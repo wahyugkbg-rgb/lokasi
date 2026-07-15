@@ -50,9 +50,33 @@
       gap: 12px;
       z-index: 1000;
       pointer-events: none;
+      transition: all 0.25s ease;
     }
     .dashboard > * {
       pointer-events: auto;
+    }
+    .dashboard.minimized {
+      padding: 10px 16px;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      border-radius: 40px;
+      gap: 6px;
+      background: rgba(10, 20, 35, 0.8);
+    }
+    .dashboard.minimized .param-grid {
+      display: none;
+    }
+    .dashboard.minimized .search-box {
+      min-width: 120px;
+      flex: 0 1 auto;
+    }
+    .dashboard.minimized .gps-btn {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }
+    .dashboard.minimized .dashboard-toggle i {
+      transform: rotate(180deg);
     }
     .param-grid {
       display: flex;
@@ -136,7 +160,27 @@
     .gps-btn i {
       font-size: 1rem;
     }
-    /* Layer control kustom di kiri atas */
+    .dashboard-toggle {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #b0c8e8;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 1.1rem;
+      pointer-events: auto;
+      flex-shrink: 0;
+    }
+    .dashboard-toggle:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+    /* Layer control kustom */
     .layer-control-container {
       position: absolute;
       top: 100px;
@@ -208,27 +252,9 @@
     .leaflet-control-zoom a:hover {
       background: #1a3a66 !important;
     }
+    /* Sembunyikan geocoder default karena kita pakai input sendiri */
     .leaflet-control-geocoder {
-      border-radius: 40px !important;
-      background: rgba(8, 22, 40, 0.8) !important;
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
-      overflow: hidden;
-    }
-    .leaflet-control-geocoder-form input {
-      background: transparent !important;
-      color: #fff !important;
-      padding: 10px 16px !important;
-      font-size: 0.9rem !important;
-    }
-    .leaflet-control-geocoder-form input::placeholder {
-      color: #9ab0d0 !important;
-    }
-    .leaflet-control-geocoder-icon {
-      background: #1e6fff !important;
-      border-radius: 0 40px 40px 0 !important;
-      color: white !important;
+      display: none !important;
     }
     .my-location-marker {
       filter: drop-shadow(0 0 12px #3b9eff);
@@ -266,6 +292,21 @@
         right: 10px;
         padding: 14px;
         border-radius: 24px;
+      }
+      .dashboard.minimized {
+        flex-direction: row;
+        align-items: center;
+        padding: 8px 14px;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+      .dashboard.minimized .search-box {
+        flex: 1 1 auto;
+        min-width: 100px;
+      }
+      .dashboard.minimized .gps-btn {
+        font-size: 0.7rem;
+        padding: 4px 10px;
       }
       .param-grid {
         font-size: 0.75rem;
@@ -325,12 +366,15 @@
         <input type="text" id="addressInput" placeholder="Cari alamat / lokasi (RW/RT)..." />
       </div>
       <button class="gps-btn" id="gpsBtn"><i class="fas fa-location-dot"></i> Posisi Saya</button>
+      <div class="dashboard-toggle" id="dashboardToggle" title="Minimize / Maximize">
+        <i class="fas fa-chevron-down"></i>
+      </div>
     </div>
   </div>
 
   <script>
     (function() {
-      // Inisialisasi peta
+      // --- Inisialisasi Peta ---
       const map = L.map('map', {
         zoomControl: true,
         fadeAnimation: true,
@@ -338,7 +382,7 @@
         attributionControl: true
       }).setView([-2.5489, 118.0149], 5);
 
-      // Definisi layer-layer
+      // --- Layer definitions ---
       const layerDefs = {
         hybrid: {
           name: 'Hybrid',
@@ -396,16 +440,12 @@
         }
       };
 
-      // Container untuk layer aktif
       let activeLayers = [];
       let currentLayerKey = 'hybrid';
 
       function setLayer(key) {
-        // Hapus semua layer yang aktif
         activeLayers.forEach(l => map.removeLayer(l));
         activeLayers = [];
-
-        // Tambahkan layer baru
         const def = layerDefs[key];
         if (def) {
           def.layers.forEach(l => {
@@ -414,103 +454,52 @@
           });
           currentLayerKey = key;
         }
-
-        // Update tombol aktif
         document.querySelectorAll('.layer-btn').forEach(btn => {
           btn.classList.remove('active');
-          if (btn.dataset.layer === key) {
-            btn.classList.add('active');
-          }
+          if (btn.dataset.layer === key) btn.classList.add('active');
         });
       }
-
-      // Event listener tombol layer
-      document.querySelectorAll('.layer-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-          const key = this.dataset.layer;
-          if (key && key !== currentLayerKey) {
-            setLayer(key);
-          }
-        });
-      });
-
-      // Set default hybrid
       setLayer('hybrid');
-
-      // Zoom maksimum 50x
       map.setMaxZoom(50);
       map.options.maxZoom = 50;
 
-      // Variabel marker & posisi
+      // --- Variabel ---
       let userMarker = null;
       let userCircle = null;
       let currentPosition = null;
+      let currentAddress = '';
 
-      // Elemen UI parameter
-      const suhuEl = document.getElementById('suhu');
-      const kelembabanEl = document.getElementById('kelembaban');
-      const ketinggianEl = document.getElementById('ketinggian');
-      const uvEl = document.getElementById('uv');
-      const kebakaranEl = document.getElementById('kebakaran');
-      const gempaEl = document.getElementById('gempa');
-      const letusanEl = document.getElementById('letusan');
-      const gpsLoading = document.getElementById('gpsLoading');
+      // --- Elemen UI ---
+      const addressInput = document.getElementById('addressInput');
       const gpsBtn = document.getElementById('gpsBtn');
+      const gpsLoading = document.getElementById('gpsLoading');
+      const dashboard = document.getElementById('dashboard');
+      const toggleBtn = document.getElementById('dashboardToggle');
 
-      // --- Update parameter (simulasi real condition) ---
-      function updateParameters(lat, lng) {
-        const suhu = (28 + Math.sin(lat / 10) * 4 + Math.cos(lng / 15) * 3 + (Math.random() - 0.5) * 2).toFixed(1);
-        const kelembaban = (65 + Math.sin(lat / 8) * 15 + Math.cos(lng / 12) * 10 + (Math.random() - 0.5) * 8).toFixed(0);
-        const ketinggian = (Math.abs(Math.sin(lat / 20) * 400 + Math.cos(lng / 25) * 300) + 50 + (Math.random() - 0.5) * 40).toFixed(0);
-        const uv = (6 + Math.sin(lat / 30) * 3 + Math.cos(lng / 20) * 2 + (Math.random() - 0.5) * 1.5).toFixed(1);
-        const fire = Math.random() > 0.85 ? '🔥 Aktif' : '☑️ Aman';
-        const earthquake = Math.random() > 0.92 ? '⚠️ Terdeteksi' : '✅ Stabil';
-        const volcano = Math.random() > 0.95 ? '🌋 Siaga' : '🔹 Normal';
+      // --- Geocoder (hanya untuk reverse & forward) ---
+      const geocoder = L.Control.Geocoder.nominatim({
+        geocodingQueryParams: { countrycodes: 'id', limit: 5, 'accept-language': 'id' }
+      });
 
-        suhuEl.textContent = suhu;
-        kelembabanEl.textContent = kelembaban;
-        ketinggianEl.textContent = ketinggian;
-        uvEl.textContent = uv;
-        kebakaranEl.textContent = fire;
-        gempaEl.textContent = earthquake;
-        letusanEl.textContent = volcano;
+      // --- Fungsi reverse geocode untuk mengisi input alamat ---
+      function reverseGeocodeAndFill(lat, lng) {
+        geocoder.reverse({ lat, lng }, function(results) {
+          if (results.length > 0) {
+            const addr = results[0].name || results[0].html || results[0].display_name || '';
+            if (addr) {
+              addressInput.value = addr;
+              currentAddress = addr;
+            } else {
+              addressInput.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+          } else {
+            addressInput.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          }
+        });
       }
 
-      // --- GPS / Geolokasi ---
-      function locateUser(showLoading = true) {
-        if (!navigator.geolocation) {
-          alert('GPS tidak didukung di perangkat ini.');
-          return;
-        }
-        if (showLoading) {
-          gpsLoading.style.display = 'flex';
-        }
-        navigator.geolocation.getCurrentPosition(
-          function(position) {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            currentPosition = [lat, lng];
-            updateUserMarker(lat, lng);
-            map.setView([lat, lng], 18, { animate: true });
-            updateParameters(lat, lng);
-            gpsLoading.style.display = 'none';
-          },
-          function(error) {
-            gpsLoading.style.display = 'none';
-            console.warn('GPS error:', error);
-            alert('Gagal mengambil posisi GPS. Pastikan izin lokasi diberikan.\nError: ' + error.message);
-            const fallback = [-6.2088, 106.8456];
-            currentPosition = fallback;
-            updateUserMarker(fallback[0], fallback[1]);
-            map.setView(fallback, 14);
-            updateParameters(fallback[0], fallback[1]);
-          },
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-        );
-      }
-
-      // --- Update marker user ---
-      function updateUserMarker(lat, lng) {
+      // --- Update marker & posisi ---
+      function updateUserMarker(lat, lng, updateAddress = true) {
         if (userMarker) map.removeLayer(userMarker);
         if (userCircle) map.removeLayer(userCircle);
         const icon = L.divIcon({
@@ -528,54 +517,81 @@
           fillColor: '#1e6fff',
           fillOpacity: 0.15,
         }).addTo(map);
+        currentPosition = [lat, lng];
         updateParameters(lat, lng);
+        if (updateAddress) {
+          reverseGeocodeAndFill(lat, lng);
+        }
       }
 
-      // --- Geocoder ---
-      const geocoder = L.Control.Geocoder.nominatim({
-        geocodingQueryParams: { countrycodes: 'id', limit: 5, 'accept-language': 'id' }
-      });
+      // --- Update parameter (simulasi) ---
+      function updateParameters(lat, lng) {
+        const suhu = (28 + Math.sin(lat / 10) * 4 + Math.cos(lng / 15) * 3 + (Math.random() - 0.5) * 2).toFixed(1);
+        const kelembaban = (65 + Math.sin(lat / 8) * 15 + Math.cos(lng / 12) * 10 + (Math.random() - 0.5) * 8).toFixed(0);
+        const ketinggian = (Math.abs(Math.sin(lat / 20) * 400 + Math.cos(lng / 25) * 300) + 50 + (Math.random() - 0.5) * 40).toFixed(0);
+        const uv = (6 + Math.sin(lat / 30) * 3 + Math.cos(lng / 20) * 2 + (Math.random() - 0.5) * 1.5).toFixed(1);
+        const fire = Math.random() > 0.85 ? '🔥 Aktif' : '☑️ Aman';
+        const earthquake = Math.random() > 0.92 ? '⚠️ Terdeteksi' : '✅ Stabil';
+        const volcano = Math.random() > 0.95 ? '🌋 Siaga' : '🔹 Normal';
 
-      const geocoderControl = L.Control.geocoder({
-        geocoder: geocoder,
-        position: 'topleft',
-        placeholder: 'Cari alamat / RW/RT...',
-        defaultMarkGeocode: true,
-        collapsed: false,
-        suggestMinLength: 2,
-        errorMessage: 'Lokasi tidak ditemukan'
-      }).addTo(map);
+        document.getElementById('suhu').textContent = suhu;
+        document.getElementById('kelembaban').textContent = kelembaban;
+        document.getElementById('ketinggian').textContent = ketinggian;
+        document.getElementById('uv').textContent = uv;
+        document.getElementById('kebakaran').textContent = fire;
+        document.getElementById('gempa').textContent = earthquake;
+        document.getElementById('letusan').textContent = volcano;
+      }
 
-      geocoderControl.on('markgeocode', function(e) {
-        const center = e.geocode.center;
-        if (center) {
-          map.setView(center, 18);
-          updateUserMarker(center.lat, center.lng);
-          currentPosition = [center.lat, center.lng];
-          updateParameters(center.lat, center.lng);
+      // --- GPS ---
+      function locateUser(showLoading = true) {
+        if (!navigator.geolocation) {
+          alert('GPS tidak didukung di perangkat ini.');
+          return;
         }
-      });
+        if (showLoading) gpsLoading.style.display = 'flex';
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            gpsLoading.style.display = 'none';
+            updateUserMarker(lat, lng, true);
+            map.setView([lat, lng], 18, { animate: true });
+          },
+          function(err) {
+            gpsLoading.style.display = 'none';
+            console.warn('GPS error:', err);
+            alert('Gagal mengambil posisi GPS. Pastikan izin lokasi diberikan.\nError: ' + err.message);
+            const fallback = [-6.2088, 106.8456];
+            updateUserMarker(fallback[0], fallback[1], true);
+            map.setView(fallback, 14);
+          },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+        );
+      }
 
-      // Input search manual
-      document.getElementById('addressInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          const query = this.value.trim();
-          if (query.length > 1) {
-            geocoder.geocode(query, function(results) {
-              if (results.length > 0) {
-                const r = results[0];
-                const center = r.center;
-                if (center) {
-                  map.setView(center, 18);
-                  updateUserMarker(center.lat, center.lng);
-                  currentPosition = [center.lat, center.lng];
-                  updateParameters(center.lat, center.lng);
-                }
-              } else {
-                alert('Alamat / lokasi tidak ditemukan. Coba lebih spesifik (RW/RT).');
-              }
-            });
+      // --- Pencarian alamat (hanya 1 input, tidak dobel) ---
+      function searchAddress(query) {
+        if (!query || query.trim().length < 2) return;
+        geocoder.geocode(query.trim(), function(results) {
+          if (results.length > 0) {
+            const r = results[0];
+            const center = r.center;
+            if (center) {
+              map.setView(center, 18);
+              updateUserMarker(center.lat, center.lng, true);
+            }
+          } else {
+            alert('Alamat / lokasi tidak ditemukan. Coba lebih spesifik (RW/RT).');
           }
+        });
+      }
+
+      // Event: Enter pada input pencarian
+      addressInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          searchAddress(this.value);
         }
       });
 
@@ -584,7 +600,18 @@
         locateUser(true);
       });
 
-      // Inisialisasi
+      // --- Toggle Dashboard Minimize/Maximize ---
+      toggleBtn.addEventListener('click', function() {
+        dashboard.classList.toggle('minimized');
+        const icon = this.querySelector('i');
+        if (dashboard.classList.contains('minimized')) {
+          icon.className = 'fas fa-chevron-up';
+        } else {
+          icon.className = 'fas fa-chevron-down';
+        }
+      });
+
+      // --- Inisialisasi awal ---
       window.addEventListener('load', function() {
         map.setView([-2.5, 118.0], 5);
         locateUser(true);
@@ -600,11 +627,21 @@
         }
       }, 12000);
 
-      // Klik peta update parameter
+      // Klik peta update parameter (tanpa mengubah marker)
       map.on('click', function(e) {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
         updateParameters(lat, lng);
+        // optional: jika ingin pindah marker saat klik, aktifkan baris di bawah
+        // updateUserMarker(lat, lng, true);
+      });
+
+      // Layer button events
+      document.querySelectorAll('.layer-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const key = this.dataset.layer;
+          if (key && key !== currentLayerKey) setLayer(key);
+        });
       });
 
     })();
