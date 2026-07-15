@@ -1,445 +1,585 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Peta Digital Canggih · Real-time</title>
-  <!-- Leaflet core -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Leaflet plugins: Hybrid + GPS -->
-  <script src="https://unpkg.com/leaflet-gps@1.0.1/dist/leaflet-gps.min.js"></script>
-  <!-- Font Awesome (ikon modern) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Google Fonts (modern) -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #0b0f1a;
-      overflow: hidden;
-      height: 100vh;
-      position: relative;
-    }
-    #map {
-      height: 100vh;
-      width: 100vw;
-      background: #101520;
-      z-index: 1;
-    }
-    /* overlay kaca – elemen UI modern */
-    .glass-panel {
-      position: absolute;
-      backdrop-filter: blur(12px) saturate(1.8);
-      -webkit-backdrop-filter: blur(12px) saturate(1.8);
-      background: rgba(18, 28, 46, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 28px;
-      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.7);
-      color: #f0f6ff;
-      padding: 16px 20px;
-      z-index: 999;
-      pointer-events: none;
-    }
-    .glass-panel * {
-      pointer-events: auto;
-    }
-    #header {
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 10px 24px 10px 20px;
-      white-space: nowrap;
-      background: rgba(10, 18, 30, 0.7);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.06);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-    }
-    #header i {
-      font-size: 1.8rem;
-      color: #6fc3ff;
-      filter: drop-shadow(0 0 8px #3b9eff66);
-    }
-    #header span {
-      font-weight: 500;
-      letter-spacing: 0.3px;
-      background: linear-gradient(135deg, #b0daff, #e0f0ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    #header small {
-      font-size: 0.7rem;
-      opacity: 0.6;
-      font-weight: 300;
-      margin-left: 6px;
-      background: none;
-      -webkit-text-fill-color: #9bb9e0;
-    }
-    #search-box {
-      top: 100px;
-      left: 20px;
-      width: 300px;
-      max-width: 80vw;
-      padding: 12px 16px;
-      background: rgba(12, 22, 40, 0.75);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 40px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-      pointer-events: auto;
-    }
-    #search-box input {
-      background: transparent;
-      border: none;
-      color: #eef6ff;
-      font-size: 0.95rem;
-      width: 100%;
-      outline: none;
-      font-weight: 400;
-      letter-spacing: 0.2px;
-    }
-    #search-box input::placeholder {
-      color: #8aa9d9;
-      font-weight: 300;
-      opacity: 0.7;
-    }
-    #search-box i {
-      color: #7bb3ff;
-      font-size: 1.1rem;
-    }
-    #info-panel {
-      bottom: 30px;
-      left: 20px;
-      right: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      pointer-events: none;
-    }
-    .badge-weather {
-      background: rgba(8, 18, 34, 0.7);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 60px;
-      padding: 8px 18px 8px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.85rem;
-      color: #d5e8ff;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      pointer-events: auto;
-      white-space: nowrap;
-    }
-    .badge-weather i {
-      font-size: 1.2rem;
-      color: #ffd966;
-      width: 24px;
-      text-align: center;
-    }
-    .badge-weather .label {
-      opacity: 0.6;
-      font-weight: 300;
-      margin-right: 4px;
-    }
-    .badge-weather .value {
-      font-weight: 600;
-      letter-spacing: 0.2px;
-    }
-    #gps-status {
-      background: rgba(0, 200, 150, 0.15);
-      border: 1px solid rgba(0, 255, 200, 0.2);
-      border-radius: 40px;
-      padding: 4px 16px 4px 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      color: #b3f0e0;
-    }
-    #gps-status i {
-      font-size: 1rem;
-      color: #5cf0d0;
-    }
-    /* kontrol zoom custom */
-    .leaflet-control-zoom {
-      border: none !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
-      backdrop-filter: blur(8px);
-      background: rgba(10, 20, 40, 0.6) !important;
-      border-radius: 40px !important;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.05) !important;
-    }
-    .leaflet-control-zoom a {
-      background: transparent !important;
-      color: #d0e6ff !important;
-      border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-      font-weight: 300;
-      transition: 0.2s;
-    }
-    .leaflet-control-zoom a:hover {
-      background: rgba(70, 140, 255, 0.2) !important;
-      color: white !important;
-    }
-    .leaflet-control-attribution {
-      background: rgba(0,0,0,0.3) !important;
-      backdrop-filter: blur(4px);
-      color: #aac0e0 !important;
-    }
-    /* custom marker */
-    .custom-marker {
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
-    }
-    /* responsive */
-    @media (max-width: 700px) {
-      #header { font-size: 0.8rem; padding: 6px 14px; gap: 8px; top: 12px; }
-      #search-box { top: 80px; width: 90vw; left: 5vw; }
-      .badge-weather { font-size: 0.7rem; padding: 5px 12px; }
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Peta Super HQ + Lokasi Saya</title>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Font Awesome untuk ikon keren -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+        }
+        
+        /* ===== TOMBOL KUSTOM ===== */
+        .custom-control-btn {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            color: #1a1a2e;
+            letter-spacing: 0.3px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .custom-control-btn i {
+            font-size: 18px;
+            color: #2563eb;
+        }
+        
+        .custom-control-btn:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.35);
+            background: #f8faff;
+        }
+        
+        .custom-control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Animasi pulsa pada tombol */
+        .custom-control-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(37,99,235,0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .custom-control-btn:hover::after {
+            opacity: 1;
+        }
+        
+        /* ===== INDICATOR LOADING ===== */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        #loadingOverlay.active {
+            display: flex;
+        }
+        
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255,255,255,0.2);
+            border-top: 5px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loadingText {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        /* ===== INFO KOORDINAT ===== */
+        #coordinateInfo {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            display: none;
+            z-index: 999;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            text-align: center;
+            gap: 4px;
+            flex-direction: column;
+            letter-spacing: 0.5px;
+            max-width: 90%;
+        }
+        
+        #coordinateInfo.visible {
+            display: flex;
+        }
+        
+        #coordinateInfo .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+        
+        #coordinateInfo .coords {
+            font-size: 15px;
+            font-weight: 600;
+            color: #60a5fa;
+        }
+        
+        #coordinateInfo .accuracy {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        
+        /* ===== TOMBOL RESET ZOOM ===== */
+        #resetZoomBtn {
+            position: fixed;
+            bottom: 160px;
+            right: 20px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            cursor: pointer;
+            font-size: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 999;
+            color: #1a1a2e;
+        }
+        
+        #resetZoomBtn:hover {
+            transform: scale(1.1);
+            background: #f0f4ff;
+        }
+        
+        #resetZoomBtn.visible {
+            display: flex;
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 600px) {
+            .custom-control-btn {
+                padding: 10px 16px;
+                font-size: 13px;
+                gap: 8px;
+            }
+            
+            .custom-control-btn i {
+                font-size: 16px;
+            }
+            
+            #coordinateInfo {
+                bottom: 90px;
+                padding: 8px 16px;
+                font-size: 11px;
+                width: 90%;
+            }
+            
+            #coordinateInfo .coords {
+                font-size: 13px;
+            }
+            
+            #resetZoomBtn {
+                width: 42px;
+                height: 42px;
+                font-size: 17px;
+                bottom: 145px;
+                right: 15px;
+            }
+        }
+        
+        /* Custom marker style */
+        .custom-marker {
+            background: none;
+            border: none;
+        }
+        
+        .custom-marker i {
+            font-size: 38px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+        }
+        
+        /* Animasi pulse untuk marker */
+        .pulse-marker {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
-  <div id="map"></div>
 
-  <!-- Header modern -->
-  <div id="header" class="glass-panel">
-    <i class="fas fa-satellite-dish"></i>
-    <span>ATLAS <small>· hybrid real-time</small></span>
-    <i class="fas fa-chevron-right" style="font-size: 0.8rem; opacity: 0.3; margin:0 4px;"></i>
-    <span style="font-weight:300; font-size:0.9rem;">RT/RW · 50x zoom</span>
-  </div>
+    <!-- ===== PETA ===== -->
+    <div id="map"></div>
 
-  <!-- Pencarian alamat (global) -->
-  <div id="search-box" class="glass-panel">
-    <i class="fas fa-search-location"></i>
-    <input type="text" id="address-input" placeholder="Cari alamat / wilayah ... (seluruh dunia)" />
-    <i class="fas fa-microphone" style="opacity:0.3; font-size:0.9rem;"></i>
-  </div>
+    <!-- ===== LOADING OVERLAY ===== -->
+    <div id="loadingOverlay">
+        <div class="loader"></div>
+        <div id="loadingText">⏳ Mengambil posisi Anda...</div>
+    </div>
 
-  <!-- Panel info cuaca & bencana (real-time simulasi terintegrasi) -->
-  <div id="info-panel">
-    <div class="badge-weather"><i class="fas fa-cloud-sun"></i><span class="label">Cuaca</span><span class="value" id="weather-temp">28°C</span><span style="margin-left:6px;opacity:0.7;">/</span><span class="value" id="weather-desc">Cerah</span></div>
-    <div class="badge-weather"><i class="fas fa-fire-extinguisher"></i><span class="label">Kebakaran</span><span class="value" id="fire-risk">Rendah</span></div>
-    <div class="badge-weather"><i class="fas fa-volcano"></i><span class="label">Gunung Api</span><span class="value" id="volcano-status">Normal</span></div>
-    <div class="badge-weather"><i class="fas fa-earth-asia"></i><span class="label">Gempa</span><span class="value" id="quake-info">≤ 2.1</span></div>
-    <div id="gps-status"><i class="fas fa-satellite"></i> GPS: <span id="gps-coord">Akuisisi...</span></div>
-  </div>
+    <!-- ===== INFO KOORDINAT ===== -->
+    <div id="coordinateInfo">
+        <span class="label">📍 Posisi Anda</span>
+        <span class="coords" id="coordDisplay">-6.2088, 106.8456</span>
+        <span class="accuracy" id="accuracyDisplay">Akurasi: ±10m</span>
+    </div>
 
-  <script>
-    (function() {
-      // ========== INISIALISASI PETA ==========
-      const map = L.map('map', {
-        zoomControl: true,
-        fadeAnimation: true,
-        attributionControl: true,
-        zoomSnap: 0.25,  // zoom halus
-        zoomDelta: 0.5,
-        wheelPxPerZoomLevel: 180
-      });
+    <!-- ===== TOMBOL RESET ZOOM ===== -->
+    <button id="resetZoomBtn" title="Reset tampilan peta">
+        <i class="fas fa-globe-asia"></i>
+    </button>
 
-      // Base layer: Hybrid terbaru (satelit + label)
-      const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-        maxZoom: 22,
-        minZoom: 2,
-        subdomains: ['mt1', 'mt2', 'mt3'],
-        attribution: '&copy; Google Hybrid'
-      });
-      hybrid.addTo(map);
+    <script>
+        // ============================================
+        // 1. INISIALISASI PETA DENGAN TILE SUPER HQ
+        // ============================================
+        const map = L.map('map', {
+            center: [-2.5, 118.0],
+            zoom: 5,
+            zoomControl: true,
+            fadeAnimation: true,
+            zoomAnimation: true,
+            markerZoomAnimation: true
+        });
 
-      // Lapisan tambahan: OpenStreetMap untuk transparansi (tapi kita pakai hybrid)
-      // Tetap set view ke koordinat global
-      map.setView([-7.7956, 110.3695], 12); // default: Indonesia (Yogyakarta)
+        // --- TILE LAYER SUPER HQ (OpenStreetMap + peningkatan) ---
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            subdomains: 'abc'
+        }).addTo(map);
 
-      // ========== GPS ==========
-      let gpsMarker = null;
-      let gpsCircle = null;
+        // --- ALTERNATIF: TILE SATELIT HD (Esri) ---
+        // Uncomment di bawah jika ingin peta satelit
+        /*
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.esri.com">Esri</a>'
+        }).addTo(map);
+        */
 
-      function updateGPS(lat, lng) {
-        if (!gpsMarker) {
-          const icon = L.divIcon({
-            className: 'custom-marker',
-            html: '<i class="fas fa-circle" style="color:#00ffc8; font-size:28px; text-shadow: 0 0 24px #00ffc8; filter: drop-shadow(0 0 10px #00ffc8);"></i>',
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
-          });
-          gpsMarker = L.marker([lat, lng], { icon: icon }).addTo(map);
-          gpsCircle = L.circle([lat, lng], {
-            radius: 15,
-            color: '#00ffc8',
-            fillColor: '#00ffc8',
-            fillOpacity: 0.2,
-            weight: 1,
-            opacity: 0.6
-          }).addTo(map);
-        } else {
-          gpsMarker.setLatLng([lat, lng]);
-          gpsCircle.setLatLng([lat, lng]);
-        }
-        document.getElementById('gps-coord').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        // zoom ke posisi gps (opsional)
-        // map.setView([lat, lng], 15, { animate: true });
-      }
+        // --- TAMBAHAN: LAYER LABEL (opsional) ---
+        // Untuk menambahkan nama jalan di atas satelit
+        /*
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        */
 
-      // Coba GPS 
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-          (pos) => {
-            const { latitude, longitude } = pos.coords;
-            updateGPS(latitude, longitude);
-            // jika pertama kali, set view
-            if (!map.getCenter().lat && !map.getCenter().lng) {
-              map.setView([latitude, longitude], 16);
+        // ============================================
+        // 2. TOMBOL "LIHAT POSISI SAYA"
+        // ============================================
+        const locateControl = L.control({ position: 'bottomright' });
+
+        locateControl.onAdd = function() {
+            const div = L.DomUtil.create('div');
+            div.innerHTML = `
+                <button class="custom-control-btn" id="locateBtn">
+                    <i class="fas fa-crosshairs"></i>
+                    <span>Lihat Posisi Saya</span>
+                </button>
+            `;
+            return div;
+        };
+
+        locateControl.addTo(map);
+
+        // ============================================
+        // 3. VARIABEL GLOBAL
+        // ============================================
+        let userMarker = null;
+        let userCircle = null;
+        let isLocating = false;
+        let initialZoom = 5;
+        let initialCenter = [-2.5, 118.0];
+
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const coordInfo = document.getElementById('coordinateInfo');
+        const coordDisplay = document.getElementById('coordDisplay');
+        const accuracyDisplay = document.getElementById('accuracyDisplay');
+        const resetBtn = document.getElementById('resetZoomBtn');
+
+        // ============================================
+        // 4. FUNGSI MENAMPILKAN LOKASI
+        // ============================================
+        function showLocation(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            // Sembunyikan loading
+            loadingOverlay.classList.remove('active');
+            isLocating = false;
+
+            // Hapus marker & circle sebelumnya
+            if (userMarker) {
+                map.removeLayer(userMarker);
+                userMarker = null;
             }
-          },
-          (err) => {
-            console.warn('GPS error:', err);
-            document.getElementById('gps-coord').innerText = 'Tidak tersedia';
-            // fallback: tetap di posisi default
-          },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-      } else {
-        document.getElementById('gps-coord').innerText = 'Tidak didukung';
-      }
+            if (userCircle) {
+                map.removeLayer(userCircle);
+                userCircle = null;
+            }
 
-      // ========== PENCARIAN ALAMAT (Nominatim) ==========
-      document.getElementById('address-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          const query = this.value.trim();
-          if (query.length < 3) return;
-          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`)
-            .then(res => res.json())
-            .then(data => {
-              if (data && data.length > 0) {
-                const { lat, lon, display_name } = data[0];
-                map.setView([parseFloat(lat), parseFloat(lon)], 16);
-                // tambahkan marker sementara
-                const marker = L.marker([lat, lon]).addTo(map)
-                  .bindPopup(`<b>📍 ${display_name}</b>`).openPopup();
-                setTimeout(() => map.removeLayer(marker), 8000);
-              } else {
-                alert('Alamat tidak ditemukan.');
-              }
-            })
-            .catch(() => alert('Gagal mencari alamat.'));
+            // --- BUAT MARKER KUSTOM DENGAN ICON FONT AWESOME ---
+            const iconHtml = `
+                <div style="
+                    background: #2563eb;
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: 3px solid white;
+                    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.6);
+                    animation: pulse 2s ease-in-out infinite;
+                ">
+                    <i class="fas fa-user" style="color: white; font-size: 22px;"></i>
+                </div>
+            `;
+
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: iconHtml,
+                iconSize: [48, 48],
+                iconAnchor: [24, 24],
+                popupAnchor: [0, -30]
+            });
+
+            userMarker = L.marker([lat, lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(`
+                    <b>📍 Anda di sini</b><br>
+                    <b>Lat:</b> ${lat.toFixed(6)}<br>
+                    <b>Lng:</b> ${lng.toFixed(6)}<br>
+                    <b>Akurasi:</b> ±${Math.round(accuracy)}m
+                `)
+                .openPopup();
+
+            // --- LINGKARAN AKURASI ---
+            userCircle = L.circle([lat, lng], {
+                radius: accuracy,
+                color: '#2563eb',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.15,
+                weight: 3,
+                dashArray: '8 6',
+                opacity: 0.8
+            }).addTo(map);
+
+            // --- ZOOM KE LOKASI ---
+            const zoomLevel = accuracy > 100 ? 14 : 16;
+            map.flyTo([lat, lng], zoomLevel, {
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+
+            // --- TAMPILKAN INFO KOORDINAT ---
+            coordDisplay.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            accuracyDisplay.textContent = `Akurasi: ±${Math.round(accuracy)}m`;
+            coordInfo.classList.add('visible');
+
+            // --- TAMPILKAN TOMBOL RESET ---
+            resetBtn.classList.add('visible');
+
+            // Kirim notifikasi sukses (opsional)
+            if ('vibrate' in navigator) {
+                navigator.vibrate(50);
+            }
         }
-      });
 
-      // ========== DATA REAL-TIME (cuaca, kebakaran, gunung api, gempa) ==========
-      // Karena API nyata memerlukan kunci, kita gunakan simulasi dinamis dengan data valid 
-      // namun tetap menampilkan data yang mendekati real dengan update tiap 20 detik.
-      // (Untuk produksi, integrasikan API BMKG / USGS / OpenWeather)
+        // ============================================
+        // 5. FUNGSI ERROR HANDLING
+        // ============================================
+        function handleLocationError(error) {
+            loadingOverlay.classList.remove('active');
+            isLocating = false;
 
-      // Simulasi data cuaca (dengan variasi)
-      function updateWeather() {
-        const temps = [26, 28, 30, 27, 29, 31, 24, 32, 33];
-        const descs = ['Cerah', 'Berawan', 'Hujan Ringan', 'Hujan', 'Berawan Tebal', 'Cerah Berawan'];
-        const t = temps[Math.floor(Math.random() * temps.length)];
-        const d = descs[Math.floor(Math.random() * descs.length)];
-        document.getElementById('weather-temp').innerText = t + '°C';
-        document.getElementById('weather-desc').innerText = d;
-      }
+            let message = '❌ Gagal mengambil lokasi. ';
+            switch(error.code) {
+                case 1:
+                    message += 'Izinkan akses lokasi di browser Anda.';
+                    break;
+                case 2:
+                    message += 'Sinyal GPS tidak tersedia. Coba di luar ruangan.';
+                    break;
+                case 3:
+                    message += 'Waktu habis. Coba lagi.';
+                    break;
+                default:
+                    message += error.message || 'Terjadi kesalahan tidak diketahui.';
+            }
+            
+            alert(message);
+            console.error('Geolocation error:', error);
+        }
 
-      // Kebakaran (risiko)
-      function updateFire() {
-        const risks = ['Rendah', 'Sedang', 'Tinggi', 'Ekstrem'];
-        const r = risks[Math.floor(Math.random() * risks.length)];
-        document.getElementById('fire-risk').innerText = r;
-      }
+        // ============================================
+        // 6. FUNGSI MULAI PENCARIAN LOKASI
+        // ============================================
+        function startLocating() {
+            if (isLocating) return;
+            
+            // Cek dukungan geolokasi
+            if (!navigator.geolocation) {
+                alert('❌ Browser Anda tidak mendukung Geolokasi.');
+                return;
+            }
 
-      // Gunung api (status)
-      function updateVolcano() {
-        const statuses = ['Normal', 'Waspada', 'Siaga', 'Awas'];
-        const s = statuses[Math.floor(Math.random() * statuses.length)];
-        document.getElementById('volcano-status').innerText = s;
-      }
+            // Tampilkan loading
+            isLocating = true;
+            loadingOverlay.classList.add('active');
+            loadingText.textContent = '⏳ Mengambil posisi Anda...';
+            
+            // Sembunyikan info sebelumnya
+            coordInfo.classList.remove('visible');
 
-      // Gempa (magnitudo)
-      function updateQuake() {
-        const mags = ['≤ 2.1', '2.5', '3.2', '4.0', '4.8', '5.3', '6.1'];
-        const m = mags[Math.floor(Math.random() * mags.length)];
-        document.getElementById('quake-info').innerText = m;
-      }
+            // Panggil geolokasi
+            navigator.geolocation.getCurrentPosition(
+                showLocation,
+                handleLocationError,
+                {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                }
+            );
 
-      // Update semua data setiap 15 detik (seolah real-time)
-      function refreshAllData() {
-        updateWeather();
-        updateFire();
-        updateVolcano();
-        updateQuake();
-      }
+            // Timeout fallback (jika terlalu lama)
+            setTimeout(() => {
+                if (isLocating) {
+                    loadingOverlay.classList.remove('active');
+                    isLocating = false;
+                    alert('⏱️ Waktu pencarian lokasi habis. Coba lagi.');
+                }
+            }, 25000);
+        }
 
-      // Panggil pertama kali
-      refreshAllData();
-      setInterval(refreshAllData, 15000);
-
-      // ========== MENAMBAHKAN FITUR 50x ZOOM (Leaflet mendukung sampai 22, kita set maxNativeZoom) ==========
-      // Google hybrid memiliki hingga 22, kita gunakan maxZoom 22 dan zoomSnap 0.25 sehingga bisa "50x" secara visual
-      // Untuk memperbesar hingga 50x, kita set maxZoom = 22 (sudah cukup besar)
-      // Tapi kita modifikasi kontrol zoom agar presisi.
-      map.setMaxZoom(22);
-      map.setMinZoom(2);
-
-      // Tambahkan layer kontrol (opsional) 
-      // Tapi kita tetap pakai hybrid.
-
-      // ========== MENAMPILKAN BEBERAPA MARKER SIMBOLIS (gunung, gempa) ==========
-      // Hanya untuk menunjukkan data geospasial, kita tambahkan beberapa titik
-      const gunungPoints = [
-        { lat: -7.573, lng: 110.445, name: 'Merapi' },
-        { lat: -8.108, lng: 114.026, name: 'Ijen' },
-        { lat: -8.533, lng: 115.128, name: 'Agung' },
-      ];
-      gunungPoints.forEach(g => {
-        const icon = L.divIcon({
-          className: 'custom-marker',
-          html: '<i class="fas fa-mountain" style="color:#ff7b3a; font-size:22px; filter:drop-shadow(0 0 10px #ff5e00);"></i>',
-          iconSize: [22, 22],
-          iconAnchor: [11, 22]
+        // ============================================
+        // 7. EVENT LISTENER
+        // ============================================
+        
+        // --- Tombol Locate ---
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('#locateBtn');
+            if (btn) {
+                e.preventDefault();
+                startLocating();
+            }
         });
-        L.marker([g.lat, g.lng], { icon }).addTo(map)
-          .bindPopup(`<b>🌋 ${g.name}</b><br>Status: ${document.getElementById('volcano-status').innerText}`);
-      });
 
-      // Marker gempa historis (simbol)
-      const quakePoints = [
-        { lat: -8.3, lng: 115.2, mag: '5.2' },
-        { lat: -7.0, lng: 112.3, mag: '4.8' },
-      ];
-      quakePoints.forEach(q => {
-        const icon = L.divIcon({
-          className: 'custom-marker',
-          html: `<i class="fas fa-circle" style="color:#ffcc00; font-size:${16 + parseFloat(q.mag)}px; text-shadow:0 0 20px #ffaa00;"></i>`,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
+        // --- Tombol Reset Zoom ---
+        resetBtn.addEventListener('click', function() {
+            map.flyTo(initialCenter, initialZoom, {
+                duration: 1.2,
+                easeLinearity: 0.3
+            });
+            
+            // Sembunyikan info & tombol reset
+            coordInfo.classList.remove('visible');
+            resetBtn.classList.remove('visible');
+            
+            // Hapus marker & circle
+            if (userMarker) {
+                map.removeLayer(userMarker);
+                userMarker = null;
+            }
+            if (userCircle) {
+                map.removeLayer(userCircle);
+                userCircle = null;
+            }
         });
-        L.marker([q.lat, q.lng], { icon }).addTo(map)
-          .bindPopup(`<b>⚡ Gempa ${q.mag}</b>`);
-      });
 
-      // ========== STYLING MODERN + INDIKATOR ==========
-      // Tambahkan kontrol zoom di kiri bawah agar presisi
-      map.zoomControl.setPosition('bottomright');
+        // --- Dukungan tombol Enter/Space pada tombol ---
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const target = e.target.closest('#locateBtn');
+                if (target) {
+                    e.preventDefault();
+                    startLocating();
+                }
+            }
+        });
 
-      // Hapus attribution default & tambahkan custom
-      map.attributionControl.setPrefix('🌍 Atlas · real-time');
+        // ============================================
+        // 8. OPSIONAL: AUTO-LOCATE SAAT PERTAMA BUKA
+        // ============================================
+        // Aktifkan jika ingin otomatis cari lokasi saat halaman dimuat
+        /*
+        window.addEventListener('load', function() {
+            setTimeout(startLocating, 1500);
+        });
+        */
 
-      console.log('Peta siap. GPS aktif, data cuaca & bencana diperbarui setiap 15 detik.');
-    })();
-  </script>
+        // ============================================
+        // 9. TAMPILKAN PESAN DI KONSOLE
+        // ============================================
+        console.log('✅ Peta Super HQ siap digunakan!');
+        console.log('📍 Klik tombol "Lihat Posisi Saya" untuk menemukan lokasi Anda.');
+        console.log('🔄 Tekan tombol reset (🌍) untuk kembali ke tampilan awal.');
+
+        // ============================================
+        // 10. HANDLE RESIZE (untuk responsif)
+        // ============================================
+        window.addEventListener('resize', function() {
+            map.invalidateSize();
+        });
+
+        console.log('🚀 Peta siap!');
+    </script>
+
 </body>
 </html>
