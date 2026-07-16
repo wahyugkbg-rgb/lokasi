@@ -1,655 +1,591 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>⚡ Neural Battery · Analisis Futuristik</title>
-    <!-- Chart.js ringan & modern -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>NeoBattery · Analisis Real-time</title>
+  <!-- Chart.js 3.9.1 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <!-- Font & ikon tambahan -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
 
-        body {
-            min-height: 100vh;
-            background: radial-gradient(circle at 20% 30%, #f9f3ff, #e0f0ff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+    body {
+      background: linear-gradient(145deg, #f9f3e8 0%, #fff9f0 100%);
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        .dashboard {
-            max-width: 1300px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.38);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border-radius: 60px 60px 40px 40px;
-            padding: 28px 32px 38px;
-            box-shadow: 0 30px 60px rgba(0, 20, 50, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            transition: all 0.2s ease;
-        }
+    /* wadah futuristik dengan glassmorphism + neon aksen */
+    .dashboard {
+      max-width: 1200px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border-radius: 56px;
+      padding: 2rem 1.8rem;
+      box-shadow: 0 30px 60px rgba(0, 20, 30, 0.15), 0 0 0 1px rgba(255, 215, 150, 0.3);
+      border: 1px solid rgba(255, 235, 200, 0.7);
+      transition: all 0.2s ease;
+    }
 
-        /* header futuristik */
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 28px;
-        }
+    /* judul & header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
 
-        .header h1 {
-            font-weight: 650;
-            font-size: 2.1rem;
-            background: linear-gradient(145deg, #0b1a3a, #2d4b7c);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    .header h1 {
+      font-weight: 700;
+      font-size: 2.1rem;
+      background: linear-gradient(135deg, #f97316, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-        .header h1 small {
-            font-size: 0.9rem;
-            background: rgba(10, 40, 80, 0.15);
-            padding: 6px 18px;
-            border-radius: 80px;
-            color: #1c3b66;
-            font-weight: 500;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-        }
+    .header h1 i {
+      background: rgba(251, 191, 36, 0.25);
+      padding: 8px 12px;
+      border-radius: 60px;
+      font-size: 1.8rem;
+      -webkit-text-fill-color: #f97316;
+    }
 
-        .badge-time {
-            background: rgba(0, 20, 60, 0.08);
-            padding: 10px 24px;
-            border-radius: 80px;
-            font-weight: 500;
-            color: #0a2647;
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(4px);
-            box-shadow: 0 8px 16px -8px rgba(0,0,0,0.05);
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .real-time-badge {
+      background: rgba(16, 185, 129, 0.2);
+      backdrop-filter: blur(4px);
+      padding: 0.5rem 1.4rem;
+      border-radius: 60px;
+      border: 1px solid #34d399;
+      color: #065f46;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 15px rgba(52, 211, 153, 0.3);
+    }
 
-        /* kartu utama */
-        .grid-utama {
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr 1fr;
-            gap: 22px;
-            margin-bottom: 32px;
-        }
+    .real-time-badge i {
+      color: #10b981;
+      font-size: 1rem;
+      animation: pulse-dot 1.8s infinite;
+    }
 
-        .card {
-            background: rgba(255, 255, 255, 0.55);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-radius: 40px;
-            padding: 22px 22px 26px;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 15px 30px -12px rgba(0, 20, 40, 0.15);
-            transition: all 0.2s;
-        }
+    @keyframes pulse-dot {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
 
-        .card:hover {
-            background: rgba(255, 255, 255, 0.75);
-            box-shadow: 0 25px 40px -16px #1d3b6b30;
-        }
+    /* kartu stat */
+    .grid-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 2rem;
+    }
 
-        .card-title {
-            font-weight: 600;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: #2c4b74;
-            opacity: 0.8;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      border-radius: 32px;
+      padding: 1rem 1.2rem;
+      border: 1px solid rgba(255, 215, 150, 0.4);
+      box-shadow: 0 8px 20px -8px rgba(0,0,0,0.05);
+      transition: 0.2s;
+    }
 
-        .battery-level {
-            font-size: 3.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #0b2b5c, #3a6e9f);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            line-height: 1;
-        }
+    .stat-card .label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #7c6b5a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-        .battery-sub {
-            font-size: 1.2rem;
-            font-weight: 400;
-            color: #1e3d62;
-            margin-left: 6px;
-        }
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e1a16;
+      margin-top: 6px;
+    }
 
-        .status-badge {
-            display: inline-block;
-            margin-top: 6px;
-            padding: 8px 22px;
-            border-radius: 80px;
-            background: rgba(0, 200, 100, 0.2);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(0, 200, 100, 0.3);
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: #005f3a;
-        }
+    .stat-card .sub {
+      font-size: 0.8rem;
+      color: #5b4d3e;
+      opacity: 0.8;
+    }
 
-        .status-badge.charging {
-            background: rgba(0, 180, 255, 0.2);
-            border-color: #0099ff80;
-            color: #005f9e;
-        }
+    /* grafik */
+    .chart-wrapper {
+      background: rgba(255, 250, 240, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 40px;
+      padding: 1.5rem 1rem;
+      margin-bottom: 2rem;
+      border: 1px solid rgba(255, 215, 150, 0.3);
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+    }
 
-        .time-metrics {
-            margin-top: 18px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px 24px;
-        }
+    .chart-container {
+      position: relative;
+      height: 200px;
+      width: 100%;
+    }
 
-        .metric-item {
-            background: rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(4px);
-            padding: 4px 14px 4px 10px;
-            border-radius: 60px;
-            border: 1px solid rgba(255,255,255,0.6);
-        }
+    /* tips + peringatan */
+    .action-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: stretch;
+      margin-bottom: 1.5rem;
+    }
 
-        .metric-item label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            color: #1f3f64;
-            opacity: 0.7;
-        }
+    .tips-box {
+      flex: 2;
+      min-width: 200px;
+      background: rgba(255, 243, 224, 0.6);
+      backdrop-filter: blur(4px);
+      border-radius: 40px;
+      padding: 1.2rem 1.5rem;
+      border-left: 6px solid #fbbf24;
+    }
 
-        .metric-item span {
-            font-weight: 650;
-            color: #0f2c4a;
-            margin-left: 6px;
-        }
+    .tips-box h4 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #92400e;
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
 
-        /* grafik */
-        .chart-wrapper {
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(4px);
-            border-radius: 38px;
-            padding: 16px 12px 6px;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            margin: 12px 0 10px;
-            height: 200px;
-        }
+    .tips-box p {
+      color: #5b3d1a;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
 
-        .chart-wrapper canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
+    .notification-preview {
+      flex: 1;
+      min-width: 150px;
+      background: rgba(220, 245, 235, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 40px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
 
-        .tips-box {
-            background: rgba(230, 245, 255, 0.5);
-            backdrop-filter: blur(8px);
-            border-radius: 28px;
-            padding: 18px 22px;
-            border-left: 6px solid #3f8cff;
-            margin-top: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.7);
-        }
+    .notification-preview i {
+      font-size: 1.6rem;
+      color: #10b981;
+    }
 
-        .tips-box p {
-            font-weight: 500;
-            color: #0d2f4e;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    .btn-request {
+      background: #fbbf24;
+      border: none;
+      border-radius: 60px;
+      padding: 0.5rem 1.2rem;
+      font-weight: 700;
+      color: #1e1a16;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 8px 16px -6px rgba(251, 191, 36, 0.4);
+      transition: 0.15s;
+      cursor: pointer;
+      border: 1px solid #fcd34d;
+    }
 
-        .tips-box i {
-            font-size: 1.8rem;
-            filter: drop-shadow(0 0 6px #3f8cff80);
-        }
+    .btn-request:active { transform: scale(0.95); }
 
-        .btn-agresif {
-            background: linear-gradient(145deg, #ffffff, #e6f0ff);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 80px;
-            font-weight: 600;
-            color: #00337a;
-            border: 1px solid white;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 8px 20px -6px #001c3d30;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 0.9rem;
-        }
+    .footer-note {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 0.7rem;
+      color: #a28d78;
+      margin-top: 0.5rem;
+      letter-spacing: 0.3px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-        .btn-agresif:hover {
-            background: white;
-            transform: scale(1.02);
-            box-shadow: 0 12px 28px -8px #002b5e60;
-        }
+    /* HP */
+    @media (max-width: 600px) {
+      .dashboard { padding: 1.2rem 1rem; border-radius: 32px; }
+      .header h1 { font-size: 1.6rem; }
+      .stat-card .value { font-size: 1.7rem; }
+      .chart-container { height: 160px; }
+      .action-row { flex-direction: column; }
+    }
 
-        .footer-actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 18px;
-            gap: 16px;
-        }
-
-        .history-badge {
-            background: rgba(0, 30, 70, 0.04);
-            padding: 8px 20px;
-            border-radius: 60px;
-            border: 1px solid rgba(255,255,255,0.5);
-            font-size: 0.9rem;
-            color: #1a3860;
-        }
-
-        @media (max-width: 920px) {
-            .grid-utama {
-                grid-template-columns: 1fr;
-                gap: 18px;
-            }
-            .dashboard {
-                padding: 20px;
-            }
-            .header h1 {
-                font-size: 1.7rem;
-            }
-        }
-
-        /* animasi halus */
-        .fade-in {
-            animation: softRise 0.4s ease;
-        }
-        @keyframes softRise {
-            0% { opacity: 0.5; transform: translateY(10px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-        .glow-text {
-            text-shadow: 0 0 12px #8ab9ff70;
-        }
-    </style>
+    /* smooth */
+    .fade-in { animation: fadeUp 0.6s ease; }
+    @keyframes fadeUp { 0% { opacity: 0.3; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
 <body>
 <div class="dashboard fade-in" id="app">
-    <div class="header">
-        <h1>⚡ NeuralBattery <small>v.2 · prediktif</small></h1>
-        <div class="badge-time" id="liveTime">⏱️ <span id="timeDisplay">--:--:--</span></div>
+  <div class="header">
+    <h1><i class="fas fa-bolt"></i> NeoBattery</h1>
+    <span class="real-time-badge"><i class="fas fa-circle"></i> LIVE · realtime</span>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="grid-stats" id="statsGrid">
+    <div class="stat-card"><div class="label"><i class="fas fa-battery-three-quarters"></i> Level</div><div class="value" id="battLevel">--%</div><div class="sub" id="battStatus">Memuat...</div></div>
+    <div class="stat-card"><div class="label"><i class="fas fa-clock"></i> Sisa pakai</div><div class="value" id="dischargeTime">--</div><div class="sub">estimasi</div></div>
+    <div class="stat-card"><div class="label"><i class="fas fa-plug"></i> Waktu isi</div><div class="value" id="chargeTime">--</div><div class="sub">hingga penuh</div></div>
+    <div class="stat-card"><div class="label"><i class="fas fa-history"></i> Histori</div><div class="value" id="historyCount">0</div><div class="sub">data tersimpan</div></div>
+  </div>
+
+  <!-- Grafik -->
+  <div class="chart-wrapper">
+    <div class="chart-container">
+      <canvas id="batteryChart"></canvas>
     </div>
+  </div>
 
-    <!-- grid 3 kartu -->
-    <div class="grid-utama">
-        <!-- kartu level & status -->
-        <div class="card">
-            <div class="card-title">🔋 status real-time</div>
-            <div>
-                <span class="battery-level" id="levelDisplay">--</span><span class="battery-sub">%</span>
-                <div id="statusBadge" class="status-badge">⏳ memuat</div>
-            </div>
-            <div class="time-metrics">
-                <div class="metric-item"><label>⏳ pengisian</label> <span id="chargeTime">--</span></div>
-                <div class="metric-item"><label>🔋 pemakaian</label> <span id="dischargeTime">--</span></div>
-            </div>
-            <div style="margin-top: 14px; font-size:0.9rem; background: rgba(0,0,0,0.02); padding: 8px 12px; border-radius: 30px;">
-                <span style="opacity:0.6;">📊 histori tersimpan: </span><span id="historyCount">0</span>
-            </div>
-        </div>
-
-        <!-- kartu grafik (chart) -->
-        <div class="card" style="grid-column: span 1;">
-            <div class="card-title">📈 pola konsumsi (6 jam)</div>
-            <div class="chart-wrapper">
-                <canvas id="batteryChart" width="300" height="150"></canvas>
-            </div>
-            <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
-                <span style="font-size:0.7rem; background: #ffffff70; padding: 2px 16px; border-radius: 50px;">estimasi waktu pakai</span>
-            </div>
-        </div>
-
-        <!-- kartu tips & estimasi -->
-        <div class="card">
-            <div class="card-title">🧠 tips hemat kontekstual</div>
-            <div id="tipsContainer" class="tips-box">
-                <p><span style="font-size:2rem;">💡</span> <span id="tipText">Memuat saran cerdas...</span></p>
-            </div>
-            <div style="margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <span class="metric-item"><label>⏱️ estimasi tersisa</label> <span id="estTimeLeft">--</span></span>
-                <span class="metric-item"><label>⚡ konsumsi rata-rata</label> <span id="avgConsumption">--</span></span>
-            </div>
-        </div>
+  <!-- Tips & notifikasi -->
+  <div class="action-row">
+    <div class="tips-box" id="tipsBox">
+      <h4><i class="fas fa-lightbulb" style="color: #f59e0b;"></i> Tips hemat kontekstual</h4>
+      <p id="tipText">Memuat saran cerdas...</p>
     </div>
-
-    <!-- footer interaktif -->
-    <div class="footer-actions">
-        <div class="history-badge">📀 IndexedDB · <span id="dbStatus">aktif</span></div>
-        <div>
-            <button class="btn-agresif" id="resetHistoryBtn">⟳ reset histori</button>
-            <button class="btn-agresif" id="notifTestBtn" style="margin-left: 8px;">🔔 uji notifikasi</button>
-        </div>
+    <div class="notification-preview" id="notifBox">
+      <i class="fas fa-bell"></i>
+      <span id="notifMessage">Notifikasi siap</span>
+      <button class="btn-request" id="notifBtn"><i class="fas fa-check-circle"></i> Izin</button>
     </div>
+  </div>
+
+  <div class="footer-note">
+    <span><i class="fas fa-database"></i> IndexedDB · histori lokal</span>
+    <span><i class="fas fa-chart-line"></i> analisis pola real-time</span>
+  </div>
 </div>
 
 <script>
-    (function() {
-        "use strict";
+  (function(){
+    "use strict";
 
-        // ---- DOM refs ----
-        const levelDisplay = document.getElementById('levelDisplay');
-        const statusBadge = document.getElementById('statusBadge');
-        const chargeTimeSpan = document.getElementById('chargeTime');
-        const dischargeTimeSpan = document.getElementById('dischargeTime');
-        const estTimeLeft = document.getElementById('estTimeLeft');
-        const avgConsumption = document.getElementById('avgConsumption');
-        const tipText = document.getElementById('tipText');
-        const historyCountSpan = document.getElementById('historyCount');
-        const timeDisplay = document.getElementById('timeDisplay');
+    // ---- elemen ----
+    const battLevel = document.getElementById('battLevel');
+    const battStatus = document.getElementById('battStatus');
+    const dischargeTime = document.getElementById('dischargeTime');
+    const chargeTime = document.getElementById('chargeTime');
+    const historyCount = document.getElementById('historyCount');
+    const tipText = document.getElementById('tipText');
+    const notifMessage = document.getElementById('notifMessage');
 
-        // ---- Chart.js ----
-        const ctx = document.getElementById('batteryChart').getContext('2d');
-        let batteryChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['-6h', '-5h', '-4h', '-3h', '-2h', '-1h', 'sekarang'],
-                datasets: [{
-                    label: 'Level baterai %',
-                    data: [72, 68, 61, 53, 44, 38, 32],
-                    borderColor: '#2f7be0',
-                    backgroundColor: 'rgba(47, 123, 224, 0.08)',
-                    borderWidth: 3.5,
-                    tension: 0.3,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#1f5bb0',
-                    pointRadius: 5,
-                    fill: true,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { backgroundColor: '#0a1e3dcc', titleColor: '#d6e6ff' }
-                },
-                scales: {
-                    y: { min: 0, max: 100, grid: { color: '#b8cef0', lineWidth: 0.5 }, ticks: { color: '#1a3a62' } },
-                    x: { grid: { display: false }, ticks: { color: '#1a3a62' } }
-                }
-            }
+    // ---- IndexedDB ----
+    const DB_NAME = 'BatteryHistoryDB';
+    const STORE_NAME = 'history';
+    let db = null;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        if (db) return resolve(db);
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (ev) => {
+          const d = ev.target.result;
+          if (!d.objectStoreNames.contains(STORE_NAME)) {
+            d.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        request.onsuccess = (ev) => { db = ev.target.result; resolve(db); };
+        request.onerror = (ev) => reject(ev.target.error);
+      });
+    }
+
+    function saveHistory(entry) {
+      return openDB().then(d => {
+        return new Promise((resolve, reject) => {
+          const tx = d.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.add(entry);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
         });
+      });
+    }
 
-        // ---- IndexedDB ----
-        let db = null;
-        const DB_NAME = 'BatteryHistoryDB';
-        const STORE_NAME = 'history';
-
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const req = indexedDB.open(DB_NAME, 2);
-                req.onupgradeneeded = (ev) => {
-                    const db = ev.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
-                        store.createIndex('level', 'level', { unique: false });
-                    }
-                };
-                req.onsuccess = (ev) => { db = ev.target.result; resolve(db); };
-                req.onerror = (ev) => reject(ev.target.error);
-            });
-        }
-
-        async function saveHistory(level, charging) {
-            try {
-                if (!db) await openDB();
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                const entry = { timestamp: Date.now(), level: Math.round(level), charging };
-                store.put(entry);
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = resolve;
-                    tx.onerror = (e) => reject(e.target.error);
-                });
-            } catch (e) { console.warn('DB save error', e); }
-        }
-
-        async function getHistory(limit = 20) {
-            try {
-                if (!db) await openDB();
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const index = store.index('level');
-                const data = await new Promise((resolve, reject) => {
-                    const result = [];
-                    const cursor = store.openCursor(null, 'prev');
-                    cursor.onsuccess = (e) => {
-                        const cur = e.target.result;
-                        if (cur && result.length < limit) {
-                            result.push(cur.value);
-                            cur.continue();
-                        } else {
-                            resolve(result);
-                        }
-                    };
-                    cursor.onerror = (e) => reject(e.target.error);
-                });
-                return data;
-            } catch (e) { console.warn('getHistory error', e); return []; }
-        }
-
-        async function clearHistory() {
-            if (!db) await openDB();
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            store.clear();
-            await new Promise((resolve, reject) => {
-                tx.oncomplete = resolve;
-                tx.onerror = (e) => reject(e.target.error);
-            });
-        }
-
-        // ---- update UI dengan data baterai ----
-        function updateUI(level, charging, chargingTime, dischargingTime) {
-            const levelInt = Math.round(level * 100);
-            levelDisplay.textContent = levelInt;
-            // status
-            if (charging) {
-                statusBadge.textContent = '⚡ sedang mengisi';
-                statusBadge.className = 'status-badge charging';
-            } else {
-                statusBadge.textContent = '🔋 menggunakan baterai';
-                statusBadge.className = 'status-badge';
-            }
-            // waktu
-            if (charging && chargingTime !== Infinity && chargingTime > 0) {
-                const mins = Math.floor(chargingTime / 60);
-                const secs = Math.floor(chargingTime % 60);
-                chargeTimeSpan.textContent = `${mins}m ${secs}s`;
-            } else {
-                chargeTimeSpan.textContent = charging ? '⏳ menghitung...' : '--';
-            }
-            if (!charging && dischargingTime !== Infinity && dischargingTime > 0) {
-                const mins = Math.floor(dischargingTime / 60);
-                const secs = Math.floor(dischargingTime % 60);
-                dischargeTimeSpan.textContent = `${mins}m ${secs}s`;
-                estTimeLeft.textContent = `${mins}m ${secs}s`;
-            } else {
-                dischargeTimeSpan.textContent = '--';
-                estTimeLeft.textContent = '--';
-            }
-
-            // estimasi konsumsi rata-rata (simulasi cerdas)
-            const avg = (100 - levelInt) / 6; 
-            avgConsumption.textContent = avg.toFixed(1) + '%/jam';
-
-            // tips kontekstual
-            if (charging) {
-                tipText.textContent = '🔌 Sedang mengisi: sambungkan ke charger cepat jika tersedia.';
-            } else if (levelInt < 20) {
-                tipText.textContent = '⚠️ Baterai kritis! Aktifkan mode hemat & redupkan layar.';
-            } else if (levelInt < 50) {
-                tipText.textContent = '📉 Konsumsi sedang. Matikan GPS & Bluetooth jika tidak perlu.';
-            } else {
-                tipText.textContent = '✅ Baterai sehat. Pertahankan suhu optimal untuk umur panjang.';
-            }
-            // update grafik dengan data baru (push shift)
-            const chartData = batteryChart.data.datasets[0].data;
-            chartData.push(levelInt);
-            if (chartData.length > 15) chartData.shift();
-            batteryChart.update();
-
-            // simpan ke IndexedDB
-            saveHistory(levelInt, charging);
-            updateHistoryCount();
-        }
-
-        async function updateHistoryCount() {
-            const history = await getHistory(50);
-            historyCountSpan.textContent = history.length;
-        }
-
-        // ---- Battery API dengan aggressive polling ----
-        let battery = null;
-        async function initBattery() {
-            try {
-                if (!navigator.getBattery) {
-                    throw new Error('Battery API tidak didukung');
-                }
-                battery = await navigator.getBattery();
-                // update pertama
-                updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-
-                // event listener
-                battery.addEventListener('levelchange', () => {
-                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-                });
-                battery.addEventListener('chargingchange', () => {
-                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-                });
-                battery.addEventListener('chargingtimechange', () => {
-                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-                });
-                battery.addEventListener('dischargingtimechange', () => {
-                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-                });
-
-                // polling agresif setiap 15 detik untuk pembaruan ekstra
-                setInterval(() => {
-                    if (battery) {
-                        updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-                    }
-                }, 15000);
-            } catch (e) {
-                console.warn('Battery API error:', e);
-                levelDisplay.textContent = '--';
-                statusBadge.textContent = '⚠️ API tidak tersedia';
-                tipText.textContent = 'Gunakan browser modern dengan Battery API.';
-            }
-        }
-
-        // ---- Notification API ----
-        async function triggerNotification() {
-            if (!('Notification' in window)) {
-                alert('Notifikasi tidak didukung di browser ini.');
-                return;
-            }
-            if (Notification.permission === 'granted') {
-                new Notification('🔋 NeuralBattery', {
-                    body: `Level baterai saat ini: ${levelDisplay.textContent}%`,
-                    icon: '🔋'
-                });
-            } else if (Notification.permission === 'denied') {
-                alert('Izin notifikasi ditolak. Aktifkan di pengaturan browser.');
-            } else {
-                const perm = await Notification.requestPermission();
-                if (perm === 'granted') {
-                    new Notification('✅ Notifikasi diaktifkan!', { body: 'Siap memantau baterai.' });
-                }
-            }
-        }
-
-        // ---- reset history ----
-        async function resetHistory() {
-            if (confirm('Hapus semua histori baterai?')) {
-                await clearHistory();
-                updateHistoryCount();
-                // reset chart ke default
-                batteryChart.data.datasets[0].data = [72, 68, 61, 53, 44, 38, 32];
-                batteryChart.update();
-                tipText.textContent = '🔄 Histori direset. Mulai pencatatan baru.';
-            }
-        }
-
-        // ---- waktu realtime ----
-        function updateClock() {
-            const d = new Date();
-            timeDisplay.textContent = d.toLocaleTimeString('id-ID', { hour12: false });
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // ---- inisialisasi ----
-        window.addEventListener('load', async () => {
-            await openDB();
-            await updateHistoryCount();
-            initBattery();
-
-            // ambil histori untuk grafik awal (opsional)
-            const history = await getHistory(12);
-            if (history.length > 2) {
-                const levels = history.map(h => h.level).reverse();
-                const chartData = batteryChart.data.datasets[0].data;
-                // ambil 7 terakhir
-                const last7 = levels.slice(-7);
-                if (last7.length === 7) {
-                    batteryChart.data.datasets[0].data = last7;
-                    batteryChart.update();
-                }
-            }
+    function getHistoryCount() {
+      return openDB().then(d => {
+        return new Promise((resolve, reject) => {
+          const tx = d.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.count();
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
         });
+      });
+    }
 
-        // ---- event binding ----
-        document.getElementById('resetHistoryBtn').addEventListener('click', resetHistory);
-        document.getElementById('notifTestBtn').addEventListener('click', triggerNotification);
-
-        // juga update saat kembali ke tab (agresif)
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && battery) {
-                updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+    function getLastHistory(limit = 20) {
+      return openDB().then(d => {
+        return new Promise((resolve, reject) => {
+          const tx = d.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.openCursor(null, 'prev');
+          const results = [];
+          let count = 0;
+          req.onsuccess = (ev) => {
+            const cursor = ev.target.result;
+            if (cursor && count < limit) {
+              results.push(cursor.value);
+              count++;
+              cursor.continue();
+            } else {
+              resolve(results.reverse());
             }
+          };
+          req.onerror = () => reject(req.error);
         });
+      });
+    }
 
-        // Interval tambahan untuk update chart dan history count
-        setInterval(() => {
-            if (battery) {
-                updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
-            }
-            updateHistoryCount();
-        }, 8000);
+    // ---- Chart.js ----
+    const ctx = document.getElementById('batteryChart').getContext('2d');
+    let chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Level baterai %',
+          data: [],
+          borderColor: '#f97316',
+          backgroundColor: 'rgba(251, 146, 60, 0.15)',
+          borderWidth: 3,
+          pointBackgroundColor: '#fbbf24',
+          pointBorderColor: '#fff',
+          pointRadius: 4,
+          tension: 0.2,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: 'rgba(30,25,20,0.8)', titleColor: '#fbbf24' }
+        },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 20 } },
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }
+        },
+        interaction: { intersect: false, mode: 'index' }
+      }
+    });
 
-        console.log('⚡ NeuralBattery siap — futuristik & agresif');
-    })();
+    // update chart dari histori
+    async function refreshChart() {
+      try {
+        const history = await getLastHistory(20);
+        const labels = history.map((_, idx) => `T-${history.length - idx}`);
+        const data = history.map(h => Math.round(h.level * 100));
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update();
+        const count = await getHistoryCount();
+        historyCount.innerText = count;
+      } catch (e) { console.warn('chart update error', e); }
+    }
+
+    // ---- notifikasi ----
+    async function requestNotifPermission() {
+      if (!('Notification' in window)) {
+        notifMessage.innerText = 'Tidak support';
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        notifMessage.innerText = 'Izin diberikan ✅';
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        notifMessage.innerText = 'Izin ditolak';
+        return;
+      }
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        notifMessage.innerText = 'Notifikasi aktif!';
+        // kirim test
+        new Notification('⚡ NeoBattery siap', { body: 'Peringatan baterai akan dikirim.', icon: '🔋' });
+      } else {
+        notifMessage.innerText = 'Izin diperlukan';
+      }
+    }
+    document.getElementById('notifBtn').addEventListener('click', requestNotifPermission);
+
+    // kirim notifikasi jika level rendah ( < 20% )
+    function sendLowBatteryNotif(level) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      if (level < 0.2) {
+        new Notification('⚠️ Baterai rendah', { body: `Level ${Math.round(level*100)}%. Segera charge.`, icon: '🔋' });
+      } else if (level > 0.85 && navigator.getBattery) {
+        // notifikasi hampir penuh (opsional)
+        new Notification('🔋 Baterai hampir penuh', { body: `Level ${Math.round(level*100)}%`, icon: '🔋' });
+      }
+    }
+
+    // ---- tips kontekstual ----
+    function updateTips(level, charging) {
+      let msg = '';
+      if (charging) {
+        if (level < 0.3) msg = '⚡ Isi daya cepat: hindari penggunaan berat saat charging.';
+        else if (level < 0.7) msg = '🔋 Pengisian stabil. Jaga suhu baterai tidak terlalu panas.';
+        else msg = '✅ Hampir penuh! Cabut charger di 100% untuk menjaga umur baterai.';
+      } else {
+        if (level < 0.15) msg = '🚨 Baterai kritis! Aktifkan mode hemat segera.';
+        else if (level < 0.35) msg = '📉 Kurangi kecerahan & matikan GPS untuk hemat daya.';
+        else if (level < 0.6) msg = '⚖️ Konsumsi normal. Tutup aplikasi yang tidak digunakan.';
+        else msg = '👍 Baterai sehat. Pertahankan pola penggunaan ini.';
+      }
+      tipText.innerText = msg;
+    }
+
+    // ---- update UI dari Battery API ----
+    async function updateBatteryUI(battery) {
+      const level = battery.level; // 0..1
+      const charging = battery.charging;
+      const chargingTime = battery.chargingTime;
+      const dischargingTime = battery.dischargingTime;
+
+      // stat
+      battLevel.innerText = `${Math.round(level * 100)}%`;
+      battStatus.innerText = charging ? '🔌 Mengisi' : '🔋 Memakai';
+      if (charging && chargingTime !== Infinity && chargingTime > 0) {
+        const mins = Math.ceil(chargingTime / 60);
+        chargeTime.innerText = `${mins} mnt`;
+      } else if (charging) {
+        chargeTime.innerText = '~ menghitung';
+      } else {
+        chargeTime.innerText = '--';
+      }
+
+      if (!charging && dischargingTime !== Infinity && dischargingTime > 0) {
+        const mins = Math.ceil(dischargingTime / 60);
+        dischargeTime.innerText = `${mins} mnt`;
+      } else if (!charging) {
+        dischargeTime.innerText = '~ menghitung';
+      } else {
+        dischargeTime.innerText = '--';
+      }
+
+      // tips
+      updateTips(level, charging);
+
+      // simpan ke indexedDB
+      const entry = { level, charging, timestamp: Date.now() };
+      await saveHistory(entry);
+
+      // refresh chart & count
+      await refreshChart();
+
+      // notifikasi peringatan
+      sendLowBatteryNotif(level);
+
+      // notif box info
+      if (level < 0.2 && !charging) {
+        notifMessage.innerText = '⚠️ Baterai rendah!';
+      } else if (charging && level > 0.9) {
+        notifMessage.innerText = '🔋 Hampir penuh';
+      } else {
+        notifMessage.innerText = charging ? '⚡ Mengisi daya' : '📊 Memantau';
+      }
+    }
+
+    // ---- main loop: ambil baterai & update ----
+    async function batteryLoop() {
+      try {
+        if (!navigator.getBattery) {
+          battStatus.innerText = 'Tidak support';
+          return;
+        }
+        const battery = await navigator.getBattery();
+        // update pertama
+        await updateBatteryUI(battery);
+        // event listener
+        battery.addEventListener('levelchange', () => updateBatteryUI(battery));
+        battery.addEventListener('chargingchange', () => updateBatteryUI(battery));
+        battery.addEventListener('chargingtimechange', () => updateBatteryUI(battery));
+        battery.addEventListener('dischargingtimechange', () => updateBatteryUI(battery));
+
+        // interval tambahan (real-time) setiap 30 detik refresh chart & count
+        setInterval(async () => {
+          try {
+            const bat = await navigator.getBattery();
+            await updateBatteryUI(bat);
+          } catch (e) {}
+        }, 30000);
+
+        // request notifikasi di awal
+        if (Notification.permission === 'default') {
+          // minta izin pasif
+          setTimeout(() => requestNotifPermission(), 2000);
+        }
+      } catch (err) {
+        battStatus.innerText = 'Error';
+        console.warn(err);
+      }
+    }
+
+    // inisialisasi
+    batteryLoop();
+
+    // load histori awal
+    refreshChart();
+
+    // request izin notifikasi via tombol sudah di atas
+
+    // fungsi tambahan: jika tidak ada data, tampilkan contoh dummy (agar grafik tidak kosong)
+    setTimeout(async () => {
+      try {
+        const count = await getHistoryCount();
+        if (count === 0) {
+          // seed dummy
+          for (let i = 0; i < 6; i++) {
+            const lvl = 0.3 + (i * 0.1) + Math.random() * 0.05;
+            await saveHistory({ level: Math.min(lvl, 0.95), charging: false, timestamp: Date.now() - (60000 * (6-i)) });
+          }
+          await refreshChart();
+        }
+      } catch (_) {}
+    }, 800);
+
+  })();
 </script>
 </body>
 </html>
