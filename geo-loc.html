@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live GPS Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --card: rgba(12, 18, 32, 0.92);
+            --card-solid: #0c1220;
+            --border: rgba(0, 229, 160, 0.15);
+            --accent: #00e5a0;
+            --accent-dim: rgba(0, 229, 160, 0.15);
+            --accent-glow: rgba(0, 229, 160, 0.4);
+            --warn: #ff6b4a;
+            --info: #4ac2ff;
+            --fg: #e8f0f2;
+            --muted: #6b7f99;
+            --radius: 14px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow: hidden;
+            height: 100dvh;
+            width: 100vw;
+            position: relative;
+        }
+
+        /* Peta penuh layar */
+        #map {
+            width: 100%;
+            height: 100dvh;
+            z-index: 1;
+        }
+
+        /* Override gaya default Leaflet */
+        .leaflet-control-zoom { display: none !important; }
+        .leaflet-control-attribution {
+            background: var(--card) !important;
+            color: var(--muted) !important;
+            font-size: 9px !important;
+            border-radius: 8px 0 0 0 !important;
+            backdrop-filter: blur(10px);
+            padding: 2px 8px !important;
+        }
+        .leaflet-control-attribution a { color: var(--accent) !important; }
+
+        /* Panel info atas */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(180deg, rgba(10,14,23,0.95) 0%, rgba(10,14,23,0.7) 70%, transparent 100%);
+            pointer-events: none;
+        }
+        .top-bar > * { pointer-events: auto; }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(20px);
+            white-space: nowrap;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--warn);
+            flex-shrink: 0;
+        }
+        .status-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow), 0 0 20px var(--accent-dim);
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.7; }
+        }
+
+        .top-spacer { flex: 1; }
+
+        /* Tombol aksi */
+        .action-btn {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            backdrop-filter: blur(20px);
+            transition: all 0.2s;
+        }
+        .action-btn:active {
+            transform: scale(0.9);
+            background: var(--accent-dim);
+            border-color: var(--accent);
+        }
+
+        /* Panel info bawah */
+        .bottom-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 0 10px 14px;
+            pointer-events: none;
+        }
+        .bottom-panel > * { pointer-events: auto; }
+
+        .info-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(30px);
+            overflow: hidden;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        }
+
+        .info-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+        }
+        .info-card-header .label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+        }
+        .info-card-header .chevron {
+            color: var(--muted);
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        .info-card-header .chevron.collapsed { transform: rotate(180deg); }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+            padding: 1px;
+            transition: max-height 0.4s ease, opacity 0.3s;
+            max-height: 500px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .info-grid.hidden {
+            max-height: 0;
+            opacity: 0;
+            padding: 0 1px;
+        }
+
+        .info-cell {
+            background: var(--card-solid);
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .info-cell .cell-label {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .info-cell .cell-label i { font-size: 9px; }
+        .info-cell .cell-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--fg);
+            line-height: 1.2;
+        }
+        .info-cell .cell-value.accent { color: var(--accent); }
+        .info-cell .cell-value.warn { color: var(--warn); }
+        .info-cell .cell-value.info { color: var(--info); }
+        .info-cell .cell-unit {
+            font-size: 9px;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        /* Bar kontrol kanan */
+        .right-controls {
+            position: fixed;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .right-controls .action-btn {
+            width: 42px;
+            height: 42px;
+            font-size: 15px;
+        }
+
+        /* Kompas */
+        .compass-widget {
+            position: fixed;
+            top: 70px;
+            right: 12px;
+            z-index: 1000;
+            width: 52px;
+            height: 52px;
+        }
+        .compass-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .compass-needle {
+            width: 3px;
+            height: 22px;
+            position: absolute;
+            transform-origin: center bottom;
+            bottom: 50%;
+            left: calc(50% - 1.5px);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .compass-needle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 12px solid var(--warn);
+        }
+        .compass-needle::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 10px solid var(--muted);
+        }
+        .compass-center {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--fg);
+            z-index: 2;
+            position: absolute;
+        }
+        .compass-n {
+            position: absolute;
+            top: 4px;
+            font-size: 8px;
+            font-weight: 800;
+            color: var(--warn);
+            letter-spacing: 0.5px;
+        }
+
+        /* Layer picker */
+        .layer-picker {
+            position: fixed;
+            bottom: 220px;
+            right: 12px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            opacity: 0;
+            transform: translateX(20px);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .layer-picker.visible {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+        .layer-option {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+            backdrop-filter: blur(20px);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .layer-option.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .layer-option:active { transform: scale(0.95); }
+
+        /* Marker kustom */
+        .gps-marker {
+            position: relative;
+            width: 22px;
+            height: 22px;
+        }
+        .gps-marker-core {
+            width: 22px;
+            height: 22px;
+            background: var(--accent);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.4);
+            position: relative;
+            z-index: 3;
+        }
+        .gps-marker-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            margin: -25px 0 0 -25px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            opacity: 0;
+            z-index: 2;
+            animation: marker-ping 2s ease-out infinite;
+        }
+        .gps-marker-ring:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes marker-ping {
+            0% { transform: scale(0.4); opacity: 0.7; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        /* Direction arrow pada marker */
+        .direction-arrow {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 10px solid var(--accent);
+            z-index: 4;
+            transition: transform 0.3s;
+            filter: drop-shadow(0 0 4px var(--accent-glow));
+        }
+
+        /* Toast notifikasi */
+        .toast {
+            position: fixed;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            z-index: 2000;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 8px 18px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast i { color: var(--accent); }
+
+        /* Speed gauge mini */
+        .speed-gauge {
+            position: fixed;
+            bottom: 225px;
+            left: 14px;
+            z-index: 1000;
+            width: 72px;
+            height: 72px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .speed-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .speed-label {
+            font-size: 7px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            transition: opacity 0.6s, visibility 0.6s;
+        }
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loading-spinner {
+            width: 44px;
+            height: 44px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        /* Responsif */
+        @media (min-width: 600px) {
+            .info-grid { grid-template-columns: repeat(6, 1fr); }
+            .bottom-panel { padding: 0 20px 20px; }
+            .speed-gauge { width: 86px; height: 86px; }
+            .speed-value { font-size: 24px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .gps-marker-ring, .status-dot.active, .loading-spinner { animation: none; }
+            * { transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Menginisialisasi GPS...</div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toastMsg"></span></div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="status-badge">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Mencari sinyal GPS...</span>
+        </div>
+        <div class="top-spacer"></div>
+        <div class="action-btn" id="btnCopy" title="Salin koordinat" aria-label="Salin koordinat">
+            <i class="fas fa-copy"></i>
+        </div>
+        <div class="action-btn" id="btnShare" title="Bagikan lokasi" aria-label="Bagikan lokasi">
+            <i class="fas fa-share-nodes"></i>
+        </div>
+    </div>
+
+    <!-- Kompas -->
+    <div class="compass-widget">
+        <div class="compass-ring">
+            <div class="compass-n">N</div>
+            <div class="compass-needle" id="compassNeedle"></div>
+            <div class="compass-center"></div>
+        </div>
+    </div>
+
+    <!-- Speed Gauge -->
+    <div class="speed-gauge">
+        <div class="speed-value" id="speedGauge">0</div>
+        <div class="speed-label">km/h</div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="right-controls">
+        <div class="action-btn" id="btnCenter" title="Kembali ke lokasi" aria-label="Kembali ke lokasi">
+            <i class="fas fa-crosshairs"></i>
+        </div>
+        <div class="action-btn" id="btnZoomIn" title="Perbesar" aria-label="Perbesar">
+            <i class="fas fa-plus"></i>
+        </div>
+        <div class="action-btn" id="btnZoomOut" title="Perkecil" aria-label="Perkecil">
+            <i class="fas fa-minus"></i>
+        </div>
+        <div class="action-btn" id="btnLayer" title="Ganti peta" aria-label="Ganti peta">
+            <i class="fas fa-layer-group"></i>
+        </div>
+        <div class="action-btn" id="btnTrail" title="Jejak perjalanan" aria-label="Jejak perjalanan">
+            <i class="fas fa-route"></i>
+        </div>
+    </div>
+
+    <!-- Layer Picker -->
+    <div class="layer-picker" id="layerPicker">
+        <div class="layer-option active" data-layer="street"><i class="fas fa-road"></i> Jalan</div>
+        <div class="layer-option" data-layer="satellite"><i class="fas fa-satellite"></i> Satelit</div>
+        <div class="layer-option" data-layer="dark"><i class="fas fa-moon"></i> Gelap</div>
+        <div class="layer-option" data-layer="terrain"><i class="fas fa-mountain"></i> Terrain</div>
+    </div>
+
+    <!-- Peta -->
+    <div id="map"></div>
+
+    <!-- Bottom Info Panel -->
+    <div class="bottom-panel">
+        <div class="info-card">
+            <div class="info-card-header" id="infoCardToggle" role="button" tabindex="0" aria-label="Buka/tutup panel info">
+                <span class="label">Data GPS Real-time</span>
+                <i class="fas fa-chevron-down chevron" id="chevronIcon"></i>
+            </div>
+            <div class="info-grid" id="infoGrid">
+                <div class="info-cell">
+                    <div class="cell-label"><i class="fas fa-arrows-up-down"></i> Lintang</div>
+                    <div class="cell-value accent" id="valLat">--</div>
+                    <div class="cell-unit">derajat</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label"><i class="fas fa-arrows-left-right"></i> Bujur</div>
+                    <div class="cell-value accent" id="valLng">--</div>
+                    <div class="cell-unit">derajat</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label"><i class="fas fa-bullseye"></i> Akurasi</div>
+                    <div class="cell-value" id="valAccuracy">--</div>
+                    <div class="cell-unit">meter</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label"><i class="fas fa-gauge-high"></i> Kecepatan</div>
+                    <div class="cell-value info" id="valSpeed">--</div>
+                    <div class="cell-unit">km/h</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label"><i class="fas fa-mountain-sun"></i> Ketinggian</div>
+                    <div class="cell-value" id="valAlt">--</div>
+                    <div class="cell-unit">mdpl</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label"><i class="fas fa-compass"></i> Arah</div>
+                    <div class="cell-value" id="valHeading">--</div>
+                    <div class="cell-unit">derajat</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // === State ===
+        let map, marker, accuracyCircle, trailLine;
+        let currentLayer = 'street';
+        let trailEnabled = false;
+        let trailPoints = [];
+        let watchId = null;
+        let isGPSActive = false;
+        let panelCollapsed = false;
+        let layerPickerVisible = false;
+        let lastPosition = null;
+        let tileLayers = {};
+
+        // === Elemen DOM ===
+        const $ = id => document.getElementById(id);
+        const statusDot = $('statusDot');
+        const statusText = $('statusText');
+        const valLat = $('valLat');
+        const valLng = $('valLng');
+        const valAccuracy = $('valAccuracy');
+        const valSpeed = $('valSpeed');
+        const valAlt = $('valAlt');
+        const valHeading = $('valHeading');
+        const speedGauge = $('speedGauge');
+        const compassNeedle = $('compassNeedle');
+        const loadingOverlay = $('loadingOverlay');
+        const toast = $('toast');
+        const toastMsg = $('toastMsg');
+        const infoGrid = $('infoGrid');
+        const chevronIcon = $('chevronIcon');
+        const layerPicker = $('layerPicker');
+
+        // === Tile Layers HQ ===
+        tileLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        });
+        tileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: '&copy; Esri'
+        });
+        tileLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            attribution: '&copy; CartoDB'
+        });
+        tileLayers.terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: '&copy; OpenTopoMap'
+        });
+
+        // === Inisialisasi Peta ===
+        function initMap() {
+            // Posisi default: Jakarta
+            map = L.map('map', {
+                center: [-6.2088, 106.8456],
+                zoom: 16,
+                zoomControl: false,
+                attributionControl: true
+            });
+
+            tileLayers.street.addTo(map);
+
+            // Buat marker kustom
+            const markerIcon = L.divIcon({
+                className: '',
+                html: `<div class="gps-marker">
+                    <div class="gps-marker-ring"></div>
+                    <div class="gps-marker-ring"></div>
+                    <div class="direction-arrow" id="dirArrow"></div>
+                    <div class="gps-marker-core"></div>
+                </div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
+            });
+
+            marker = L.marker([-6.2088, 106.8456], {
+                icon: markerIcon,
+                zIndexOffset: 1000
+            }).addTo(map);
+
+            // Lingkaran akurasi
+            accuracyCircle = L.circle([-6.2088, 106.8456], {
+                radius: 50,
+                color: '#00e5a0',
+                fillColor: '#00e5a0',
+                fillOpacity: 0.08,
+                weight: 1,
+                opacity: 0.3
+            }).addTo(map);
+
+            // Garis jejak
+            trailLine = L.polyline([], {
+                color: '#00e5a0',
+                weight: 3,
+                opacity: 0.7,
+                smoothFactor: 1,
+                dashArray: '8, 6'
+            });
+        }
+
+        // === Ganti Layer Peta ===
+        function switchLayer(name) {
+            if (!tileLayers[name] || name === currentLayer) return;
+            map.removeLayer(tileLayers[currentLayer]);
+            tileLayers[name].addTo(map);
+            currentLayer = name;
+
+            // Update UI
+            document.querySelectorAll('.layer-option').forEach(el => {
+                el.classList.toggle('active', el.dataset.layer === name);
+            });
+
+            showToast(`Peta: ${name.charAt(0).toUpperCase() + name.slice(1)}`);
+        }
+
+        // === Mulai GPS ===
+        function startGPS() {
+            if (!navigator.geolocation) {
+                statusText.textContent = 'GPS tidak didukung';
+                showToast('Perangkat tidak mendukung GPS');
+                loadingOverlay.classList.add('hidden');
+                return;
+            }
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                onPositionSuccess,
+                onPositionError,
+                options
+            );
+        }
+
+        // === Handle Posisi Berhasil ===
+        function onPositionSuccess(pos) {
+            if (!isGPSActive) {
+                isGPSActive = true;
+                statusDot.classList.add('active');
+                statusText.textContent = 'GPS Aktif';
+                loadingOverlay.classList.add('hidden');
+                showToast('Sinyal GPS ditemukan');
+            }
+
+            const { latitude, longitude, accuracy, altitude, speed, heading } = pos.coords;
+            const timestamp = pos.timestamp;
+
+            // Update marker
+            const latlng = [latitude, longitude];
+            marker.setLatLng(latlng);
+
+            // Update lingkaran akurasi
+            accuracyCircle.setLatLng(latlng);
+            accuracyCircle.setRadius(Math.max(1, accuracy));
+
+            // Warna akurasi
+            if (accuracy <= 10) {
+                accuracyCircle.setStyle({ color: '#00e5a0', fillColor: '#00e5a0', fillOpacity: 0.1 });
+            } else if (accuracy <= 30) {
+                accuracyCircle.setStyle({ color: '#ffc44a', fillColor: '#ffc44a', fillOpacity: 0.08 });
+            } else {
+                accuracyCircle.setStyle({ color: '#ff6b4a', fillColor: '#ff6b4a', fillOpacity: 0.06 });
+            }
+
+            // Update arah panah
+            const dirArrow = document.getElementById('dirArrow');
+            if (heading !== null && !isNaN(heading) && speed !== null && speed > 0.5) {
+                dirArrow.style.transform = `translateX(-50%) rotate(${heading}deg)`;
+                dirArrow.style.opacity = '1';
+            } else {
+                dirArrow.style.opacity = '0.3';
+            }
+
+            // Update info panel
+            valLat.textContent = latitude.toFixed(6);
+            valLng.textContent = longitude.toFixed(6);
+            valAccuracy.textContent = accuracy.toFixed(1);
+            valAccuracy.className = 'cell-value' + (accuracy <= 10 ? ' accent' : accuracy <= 30 ? '' : ' warn');
+
+            // Kecepatan: m/s -> km/h
+            const speedKmh = speed !== null && !isNaN(speed) ? (speed * 3.6) : 0;
+            valSpeed.textContent = speedKmh.toFixed(1);
+            speedGauge.textContent = Math.round(speedKmh);
+
+            // Ketinggian
+            valAlt.textContent = altitude !== null && !isNaN(altitude) ? altitude.toFixed(1) : '--';
+
+            // Arah
+            if (heading !== null && !isNaN(heading)) {
+                valHeading.textContent = heading.toFixed(0) + '°';
+                // Update kompas
+                compassNeedle.style.transform = `rotate(${-heading}deg)`;
+            } else {
+                valHeading.textContent = '--';
+            }
+
+            // Jejak perjalanan
+            if (trailEnabled) {
+                // Hanya tambah jika jarak dari titik terakhir > 3 meter
+                if (trailPoints.length === 0 || getDistance(trailPoints[trailPoints.length - 1], latlng) > 3) {
+                    trailPoints.push(latlng);
+                    trailLine.setLatLngs(trailPoints);
+                }
+            }
+
+            // Simpan posisi terakhir
+            lastPosition = { lat: latitude, lng: longitude, speed: speedKmh, heading, timestamp };
+        }
+
+        // === Handle Error GPS ===
+        function onPositionError(err) {
+            console.warn('GPS Error:', err.message);
+            if (err.code === 1) {
+                statusText.textContent = 'Izin GPS ditolak';
+                showToast('Aktifkan izin lokasi di pengaturan');
+            } else if (err.code === 2) {
+                statusText.textContent = 'Sinyal tidak tersedia';
+            } else if (err.code === 3) {
+                statusText.textContent = 'GPS timeout';
+            }
+            loadingOverlay.classList.add('hidden');
+        }
+
+        // === Hitung jarak 2 titik (meter) ===
+        function getDistance(a, b) {
+            const R = 6371000;
+            const dLat = (b[0] - a[0]) * Math.PI / 180;
+            const dLng = (b[1] - a[1]) * Math.PI / 180;
+            const s = Math.sin(dLat/2)**2 + Math.cos(a[0]*Math.PI/180) * Math.cos(b[0]*Math.PI/180) * Math.sin(dLng/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+        }
+
+        // === Toast ===
+        let toastTimer;
+        function showToast(msg) {
+            toastMsg.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // === Salin Koordinat ===
+        function copyCoords() {
+            if (!lastPosition) { showToast('Menunggu data GPS...'); return; }
+            const text = `${lastPosition.lat.toFixed(6)}, ${lastPosition.lng.toFixed(6)}`;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => showToast('Koordinat disalin'));
+            } else {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('Koordinat disalin');
+            }
+        }
+
+        // === Bagikan Lokasi ===
+        function shareLocation() {
+            if (!lastPosition) { showToast('Menunggu data GPS...'); return; }
+            const url = `https://www.google.com/maps?q=${lastPosition.lat},${lastPosition.lng}`;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Lokasi Saya',
+                    text: `Lat: ${lastPosition.lat.toFixed(6)}, Lng: ${lastPosition.lng.toFixed(6)}`,
+                    url: url
+                }).catch(() => {});
+            } else {
+                window.open(url, '_blank');
+                showToast('Membuka Google Maps');
+            }
+        }
+
+        // === Event Listeners ===
+        function bindEvents() {
+            // Kembali ke lokasi
+            $('btnCenter').addEventListener('click', () => {
+                if (lastPosition) {
+                    map.flyTo([lastPosition.lat, lastPosition.lng], Math.max(map.getZoom(), 16), { duration: 0.8 });
+                    showToast('Kembali ke lokasi');
+                } else {
+                    showToast('Menunggu data GPS...');
+                }
+            });
+
+            // Zoom
+            $('btnZoomIn').addEventListener('click', () => map.zoomIn());
+            $('btnZoomOut').addEventListener('click', () => map.zoomOut());
+
+            // Salin
+            $('btnCopy').addEventListener('click', copyCoords);
+
+            // Bagikan
+            $('btnShare').addEventListener('click', shareLocation);
+
+            // Layer picker toggle
+            $('btnLayer').addEventListener('click', () => {
+                layerPickerVisible = !layerPickerVisible;
+                layerPicker.classList.toggle('visible', layerPickerVisible);
+            });
+
+            // Pilih layer
+            document.querySelectorAll('.layer-option').forEach(el => {
+                el.addEventListener('click', () => {
+                    switchLayer(el.dataset.layer);
+                    layerPickerVisible = false;
+                    layerPicker.classList.remove('visible');
+                });
+            });
+
+            // Toggle jejak
+            $('btnTrail').addEventListener('click', () => {
+                trailEnabled = !trailEnabled;
+                if (trailEnabled) {
+                    trailLine.addTo(map);
+                    trailPoints = [];
+                    if (lastPosition) {
+                        trailPoints.push([lastPosition.lat, lastPosition.lng]);
+                        trailLine.setLatLngs(trailPoints);
+                    }
+                    $('btnTrail').style.borderColor = 'var(--accent)';
+                    $('btnTrail').style.color = 'var(--accent)';
+                    showToast('Jejak perjalanan aktif');
+                } else {
+                    map.removeLayer(trailLine);
+                    trailPoints = [];
+                    $('btnTrail').style.borderColor = '';
+                    $('btnTrail').style.color = '';
+                    showToast('Jejak perjalanan nonaktif');
+                }
+            });
+
+            // Toggle panel info
+            $('infoCardToggle').addEventListener('click', () => {
+                panelCollapsed = !panelCollapsed;
+                infoGrid.classList.toggle('hidden', panelCollapsed);
+                chevronIcon.classList.toggle('collapsed', panelCollapsed);
+            });
+            $('infoCardToggle').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    $('infoCardToggle').click();
+                }
+            });
+
+            // Tutup layer picker saat tap peta
+            map.on('click', () => {
+                if (layerPickerVisible) {
+                    layerPickerVisible = false;
+                    layerPicker.classList.remove('visible');
+                }
+            });
+        }
+
+        // === Orientasi perangkat untuk kompas tambahan ===
+        function initDeviceOrientation() {
+            if (window.DeviceOrientationEvent) {
+                // Untuk iOS 13+ perlu izin, tapi kita fokus Android
+                window.addEventListener('deviceorientation', (e) => {
+                    // Hanya gunakan jika GPS heading tidak tersedia
+                    if (e.alpha !== null && (!lastPosition || lastPosition.heading === null)) {
+                        compassNeedle.style.transform = `rotate(${-e.alpha}deg)`;
+                    }
+                });
+            }
+        }
+
+        // === Wake Lock agar layar tidak mati ===
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    const lock = await navigator.wakeLock.request('screen');
+                    lock.addEventListener('release', () => {});
+                }
+            } catch (e) {
+                // Biasanya perlu interaksi user dulu
+            }
+        }
+
+        // Re-request wake lock setelah interaksi
+        document.addEventListener('click', () => requestWakeLock(), { once: true });
+        document.addEventListener('touchstart', () => requestWakeLock(), { once: true });
+
+        // === Inisialisasi ===
+        function init() {
+            initMap();
+            bindEvents();
+            initDeviceOrientation();
+            startGPS();
+
+            // Fallback: sembunyikan loading setelah 8 detik
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+                if (!isGPSActive) {
+                    statusText.textContent = 'Menunggu sinyal...';
+                    showToast('Pastikan GPS aktif & izin lokasi diberikan');
+                }
+            }, 8000);
+        }
+
+        // Jalankan saat DOM siap
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+    </script>
+</body>
+</html>
