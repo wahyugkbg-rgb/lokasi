@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS Speedometer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #050a12;
+            --card: rgba(8, 18, 38, 0.85);
+            --accent: #00e5ff;
+            --green: #00ff88;
+            --amber: #ffab00;
+            --red: #ff1744;
+            --text: #dce6f0;
+            --muted: #4a6080;
+            --border: rgba(0, 229, 255, 0.12);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background: var(--bg); color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        #app {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            position: relative; overflow: hidden;
+        }
+        /* Grid latar */
+        #app::before {
+            content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+            background-image:
+                linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+            background-size: 36px 36px;
+        }
+        /* Garis scan */
+        .scanlines {
+            position: absolute; inset: 0; pointer-events: none; z-index: 100;
+            background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+        }
+        /* Orb cahaya */
+        .glow-orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.12; pointer-events: none; z-index: 0; }
+        .orb-1 { width: 320px; height: 320px; background: var(--accent); top: -120px; left: -100px; animation: floatOrb 9s ease-in-out infinite; }
+        .orb-2 { width: 260px; height: 260px; background: var(--green); bottom: -90px; right: -80px; animation: floatOrb 11s ease-in-out infinite reverse; }
+        .orb-3 { width: 180px; height: 180px; background: #7c4dff; top: 40%; left: 60%; animation: floatOrb 13s ease-in-out infinite 2s; opacity: 0.06; }
+        @keyframes floatOrb { 0%,100%{transform:translate(0,0)} 50%{transform:translate(25px,18px)} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+        /* Status bar */
+        #statusBar {
+            position: relative; z-index: 10; display: flex; align-items: center;
+            justify-content: space-between; padding: 6px 14px; font-size: 10px;
+            color: var(--muted); border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .st-group { display: flex; align-items: center; gap: 6px; }
+        .gps-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); transition: all 0.5s; flex-shrink: 0; }
+        .gps-dot.acquiring { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
+        .gps-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        #clock { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 2px; }
+
+        /* Area gauge */
+        #gaugeArea { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; min-height: 0; padding: 4px; }
+        #gaugeCanvas { display: block; }
+
+        /* Panel data */
+        #dataPanels { position: relative; z-index: 10; padding: 0 10px; flex-shrink: 0; }
+        .data-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .data-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 6px 8px; text-align: center; backdrop-filter: blur(6px);
+        }
+        .data-label { font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-bottom: 2px; }
+        .data-value { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); transition: color 0.3s; }
+        .data-unit { font-size: 8px; color: var(--muted); margin-top: 1px; }
+
+        /* Lokasi & kompas */
+        #locationInfo { position: relative; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 6px 12px; flex-shrink: 0; }
+        .compass-mini {
+            width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--border);
+            background: var(--card); display: flex; align-items: center; justify-content: center;
+            position: relative; flex-shrink: 0; backdrop-filter: blur(6px);
+        }
+        .compass-needle { width: 2px; height: 18px; position: relative; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); }
+        .compass-needle::before {
+            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            border-left: 4px solid transparent; border-right: 4px solid transparent;
+            border-bottom: 10px solid var(--red);
+        }
+        .compass-needle::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            border-left: 3px solid transparent; border-right: 3px solid transparent;
+            border-top: 8px solid rgba(255,255,255,0.25);
+        }
+        .compass-dir {
+            position: absolute; bottom: -1px; font-size: 7px;
+            font-family: 'Orbitron', sans-serif; color: var(--accent); letter-spacing: 1px;
+        }
+        .address-box {
+            flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 7px 10px; font-size: 10px; color: var(--muted);
+            display: flex; align-items: center; gap: 7px; overflow: hidden;
+            white-space: nowrap; text-overflow: ellipsis; backdrop-filter: blur(6px);
+        }
+        .address-box i { color: var(--accent); flex-shrink: 0; font-size: 11px; }
+        .address-box span { overflow: hidden; text-overflow: ellipsis; }
+
+        /* Info ekstra */
+        #extraInfo {
+            position: relative; z-index: 10; display: flex; justify-content: center;
+            gap: 20px; padding: 3px 14px; font-size: 9px; color: var(--muted); flex-shrink: 0;
+        }
+        #extraInfo i { color: var(--accent); margin-right: 3px; font-size: 8px; }
+
+        /* Tombol kontrol */
+        #controls { position: relative; z-index: 10; display: flex; justify-content: center; gap: 8px; padding: 8px 14px 14px; flex-shrink: 0; }
+        #controls button {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 10px;
+            padding: 7px 12px; cursor: pointer; display: flex; align-items: center;
+            gap: 5px; transition: all 0.15s; backdrop-filter: blur(6px);
+        }
+        #controls button:active { background: rgba(0,229,255,0.1); border-color: var(--accent); transform: scale(0.95); }
+        #controls button i { color: var(--accent); font-size: 11px; }
+
+        /* Overlay GPS */
+        #gpsOverlay {
+            position: absolute; inset: 0; background: rgba(5,10,18,0.97);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 200; text-align: center; padding: 40px; transition: opacity 0.6s, visibility 0.6s;
+        }
+        #gpsOverlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .overlay-icon { font-size: 52px; color: var(--accent); margin-bottom: 24px; animation: pulse 2s ease-in-out infinite; }
+        .overlay-title { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 8px; letter-spacing: 3px; }
+        .overlay-sub { color: var(--muted); font-size: 12px; line-height: 1.7; max-width: 300px; }
+        .btn-activate {
+            margin-top: 32px; background: linear-gradient(135deg, var(--accent), #00b8d4); border: none;
+            border-radius: 12px; color: #050a12; font-family: 'Orbitron', sans-serif;
+            font-size: 13px; font-weight: 700; padding: 14px 44px; cursor: pointer;
+            letter-spacing: 2px; transition: all 0.2s; box-shadow: 0 0 30px rgba(0,229,255,0.25);
+        }
+        .btn-activate:active { transform: scale(0.96); }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 50px; left: 50%; transform: translateX(-50%) translateY(-16px);
+            background: var(--card); border: 1px solid var(--accent); border-radius: 8px;
+            padding: 8px 18px; font-size: 11px; color: var(--accent); z-index: 300;
+            opacity: 0; transition: all 0.3s; pointer-events: none; backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0,229,255,0.15);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Indikator sumber kecepatan */
+        .speed-source {
+            font-size: 7px; letter-spacing: 2px; color: var(--muted);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+        @media (max-height: 600px) {
+            .data-card { padding: 4px 6px; }
+            .data-value { font-size: 13px; }
+            #locationInfo { padding: 4px 10px; }
+            #controls { padding: 6px 10px 10px; }
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="scanlines"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+
+    <!-- Status Bar -->
+    <header id="statusBar">
+        <div class="st-group">
+            <div class="gps-dot" id="gpsDot"></div>
+            <span id="gpsStatusText">Nonaktif</span>
+        </div>
+        <span id="clock">00:00:00</span>
+        <div class="st-group">
+            <span id="batteryIcon"><i class="fas fa-battery-full"></i></span>
+            <span id="accText">--</span>
+        </div>
+    </header>
+
+    <!-- Gauge -->
+    <div id="gaugeArea">
+        <canvas id="gaugeCanvas"></canvas>
+    </div>
+
+    <!-- Data Trip/ODO/Max -->
+    <section id="dataPanels">
+        <div class="data-row">
+            <div class="data-card">
+                <div class="data-label">TRIP</div>
+                <div class="data-value" id="tripVal">0.000</div>
+                <div class="data-unit" id="tripUnit">km</div>
+            </div>
+            <div class="data-card">
+                <div class="data-label">ODOMETER</div>
+                <div class="data-value" id="odoVal">0.0</div>
+                <div class="data-unit" id="odoUnit">km</div>
+            </div>
+            <div class="data-card">
+                <div class="data-label">MAX</div>
+                <div class="data-value" id="maxVal">0</div>
+                <div class="data-unit" id="maxUnit">km/h</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Kompas & Alamat -->
+    <section id="locationInfo">
+        <div class="compass-mini">
+            <div class="compass-needle" id="compassNeedle"></div>
+            <span class="compass-dir" id="compassDir">--</span>
+        </div>
+        <div class="address-box">
+            <i class="fas fa-map-marker-alt"></i>
+            <span id="addressText">Menunggu GPS...</span>
+        </div>
+    </section>
+
+    <!-- Info Tambahan -->
+    <section id="extraInfo">
+        <span><i class="fas fa-mountain"></i> <span id="altText">-- m</span></span>
+        <span><i class="fas fa-crosshairs"></i> <span id="coordText">-, -</span></span>
+        <span><i class="fas fa-satellite"></i> <span id="satText">--</span></span>
+    </section>
+
+    <!-- Kontrol -->
+    <footer id="controls">
+        <button id="btnReset" aria-label="Reset trip meter"><i class="fas fa-undo"></i> Reset Trip</button>
+        <button id="btnUnit" aria-label="Ganti satuan kecepatan"><i class="fas fa-exchange-alt"></i> <span id="unitLabel">km/h</span></button>
+        <button id="btnFS" aria-label="Layar penuh"><i class="fas fa-expand" id="fsIcon"></i></button>
+    </footer>
+
+    <!-- Overlay GPS -->
+    <div id="gpsOverlay">
+        <div class="overlay-icon"><i class="fas fa-satellite-dish"></i></div>
+        <div class="overlay-title">NEXUS</div>
+        <div class="overlay-sub">
+            Speedometer digital real-time berbasis GPS.<br>
+            Izinkan akses lokasi presisi tinggi untuk akurasi maksimal.
+        </div>
+        <button class="btn-activate" id="btnActivate">AKTIFKAN GPS</button>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================
+   STATE & KONFIGURASI
+   ============================================ */
+const S = {
+    speed: 0,           // Kecepatan mentah (km/h)
+    displaySpeed: 0,    // Kecepatan tampilan (smoothed)
+    maxSpeed: 0,
+    tripDist: 0,        // km
+    odometer: 0,        // km
+    heading: 0,
+    altitude: 0,
+    lat: 0, lon: 0,
+    accuracy: 0,
+    gpsState: 'off',    // off | acquiring | active | error
+    unit: 'kmh',        // kmh | mph
+    address: 'Menunggu GPS...',
+    speedSource: '--',  // GPS | CALC
+    lastPos: null,
+    lastTs: null,
+    watchId: null,
+    wakeLock: null,
+    sweepPhase: 'idle', // idle | sweeping | ready
+    sweepStart: 0,
+    addressTimer: null,
+    lastAddrLat: null,
+    lastAddrLon: null,
+    orientationHeading: null,
+    batteryLevel: null,
+    batteryCharging: false
+};
+
+const MAX_GAUGE_KMH = 240;
+const MAX_GAUGE_MPH = 150;
+const SMOOTH_ALPHA = 0.35;
+const MAX_ACCEL = 120; // km/h per detik - filter glitch GPS
+
+/* ============================================
+   UTILITAS
+   ============================================ */
+// Formula Haversine - jarak dalam meter
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Bearing antara dua titik
+function calcBearing(lat1, lon1, lat2, lon2) {
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+    const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+              Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+    return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+// Konversi satuan
+function toDisplay(kmh) {
+    return S.unit === 'mph' ? kmh * 0.621371 : kmh;
+}
+function toDisplayDist(km) {
+    return S.unit === 'mph' ? km * 0.621371 : km;
+}
+function unitSpeed() { return S.unit === 'mph' ? 'mph' : 'km/h'; }
+function unitDist() { return S.unit === 'mph' ? 'mi' : 'km'; }
+function maxGauge() { return S.unit === 'mph' ? MAX_GAUGE_MPH : MAX_GAUGE_KMH; }
+
+// Arah kompas
+function compassDir(deg) {
+    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    return dirs[Math.round(deg / 22.5) % 16];
+}
+
+// Toast notifikasi
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ============================================
+   PERSISTENSI (localStorage)
+   ============================================ */
+function loadData() {
+    S.odometer = parseFloat(localStorage.getItem('nx_odo')) || 0;
+    S.unit = localStorage.getItem('nx_unit') || 'kmh';
+    S.maxSpeed = parseFloat(localStorage.getItem('nx_max')) || 0;
+}
+function saveData() {
+    localStorage.setItem('nx_odo', S.odometer.toFixed(3));
+    localStorage.setItem('nx_unit', S.unit);
+    localStorage.setItem('nx_max', S.maxSpeed.toFixed(1));
+}
+
+/* ============================================
+   GPS - GEOLOCATION API (AGRESIF)
+   ============================================ */
+function startGPS() {
+    if (!navigator.geolocation) {
+        S.gpsState = 'error';
+        updateGPSStatus();
+        showToast('Geolocation tidak didukung perangkat ini');
+        return;
+    }
+
+    S.gpsState = 'acquiring';
+    updateGPSStatus();
+
+    // Opsi agresif: presisi tinggi, tanpa cache, timeout panjang
+    const opts = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 };
+
+    // Pertama, dapatkan posisi sekali untuk trigger permission prompt
+    navigator.geolocation.getCurrentPosition(
+        pos => { onPosition(pos); startWatch(opts); },
+        err => { onPositionError(err); startWatch(opts); },
+        opts
+    );
+}
+
+function startWatch(opts) {
+    // Jika sudah ada watch, hapus dulu
+    if (S.watchId !== null) navigator.geolocation.clearWatch(S.watchId);
+
+    S.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, opts);
+}
+
+function onPosition(pos) {
+    const { latitude, longitude, accuracy, altitude, speed, heading } = pos.coords;
+    const timestamp = pos.timestamp;
+
+    // Cek akurasi - tandai aktif jika cukup baik
+    if (accuracy <= 30) S.gpsState = 'active';
+    else if (accuracy <= 100) S.gpsState = 'acquiring';
+    else S.gpsState = 'acquiring';
+
+    S.lat = latitude;
+    S.lon = longitude;
+    S.accuracy = accuracy;
+    S.altitude = altitude || 0;
+
+    // Hitung kecepatan
+    let rawSpeedKmh = 0;
+    let source = 'CALC';
+
+    // Prioritas 1: Gunakan speed dari GPS jika valid
+    if (speed !== null && speed >= 0 && isFinite(speed)) {
+        rawSpeedKmh = speed * 3.6; // m/s -> km/h
+        source = 'GPS';
+    }
+
+    // Prioritas 2: Hitung dari delta posisi
+    if (S.lastPos && S.lastTs) {
+        const dt = (timestamp - S.lastTs) / 1000; // detik
+        if (dt > 0.1 && dt < 10) { // Filter interval tidak wajar
+            const dist = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+            const calcSpeed = (dist / dt) * 3.6; // km/h
+            // Gunakan kalkulasi jika GPS speed tidak tersedia atau kurang reliabel
+            if (speed === null || speed < 0 || !isFinite(speed)) {
+                rawSpeedKmh = calcSpeed;
+                source = 'CALC';
+            } else {
+                // Rata-rata keduanya jika dekat, jika jauh ambil yang lebih masuk akal
+                const diff = Math.abs(rawSpeedKmh - calcSpeed);
+                if (diff < 20) {
+                    rawSpeedKmh = (rawSpeedKmh + calcSpeed) / 2;
+                    source = 'GPS+CALC';
+                }
+            }
+        }
+    }
+
+    S.speedSource = source;
+
+    // Filter: cek akselerasi tidak wajar (glitch GPS)
+    if (S.lastTs) {
+        const dt = (timestamp - S.lastTs) / 1000;
+        if (dt > 0) {
+            const accel = Math.abs(rawSpeedKmh - S.speed) / dt;
+            if (accel > MAX_ACCEL) rawSpeedKmh = S.speed; // Tolak, pertahankan nilai lama
+        }
+    }
+
+    // Filter negatif & tidak wajar
+    if (rawSpeedKmh < 0) rawSpeedKmh = 0;
+    if (rawSpeedKmh > 400) rawSpeedKmh = 0;
+
+    S.speed = rawSpeedKmh;
+
+    // Smoothing eksponensial
+    S.displaySpeed = SMOOTH_ALPHA * S.speed + (1 - SMOOTH_ALPHA) * S.displaySpeed;
+    if (S.displaySpeed < 0.5 && S.speed < 0.5) S.displaySpeed = 0;
+
+    // Update max speed
+    if (S.displaySpeed > S.maxSpeed) {
+        S.maxSpeed = S.displaySpeed;
+    }
+
+    // Hitung jarak untuk trip & odometer
+    if (S.lastPos && S.lastTs) {
+        const distKm = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude) / 1000;
+        // Hanya tambahkan jika jarak masuk akal (< 0.5 km per update, untuk hindari lompatan GPS)
+        if (distKm < 0.5 && distKm > 0.00001) {
+            S.tripDist += distKm;
+            S.odometer += distKm;
+        }
+    }
+
+    // Update heading
+    if (heading !== null && heading >= 0 && isFinite(heading)) {
+        S.heading = heading;
+    } else if (S.lastPos) {
+        const dist = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+        if (dist > 3) { // Minimal 3 meter perubahan untuk hitung bearing
+            S.heading = calcBearing(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+        }
+    }
+
+    S.lastPos = { lat: latitude, lon: longitude };
+    S.lastTs = timestamp;
+
+    // Update alamat (dengan debounce)
+    debouncedReverseGeocode(latitude, longitude);
+
+    // Simpan data
+    saveData();
+    updateGPSStatus();
+}
+
+function onPositionError(err) {
+    console.warn('GPS Error:', err.message, err.code);
+    if (err.code === 1) {
+        S.gpsState = 'error';
+        updateGPSStatus();
+        showToast('Izin lokasi ditolak. Aktifkan di pengaturan browser.');
+    } else if (err.code === 2) {
+        S.gpsState = 'acquiring';
+        updateGPSStatus();
+    } else if (err.code === 3) {
+        // Timeout - coba lagi
+        S.gpsState = 'acquiring';
+        updateGPSStatus();
+    }
+}
+
+function updateGPSStatus() {
+    const dot = document.getElementById('gpsDot');
+    const txt = document.getElementById('gpsStatusText');
+    dot.className = 'gps-dot';
+    if (S.gpsState === 'active') {
+        dot.classList.add('active');
+        txt.textContent = 'GPS Aktif';
+        txt.style.color = 'var(--green)';
+    } else if (S.gpsState === 'acquiring') {
+        dot.classList.add('acquiring');
+        txt.textContent = 'Mencari GPS...';
+        txt.style.color = 'var(--amber)';
+    } else if (S.gpsState === 'error') {
+        txt.textContent = 'GPS Error';
+        txt.style.color = 'var(--red)';
+    } else {
+        txt.textContent = 'Nonaktif';
+        txt.style.color = 'var(--muted)';
+    }
+}
+
+/* ============================================
+   REVERSE GEOCODE (Nominatim - Debounced)
+   ============================================ */
+function debouncedReverseGeocode(lat, lon) {
+    // Debounce: hanya update jika pindah > 30m atau belum pernah
+    if (S.lastAddrLat !== null) {
+        const d = haversine(S.lastAddrLat, S.lastAddrLon, lat, lon);
+        if (d < 30) return;
+    }
+    clearTimeout(S.addressTimer);
+    S.addressTimer = setTimeout(() => reverseGeocode(lat, lon), 3000);
+}
+
+async function reverseGeocode(lat, lon) {
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=17&addressdetails=1&accept-language=id`,
+            { headers: { 'User-Agent': 'NexusSpeedometer/1.0' } }
+        );
+        const data = await res.json();
+        if (data.display_name) {
+            // Ambil bagian penting saja
+            const parts = data.display_name.split(',');
+            const short = parts.slice(0, Math.min(3, parts.length)).join(',').trim();
+            S.address = short;
+            S.lastAddrLat = lat;
+            S.lastAddrLon = lon;
+        }
+    } catch (e) {
+        // Gagal silently
+    }
+}
+
+/* ============================================
+   WAKE LOCK API - Layar tetap menyala
+   ============================================ */
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            S.wakeLock = await navigator.wakeLock.request('screen');
+            S.wakeLock.addEventListener('release', () => { S.wakeLock = null; });
+            console.log('Wake Lock aktif');
+        }
+    } catch (e) {
+        console.warn('Wake Lock gagal:', e);
+    }
+}
+
+// Re-request wake lock saat halaman kembali visible
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !S.wakeLock) {
+        requestWakeLock();
+    }
+});
+
+/* ============================================
+   BATTERY API
+   ============================================ */
+async function initBattery() {
+    try {
+        if ('getBattery' in navigator) {
+            const bat = await navigator.getBattery();
+            S.batteryLevel = bat.level;
+            S.batteryCharging = bat.charging;
+            bat.addEventListener('levelchange', () => { S.batteryLevel = bat.level; });
+            bat.addEventListener('chargingchange', () => { S.batteryCharging = bat.charging; });
+        }
+    } catch (e) { /* Tidak tersedia */ }
+}
+
+function getBatteryHTML() {
+    if (S.batteryLevel === null) return '<i class="fas fa-battery-full"></i>';
+    const pct = Math.round(S.batteryLevel * 100);
+    let icon = 'fa-battery-full';
+    if (pct <= 10) icon = 'fa-battery-empty';
+    else if (pct <= 25) icon = 'fa-battery-quarter';
+    else if (pct <= 50) icon = 'fa-battery-half';
+    else if (pct <= 75) icon = 'fa-battery-three-quarters';
+    if (S.batteryCharging) icon = 'fa-bolt';
+    return `<i class="fas ${icon}"></i> ${pct}%`;
+}
+
+/* ============================================
+   DEVICE ORIENTATION API (Kompas tambahan)
+   ============================================ */
+function initDeviceOrientation() {
+    // Cek apakah perlu request permission (iOS 13+)
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS - perlu trigger dari user gesture, kita coba saat tombol aktifkan ditekan
+        DeviceOrientationEvent.requestPermission().then(resp => {
+            if (resp === 'granted') {
+                window.addEventListener('deviceorientation', onOrientation);
+            }
+        }).catch(() => {});
+    } else {
+        window.addEventListener('deviceorientation', onOrientation);
+    }
+}
+
+function onOrientation(e) {
+    // Gunakan heading dari device orientation sebagai pelengkap
+    if (e.webkitCompassHeading !== undefined) {
+        S.orientationHeading = e.webkitCompassHeading;
+    } else if (e.alpha !== null) {
+        // Android: alpha relative ke utara jika device non-tilted
+        S.orientationHeading = (360 - e.alpha) % 360;
+    }
+}
+
+/* ============================================
+   FULLSCREEN API
+   ============================================ */
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        // Coba juga lock landscape
+        try { screen.orientation.lock('any').catch(() => {}); } catch(e) {}
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+}
+
+document.addEventListener('fullscreenchange', () => {
+    const icon = document.getElementById('fsIcon');
+    icon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
+});
+
+/* ============================================
+   VIBRATION API - Peringatan kecepatan
+   ============================================ */
+let lastVibrateSpeed = 0;
+function checkSpeedVibrate() {
+    const thresholds = [60, 80, 100, 120, 140, 160, 180, 200];
+    for (const t of thresholds) {
+        if (S.displaySpeed >= t && lastVibrateSpeed < t) {
+            if (navigator.vibrate) navigator.vibrate(50);
+            break;
+        }
+    }
+    lastVibrateSpeed = Math.floor(S.displaySpeed);
+}
+
+/* ============================================
+   CANVAS - RENDERING SPEEDOMETER
+   ============================================ */
+let canvas, ctx, canvasSize, dpr;
+
+function setupCanvas() {
+    canvas = document.getElementById('gaugeCanvas');
+    const area = document.getElementById('gaugeArea');
+    const w = area.clientWidth - 8;
+    const h = area.clientHeight - 8;
+    canvasSize = Math.min(w, h, 560);
+    dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvasSize * dpr;
+    canvas.height = canvasSize * dpr;
+    canvas.style.width = canvasSize + 'px';
+    canvas.style.height = canvasSize + 'px';
+
+    ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+}
+
+function drawGauge() {
+    const size = canvasSize;
+    const cx = size / 2;
+    const cy = size / 2;
+    const R = size * 0.42; // Radius utama gauge
+
+    ctx.clearRect(0, 0, size, size);
+
+    const startA = Math.PI * 0.75;  // 135°
+    const endA = Math.PI * 2.25;    // 405°
+    const totalA = endA - startA;   // 270°
+    const mg = maxGauge();
+    const spd = Math.max(0, Math.min(S.displaySpeed, mg));
+    const spdKmh = S.displaySpeed; // Untuk penentuan warna (selalu dalam km/h)
+
+    // --- Latar belakang gauge (lingkaran dalam) ---
+    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.05);
+    bgGrad.addColorStop(0, 'rgba(10, 18, 35, 0.9)');
+    bgGrad.addColorStop(0.85, 'rgba(6, 12, 24, 0.95)');
+    bgGrad.addColorStop(1, 'rgba(4, 8, 16, 1)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.92, 0, Math.PI * 2);
+    ctx.fillStyle = bgGrad;
+    ctx.fill();
+
+    // --- Cincin luar dekoratif ---
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.95, startA, endA);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.06)';
+    ctx.lineWidth = size * 0.02;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
+
+    // --- Zona warna (belakang) ---
+    const zones = [
+        { end: 80, color: '#00ff88' },
+        { end: 120, color: '#ffab00' },
+        { end: 999, color: '#ff1744' }
+    ];
+    let zStart = 0;
+    zones.forEach(z => {
+        const zEnd = Math.min(z.end, mg);
+        const a1 = startA + (zStart / mg) * totalA;
+        const a2 = startA + (zEnd / mg) * totalA;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.88, a1, a2);
+        ctx.strokeStyle = z.color + '18';
+        ctx.lineWidth = size * 0.055;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+        zStart = zEnd;
+        if (zEnd >= mg) return;
+    });
+
+    // --- Arc kecepatan aktif (glow) ---
+    if (spd > 0.5) {
+        const spdAngle = startA + (spd / mg) * totalA;
+        let arcColor = '#00ff88';
+        if (spdKmh > 120) arcColor = '#ff1744';
+        else if (spdKmh > 80) arcColor = '#ffab00';
+
+        // Glow luar
+        ctx.save();
+        ctx.shadowColor = arcColor;
+        ctx.shadowBlur = 25;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.88, startA, spdAngle);
+        ctx.strokeStyle = arcColor + '60';
+        ctx.lineWidth = size * 0.04;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+
+        // Arc utama
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.88, startA, spdAngle);
+        ctx.strokeStyle = arcColor;
+        ctx.lineWidth = size * 0.018;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
+
+    // --- Tick marks ---
+    const majorStep = S.unit === 'mph' ? 20 : 20;
+    const midStep = 10;
+    const minorStep = 5;
+
+    for (let i = 0; i <= mg; i += minorStep) {
+        const angle = startA + (i / mg) * totalA;
+        const isMajor = i % majorStep === 0;
+        const isMid = i % midStep === 0 && !isMajor;
+        const outerR = R * 0.82;
+        const innerR = isMajor ? R * 0.68 : isMid ? R * 0.73 : R * 0.77;
+
+        ctx.beginPath();
+        ctx.moveTo(cx + innerR * Math.cos(angle), cy + innerR * Math.sin(angle));
+        ctx.lineTo(cx + outerR * Math.cos(angle), cy + outerR * Math.sin(angle));
+        ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.85)' : isMid ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = isMajor ? 2.5 : isMid ? 1.5 : 0.8;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Label angka pada major tick
+        if (isMajor) {
+            const numR = R * 0.58;
+            const displayNum = S.unit === 'mph' ? Math.round(i * 0.621371) : i;
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = `600 ${Math.max(9, size * 0.032)}px Orbitron`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(displayNum.toString(), cx + numR * Math.cos(angle), cy + numR * Math.sin(angle));
+        }
+    }
+
+    // --- Jarum (Needle) ---
+    const needleAngle = startA + (spd / mg) * totalA;
+    const needleLen = R * 0.72;
+    const tailLen = R * 0.15;
+
+    let needleColor = '#00ff88';
+    if (spdKmh > 120) needleColor = '#ff1744';
+    else if (spdKmh > 80) needleColor = '#ffab00';
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(needleAngle);
+
+    // Glow jarum
+    ctx.shadowColor = needleColor;
+    ctx.shadowBlur = 18;
+
+    // Badan jarum (tapered)
+    ctx.beginPath();
+    ctx.moveTo(-tailLen, -2.5);
+    ctx.lineTo(needleLen - 8, -0.8);
+    ctx.lineTo(needleLen, 0);
+    ctx.lineTo(needleLen - 8, 0.8);
+    ctx.lineTo(-tailLen, 2.5);
+    ctx.closePath();
+    ctx.fillStyle = needleColor;
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // --- Hub tengah ---
+    // Lingkaran luar
+    const hubGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.04);
+    hubGrad.addColorStop(0, '#1a2540');
+    hubGrad.addColorStop(0.7, '#0d1525');
+    hubGrad.addColorStop(1, '#080e1a');
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.04, 0, Math.PI * 2);
+    ctx.fillStyle = hubGrad;
+    ctx.fill();
+    ctx.strokeStyle = needleColor + '80';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Titik kecil di pusat
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.012, 0, Math.PI * 2);
+    ctx.fillStyle = needleColor;
+    ctx.fill();
+
+    // --- Digital speed display di tengah ---
+    const dispSpd = toDisplay(S.displaySpeed);
+    const spdText = dispSpd < 10 ? dispSpd.toFixed(1) : Math.round(dispSpd).toString();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${Math.max(28, size * 0.16)}px Orbitron`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(spdText, cx, cy + size * 0.13);
+
+    // Unit label
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.7)';
+    ctx.font = `500 ${Math.max(9, size * 0.04)}px Orbitron`;
+    ctx.fillText(unitSpeed(), cx, cy + size * 0.22);
+
+    // Speed source indicator
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = `${Math.max(7, size * 0.025)}px 'Share Tech Mono'`;
+    ctx.fillText(S.speedSource, cx, cy + size * 0.28);
+
+    // --- Label merek di bawah gauge ---
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.15)';
+    ctx.font = `700 ${Math.max(8, size * 0.03)}px Orbitron`;
+    ctx.letterSpacing = '4px';
+    ctx.fillText('NEXUS', cx, cy + R * 0.55);
+
+    // --- Indikator akurasi GPS di kanan atas gauge ---
+    const accX = cx + R * 0.6;
+    const accY = cy - R * 0.55;
+    ctx.fillStyle = S.accuracy <= 10 ? '#00ff88' : S.accuracy <= 30 ? '#ffab00' : '#ff1744';
+    ctx.beginPath();
+    ctx.arc(accX, accY, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = `${Math.max(7, size * 0.023)}px 'Share Tech Mono'`;
+    ctx.textAlign = 'left';
+    ctx.fillText(S.accuracy > 0 ? `±${Math.round(S.accuracy)}m` : '--', accX + 7, accY + 3);
+}
+
+/* ============================================
+   UPDATE UI ELEMEN
+   ============================================ */
+function updateUI() {
+    // Jam
+    const now = new Date();
+    document.getElementById('clock').textContent =
+        now.getHours().toString().padStart(2,'0') + ':' +
+        now.getMinutes().toString().padStart(2,'0') + ':' +
+        now.getSeconds().toString().padStart(2,'0');
+
+    // Data panel
+    const tripD = toDisplayDist(S.tripDist);
+    const odoD = toDisplayDist(S.odometer);
+    const maxS = toDisplay(S.maxSpeed);
+
+    document.getElementById('tripVal').textContent = tripD < 100 ? tripD.toFixed(3) : tripD.toFixed(1);
+    document.getElementById('odoVal').textContent = odoD < 1000 ? odoD.toFixed(1) : odoD.toFixed(0);
+    document.getElementById('maxVal').textContent = Math.round(maxS).toString();
+
+    // Warna max speed
+    const maxEl = document.getElementById('maxVal');
+    const maxKmh = S.maxSpeed;
+    maxEl.style.color = maxKmh > 120 ? 'var(--red)' : maxKmh > 80 ? 'var(--amber)' : 'var(--text)';
+
+    document.getElementById('tripUnit').textContent = unitDist();
+    document.getElementById('odoUnit').textContent = unitDist();
+    document.getElementById('maxUnit').textContent = unitSpeed();
+    document.getElementById('unitLabel').textContent = unitSpeed();
+
+    // Kompas
+    const heading = S.heading;
+    document.getElementById('compassNeedle').style.transform = `rotate(${heading}deg)`;
+    document.getElementById('compassDir').textContent = compassDir(heading);
+
+    // Alamat
+    document.getElementById('addressText').textContent = S.address;
+
+    // Info ekstra
+    document.getElementById('altText').textContent = S.altitude > 0 ? `${Math.round(S.altitude)} m` : '-- m';
+    document.getElementById('coordText').textContent =
+        S.lat !== 0 ? `${S.lat.toFixed(5)}, ${S.lon.toFixed(5)}` : '-, -';
+
+    // Akurasi
+    document.getElementById('accText').textContent =
+        S.accuracy > 0 ? `±${Math.round(S.accuracy)}m` : '--';
+
+    // Battery
+    document.getElementById('batteryIcon').innerHTML = getBatteryHTML();
+}
+
+/* ============================================
+   ANIMASI SWEEP STARTUP
+   ============================================ */
+function startSweep() {
+    S.sweepPhase = 'sweeping';
+    S.sweepStart = performance.now();
+}
+
+function updateSweep(now) {
+    if (S.sweepPhase !== 'sweeping') return;
+    const elapsed = now - S.sweepStart;
+    const duration = 1800;
+    if (elapsed >= duration) {
+        S.sweepPhase = 'ready';
+        S.displaySpeed = 0;
+        return;
+    }
+    // Wave segitiga: 0 -> max -> 0
+    const t = elapsed / duration;
+    const wave = t < 0.5 ? t * 2 : 2 - t * 2;
+    // Easing
+    const eased = wave < 0.5 ? 2 * wave * wave : 1 - (-2 * wave + 2) ** 2 / 2;
+    S.displaySpeed = eased * maxGauge();
+}
+
+/* ============================================
+   LOOP UTAMA (requestAnimationFrame)
+   ============================================ */
+function mainLoop(timestamp) {
+    updateSweep(timestamp);
+
+    if (S.sweepPhase === 'ready') {
+        // Decelerasi halus saat kecepatan turun
+        if (S.displaySpeed > S.speed + 0.5) {
+            S.displaySpeed -= (S.displaySpeed - S.speed) * 0.08;
+            if (S.displaySpeed - S.speed < 0.3) S.displaySpeed = S.speed;
+        }
+        checkSpeedVibrate();
+    }
+
+    drawGauge();
+    updateUI();
+    requestAnimationFrame(mainLoop);
+}
+
+/* ============================================
+   EVENT HANDLERS
+   ============================================ */
+document.getElementById('btnActivate').addEventListener('click', async () => {
+    document.getElementById('gpsOverlay').classList.add('hidden');
+
+    // Request wake lock
+    await requestWakeLock();
+
+    // Coba request permission device orientation (iOS)
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const resp = await DeviceOrientationEvent.requestPermission();
+            if (resp === 'granted') window.addEventListener('deviceorientation', onOrientation);
+        } catch(e) {}
+    }
+
+    // Mulai GPS
+    startGPS();
+
+    // Animasi sweep
+    setTimeout(startSweep, 300);
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+    S.tripDist = 0;
+    S.maxSpeed = 0;
+    lastVibrateSpeed = 0;
+    saveData();
+    showToast('Trip & max speed direset');
+    // Vibrate konfirmasi
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+});
+
+document.getElementById('btnUnit').addEventListener('click', () => {
+    S.unit = S.unit === 'kmh' ? 'mph' : 'kmh';
+    saveData();
+    showToast(`Satuan: ${unitSpeed()}`);
+    if (navigator.vibrate) navigator.vibrate(30);
+});
+
+document.getElementById('btnFS').addEventListener('click', () => {
+    toggleFullscreen();
+    if (navigator.vibrate) navigator.vibrate(20);
+});
+
+// Resize handler
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { setupCanvas(); }, 150);
+});
+
+// Cegah zoom dan scroll di mobile
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+/* ============================================
+   INISIALISASI
+   ============================================ */
+function init() {
+    loadData();
+    initBattery();
+    initDeviceOrientation();
+    setupCanvas();
+
+    // Mulai render loop
+    requestAnimationFrame(mainLoop);
+}
+
+// Jalankan saat DOM siap
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+</script>
+</body>
+</html>
