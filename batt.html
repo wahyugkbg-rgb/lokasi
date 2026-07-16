@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BATTX — Battery Intelligence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{'cd':'#060b18','cc':'#0a1224','nc':'#00f5d4','nm':'#ff2d75','ny':'#ffe14d','nl':'#7bff00','no':'#ff8c00'},fontFamily:{'d':['Orbitron','sans-serif'],'b':['Space Grotesk','sans-serif']}}}}
+</script>
+<style>
+:root{--ring-color:#00f5d4;--glow-color:rgba(0,245,212,0.5)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Space Grotesk',sans-serif;background:#060b18;color:#e2e8f0;overflow-x:hidden;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,212,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,0.025) 1px,transparent 1px);background-size:48px 48px;z-index:0;pointer-events:none}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(6,11,24,0.85) 100%);pointer-events:none;z-index:1}
+#particleCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.scan-line{position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 10%,#00f5d4 50%,transparent 90%);z-index:2;animation:scanDown 6s linear infinite;opacity:0.2;pointer-events:none}
+@keyframes scanDown{0%{top:-2px}100%{top:100vh}}
+.card{background:rgba(10,18,36,0.85);border:1px solid rgba(0,245,212,0.08);border-radius:14px;backdrop-filter:blur(16px);transition:border-color .3s,box-shadow .3s}
+.card:hover{border-color:rgba(0,245,212,0.2);box-shadow:0 0 30px rgba(0,245,212,0.04)}
+.battery-card{position:relative;overflow:hidden}
+.battery-card::before{content:'';position:absolute;inset:-2px;border-radius:16px;background:conic-gradient(from var(--a,0deg),transparent 60%,var(--ring-color) 80%,transparent 100%);animation:rotBorder 3s linear infinite;z-index:-1;opacity:.5}
+@keyframes rotBorder{to{--a:360deg}}
+@property --a{syntax:'<angle>';initial-value:0deg;inherits:false}
+.stat-val{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.15rem;letter-spacing:.5px}
+@keyframes pulseGlow{0%,100%{filter:drop-shadow(0 0 8px var(--glow-color))}50%{filter:drop-shadow(0 0 20px var(--glow-color))}}
+.charging-pulse{animation:pulseGlow 2s ease-in-out infinite}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .5s ease-out both}
+.tip-card{border-left:3px solid var(--tip-color,#00f5d4);transition:transform .2s,box-shadow .2s}
+.tip-card:hover{transform:translateX(4px);box-shadow:0 0 20px color-mix(in srgb,var(--tip-color,#00f5d4) 20%,transparent)}
+#loader{transition:opacity .6s,visibility .6s}
+#loader.hidden{opacity:0;visibility:hidden}
+#app{transition:opacity .8s}
+.toast-enter{animation:toastIn .35s ease-out both}
+@keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast-exit{animation:toastOut .3s ease-in both}
+@keyframes toastOut{to{transform:translateX(120%);opacity:0}}
+.sim-badge{background:linear-gradient(135deg,#ff8c00,#ff2d75);padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.5px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,245,212,0.15);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,245,212,0.3)}
+@media(prefers-reduced-motion:reduce){.scan-line,.charging-pulse{animation:none}.battery-card::before{animation:none}*{transition-duration:0.01ms!important;animation-duration:0.01ms!important}}
+</style>
+</head>
+<body>
+<canvas id="particleCanvas"></canvas>
+<div class="scan-line"></div>
+
+<!-- Loader -->
+<div id="loader" class="fixed inset-0 z-50 flex items-center justify-center bg-cd">
+  <div class="text-center">
+    <div class="w-16 h-16 mx-auto border-2 border-nc/20 border-t-nc rounded-full animate-spin"></div>
+    <p class="font-d text-nc text-lg mt-5 tracking-widest">BATTX</p>
+    <p class="text-xs text-gray-500 mt-2 font-b" id="loaderMsg">Menginisialisasi sistem...</p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="relative z-10 min-h-screen opacity-0">
+  <!-- Header -->
+  <header class="border-b border-white/5 backdrop-blur-xl bg-cd/80 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-nc to-nl flex items-center justify-center shadow-lg shadow-nc/20">
+          <i class="fas fa-bolt text-cd text-sm"></i>
+        </div>
+        <h1 class="font-d text-base sm:text-lg font-bold tracking-widest">BATTX</h1>
+        <span class="text-[10px] font-b text-gray-500 border border-white/10 rounded px-1.5 py-0.5 hidden sm:inline">v2.0</span>
+        <span id="simBadge" class="sim-badge hidden">SIMULASI</span>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="btnSimToggle" class="hidden w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-ny hover:border-ny/30 transition-colors text-xs" title="Toggle Pengisian (Simulasi)"><i class="fas fa-plug"></i></button>
+        <button id="btnNotif" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-nc hover:border-nc/30 transition-colors text-xs" title="Aktifkan Notifikasi"><i class="fas fa-bell"></i></button>
+        <button id="btnClear" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-nm hover:border-nm/30 transition-colors text-xs" title="Hapus Histori"><i class="fas fa-trash-alt"></i></button>
+        <div id="statusDot" class="w-2 h-2 rounded-full bg-nc animate-pulse"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <!-- Hero: Ring + Stats -->
+    <section class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+      <!-- Battery Ring -->
+      <div class="lg:col-span-2 battery-card card p-6 flex flex-col items-center justify-center min-h-[340px]">
+        <div class="relative" id="ringWrap">
+          <svg id="batteryRing" viewBox="0 0 300 300" class="w-56 h-56 sm:w-64 sm:h-64">
+            <defs>
+              <filter id="rg" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <g id="ticks" transform="translate(150,150)"></g>
+            <circle cx="150" cy="150" r="120" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="10"/>
+            <circle id="pRing" cx="150" cy="150" r="120" fill="none" stroke="var(--ring-color)" stroke-width="10" stroke-linecap="round" stroke-dasharray="753.98" stroke-dashoffset="753.98" transform="rotate(-90 150 150)" filter="url(#rg)" style="transition:stroke-dashoffset .8s ease,stroke .5s"/>
+            <text id="rPct" x="150" y="142" text-anchor="middle" fill="white" font-family="Orbitron" font-size="54" font-weight="900">0</text>
+            <text x="150" y="170" text-anchor="middle" fill="#4a5578" font-family="Space Grotesk" font-size="11" letter-spacing="4">PERSEN</text>
+          </svg>
+          <div id="chargeInd" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+            <i class="fas fa-bolt text-ny text-xl drop-shadow-lg" style="animation:bounce 1.5s infinite"></i>
+          </div>
+        </div>
+        <p id="ringStatus" class="font-d text-xs tracking-[.25em] mt-3 text-gray-500">MENGAMBIL DATA</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div class="card p-4 fade-up" style="animation-delay:.1s">
+          <div class="text-[10px] text-gray-500 font-b tracking-wider mb-1.5">STATUS</div>
+          <div id="sStatus" class="stat-val text-nc">--</div>
+        </div>
+        <div class="card p-4 fade-up" style="animation-delay:.15s">
+          <div class="text-[10px] text-gray-500 font-b tracking-wider mb-1.5">WAKTU CHARGE</div>
+          <div id="sChargeT" class="stat-val">--:--</div>
+        </div>
+        <div class="card p-4 fade-up" style="animation-delay:.2s">
+          <div class="text-[10px] text-gray-500 font-b tracking-wider mb-1.5">SISA WAKTU</div>
+          <div id="sDischargeT" class="stat-val">--:--</div>
+        </div>
+        <div class="card p-4 fade-up" style="animation-delay:.25s">
+          <div class="text-[10px] text-gray-500 font-b tracking-wider mb-1.5">KONSUMSI</div>
+          <div id="sRate" class="stat-val">-- %/j</div>
+        </div>
+        <div class="card p-4 fade-up" style="animation-delay:.3s">
+          <div class="text-[10px] text-gray-500 font-b tracking-wider mb-1.5">SKOR KESEHATAN</div>
+          <div id="sHealth" class="stat-val text-nl">--/100</div>
+        </div>
+        <div class="card p-4 fade-up" style="animation-delay:.35s">
+          <div class="text-[10px] text-gray-500 font-b tracking-wider mb-1.5">SESI HARI INI</div>
+          <div id="sSessions" class="stat-val">0</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Chart -->
+    <section class="card p-5 sm:p-6 fade-up" style="animation-delay:.4s">
+      <div class="flex flex-wrap items-center justify-between mb-4 gap-2">
+        <h2 class="font-d text-xs font-bold tracking-[.2em]">POLA BATERAI HARI INI</h2>
+        <div class="flex gap-4 text-[11px] text-gray-500">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-[3px] rounded bg-nc"></span>Level</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-[3px] rounded bg-ny"></span>Mengisi</span>
+        </div>
+      </div>
+      <div class="h-56 sm:h-64"><canvas id="mainChart"></canvas></div>
+    </section>
+
+    <!-- Secondary Charts -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="card p-5 sm:p-6 fade-up" style="animation-delay:.45s">
+        <h2 class="font-d text-xs font-bold tracking-[.2em] mb-4">DURASI SESI PENGISIAN</h2>
+        <div class="h-48"><canvas id="sessChart"></canvas></div>
+      </div>
+      <div class="card p-5 sm:p-6 fade-up" style="animation-delay:.5s">
+        <h2 class="font-d text-xs font-bold tracking-[.2em] mb-4">DISTRIBUSI LEVEL HARI INI</h2>
+        <div class="h-48"><canvas id="distChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- Tips -->
+    <section class="fade-up" style="animation-delay:.55s">
+      <h2 class="font-d text-xs font-bold tracking-[.2em] mb-4">TIPS KONTEKSTUAL</h2>
+      <div id="tipsBox" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- History -->
+    <section class="card p-5 sm:p-6 fade-up" style="animation-delay:.6s">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-d text-xs font-bold tracking-[.2em]">HISTORI BATERAI</h2>
+        <span id="hCount" class="text-[11px] text-gray-500">0 catatan</span>
+      </div>
+      <div class="overflow-x-auto -mx-5 sm:-mx-6 px-5 sm:px-6">
+        <table class="w-full text-sm min-w-[520px]">
+          <thead>
+            <tr class="text-left text-[10px] text-gray-500 tracking-wider border-b border-white/5">
+              <th class="pb-2 pr-4 font-medium">WAKTU</th>
+              <th class="pb-2 pr-4 font-medium">LEVEL</th>
+              <th class="pb-2 pr-4 font-medium">STATUS</th>
+              <th class="pb-2 pr-4 font-medium">CHARGE TIME</th>
+              <th class="pb-2 font-medium">DISCHARGE TIME</th>
+            </tr>
+          </thead>
+          <tbody id="hBody" class="text-gray-300"></tbody>
+        </table>
+      </div>
+      <div id="hEmpty" class="hidden text-center py-10 text-gray-600 text-sm">
+        <i class="fas fa-database text-2xl mb-2 block"></i>Belum ada data histori
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/5 mt-6 py-5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between text-[11px] text-gray-600 gap-2">
+      <span>BATTX Battery Intelligence System</span>
+      <span>Powered by Battery Status API + Chart.js + IndexedDB</span>
+    </div>
+  </footer>
+</div>
+
+<!-- Toast Container -->
+<div id="toasts" class="fixed top-16 right-4 z-50 space-y-2 max-w-sm"></div>
+
+<script>
+/* =========================================
+   BATTX — Battery Intelligence System
+   Analisis pola pengisian & penggunaan baterai
+   ========================================= */
+
+// ── Konfigurasi ──
+const CFG = {
+  sampleMs: 15000,        // Sampling setiap 15 detik (agresif)
+  maxHistory: 2000,       // Maks data histori
+  notifLow: 20,
+  notifCritical: 10,
+  notifFull: 95,
+  circ: 2 * Math.PI * 120 // 753.98
+};
+
+// ── Warna berdasarkan level ──
+function levelColor(pct) {
+  if (pct > 80) return '#7bff00';
+  if (pct > 60) return '#00f5d4';
+  if (pct > 40) return '#ffe14d';
+  if (pct > 20) return '#ff8c00';
+  return '#ff2d75';
+}
+function levelColorAlpha(pct, a) {
+  const c = levelColor(pct);
+  const r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ── Format waktu ──
+function fmtTime(sec) {
+  if (!isFinite(sec) || sec <= 0) return '--:--';
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}j ${m}m` : `${m}m`;
+}
+function fmtClock(d) {
+  return d.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+function fmtShort(d) {
+  return d.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+}
+
+// ── Toast ──
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const colors = { info:'border-l-nc bg-nc/10', warning:'border-l-ny bg-ny/10', danger:'border-l-nm bg-nm/10', success:'border-l-nl bg-nl/10' };
+  const icons = { info:'fa-circle-info text-nc', warning:'fa-triangle-exclamation text-ny', danger:'fa-circle-exclamation text-nm', success:'fa-circle-check text-nl' };
+  const el = document.createElement('div');
+  el.className = `border-l-4 ${colors[type]||colors.info} backdrop-blur-xl rounded-r-xl px-4 py-3 text-sm text-white font-b toast-enter flex items-start gap-3`;
+  el.innerHTML = `<i class="fas ${icons[type]||icons.info} mt-0.5"></i><span>${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => { el.classList.replace('toast-enter','toast-exit'); setTimeout(() => el.remove(), 300); }, 4500);
+}
+
+// ═══════════════════════════════════════
+// IndexedDB — Penyimpanan Histori
+// ═══════════════════════════════════════
+const DB_NAME = 'BattXDB', DB_VER = 1;
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('readings')) {
+        const s = d.createObjectStore('readings', { keyPath:'id', autoIncrement:true });
+        s.createIndex('ts', 'timestamp');
+      }
+      if (!d.objectStoreNames.contains('sessions')) {
+        const s = d.createObjectStore('sessions', { keyPath:'id', autoIncrement:true });
+        s.createIndex('start', 'startTime');
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+function dbAdd(store, data) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).add(data);
+    tx.oncomplete = () => res();
+    tx.onerror = e => rej(e.target.error);
+  });
+}
+
+function dbGetAll(store, indexName, range) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const s = tx.objectStore(store);
+    let req;
+    if (indexName && range) req = s.index(indexName).openCursor(range);
+    else req = s.openCursor(null, 'prev');
+    const results = [];
+    req.onsuccess = e => {
+      const cur = e.target.result;
+      if (cur) { results.push(cur.value); cur.continue(); }
+      else res(results);
+    };
+    req.onerror = e => rej(e.target.error);
+  });
+}
+
+function dbClear(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).clear();
+    tx.oncomplete = () => res();
+    tx.onerror = e => rej(e.target.error);
+  });
+}
+
+function dbCount(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).count();
+    req.onsuccess = () => res(req.result);
+    req.onerror = e => rej(e.target.error);
+  });
+}
+
+// ═══════════════════════════════════════
+// Particle System — Background Atmosfer
+// ═══════════════════════════════════════
+let particles = [], pCanvas, pCtx, pAnim;
+const P_COUNT = 60;
+
+function initParticles() {
+  pCanvas = document.getElementById('particleCanvas');
+  pCtx = pCanvas.getContext('2d');
+  resizeParticles();
+  window.addEventListener('resize', resizeParticles);
+  for (let i = 0; i < P_COUNT; i++) {
+    particles.push({
+      x: Math.random() * pCanvas.width,
+      y: Math.random() * pCanvas.height,
+      r: Math.random() * 1.8 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      a: Math.random() * 0.4 + 0.1
+    });
+  }
+  animParticles();
+}
+
+function resizeParticles() {
+  pCanvas.width = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+}
+
+function animParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  const col = levelColor(currentLevel || 70);
+  const r = parseInt(col.slice(1,3),16), g = parseInt(col.slice(3,5),16), b = parseInt(col.slice(5,7),16);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = pCanvas.width;
+    if (p.x > pCanvas.width) p.x = 0;
+    if (p.y < 0) p.y = pCanvas.height;
+    if (p.y > pCanvas.height) p.y = 0;
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
+    pCtx.fillStyle = `rgba(${r},${g},${b},${p.a})`;
+    pCtx.fill();
+    // Glow
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, Math.max(0.1, p.r * 3), 0, Math.PI * 2);
+    pCtx.fillStyle = `rgba(${r},${g},${b},${p.a * 0.15})`;
+    pCtx.fill();
+  });
+  pAnim = requestAnimationFrame(animParticles);
+}
+
+// ═══════════════════════════════════════
+// Tick Marks pada Ring SVG
+// ═══════════════════════════════════════
+function genTicks() {
+  const g = document.getElementById('ticks');
+  let html = '';
+  for (let i = 0; i < 60; i++) {
+    const angle = (i * 6 - 90) * Math.PI / 180;
+    const major = i % 5 === 0;
+    const r1 = major ? 106 : 108, r2 = 113;
+    const x1 = Math.cos(angle) * r1, y1 = Math.sin(angle) * r1;
+    const x2 = Math.cos(angle) * r2, y2 = Math.sin(angle) * r2;
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,${major ? 0.12 : 0.04})" stroke-width="${major ? 1.5 : 0.8}"/>`;
+  }
+  g.innerHTML = html;
+}
+
+// ═══════════════════════════════════════
+// Chart.js — Visualisasi Grafik
+// ═══════════════════════════════════════
+let mainChart, sessChart, distChart;
+
+function initCharts() {
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 400 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(10,18,36,0.95)',
+        titleFont: { family: 'Space Grotesk', size: 11 },
+        bodyFont: { family: 'Orbitron', size: 12 },
+        borderColor: 'rgba(0,245,212,0.2)',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8
+      }
+    }
+  };
+
+  // ── Grafik Utama: Pola Baterai ──
+  const mCtx = document.getElementById('mainChart').getContext('2d');
+  const grad1 = mCtx.createLinearGradient(0, 0, 0, 260);
+  grad1.addColorStop(0, 'rgba(0,245,212,0.25)');
+  grad1.addColorStop(1, 'rgba(0,245,212,0.0)');
+
+  mainChart = new Chart(mCtx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'Level Baterai',
+          data: [],
+          borderColor: '#00f5d4',
+          backgroundColor: grad1,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#00f5d4',
+          borderWidth: 2,
+          segment: {
+            borderColor: ctx => {
+              const y0 = ctx.p0.parsed.y, y1 = ctx.p1.parsed.y;
+              if (y1 > y0 + 0.3) return '#ffe14d';
+              if (y1 < y0 - 0.3) return '#ff2d75';
+              return '#00f5d4';
+            }
+          }
+        },
+        {
+          label: 'Mengisi',
+          data: [],
+          borderColor: 'rgba(255,225,77,0.4)',
+          backgroundColor: 'rgba(255,225,77,0.06)',
+          fill: true,
+          stepped: 'before',
+          pointRadius: 0,
+          borderWidth: 1,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#4a5578', font: { family: 'Space Grotesk', size: 10 }, maxTicksLimit: 12 }
+        },
+        y: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#4a5578', font: { family: 'Space Grotesk', size: 10 }, callback: v => v + '%' }
+        },
+        y1: {
+          display: false, min: -5, max: 105
+        }
+      }
+    }
+  });
+
+  // ── Grafik Sesi Pengisian ──
+  const sCtx = document.getElementById('sessChart').getContext('2d');
+  sessChart = new Chart(sCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Durasi (menit)', data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }] },
+    options: {
+      ...baseOpts,
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#4a5578', font: { family: 'Space Grotesk', size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#4a5578', font: { family: 'Space Grotesk', size: 10 }, callback: v => v + 'm' }, beginAtZero: true }
+      }
+    }
+  });
+
+  // ── Grafik Distribusi Level ──
+  const dCtx = document.getElementById('distChart').getContext('2d');
+  distChart = new Chart(dCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'],
+      datasets: [{
+        data: [0, 0, 0, 0, 0],
+        backgroundColor: ['#ff2d75', '#ff8c00', '#ffe14d', '#00f5d4', '#7bff00'],
+        borderColor: '#0a1224',
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      ...baseOpts,
+      cutout: '65%',
+      plugins: {
+        ...baseOpts.plugins,
+        legend: {
+          display: true,
+          position: 'right',
+          labels: { color: '#6b7a99', font: { family: 'Space Grotesk', size: 11 }, padding: 12, usePointStyle: true, pointStyleWidth: 8 }
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════
+// Tips Engine — Tips Kontekstual
+// ═══════════════════════════════════════
+const TIPS = [
+  { id:'crit', cond:(d)=>d.level<CFG.notifCritical&&!d.charging, icon:'fa-battery-empty', title:'Baterai Kritis', desc:'Segera hubungkan pengisi daya. Aktifkan mode hemat energi dan tutup semua aplikasi berat sekarang.', color:'#ff2d75', pri:4 },
+  { id:'low', cond:(d)=>d.level<CFG.notifLow&&!d.charging, icon:'fa-battery-quarter', title:'Baterai Rendah', desc:'Hubungkan pengisi daya dalam waktu dekat. Kurangi kecerahan layar dan nonaktifkan fitur yang tidak diperlukan.', color:'#ff8c00', pri:3 },
+  { id:'overchg', cond:(d)=>d.charging&&d.level>80, icon:'fa-plug-circle-exclamation', title:'Sebaiknya Cabut Charger', desc:'Mengisi daya di atas 80% secara terus-menerus mempercepat degradasi baterai lithium-ion.', color:'#ffe14d', pri:2 },
+  { id:'fastdrain', cond:(d,r)=>r>15, icon:'fa-gauge-high', title:'Konsumsi Ekstrem', desc:'Baterai berkurang sangat cepat. Periksa aplikasi background, GPS, dan layar. Pertimbangkan restart perangkat.', color:'#ff2d75', pri:3 },
+  { id:'heavy', cond:(d,r)=>r>8&&r<=15, icon:'fa-microchip', title:'Penggunaan Berat', desc:'Konsumsi baterai cukup tinggi. Kurangi penggunaan aplikasi berat seperti game atau streaming.', color:'#ff8c00', pri:2 },
+  { id:'nightchg', cond:(d)=>{const h=new Date().getHours();return d.charging&&(h>=23||h<5)}, icon:'fa-moon', title:'Pengisian Malam Hari', desc:'Pengisian semalaman meningkatkan risiko overcharging. Gunakan fitur pengisian terjadwal jika ada.', color:'#00f5d4', pri:1 },
+  { id:'slowchg', cond:(d)=>d.charging&&isFinite(d.chargingTime)&&d.chargingTime>10800, icon:'fa-hourglass-half', title:'Pengisian Sangat Lambat', desc:'Lebih dari 3 jam. Pastikan menggunakan charger dan kabel original yang berfungsi baik.', color:'#ffe14d', pri:1 },
+  { id:'good', cond:(d,r,h)=>h>=80, icon:'fa-shield-heart', title:'Pola Penggunaan Sehat', desc:'Pola pengisian dan konsumsi Anda baik. Rentang 20-80% adalah zona optimal baterai lithium.', color:'#7bff00', pri:0 },
+  { id:'optimal', cond:(d)=>d.level>=20&&d.level<=80&&!d.charging, icon:'fa-battery-half', title:'Zona Optimal', desc:'Baterai berada di rentang sehat. Pertahankan pola ini untuk umur baterai yang lebih panjang.', color:'#00f5d4', pri:0 },
+  { id:'charging', cond:(d)=>d.charging&&d.level<80, icon:'fa-bolt', title:'Sedang Mengisi Daya', desc:'Pengisian berlangsung. Disarankan cabut saat mencapai 80% untuk kesehatan jangka panjang.', color:'#7bff00', pri:1 },
+  { id:'full', cond:(d)=>d.level>=95&&!d.charging, icon:'fa-battery-full', title:'Baterai Penuh', desc:'Kapasitas maksimal. Waktu tepat untuk penggunaan intens tanpa kekhawatiran daya.', color:'#7bff00', pri:0 }
+];
+
+function getTips(data, rate, health) {
+  return TIPS.filter(t => t.cond(data, rate, health)).sort((a,b) => b.pri - a.pri).slice(0, 3);
+}
+
+function renderTips(tips) {
+  const box = document.getElementById('tipsBox');
+  if (!tips.length) {
+    box.innerHTML = `<div class="card p-5 text-gray-500 text-sm col-span-full text-center"><i class="fas fa-lightbulb mr-2"></i>Tip akan muncul berdasarkan kondisi baterai Anda</div>`;
+    return;
+  }
+  box.innerHTML = tips.map((t, i) => `
+    <div class="tip-card card p-4 fade-up" style="--tip-color:${t.color};animation-delay:${i*0.08}s">
+      <div class="flex items-center gap-2.5 mb-2">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:${t.color}15"><i class="fas ${t.icon} text-sm" style="color:${t.color}"></i></div>
+        <span class="font-d text-[11px] font-bold tracking-wider" style="color:${t.color}">${t.title.toUpperCase()}</span>
+      </div>
+      <p class="text-xs text-gray-400 leading-relaxed font-b">${t.desc}</p>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+// Notification Manager
+// ═══════════════════════════════════════
+let notifPermission = 'default';
+const sentNotifs = new Set();
+
+async function requestNotif() {
+  if (!('Notification' in window)) { toast('Browser tidak mendukung notifikasi', 'warning'); return; }
+  if (Notification.permission === 'granted') { notifPermission = 'granted'; toast('Notifikasi sudah aktif', 'success'); return; }
+  const perm = await Notification.requestPermission();
+  notifPermission = perm;
+  if (perm === 'granted') toast('Notifikasi diaktifkan', 'success');
+  else toast('Izin notifikasi ditolak', 'warning');
+}
+
+function sendNotif(key, title, body, icon) {
+  if (sentNotifs.has(key)) return;
+  sentNotifs.add(key);
+  if (notifPermission === 'granted') {
+    new Notification(title, { body, icon: icon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔋</text></svg>', tag: key });
+  }
+  toast(`${title}: ${body}`, key.includes('crit') || key.includes('low') ? 'danger' : 'info');
+}
+
+function checkNotifs(data) {
+  if (data.level <= CFG.notifCritical && !data.charging) sendNotif('crit', 'Baterai Kritis', `${Math.round(data.level)}% tersisa. Segera charge!`);
+  else if (data.level <= CFG.notifLow && !data.charging) sendNotif('low', 'Baterai Rendah', `${Math.round(data.level)}% tersisa.`);
+  if (data.level >= CFG.notifFull && data.charging) sendNotif('full', 'Pengisian Selesai', `Baterai ${Math.round(data.level)}%. Sebaiknya cabut charger.`);
+  // Reset notif keys saat kondisi berubah
+  if (data.level > CFG.notifLow) { sentNotifs.delete('crit'); sentNotifs.delete('low'); }
+  if (data.level < CFG.notifFull || !data.charging) sentNotifs.delete('full');
+}
+
+// ═══════════════════════════════════════
+// Simulasi Baterai (fallback)
+// ═══════════════════════════════════════
+class SimBattery {
+  constructor() { this.level = 72 + Math.random() * 15; this.charging = false; this.chargingTime = Infinity; this.dischargingTime = 14400; this._iv = null; }
+  start(cb) {
+    this._iv = setInterval(() => {
+      if (this.charging) {
+        this.level = Math.min(100, this.level + 0.4 + Math.random() * 0.6);
+        this.chargingTime = Math.max(0, (100 - this.level) / 1.2 * 60);
+        this.dischargingTime = Infinity;
+        if (this.level >= 100) { this.charging = false; this.chargingTime = Infinity; }
+      } else {
+        this.level = Math.max(3, this.level - 0.15 - Math.random() * 0.35);
+        this.chargingTime = Infinity;
+        this.dischargingTime = Math.max(0, this.level / 0.25 * 3600);
+      }
+      cb(this.data());
+    }, 3000);
+  }
+  toggle() {
+    this.charging = !this.charging;
+    if (this.charging) this.chargingTime = (100 - this.level) / 1.2 * 60;
+    else { this.chargingTime = Infinity; this.dischargingTime = this.level / 0.25 * 3600; }
+    return this.data();
+  }
+  data() { return { level: this.level, charging: this.charging, chargingTime: this.chargingTime, dischargingTime: this.dischargingTime }; }
+  stop() { clearInterval(this._iv); }
+}
+
+// ═══════════════════════════════════════
+// State & Logika Utama
+// ═══════════════════════════════════════
+let battery = null, isSim = false, sim = null;
+let currentLevel = 0, currentData = { level:0, charging:false, chargingTime:Infinity, dischargingTime:Infinity };
+let consumptionRate = 0, healthScore = 50;
+let sampleInterval = null;
+let chargingSessionStart = null;
+
+// Hitung laju konsumsi dari data histori
+function calcRate(readings) {
+  if (readings.length < 3) return 0;
+  const recent = readings.slice(0, Math.min(10, readings.length)).reverse();
+  const span = (recent[recent.length-1].timestamp - recent[0].timestamp) / 3600000; // jam
+  if (span < 0.01) return 0;
+  const drop = recent[0].level - recent[recent.length-1].level;
+  return drop / span; // %/jam
+}
+
+// Hitung skor kesehatan (heuristik sederhana)
+function calcHealth(readings, sessions) {
+  let score = 100;
+  if (currentData.level < 20 && !currentData.charging) score -= 8;
+  const avgLevel = readings.length ? readings.reduce((s,r) => s + r.level, 0) / readings.length : 50;
+  if (avgLevel < 30) score -= 5;
+  if (sessions.length > 4) score -= 5;
+  if (currentData.charging && currentData.level > 85) score -= 4;
+  if (consumptionRate > 15) score -= 4;
+  if (consumptionRate > 8) score -= 2;
+  return Math.max(10, Math.min(100, Math.round(score)));
+}
+
+// ═══════════════════════════════════════
+// UI Update
+// ═══════════════════════════════════════
+function updateRing(level, charging) {
+  const pct = Math.round(level);
+  const offset = CFG.circ * (1 - level / 100);
+  const ring = document.getElementById('pRing');
+  const color = levelColor(pct);
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = color;
+  document.documentElement.style.setProperty('--ring-color', color);
+  document.documentElement.style.setProperty('--glow-color', levelColorAlpha(pct, 0.5));
+  document.getElementById('rPct').textContent = pct;
+  const wrap = document.getElementById('ringWrap');
+  if (charging) { wrap.classList.add('charging-pulse'); }
+  else { wrap.classList.remove('charging-pulse'); }
+  document.getElementById('chargeInd').style.opacity = charging ? '1' : '0';
+  document.getElementById('ringStatus').textContent = charging ? 'MENGISI DAYA' : (pct > 80 ? 'DAYA MEMADAI' : pct > 40 ? 'DAYA NORMAL' : 'DAYA RENDAH');
+  document.getElementById('ringStatus').style.color = color;
+}
+
+function updateStats(data, rate, health, sessionCount) {
+  const color = levelColor(Math.round(data.level));
+  document.getElementById('sStatus').textContent = data.charging ? 'MENGISI' : 'MENGURANG';
+  document.getElementById('sStatus').style.color = data.charging ? '#ffe14d' : color;
+  document.getElementById('sChargeT').textContent = fmtTime(data.chargingTime);
+  document.getElementById('sChargeT').style.color = data.charging ? '#ffe14d' : '';
+  document.getElementById('sDischargeT').textContent = fmtTime(data.dischargingTime);
+  document.getElementById('sDischargeT').style.color = !data.charging ? color : '';
+  const rateStr = isFinite(rate) ? rate.toFixed(1) + ' %/j' : '-- %/j';
+  document.getElementById('sRate').textContent = rateStr;
+  document.getElementById('sRate').style.color = rate > 15 ? '#ff2d75' : rate > 8 ? '#ff8c00' : '';
+  document.getElementById('sHealth').textContent = health + '/100';
+  document.getElementById('sHealth').style.color = health >= 80 ? '#7bff00' : health >= 50 ? '#ffe14d' : '#ff2d75';
+  document.getElementById('sSessions').textContent = sessionCount;
+}
+
+async function updateCharts() {
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  try {
+    const readings = await dbGetAll('readings', 'ts', IDBKeyRange.lowerBound(todayStart.getTime()));
+    readings.reverse(); // kronologis
+
+    // Main chart
+    mainChart.data.labels = readings.map(r => fmtShort(new Date(r.timestamp)));
+    mainChart.data.datasets[0].data = readings.map(r => r.level);
+    mainChart.data.datasets[1].data = readings.map(r => r.charging ? 100 : -5);
+    mainChart.update('none');
+
+    // Distribusi
+    const buckets = [0,0,0,0,0];
+    readings.forEach(r => {
+      const idx = Math.min(4, Math.floor(r.level / 20));
+      buckets[idx]++;
+    });
+    distChart.data.datasets[0].data = buckets;
+    distChart.update('none');
+
+    // Sesi
+    const sessions = await dbGetAll('sessions', 'start', IDBKeyRange.lowerBound(todayStart.getTime()));
+    sessChart.data.labels = sessions.map((s,i) => `Sesi ${i+1}`);
+    sessChart.data.datasets[0].data = sessions.map(s => Math.round(s.duration / 60));
+    sessChart.data.datasets[0].backgroundColor = sessions.map(s => {
+      const speed = (s.endLevel - s.startLevel) / Math.max(1, s.duration / 60);
+      return speed > 5 ? '#7bff00' : speed > 2 ? '#00f5d4' : '#ffe14d';
+    });
+    sessChart.update('none');
+
+    // Hitung metrik
+    consumptionRate = calcRate(readings);
+    healthScore = calcHealth(readings, sessions);
+    updateStats(currentData, consumptionRate, healthScore, sessions.length);
+    renderTips(getTips(currentData, consumptionRate, healthScore));
+  } catch(e) { console.warn('Gagal update chart:', e); }
+}
+
+async function updateHistory() {
+  try {
+    const count = await dbCount('readings');
+    document.getElementById('hCount').textContent = count + ' catatan';
+    const readings = await dbGetAll('readings');
+    const body = document.getElementById('hBody');
+    const empty = document.getElementById('hEmpty');
+    if (!readings.length) { body.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    body.innerHTML = readings.slice(0, 50).map(r => {
+      const pct = Math.round(r.level);
+      const col = levelColor(pct);
+      return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+        <td class="py-2.5 pr-4 text-xs text-gray-400 font-mono">${fmtClock(new Date(r.timestamp))}</td>
+        <td class="py-2.5 pr-4"><span class="font-d text-xs font-bold" style="color:${col}">${pct}%</span></td>
+        <td class="py-2.5 pr-4 text-xs">${r.charging ? '<span class="text-ny"><i class="fas fa-bolt mr-1"></i>Mengisi</span>' : '<span class="text-gray-500"><i class="fas fa-arrow-down mr-1"></i>Mengurang</span>'}</td>
+        <td class="py-2.5 pr-4 text-xs text-gray-500">${isFinite(r.chargingTime) ? fmtTime(r.chargingTime) : '--'}</td>
+        <td class="py-2.5 text-xs text-gray-500">${isFinite(r.dischargingTime) ? fmtTime(r.dischargingTime) : '--'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.warn('Gagal update histori:', e); }
+}
+
+// ═══════════════════════════════════════
+// Sampling & Penyimpanan
+// ═══════════════════════════════════════
+async function sample() {
+  const d = currentData;
+  const reading = {
+    timestamp: Date.now(),
+    level: d.level,
+    charging: d.charging,
+    chargingTime: d.chargingTime,
+    dischargingTime: d.dischargingTime
+  };
+  try {
+    await dbAdd('readings', reading);
+    // Batasi jumlah data
+    const count = await dbCount('readings');
+    if (count > CFG.maxHistory) {
+      // Hapus data paling lama (lebih dari 3 hari)
+      const cutoff = Date.now() - 3 * 86400000;
+      const tx = db.transaction('readings', 'readwrite');
+      const store = tx.objectStore('readings');
+      const idx = store.index('ts');
+      const cur = idx.openCursor(IDBKeyRange.upperBound(cutoff));
+      cur.onsuccess = e => {
+        const c = e.target.result;
+        if (c) { c.delete(); c.continue(); }
+      };
+    }
+  } catch(e) { console.warn('Gagal simpan reading:', e); }
+
+  // Track sesi pengisian
+  if (d.charging && !chargingSessionStart) {
+    chargingSessionStart = { startTime: Date.now(), startLevel: d.level };
+  }
+  if (!d.charging && chargingSessionStart) {
+    const dur = (Date.now() - chargingSessionStart.startTime) / 1000;
+    if (dur > 30) { // Minimal 30 detik dihitung sesi
+      try {
+        await dbAdd('sessions', {
+          startTime: chargingSessionStart.startTime,
+          endTime: Date.now(),
+          startLevel: chargingSessionStart.startLevel,
+          endLevel: d.level,
+          duration: dur
+        });
+      } catch(e) {}
+    }
+    chargingSessionStart = null;
+  }
+
+  await updateCharts();
+  await updateHistory();
+}
+
+// ═══════════════════════════════════════
+// Battery Event Handlers
+// ═══════════════════════════════════════
+function onBatteryUpdate() {
+  if (!battery) return;
+  currentData = {
+    level: battery.level * 100,
+    charging: battery.charging,
+    chargingTime: battery.chargingTime,
+    dischargingTime: battery.dischargingTime
+  };
+  currentLevel = currentData.level;
+  updateRing(currentData.level, currentData.charging);
+  checkNotifs(currentData);
+}
+
+function attachBatteryListeners() {
+  if (!battery) return;
+  battery.addEventListener('chargingchange', onBatteryUpdate);
+  battery.addEventListener('levelchange', onBatteryUpdate);
+  battery.addEventListener('chargingtimechange', onBatteryUpdate);
+  battery.addEventListener('dischargingtimechange', onBatteryUpdate);
+}
+
+// ═══════════════════════════════════════
+// Page Visibility — Jeda sampling saat background
+// ═══════════════════════════════════════
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Saat page hidden, simpan data terakhir
+    sample();
+  } else {
+    // Saat kembali, langsung update
+    onBatteryUpdate();
+    sample();
+  }
+});
+
+// ═══════════════════════════════════════
+// Inisialisasi Aplikasi
+// ═══════════════════════════════════════
+async function init() {
+  const msg = document.getElementById('loaderMsg');
+  try {
+    // 1. Buka database
+    msg.textContent = 'Membuka database...';
+    await openDB();
+
+    // 2. Coba Battery API
+    msg.textContent = 'Mendeteksi baterai...';
+    if ('getBattery' in navigator) {
+      battery = await navigator.getBattery();
+      attachBatteryListeners();
+      onBatteryUpdate();
+      msg.textContent = 'Baterai terdeteksi';
+    } else {
+      throw new Error('No Battery API');
+    }
+  } catch(e) {
+    // Fallback: simulasi
+    isSim = true;
+    sim = new SimBattery();
+    document.getElementById('simBadge').classList.remove('hidden');
+    document.getElementById('btnSimToggle').classList.remove('hidden');
+    sim.start(d => {
+      currentData = d;
+      currentLevel = d.level;
+      updateRing(d.level, d.charging);
+      checkNotifs(d);
+    });
+    msg.textContent = 'Mode simulasi aktif';
+  }
+
+  // 3. Init komponen visual
+  msg.textContent = 'Memuat visualisasi...';
+  genTicks();
+  initParticles();
+  initCharts();
+
+  // 4. Sampling pertama
+  await sample();
+
+  // 5. Mulai interval sampling
+  sampleInterval = setInterval(sample, CFG.sampleMs);
+
+  // 6. Tampilkan app
+  msg.textContent = 'Siap';
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('hidden');
+    document.getElementById('app').style.opacity = '1';
+  }, 400);
+
+  // 7. Cek izin notifikasi
+  if ('Notification' in window && Notification.permission === 'granted') notifPermission = 'granted';
+}
+
+// ── Event Listeners UI ──
+document.getElementById('btnNotif').addEventListener('click', requestNotif);
+
+document.getElementById('btnClear').addEventListener('click', async () => {
+  try {
+    await dbClear('readings');
+    await dbClear('sessions');
+    chargingSessionStart = null;
+    await updateCharts();
+    await updateHistory();
+    toast('Semua histori berhasil dihapus', 'success');
+  } catch(e) {
+    toast('Gagal menghapus histori', 'danger');
+  }
+});
+
+document.getElementById('btnSimToggle').addEventListener('click', () => {
+  if (!sim) return;
+  const d = sim.toggle();
+  currentData = d;
+  currentLevel = d.level;
+  updateRing(d.level, d.charging);
+  toast(d.charging ? 'Pengisian daya dimulai (simulasi)' : 'Pengisi daya dicabut (simulasi)', 'info');
+});
+
+// ── Jalankan ──
+init().catch(e => {
+  console.error('Init gagal:', e);
+  document.getElementById('loaderMsg').textContent = 'Gagal: ' + e.message;
+});
+</script>
+</body>
+</html>
