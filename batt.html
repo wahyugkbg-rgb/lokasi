@@ -1,591 +1,1566 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>NeoBattery · Analisis Real-time</title>
-  <!-- Chart.js 3.9.1 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <!-- Font & ikon tambahan -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-
-    body {
-      background: linear-gradient(145deg, #f9f3e8 0%, #fff9f0 100%);
-      min-height: 100vh;
-      padding: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* wadah futuristik dengan glassmorphism + neon aksen */
-    .dashboard {
-      max-width: 1200px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.45);
-      backdrop-filter: blur(16px) saturate(180%);
-      -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border-radius: 56px;
-      padding: 2rem 1.8rem;
-      box-shadow: 0 30px 60px rgba(0, 20, 30, 0.15), 0 0 0 1px rgba(255, 215, 150, 0.3);
-      border: 1px solid rgba(255, 235, 200, 0.7);
-      transition: all 0.2s ease;
-    }
-
-    /* judul & header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 2rem;
-    }
-
-    .header h1 {
-      font-weight: 700;
-      font-size: 2.1rem;
-      background: linear-gradient(135deg, #f97316, #fbbf24);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -0.5px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .header h1 i {
-      background: rgba(251, 191, 36, 0.25);
-      padding: 8px 12px;
-      border-radius: 60px;
-      font-size: 1.8rem;
-      -webkit-text-fill-color: #f97316;
-    }
-
-    .real-time-badge {
-      background: rgba(16, 185, 129, 0.2);
-      backdrop-filter: blur(4px);
-      padding: 0.5rem 1.4rem;
-      border-radius: 60px;
-      border: 1px solid #34d399;
-      color: #065f46;
-      font-weight: 600;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 0 15px rgba(52, 211, 153, 0.3);
-    }
-
-    .real-time-badge i {
-      color: #10b981;
-      font-size: 1rem;
-      animation: pulse-dot 1.8s infinite;
-    }
-
-    @keyframes pulse-dot {
-      0% { opacity: 0.4; transform: scale(0.9); }
-      50% { opacity: 1; transform: scale(1.2); }
-      100% { opacity: 0.4; transform: scale(0.9); }
-    }
-
-    /* kartu stat */
-    .grid-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1.2rem;
-      margin-bottom: 2rem;
-    }
-
-    .stat-card {
-      background: rgba(255, 255, 255, 0.5);
-      backdrop-filter: blur(8px);
-      border-radius: 32px;
-      padding: 1rem 1.2rem;
-      border: 1px solid rgba(255, 215, 150, 0.4);
-      box-shadow: 0 8px 20px -8px rgba(0,0,0,0.05);
-      transition: 0.2s;
-    }
-
-    .stat-card .label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      color: #7c6b5a;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .stat-card .value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #1e1a16;
-      margin-top: 6px;
-    }
-
-    .stat-card .sub {
-      font-size: 0.8rem;
-      color: #5b4d3e;
-      opacity: 0.8;
-    }
-
-    /* grafik */
-    .chart-wrapper {
-      background: rgba(255, 250, 240, 0.5);
-      backdrop-filter: blur(4px);
-      border-radius: 40px;
-      padding: 1.5rem 1rem;
-      margin-bottom: 2rem;
-      border: 1px solid rgba(255, 215, 150, 0.3);
-      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
-    }
-
-    .chart-container {
-      position: relative;
-      height: 200px;
-      width: 100%;
-    }
-
-    /* tips + peringatan */
-    .action-row {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: stretch;
-      margin-bottom: 1.5rem;
-    }
-
-    .tips-box {
-      flex: 2;
-      min-width: 200px;
-      background: rgba(255, 243, 224, 0.6);
-      backdrop-filter: blur(4px);
-      border-radius: 40px;
-      padding: 1.2rem 1.5rem;
-      border-left: 6px solid #fbbf24;
-    }
-
-    .tips-box h4 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: #92400e;
-      font-weight: 600;
-      font-size: 1rem;
-      margin-bottom: 6px;
-    }
-
-    .tips-box p {
-      color: #5b3d1a;
-      font-size: 0.95rem;
-      line-height: 1.4;
-    }
-
-    .notification-preview {
-      flex: 1;
-      min-width: 150px;
-      background: rgba(220, 245, 235, 0.5);
-      backdrop-filter: blur(4px);
-      border-radius: 40px;
-      padding: 1rem 1.2rem;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid #a7f3d0;
-      color: #065f46;
-      font-weight: 500;
-      font-size: 0.95rem;
-    }
-
-    .notification-preview i {
-      font-size: 1.6rem;
-      color: #10b981;
-    }
-
-    .btn-request {
-      background: #fbbf24;
-      border: none;
-      border-radius: 60px;
-      padding: 0.5rem 1.2rem;
-      font-weight: 700;
-      color: #1e1a16;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 8px 16px -6px rgba(251, 191, 36, 0.4);
-      transition: 0.15s;
-      cursor: pointer;
-      border: 1px solid #fcd34d;
-    }
-
-    .btn-request:active { transform: scale(0.95); }
-
-    .footer-note {
-      display: flex;
-      justify-content: flex-end;
-      font-size: 0.7rem;
-      color: #a28d78;
-      margin-top: 0.5rem;
-      letter-spacing: 0.3px;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    /* HP */
-    @media (max-width: 600px) {
-      .dashboard { padding: 1.2rem 1rem; border-radius: 32px; }
-      .header h1 { font-size: 1.6rem; }
-      .stat-card .value { font-size: 1.7rem; }
-      .chart-container { height: 160px; }
-      .action-row { flex-direction: column; }
-    }
-
-    /* smooth */
-    .fade-in { animation: fadeUp 0.6s ease; }
-    @keyframes fadeUp { 0% { opacity: 0.3; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-  </style>
-</head>
-<body>
-<div class="dashboard fade-in" id="app">
-  <div class="header">
-    <h1><i class="fas fa-bolt"></i> NeoBattery</h1>
-    <span class="real-time-badge"><i class="fas fa-circle"></i> LIVE · realtime</span>
-  </div>
-
-  <!-- Stat cards -->
-  <div class="grid-stats" id="statsGrid">
-    <div class="stat-card"><div class="label"><i class="fas fa-battery-three-quarters"></i> Level</div><div class="value" id="battLevel">--%</div><div class="sub" id="battStatus">Memuat...</div></div>
-    <div class="stat-card"><div class="label"><i class="fas fa-clock"></i> Sisa pakai</div><div class="value" id="dischargeTime">--</div><div class="sub">estimasi</div></div>
-    <div class="stat-card"><div class="label"><i class="fas fa-plug"></i> Waktu isi</div><div class="value" id="chargeTime">--</div><div class="sub">hingga penuh</div></div>
-    <div class="stat-card"><div class="label"><i class="fas fa-history"></i> Histori</div><div class="value" id="historyCount">0</div><div class="sub">data tersimpan</div></div>
-  </div>
-
-  <!-- Grafik -->
-  <div class="chart-wrapper">
-    <div class="chart-container">
-      <canvas id="batteryChart"></canvas>
-    </div>
-  </div>
-
-  <!-- Tips & notifikasi -->
-  <div class="action-row">
-    <div class="tips-box" id="tipsBox">
-      <h4><i class="fas fa-lightbulb" style="color: #f59e0b;"></i> Tips hemat kontekstual</h4>
-      <p id="tipText">Memuat saran cerdas...</p>
-    </div>
-    <div class="notification-preview" id="notifBox">
-      <i class="fas fa-bell"></i>
-      <span id="notifMessage">Notifikasi siap</span>
-      <button class="btn-request" id="notifBtn"><i class="fas fa-check-circle"></i> Izin</button>
-    </div>
-  </div>
-
-  <div class="footer-note">
-    <span><i class="fas fa-database"></i> IndexedDB · histori lokal</span>
-    <span><i class="fas fa-chart-line"></i> analisis pola real-time</span>
-  </div>
-</div>
-
-<script>
-  (function(){
-    "use strict";
-
-    // ---- elemen ----
-    const battLevel = document.getElementById('battLevel');
-    const battStatus = document.getElementById('battStatus');
-    const dischargeTime = document.getElementById('dischargeTime');
-    const chargeTime = document.getElementById('chargeTime');
-    const historyCount = document.getElementById('historyCount');
-    const tipText = document.getElementById('tipText');
-    const notifMessage = document.getElementById('notifMessage');
-
-    // ---- IndexedDB ----
-    const DB_NAME = 'BatteryHistoryDB';
-    const STORE_NAME = 'history';
-    let db = null;
-
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        if (db) return resolve(db);
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (ev) => {
-          const d = ev.target.result;
-          if (!d.objectStoreNames.contains(STORE_NAME)) {
-            d.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-          }
-        };
-        request.onsuccess = (ev) => { db = ev.target.result; resolve(db); };
-        request.onerror = (ev) => reject(ev.target.error);
-      });
-    }
-
-    function saveHistory(entry) {
-      return openDB().then(d => {
-        return new Promise((resolve, reject) => {
-          const tx = d.transaction(STORE_NAME, 'readwrite');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.add(entry);
-          req.onsuccess = () => resolve();
-          req.onerror = () => reject(req.error);
-        });
-      });
-    }
-
-    function getHistoryCount() {
-      return openDB().then(d => {
-        return new Promise((resolve, reject) => {
-          const tx = d.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.count();
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-      });
-    }
-
-    function getLastHistory(limit = 20) {
-      return openDB().then(d => {
-        return new Promise((resolve, reject) => {
-          const tx = d.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.openCursor(null, 'prev');
-          const results = [];
-          let count = 0;
-          req.onsuccess = (ev) => {
-            const cursor = ev.target.result;
-            if (cursor && count < limit) {
-              results.push(cursor.value);
-              count++;
-              cursor.continue();
-            } else {
-              resolve(results.reverse());
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BatteryVision Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Orbitron', 'monospace'],
+                        body: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
             }
-          };
-          req.onerror = () => reject(req.error);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --cyan: #00e5ff;
+            --green: #39ff14;
+            --pink: #ff2d6b;
+            --orange: #ff6b35;
+            --amber: #ffab00;
+            --purple: #b388ff;
+            --bg: #050a15;
+            --card: rgba(10, 20, 45, 0.6);
+            --border: rgba(0, 229, 255, 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        ::selection { background: rgba(0,229,255,0.3); color: #fff; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.4); }
+
+        /* ===== BACKGROUND EFFECTS ===== */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        .glow-orb {
+            position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+            filter: blur(100px); opacity: 0.12;
+            transition: background 3s ease;
+        }
+        .orb-1 { width: 500px; height: 500px; background: var(--cyan); top: -150px; right: -150px; animation: orbFloat1 25s ease-in-out infinite; }
+        .orb-2 { width: 400px; height: 400px; background: var(--green); bottom: -100px; left: -100px; animation: orbFloat2 30s ease-in-out infinite; }
+        .orb-3 { width: 300px; height: 300px; background: var(--purple); top: 40%; left: 50%; animation: orbFloat3 20s ease-in-out infinite; }
+        @keyframes orbFloat1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-60px,80px); } }
+        @keyframes orbFloat2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(70px,-60px); } }
+        @keyframes orbFloat3 { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.3); } }
+        .scanlines {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px);
+        }
+
+        /* ===== LOADING ===== */
+        #loading {
+            position: fixed; inset: 0; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg); transition: opacity 0.5s ease;
+        }
+        #loading.fade-out { opacity: 0; pointer-events: none; }
+        .loading-ring {
+            width: 60px; height: 60px; border-radius: 50%;
+            border: 3px solid rgba(0,229,255,0.1);
+            border-top-color: var(--cyan);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== CARDS ===== */
+        .glass-card {
+            background: var(--card);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+        }
+        .glass-card:hover {
+            border-color: rgba(0,229,255,0.25);
+            box-shadow: 0 0 30px rgba(0,229,255,0.07);
+        }
+
+        /* ===== GAUGE ===== */
+        .gauge-svg { width: 100%; max-width: 280px; height: auto; }
+        .gauge-deco { animation: rotateSlow 40s linear infinite; transform-origin: 120px 120px; }
+        @keyframes rotateSlow { to { transform: rotate(360deg); } }
+        .gauge-progress { transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+        .gauge-glow { transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); opacity: 0.25; filter: blur(6px); }
+        .gauge-charging .gauge-glow { animation: gaugePulse 2s ease-in-out infinite; }
+        @keyframes gaugePulse { 0%,100% { opacity: 0.15; filter: blur(4px); } 50% { opacity: 0.5; filter: blur(10px); } }
+        .gauge-charging .charge-icon { animation: chargeBlink 1.5s ease-in-out infinite; }
+        @keyframes chargeBlink { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* ===== STAT MINI CARDS ===== */
+        .stat-mini {
+            background: rgba(10,20,45,0.5);
+            border: 1px solid rgba(0,229,255,0.06);
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.3s;
+        }
+        .stat-mini:hover {
+            border-color: rgba(0,229,255,0.2);
+            background: rgba(10,20,45,0.7);
+        }
+
+        /* ===== ANALYSIS CARD ===== */
+        .analysis-card {
+            background: rgba(10,20,45,0.4);
+            border: 1px solid rgba(0,229,255,0.06);
+            border-radius: 14px;
+            padding: 16px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .analysis-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .analysis-card:hover::before { opacity: 1; }
+        .analysis-card:hover { border-color: rgba(0,229,255,0.15); transform: translateY(-2px); }
+
+        /* ===== TIP CARD ===== */
+        .tip-card {
+            border-radius: 14px; padding: 16px 18px;
+            border-left: 3px solid;
+            background: rgba(10,20,45,0.4);
+            transition: all 0.3s;
+            animation: tipSlideIn 0.4s ease-out both;
+        }
+        .tip-card:hover { background: rgba(10,20,45,0.6); transform: translateX(4px); }
+        @keyframes tipSlideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* ===== TOGGLE SWITCH ===== */
+        .toggle-track {
+            width: 44px; height: 24px; border-radius: 12px;
+            background: rgba(255,255,255,0.1); cursor: pointer;
+            transition: background 0.3s; position: relative; flex-shrink: 0;
+        }
+        .toggle-track.active { background: var(--cyan); }
+        .toggle-thumb {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: #fff; position: absolute; top: 2px; left: 2px;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .toggle-track.active .toggle-thumb { transform: translateX(20px); }
+
+        /* ===== TOAST ===== */
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+            padding: 12px 20px; border-radius: 10px; font-size: 13px;
+            background: rgba(10,20,45,0.95); backdrop-filter: blur(12px);
+            border: 1px solid var(--border); color: #fff;
+            transform: translateX(120%); transition: transform 0.3s ease;
+            max-width: 320px;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast-success { border-color: rgba(57,255,20,0.3); }
+        .toast-warning { border-color: rgba(255,171,0,0.3); }
+        .toast-error { border-color: rgba(255,45,107,0.3); }
+
+        /* ===== SESSION BAR ===== */
+        .session-bar {
+            height: 6px; border-radius: 3px; background: rgba(255,255,255,0.05);
+            overflow: hidden; position: relative;
+        }
+        .session-bar-fill {
+            height: 100%; border-radius: 3px;
+            background: linear-gradient(90deg, var(--cyan), var(--green));
+            transition: width 0.8s ease;
+        }
+
+        /* ===== SECTION ANIMATIONS ===== */
+        .section-reveal {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .section-reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ===== BUTTON ===== */
+        .btn-cyber {
+            padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+            border: 1px solid var(--border); background: rgba(0,229,255,0.05);
+            color: var(--cyan); cursor: pointer; transition: all 0.3s;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .btn-cyber:hover { background: rgba(0,229,255,0.15); border-color: rgba(0,229,255,0.4); box-shadow: 0 0 20px rgba(0,229,255,0.1); }
+        .btn-cyber:active { transform: scale(0.97); }
+        .btn-danger { color: var(--pink); border-color: rgba(255,45,107,0.15); background: rgba(255,45,107,0.05); }
+        .btn-danger:hover { background: rgba(255,45,107,0.15); border-color: rgba(255,45,107,0.4); box-shadow: 0 0 20px rgba(255,45,107,0.1); }
+
+        /* ===== LIVE DOT ===== */
+        .live-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+            animation: livePulse 2s ease-in-out infinite;
+        }
+        @keyframes livePulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(57,255,20,0.4); } 50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(57,255,20,0); } }
+
+        /* ===== CHART CONTAINER ===== */
+        .chart-wrap { position: relative; height: 220px; }
+        @media(min-width: 768px) { .chart-wrap { height: 280px; } }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.3); }
+
+        /* ===== REDUCED MOTION ===== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="font-body">
+    <!-- Loading Overlay -->
+    <div id="loading">
+        <div class="text-center">
+            <div class="loading-ring"></div>
+            <p class="font-display text-sm tracking-[0.3em] mt-6" style="color: var(--cyan);">MENGHUBUNGKAN SENSOR</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="glow-orb orb-1" id="orb1"></div>
+    <div class="glow-orb orb-2" id="orb2"></div>
+    <div class="glow-orb orb-3" id="orb3"></div>
+    <div class="scanlines"></div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 max-w-5xl mx-auto px-4 pb-16">
+
+        <!-- Header -->
+        <header class="flex items-center justify-between py-5 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.2);">
+                    <i class="fas fa-bolt text-sm" style="color: var(--cyan);"></i>
+                </div>
+                <div>
+                    <h1 class="font-display text-sm md:text-base font-bold tracking-wider" style="color: var(--cyan);">BATTERYVISION</h1>
+                    <p class="text-[10px] tracking-widest text-white/30 font-display">REAL-TIME ANALYSIS</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="live-dot"></div>
+                    <span class="text-[11px] text-white/40 font-display">LIVE</span>
+                </div>
+                <div id="clock" class="font-display text-xs text-white/50 tracking-wider hidden sm:block"></div>
+                <span id="dataCount" class="text-[10px] text-white/20 font-display hidden sm:block"></span>
+            </div>
+        </header>
+
+        <!-- Hero: Gauge + Stats -->
+        <section class="py-8 section-reveal">
+            <div class="flex flex-col lg:flex-row items-center gap-8">
+                <!-- Gauge -->
+                <div class="flex-shrink-0 relative" id="gaugeWrapper">
+                    <svg viewBox="0 0 240 240" class="gauge-svg" aria-label="Gauge baterai">
+                        <defs>
+                            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" id="gradStop1" stop-color="#00e5ff"/>
+                                <stop offset="100%" id="gradStop2" stop-color="#39ff14"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Dekorasi luar -->
+                        <circle cx="120" cy="120" r="112" fill="none" stroke="rgba(0,229,255,0.04)" stroke-width="1" stroke-dasharray="3 7" class="gauge-deco"/>
+                        <circle cx="120" cy="120" r="105" fill="none" stroke="rgba(0,229,255,0.02)" stroke-width="0.5"/>
+                        <!-- Background ring -->
+                        <circle cx="120" cy="120" r="95" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10" stroke-linecap="round"/>
+                        <!-- Glow ring -->
+                        <circle id="gaugeGlow" cx="120" cy="120" r="95" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="596.9" stroke-dashoffset="596.9" transform="rotate(-90 120 120)" class="gauge-glow"/>
+                        <!-- Progress ring -->
+                        <circle id="gaugeProgress" cx="120" cy="120" r="95" fill="none" stroke="url(#gaugeGrad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="596.9" stroke-dashoffset="596.9" transform="rotate(-90 120 120)" class="gauge-progress"/>
+                        <!-- Inner ring -->
+                        <circle cx="120" cy="120" r="78" fill="none" stroke="rgba(0,229,255,0.03)" stroke-width="0.5"/>
+                    </svg>
+                    <!-- Center text -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <div class="flex items-start">
+                            <span id="gaugePercent" class="font-display text-5xl md:text-6xl font-black leading-none" style="color: var(--cyan);">--</span>
+                            <span class="font-display text-lg font-bold mt-1 ml-1" style="color: rgba(0,229,255,0.5);">%</span>
+                        </div>
+                        <div id="gaugeStatus" class="font-display text-[10px] tracking-[0.2em] mt-2 text-white/40">DETEKSI</div>
+                        <div id="chargeIcon" class="charge-icon mt-1 hidden">
+                            <i class="fas fa-bolt text-xs" style="color: var(--green);"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stat Cards -->
+                <div class="grid grid-cols-2 gap-3 w-full lg:w-auto lg:flex-1">
+                    <div class="stat-mini">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <i id="statusIcon" class="fas fa-plug text-xs text-white/30"></i>
+                            <span class="text-[10px] tracking-wider text-white/30 font-display">STATUS</span>
+                        </div>
+                        <div id="statusText" class="text-sm font-semibold text-white/80">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <i class="fas fa-hourglass-half text-xs text-white/30"></i>
+                            <span class="text-[10px] tracking-wider text-white/30 font-display">ESTIMASI</span>
+                        </div>
+                        <div id="estimasiText" class="text-sm font-semibold text-white/80">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <i class="fas fa-gauge text-xs text-white/30"></i>
+                            <span class="text-[10px] tracking-wider text-white/30 font-display">LAJU</span>
+                        </div>
+                        <div id="lajuText" class="text-sm font-semibold text-white/80">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <i class="fas fa-rotate text-xs text-white/30"></i>
+                            <span class="text-[10px] tracking-wider text-white/30 font-display">SESI HARI INI</span>
+                        </div>
+                        <div id="sesiText" class="text-sm font-semibold text-white/80">0x</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 24-Hour Chart -->
+        <section class="mb-8 section-reveal">
+            <div class="glass-card p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-display text-xs font-bold tracking-wider text-white/70"><i class="fas fa-chart-line mr-2" style="color: var(--cyan);"></i>ANALISIS 24 JAM</h2>
+                    <div class="flex items-center gap-3 text-[10px]">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--cyan);"></span><span class="text-white/40">Discharge</span></span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--green);"></span><span class="text-white/40">Charging</span></span>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="chart24h"></canvas>
+                </div>
+                <div id="chartEmpty" class="empty-state hidden">
+                    <i class="fas fa-database text-2xl mb-2" style="color: rgba(0,229,255,0.2);"></i>
+                    <p class="text-xs">Mengumpulkan data... Grafik akan muncul dalam beberapa menit.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pattern Analysis -->
+        <section class="mb-8 section-reveal">
+            <h2 class="font-display text-xs font-bold tracking-wider text-white/70 mb-4"><i class="fas fa-microscope mr-2" style="color: var(--purple);"></i>POLA PENGGUNAAN</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3" id="analysisGrid">
+                <div class="analysis-card">
+                    <div class="text-[10px] tracking-wider text-white/30 font-display mb-1">RATA-RATA DISCHARGE</div>
+                    <div id="avgDischarge" class="text-xl font-bold" style="color: var(--cyan);">-- %/jam</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="text-[10px] tracking-wider text-white/30 font-display mb-1">WAKTU PUNCAK</div>
+                    <div id="peakHour" class="text-xl font-bold" style="color: var(--orange);">--</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="text-[10px] tracking-wider text-white/30 font-display mb-1">TOTAL SESI CHARGE</div>
+                    <div id="totalSessions" class="text-xl font-bold" style="color: var(--green);">0</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="text-[10px] tracking-wider text-white/30 font-display mb-1">DURASI RATA-RATA</div>
+                    <div id="avgDuration" class="text-xl font-bold" style="color: var(--amber);">--</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="text-[10px] tracking-wider text-white/30 font-display mb-1">LEVEL TERTINGGI</div>
+                    <div id="maxLevel" class="text-xl font-bold" style="color: var(--green);">--%</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="text-[10px] tracking-wider text-white/30 font-display mb-1">LEVEL TERENDAH</div>
+                    <div id="minLevel" class="text-xl font-bold" style="color: var(--pink);">--%</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charging Sessions -->
+        <section class="mb-8 section-reveal">
+            <h2 class="font-display text-xs font-bold tracking-wider text-white/70 mb-4"><i class="fas fa-plug-circle-bolt mr-2" style="color: var(--green);"></i>SESI PENGISIAN HARI INI</h2>
+            <div id="sessionsList" class="space-y-3">
+                <div class="empty-state">
+                    <i class="fas fa-charging-station text-2xl mb-2" style="color: rgba(57,255,20,0.2);"></i>
+                    <p class="text-xs">Belum ada sesi pengisian terdeteksi hari ini.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Smart Tips -->
+        <section class="mb-8 section-reveal">
+            <h2 class="font-display text-xs font-bold tracking-wider text-white/70 mb-4"><i class="fas fa-lightbulb mr-2" style="color: var(--amber);"></i>REKOMENDASI CERDAS</h2>
+            <div id="tipsList" class="space-y-3">
+                <div class="empty-state">
+                    <i class="fas fa-brain text-2xl mb-2" style="color: rgba(255,171,0,0.2);"></i>
+                    <p class="text-xs">Menganalisis pola untuk memberikan rekomendasi...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="mb-8 section-reveal">
+            <h2 class="font-display text-xs font-bold tracking-wider text-white/70 mb-4"><i class="fas fa-bell mr-2" style="color: var(--cyan);"></i>PENGATURAN PERINGATAN</h2>
+            <div class="glass-card p-5 md:p-6 space-y-5">
+                <!-- Notif Permission -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-white/80">Izin Notifikasi</div>
+                        <div class="text-[11px] text-white/40 mt-0.5" id="notifPermStatus">Memeriksa...</div>
+                    </div>
+                    <button id="btnNotifPerm" class="btn-cyber text-xs" onclick="requestNotifPermission()">Aktifkan</button>
+                </div>
+                <div class="border-t border-white/5"></div>
+                <!-- Toggles -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-white/80">Peringatan Baterai Rendah</div>
+                        <div class="text-[11px] text-white/40 mt-0.5">Notifikasi saat baterai di bawah ambang batas</div>
+                    </div>
+                    <div class="toggle-track active" id="toggleLow" onclick="toggleNotif('lowBattery', this)" role="switch" aria-checked="true" tabindex="0">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-white/80">Ambang Batas Rendah</div>
+                        <div class="text-[11px] text-white/40 mt-0.5">Picu notifikasi di bawah level ini</div>
+                    </div>
+                    <select id="thresholdSelect" onchange="updateThreshold(this.value)" class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/80 font-display focus:outline-none focus:border-cyan-400/40" style="color-scheme: dark;">
+                        <option value="20" selected>20%</option>
+                        <option value="15">15%</option>
+                        <option value="10">10%</option>
+                        <option value="5">5%</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-white/80">Peringatan Baterai Penuh</div>
+                        <div class="text-[11px] text-white/40 mt-0.5">Notifikasi saat baterai mencapai 100%</div>
+                    </div>
+                    <div class="toggle-track active" id="toggleFull" onclick="toggleNotif('fullBattery', this)" role="switch" aria-checked="true" tabindex="0">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-white/80">Peringatan Charging Lambat</div>
+                        <div class="text-[11px] text-white/40 mt-0.5">Notifikasi jika estimasi charge > 3 jam</div>
+                    </div>
+                    <div class="toggle-track active" id="toggleSlow" onclick="toggleNotif('slowCharging', this)" role="switch" aria-checked="true" tabindex="0">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+                <div class="border-t border-white/5"></div>
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-3">
+                    <button class="btn-cyber text-xs" onclick="exportData()"><i class="fas fa-download mr-2"></i>Ekspor CSV</button>
+                    <button class="btn-cyber btn-danger text-xs" onclick="clearAllData()"><i class="fas fa-trash mr-2"></i>Hapus Semua Data</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-6 border-t border-white/5">
+            <div class="flex items-center justify-center gap-2 mb-2" id="compatInfo"></div>
+            <p class="text-[10px] text-white/20 font-display tracking-wider">BATTERYVISION PRO v1.0 &mdash; DATA DISIMPAN LOKAL DI PERANGKAT</p>
+        </footer>
+    </main>
+
+    <script>
+    // ================================================================
+    // KONFIGURASI
+    // ================================================================
+    const CIRCUMFERENCE = 2 * Math.PI * 95; // ~596.9
+    const DB_NAME = 'BatteryVisionDB';
+    const STORE_NAME = 'history';
+    const RECORD_INTERVAL = 30000; // 30 detik
+    const CHART_UPDATE_INTERVAL = 60000; // 1 menit
+    const HISTORY_CLEANUP_DAYS = 7;
+
+    // ================================================================
+    // STATE GLOBAL
+    // ================================================================
+    let db = null;
+    let battery = null;
+    let batteryHistory = [];
+    let mainChart = null;
+    let dischargeRate = null;
+    let sessions = [];
+
+    let currentData = {
+        level: 0,
+        charging: false,
+        chargingTime: Infinity,
+        dischargingTime: Infinity,
+        timestamp: Date.now()
+    };
+
+    let notifSettings = {
+        lowBattery: true,
+        lowThreshold: 20,
+        fullBattery: true,
+        slowCharging: true
+    };
+
+    let notifiedStates = {
+        low: false,
+        full: false,
+        slow: false
+    };
+
+    // ================================================================
+    // DATABASE (IndexedDB)
+    // ================================================================
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains(STORE_NAME)) {
+                    const store = database.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
+                    store.createIndex('timestamp', 'timestamp', { unique: true });
+                    store.createIndex('charging', 'charging', { unique: false });
+                }
+            };
+            request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+            request.onerror = (e) => reject(new Error('Gagal membuka database lokal'));
         });
-      });
     }
 
-    // ---- Chart.js ----
-    const ctx = document.getElementById('batteryChart').getContext('2d');
-    let chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Level baterai %',
-          data: [],
-          borderColor: '#f97316',
-          backgroundColor: 'rgba(251, 146, 60, 0.15)',
-          borderWidth: 3,
-          pointBackgroundColor: '#fbbf24',
-          pointBorderColor: '#fff',
-          pointRadius: 4,
-          tension: 0.2,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: 'rgba(30,25,20,0.8)', titleColor: '#fbbf24' }
-        },
-        scales: {
-          y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 20 } },
-          x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }
-        },
-        interaction: { intersect: false, mode: 'index' }
-      }
+    function dbAdd(record) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).put(record);
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e);
+        });
+    }
+
+    function dbGetRange(start, end) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const index = store.index('timestamp');
+            const range = IDBKeyRange.bound(start, end);
+            const request = index.openCursor(range);
+            const results = [];
+            request.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) { results.push(cursor.value); cursor.continue(); }
+                else resolve(results);
+            };
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function dbGetAll() {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const request = tx.objectStore(STORE_NAME).getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function dbClear() {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).clear();
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e);
+        });
+    }
+
+    async function dbCleanup() {
+        try {
+            const cutoff = Date.now() - HISTORY_CLEANUP_DAYS * 24 * 60 * 60 * 1000;
+            const all = await dbGetAll();
+            const old = all.filter(d => d.timestamp < cutoff);
+            if (old.length === 0) return;
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            old.forEach(d => store.delete(d.timestamp));
+            await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+            console.log(`Cleanup: ${old.length} record lama dihapus`);
+        } catch (e) { console.warn('Cleanup gagal:', e); }
+    }
+
+    // ================================================================
+    // BATTERY API
+    // ================================================================
+    function connectBattery() {
+        return navigator.getBattery();
+    }
+
+    function updateBatteryData() {
+        if (!battery) return;
+        currentData = {
+            level: battery.level,
+            charging: battery.charging,
+            chargingTime: battery.chargingTime,
+            dischargingTime: battery.dischargingTime,
+            timestamp: Date.now()
+        };
+        updateUI();
+        checkNotifications();
+    }
+
+    async function recordData() {
+        if (!battery) return;
+        const record = {
+            timestamp: Date.now(),
+            level: battery.level,
+            charging: battery.charging,
+            chargingTime: battery.chargingTime,
+            dischargingTime: battery.dischargingTime
+        };
+        try {
+            await dbAdd(record);
+            // Tambah ke history lokal
+            batteryHistory.push(record);
+            // Trim ke 24 jam terakhir
+            const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+            batteryHistory = batteryHistory.filter(d => d.timestamp >= cutoff);
+            batteryHistory.sort((a, b) => a.timestamp - b.timestamp);
+            updateDataCount();
+        } catch (e) { console.warn('Gagal menyimpan data:', e); }
+    }
+
+    // ================================================================
+    // ANALISIS
+    // ================================================================
+    function calculateDischargeRate(data) {
+        // Cari periode discharge terpanjang yang valid
+        if (data.length < 3) return null;
+        let bestRate = null;
+        let bestLen = 0;
+        let streak = [];
+
+        for (const point of data) {
+            if (!point.charging) {
+                streak.push(point);
+            } else {
+                if (streak.length >= 3) {
+                    const first = streak[0];
+                    const last = streak[streak.length - 1];
+                    const hours = (last.timestamp - first.timestamp) / (1000 * 60 * 60);
+                    if (hours > 0.05) { // minimal 3 menit data
+                        const rate = ((first.level - last.level) / hours) * 100;
+                        if (rate > 0 && streak.length > bestLen) {
+                            bestRate = rate;
+                            bestLen = streak.length;
+                        }
+                    }
+                }
+                streak = [];
+            }
+        }
+        // Cek streak terakhir
+        if (streak.length >= 3) {
+            const first = streak[0];
+            const last = streak[streak.length - 1];
+            const hours = (last.timestamp - first.timestamp) / (1000 * 60 * 60);
+            if (hours > 0.05) {
+                const rate = ((first.level - last.level) / hours) * 100;
+                if (rate > 0 && streak.length > bestLen) bestRate = rate;
+            }
+        }
+        return bestRate;
+    }
+
+    function detectSessions(data) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.getTime();
+        const todayData = data.filter(d => d.timestamp >= todayStart);
+        if (todayData.length === 0) return [];
+
+        const result = [];
+        let session = null;
+
+        for (const point of todayData) {
+            if (point.charging && !session) {
+                session = { start: point.timestamp, startLevel: point.level * 100, end: null, endLevel: null };
+            } else if (!point.charging && session) {
+                session.end = point.timestamp;
+                session.endLevel = point.level * 100;
+                result.push(session);
+                session = null;
+            } else if (point.charging && session) {
+                // Update endLevel sementara
+                session.endLevel = point.level * 100;
+                session.end = point.timestamp;
+            }
+        }
+        // Sesi yang masih berlangsung
+        if (session) {
+            if (!session.end) { session.end = Date.now(); session.endLevel = currentData.level * 100; }
+            session.ongoing = true;
+            result.push(session);
+        }
+        return result;
+    }
+
+    function findPeakHour(data) {
+        if (data.length < 5) return null;
+        // Hitung laju discharge per jam
+        const hourlyRates = {};
+        for (let i = 1; i < data.length; i++) {
+            if (!data[i].charging && !data[i-1].charging) {
+                const hour = new Date(data[i].timestamp).getHours();
+                const dtHours = (data[i].timestamp - data[i-1].timestamp) / (1000 * 60 * 60);
+                if (dtHours > 0) {
+                    const rate = ((data[i-1].level - data[i].level) / dtHours) * 100;
+                    if (rate > 0) {
+                        hourlyRates[hour] = (hourlyRates[hour] || 0) + rate;
+                    }
+                }
+            }
+        }
+        let maxHour = null, maxRate = 0;
+        for (const [h, r] of Object.entries(hourlyRates)) {
+            if (r > maxRate) { maxRate = r; maxHour = parseInt(h); }
+        }
+        return maxHour;
+    }
+
+    function analyzePatterns() {
+        const data = batteryHistory;
+        if (data.length < 2) return;
+
+        // Discharge rate
+        dischargeRate = calculateDischargeRate(data);
+        const avgD = document.getElementById('avgDischarge');
+        if (dischargeRate !== null) {
+            avgD.textContent = dischargeRate.toFixed(1) + ' %/jam';
+            avgD.style.color = dischargeRate > 15 ? 'var(--pink)' : dischargeRate > 8 ? 'var(--amber)' : 'var(--cyan)';
+        } else {
+            avgD.textContent = '-- %/jam';
+        }
+
+        // Peak hour
+        const peak = findPeakHour(data);
+        document.getElementById('peakHour').textContent = peak !== null ? `${String(peak).padStart(2,'0')}:00` : '--';
+
+        // Sessions
+        sessions = detectSessions(data);
+        document.getElementById('totalSessions').textContent = sessions.length;
+        document.getElementById('sesiText').textContent = sessions.length + 'x';
+
+        // Average duration
+        const completedSessions = sessions.filter(s => !s.ongoing && s.end);
+        if (completedSessions.length > 0) {
+            const avgMs = completedSessions.reduce((sum, s) => sum + (s.end - s.start), 0) / completedSessions.length;
+            document.getElementById('avgDuration').textContent = formatMs(avgMs);
+        } else {
+            document.getElementById('avgDuration').textContent = '--';
+        }
+
+        // Max/min level
+        const levels = data.map(d => d.level * 100);
+        document.getElementById('maxLevel').textContent = Math.max(...levels).toFixed(0) + '%';
+        document.getElementById('minLevel').textContent = Math.min(...levels).toFixed(0) + '%';
+
+        // Render sessions
+        renderSessions();
+    }
+
+    // ================================================================
+    // TIPS ENGINE
+    // ================================================================
+    function generateTips() {
+        const tips = [];
+        const level = currentData.level * 100;
+        const hour = new Date().getHours();
+
+        // Baterai kritis
+        if (level <= 15 && !currentData.charging) {
+            let timeText = '';
+            if (currentData.dischargingTime !== Infinity && currentData.dischargingTime > 0) {
+                timeText = `Estimasi tersisa ${formatSeconds(currentData.dischargingTime)}. `;
+            }
+            tips.push({
+                icon: 'fa-triangle-exclamation', color: 'var(--pink)', priority: 0,
+                title: 'Baterai Kritis!',
+                text: `${timeText}Segera hubungkan charger untuk menghindari perangkat mati mendadak.`
+            });
+        }
+
+        // Hampir penuh saat charging
+        if (currentData.charging && level >= 92) {
+            tips.push({
+                icon: 'fa-plug-circle-xmark', color: 'var(--amber)', priority: 1,
+                title: 'Segera Lepas Charger',
+                text: 'Baterai mendekati penuh. Melebihi 100% berkepanjangan dapat menurunkan kapasitas baterai jangka panjang.'
+            });
+        }
+
+        // Discharge tinggi
+        if (dischargeRate && dischargeRate > 12 && !currentData.charging) {
+            tips.push({
+                icon: 'fa-gauge-high', color: 'var(--orange)', priority: 1,
+                title: 'Konsumsi Daya Tinggi',
+                text: `Laju penurunan ${dischargeRate.toFixed(1)}%/jam. Tutup aplikasi berat di background, kurangi kecerahan layar, atau aktifkan mode hemat baterai.`
+            });
+        }
+
+        // Pola charging malam
+        const nightSessions = sessions.filter(s => {
+            const h = new Date(s.start).getHours();
+            return (h >= 23 || h <= 5) && !s.ongoing;
+        });
+        if (nightSessions.length >= 2) {
+            tips.push({
+                icon: 'fa-moon', color: 'var(--purple)', priority: 2,
+                title: 'Pola Charging Malam Terdeteksi',
+                text: `${nightSessions.length} sesi charging terdeteksi di malam hari. Untuk kesehatan baterai, charge hingga 80% sebelum tidur dan hindari overnight charging.`
+            });
+        }
+
+        // Zona optimal
+        if (level >= 20 && level <= 80 && !currentData.charging && level <= 15 === false) {
+            tips.push({
+                icon: 'fa-shield-check', color: 'var(--green)', priority: 3,
+                title: 'Zona Kesehatan Optimal',
+                text: 'Baterai berada di rentang 20-80%, ini adalah range terbaik untuk menjaga kapasitas jangka panjang.'
+            });
+        }
+
+        // Persiapan tidur
+        if (hour >= 22 && !currentData.charging && level < 40) {
+            tips.push({
+                icon: 'fa-bed', color: 'var(--purple)', priority: 2,
+                title: 'Persiapan Tidur',
+                text: `Baterai hanya ${Math.round(level)}% menjelang tidur. Pertimbangkan untuk charge sekarang hingga minimal 60% agar cukup sampai pagi.`
+            });
+        }
+
+        // Charging lambat
+        if (currentData.charging && currentData.chargingTime !== Infinity && currentData.chargingTime > 10800) {
+            tips.push({
+                icon: 'fa-snail', color: 'var(--amber)', priority: 1,
+                title: 'Kecepatan Charging Rendah',
+                text: `Estimasi pengisian ${formatSeconds(currentData.chargingTime)}. Pastikan menggunakan charger dan kabel original yang mendukung fast charging.`
+            });
+        }
+
+        // Pengisian frekuentif
+        if (sessions.length >= 6) {
+            tips.push({
+                icon: 'fa-rotate', color: 'var(--amber)', priority: 2,
+                title: 'Pengisian Sangat Frekuentif',
+                text: `${sessions.length} sesi hari ini. Partial charge sebenarnya baik untuk lithium-ion, tapi pastikan baterai tidak sering turun di bawah 10%.`
+            });
+        }
+
+        // Sesi singkat
+        const shortSessions = sessions.filter(s => !s.ongoing && s.end && (s.end - s.start) < 10 * 60 * 1000);
+        if (shortSessions.length >= 3) {
+            tips.push({
+                icon: 'fa-bolt', color: 'var(--amber)', priority: 2,
+                title: 'Banyak Sesi Singkat',
+                text: `${shortSessions.length} sesi di bawah 10 menit. Charge singkat tidak berbahaya, tapi untuk efisiensi, usahakan minimal 15-20 menit per sesi.`
+            });
+        }
+
+        // Tips positif saat charging di range baik
+        if (currentData.charging && level >= 20 && level <= 80) {
+            tips.push({
+                icon: 'fa-circle-check', color: 'var(--green)', priority: 3,
+                title: 'Charging di Zona Ideal',
+                text: 'Sedang mengisi di range 20-80%. Ini adalah praktik terbaik untuk memperpanjang usia baterai.'
+            });
+        }
+
+        return tips.sort((a, b) => a.priority - b.priority);
+    }
+
+    function renderTips() {
+        const container = document.getElementById('tipsList');
+        const tips = generateTips();
+        if (tips.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-brain text-2xl mb-2" style="color: rgba(255,171,0,0.2);"></i><p class="text-xs">Menganalisis pola untuk memberikan rekomendasi...</p></div>`;
+            return;
+        }
+        container.innerHTML = tips.map((tip, i) => `
+            <div class="tip-card" style="border-left-color: ${tip.color}; animation-delay: ${i * 0.08}s;">
+                <div class="flex items-start gap-3">
+                    <i class="fas ${tip.icon} mt-0.5 text-sm" style="color: ${tip.color};"></i>
+                    <div>
+                        <div class="text-sm font-semibold text-white/90 mb-1">${tip.title}</div>
+                        <div class="text-[12px] text-white/50 leading-relaxed">${tip.text}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ================================================================
+    // SESI PENGISIAN RENDER
+    // ================================================================
+    function renderSessions() {
+        const container = document.getElementById('sessionsList');
+        if (sessions.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-charging-station text-2xl mb-2" style="color: rgba(57,255,20,0.2);"></i><p class="text-xs">Belum ada sesi pengisian terdeteksi hari ini.</p></div>`;
+            return;
+        }
+        container.innerHTML = sessions.map(s => {
+            const dur = s.end - s.start;
+            const gain = (s.endLevel || s.startLevel) - s.startLevel;
+            const startStr = new Date(s.start).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const endStr = s.end ? new Date(s.end).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '...';
+            const isOngoing = s.ongoing;
+            const barWidth = Math.min(100, Math.max(5, (gain / 100) * 100));
+            return `
+                <div class="glass-card p-4 ${isOngoing ? 'ring-1 ring-green-400/20' : ''}">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-bolt text-xs" style="color: var(--green);"></i>
+                            <span class="text-sm font-semibold text-white/80">${startStr} — ${endStr}</span>
+                            ${isOngoing ? '<span class="text-[10px] font-display px-2 py-0.5 rounded-full bg-green-400/10 text-green-400">BERLANGSUNG</span>' : ''}
+                        </div>
+                        <span class="text-xs font-display" style="color: ${gain >= 0 ? 'var(--green)' : 'var(--pink)'};">${gain >= 0 ? '+' : ''}${gain.toFixed(0)}%</span>
+                    </div>
+                    <div class="session-bar">
+                        <div class="session-bar-fill" style="width: ${barWidth}%;"></div>
+                    </div>
+                    <div class="flex justify-between mt-1.5 text-[10px] text-white/30">
+                        <span>${s.startLevel.toFixed(0)}% → ${(s.endLevel || s.startLevel).toFixed(0)}%</span>
+                        <span>${formatMs(dur)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ================================================================
+    // CHART
+    // ================================================================
+    function initChart() {
+        const canvas = document.getElementById('chart24h');
+        const ctx = canvas.getContext('2d');
+        const emptyEl = document.getElementById('chartEmpty');
+
+        if (batteryHistory.length < 2) {
+            canvas.style.display = 'none';
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        canvas.style.display = 'block';
+        emptyEl.classList.add('hidden');
+
+        const labels = batteryHistory.map(d => formatTimeShort(d.timestamp));
+        const values = batteryHistory.map(d => d.level * 100);
+        const pointColors = batteryHistory.map(d => d.charging ? '#39ff14' : '#00e5ff');
+
+        mainChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Level Baterai',
+                    data: values,
+                    borderColor: '#00e5ff',
+                    borderWidth: 2,
+                    pointRadius: batteryHistory.length > 100 ? 0 : 2.5,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#fff',
+                    fill: true,
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const { ctx: c, chartArea } = chart;
+                        if (!chartArea) return 'rgba(0,229,255,0.05)';
+                        const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                        g.addColorStop(0, 'rgba(0, 229, 255, 0.25)');
+                        g.addColorStop(0.5, 'rgba(0, 229, 255, 0.08)');
+                        g.addColorStop(1, 'rgba(0, 229, 255, 0.0)');
+                        return g;
+                    },
+                    tension: 0.35,
+                    cubicInterpolationMode: 'monotone',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                animation: { duration: 600 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(5, 10, 21, 0.95)',
+                        borderColor: 'rgba(0, 229, 255, 0.25)',
+                        borderWidth: 1,
+                        titleColor: '#00e5ff',
+                        bodyColor: '#ffffff',
+                        padding: 12,
+                        cornerRadius: 10,
+                        titleFont: { family: 'Orbitron', size: 10, weight: '600' },
+                        bodyFont: { family: 'Space Grotesk', size: 12 },
+                        displayColors: false,
+                        callbacks: {
+                            title: (items) => items[0].label,
+                            label: (item) => {
+                                const idx = item.dataIndex;
+                                const point = batteryHistory[idx];
+                                const status = point && point.charging ? ' (Charging)' : '';
+                                return `Baterai: ${item.raw.toFixed(1)}%${status}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.025)', drawBorder: false },
+                        ticks: {
+                            color: 'rgba(255,255,255,0.3)',
+                            maxTicksLimit: 8,
+                            font: { family: 'Space Grotesk', size: 10 }
+                        },
+                        border: { display: false }
+                    },
+                    y: {
+                        min: 0, max: 100,
+                        grid: { color: 'rgba(255,255,255,0.025)', drawBorder: false },
+                        ticks: {
+                            color: 'rgba(255,255,255,0.3)',
+                            font: { family: 'Space Grotesk', size: 10 },
+                            callback: (v) => v + '%',
+                            stepSize: 25
+                        },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function refreshChartData() {
+        if (!mainChart) { initChart(); return; }
+        const canvas = document.getElementById('chart24h');
+        const emptyEl = document.getElementById('chartEmpty');
+
+        if (batteryHistory.length < 2) {
+            canvas.style.display = 'none';
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        canvas.style.display = 'block';
+        emptyEl.classList.add('hidden');
+
+        mainChart.data.labels = batteryHistory.map(d => formatTimeShort(d.timestamp));
+        mainChart.data.datasets[0].data = batteryHistory.map(d => d.level * 100);
+        mainChart.data.datasets[0].pointRadius = batteryHistory.length > 100 ? 0 : 2.5;
+        mainChart.data.datasets[0].pointBackgroundColor = batteryHistory.map(d => d.charging ? '#39ff14' : '#00e5ff');
+        mainChart.data.datasets[0].pointBorderColor = batteryHistory.map(d => d.charging ? '#39ff14' : '#00e5ff');
+        mainChart.update('none');
+    }
+
+    // ================================================================
+    // NOTIFIKASI
+    // ================================================================
+    function loadNotifSettings() {
+        try {
+            const saved = localStorage.getItem('bv_notif');
+            if (saved) notifSettings = { ...notifSettings, ...JSON.parse(saved) };
+        } catch (e) {}
+    }
+
+    function saveNotifSettings() {
+        try { localStorage.setItem('bv_notif', JSON.stringify(notifSettings)); } catch (e) {}
+    }
+
+    function updateNotifPermUI() {
+        const status = document.getElementById('notifPermStatus');
+        const btn = document.getElementById('btnNotifPerm');
+        if (!('Notification' in window)) {
+            status.textContent = 'Tidak didukung di browser ini';
+            btn.disabled = true;
+            btn.style.opacity = '0.3';
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            status.textContent = 'Aktif';
+            status.style.color = 'var(--green)';
+            btn.textContent = 'Aktif';
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+        } else if (Notification.permission === 'denied') {
+            status.textContent = 'Ditolak — buka pengaturan browser';
+            status.style.color = 'var(--pink)';
+            btn.textContent = 'Ditolak';
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+        } else {
+            status.textContent = 'Belum diizinkan';
+            status.style.color = 'var(--amber)';
+            btn.textContent = 'Aktifkan';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+    }
+
+    async function requestNotifPermission() {
+        if (!('Notification' in window)) {
+            showToast('Notification API tidak didukung', 'error');
+            return;
+        }
+        const result = await Notification.requestPermission();
+        updateNotifPermUI();
+        if (result === 'granted') {
+            showToast('Notifikasi diaktifkan!', 'success');
+            new Notification('BatteryVision Pro', { body: 'Peringatan baterai sekarang aktif.', icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔋</text></svg>' });
+        } else {
+            showToast('Izin notifikasi ditolak', 'warning');
+        }
+    }
+
+    function toggleNotif(key, el) {
+        notifSettings[key] = !notifSettings[key];
+        el.classList.toggle('active', notifSettings[key]);
+        el.setAttribute('aria-checked', notifSettings[key]);
+        saveNotifSettings();
+        // Reset state terkait
+        if (key === 'lowBattery') notifiedStates.low = false;
+        if (key === 'fullBattery') notifiedStates.full = false;
+        if (key === 'slowCharging') notifiedStates.slow = false;
+    }
+
+    function updateThreshold(val) {
+        notifSettings.lowThreshold = parseInt(val);
+        notifiedStates.low = false;
+        saveNotifSettings();
+    }
+
+    function renderNotifSettings() {
+        document.getElementById('toggleLow').classList.toggle('active', notifSettings.lowBattery);
+        document.getElementById('toggleFull').classList.toggle('active', notifSettings.fullBattery);
+        document.getElementById('toggleSlow').classList.toggle('active', notifSettings.slowCharging);
+        document.getElementById('thresholdSelect').value = notifSettings.lowThreshold;
+        updateNotifPermUI();
+    }
+
+    function checkNotifications() {
+        if (Notification.permission !== 'granted') return;
+        const level = currentData.level * 100;
+
+        // Low battery
+        if (notifSettings.lowBattery && !currentData.charging && level <= notifSettings.lowThreshold && !notifiedStates.low) {
+            sendNotif('Baterai Rendah', `Baterai tersisa ${Math.round(level)}%. Segera hubungkan charger!`);
+            notifiedStates.low = true;
+        }
+        if (level > notifSettings.lowThreshold + 5) notifiedStates.low = false;
+
+        // Full battery
+        if (notifSettings.fullBattery && currentData.charging && level >= 100 && !notifiedStates.full) {
+            sendNotif('Baterai Penuh', 'Baterai sudah 100%. Segera cabut charger untuk kesehatan baterai!');
+            notifiedStates.full = true;
+        }
+        if (!currentData.charging) notifiedStates.full = false;
+
+        // Slow charging
+        if (notifSettings.slowCharging && currentData.charging && currentData.chargingTime !== Infinity && currentData.chargingTime > 10800 && !notifiedStates.slow) {
+            sendNotif('Charging Lambat', `Estimasi pengisian ${formatSeconds(currentData.chargingTime)}. Periksa charger dan kabel Anda.`);
+            notifiedStates.slow = true;
+        }
+        if (!currentData.charging) notifiedStates.slow = false;
+    }
+
+    function sendNotif(title, body) {
+        try {
+            new Notification(title, {
+                body: body,
+                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚡</text></svg>',
+                tag: 'batteryvision-' + title,
+                renotify: true
+            });
+        } catch (e) { console.warn('Notif gagal:', e); }
+    }
+
+    // ================================================================
+    // UI UPDATE
+    // ================================================================
+    function updateUI() {
+        const level = currentData.level;
+        const percent = Math.round(level * 100);
+
+        // Gauge
+        const offset = CIRCUMFERENCE * (1 - level);
+        document.getElementById('gaugeProgress').setAttribute('stroke-dashoffset', offset);
+        document.getElementById('gaugeGlow').setAttribute('stroke-dashoffset', offset);
+        document.getElementById('gaugePercent').textContent = percent;
+
+        // Warna gauge berdasarkan level
+        updateGaugeColor(level);
+
+        // Charging class
+        const wrapper = document.getElementById('gaugeWrapper');
+        wrapper.classList.toggle('gauge-charging', currentData.charging);
+        document.getElementById('chargeIcon').classList.toggle('hidden', !currentData.charging);
+
+        // Status
+        document.getElementById('statusIcon').className = currentData.charging
+            ? 'fas fa-bolt text-xs' : 'fas fa-plug text-xs text-white/30';
+        document.getElementById('statusIcon').style.color = currentData.charging ? 'var(--green)' : 'rgba(255,255,255,0.3)';
+        document.getElementById('statusText').textContent = currentData.charging ? 'Mengisi Daya' : 'Menggunakan Daya';
+        document.getElementById('statusText').style.color = currentData.charging ? 'var(--green)' : 'rgba(255,255,255,0.8)';
+
+        document.getElementById('gaugeStatus').textContent = currentData.charging ? 'CHARGING' : 'DISCHARGING';
+        document.getElementById('gaugeStatus').style.color = currentData.charging ? 'rgba(57,255,20,0.6)' : 'rgba(255,255,255,0.3)';
+
+        // Estimasi
+        let estimasi = '--';
+        if (currentData.charging) {
+            if (currentData.chargingTime !== Infinity && currentData.chargingTime > 0) {
+                estimasi = formatSeconds(currentData.chargingTime);
+            } else {
+                estimasi = 'Menghitung...';
+            }
+        } else {
+            if (currentData.dischargingTime !== Infinity && currentData.dischargingTime > 0) {
+                estimasi = formatSeconds(currentData.dischargingTime);
+            } else if (dischargeRate && dischargeRate > 0) {
+                const secs = (level * 100 / dischargeRate) * 3600;
+                estimasi = formatSeconds(secs);
+            } else {
+                estimasi = 'Menghitung...';
+            }
+        }
+        document.getElementById('estimasiText').textContent = estimasi;
+
+        // Laju
+        if (dischargeRate !== null) {
+            const sign = currentData.charging ? '+' : '-';
+            const rate = currentData.charging ? dischargeRate * 0.7 : dischargeRate; // Perkiraan charge rate
+            document.getElementById('lajuText').textContent = `${sign}${rate.toFixed(1)}%/jam`;
+            document.getElementById('lajuText').style.color = currentData.charging ? 'var(--green)' : (rate > 15 ? 'var(--pink)' : rate > 8 ? 'var(--amber)' : 'var(--cyan)');
+        } else {
+            document.getElementById('lajuText').textContent = currentData.charging ? '+--/jam' : '--/jam';
+        }
+
+        // Background orb warna kontekstual
+        updateBackgroundOrbs(level);
+
+        // Analisis & tips (throttled - hanya saat ada perubahan signifikan)
+        analyzePatterns();
+        renderTips();
+    }
+
+    function updateGaugeColor(level) {
+        const s1 = document.getElementById('gradStop1');
+        const s2 = document.getElementById('gradStop2');
+        const percent = document.getElementById('gaugePercent');
+
+        if (level > 0.6) {
+            s1.setAttribute('stop-color', '#00e5ff');
+            s2.setAttribute('stop-color', '#39ff14');
+            percent.style.color = '#00e5ff';
+        } else if (level > 0.2) {
+            s1.setAttribute('stop-color', '#ffab00');
+            s2.setAttribute('stop-color', '#ff6b35');
+            percent.style.color = '#ffab00';
+        } else {
+            s1.setAttribute('stop-color', '#ff2d6b');
+            s2.setAttribute('stop-color', '#ff6b35');
+            percent.style.color = '#ff2d6b';
+        }
+    }
+
+    function updateBackgroundOrbs(level) {
+        const o1 = document.getElementById('orb1');
+        const o2 = document.getElementById('orb2');
+        if (level > 0.6) {
+            o1.style.background = '#00e5ff';
+            o2.style.background = '#39ff14';
+        } else if (level > 0.2) {
+            o1.style.background = '#ffab00';
+            o2.style.background = '#ff6b35';
+        } else {
+            o1.style.background = '#ff2d6b';
+            o2.style.background = '#ff6b35';
+        }
+    }
+
+    function updateClock() {
+        const now = new Date();
+        const str = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const el = document.getElementById('clock');
+        if (el) el.textContent = str;
+    }
+
+    function updateDataCount() {
+        const el = document.getElementById('dataCount');
+        if (el) el.textContent = `${batteryHistory.length} pts`;
+    }
+
+    // ================================================================
+    // UTILITAS
+    // ================================================================
+    function formatSeconds(secs) {
+        if (!secs || secs === Infinity || secs <= 0) return '--';
+        secs = Math.round(secs);
+        if (secs < 60) return `${secs} dtk`;
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        if (m < 60) return s > 0 ? `${m} mnt ${s} dtk` : `${m} mnt`;
+        const h = Math.floor(m / 60);
+        const rm = m % 60;
+        return rm > 0 ? `${h} jam ${rm} mnt` : `${h} jam`;
+    }
+
+    function formatMs(ms) {
+        if (!ms || ms <= 0) return '--';
+        const secs = Math.round(ms / 1000);
+        return formatSeconds(secs);
+    }
+
+    function formatTimeShort(ts) {
+        const d = new Date(ts);
+        return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => { requestAnimationFrame(() => { toast.classList.add('show'); }); });
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 350);
+        }, 3000);
+    }
+
+    async function exportData() {
+        try {
+            const data = await dbGetAll();
+            if (data.length === 0) { showToast('Tidak ada data untuk diekspor', 'warning'); return; }
+            let csv = 'Timestamp,Level (%),Charging,Charging Time (s),Discharging Time (s)\n';
+            data.sort((a, b) => a.timestamp - b.timestamp).forEach(d => {
+                csv += `${new Date(d.timestamp).toISOString()},${(d.level * 100).toFixed(2)},${d.charging},${d.chargingTime === Infinity ? '' : d.chargingTime},${d.dischargingTime === Infinity ? '' : d.dischargingTime}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `battery-history-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Berhasil mengekspor ${data.length} data point`, 'success');
+        } catch (e) {
+            showToast('Gagal mengekspor data', 'error');
+        }
+    }
+
+    async function clearAllData() {
+        // Konfirmasi dengan modal sederhana
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-4';
+        overlay.style.background = 'rgba(5,10,21,0.85)';
+        overlay.style.backdropFilter = 'blur(8px)';
+        overlay.innerHTML = `
+            <div class="glass-card p-6 max-w-sm w-full text-center" style="border-color: rgba(255,45,107,0.3);">
+                <i class="fas fa-triangle-exclamation text-3xl mb-3" style="color: var(--pink);"></i>
+                <h3 class="font-display text-sm font-bold tracking-wider mb-2">HAPUS SEMUA DATA?</h3>
+                <p class="text-xs text-white/50 mb-5">Semua histori baterai yang tersimpan akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
+                <div class="flex gap-3 justify-center">
+                    <button class="btn-cyber text-xs" id="cancelClear">Batal</button>
+                    <button class="btn-cyber btn-danger text-xs" id="confirmClear">Hapus</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#cancelClear').onclick = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+        overlay.querySelector('#confirmClear').onclick = async () => {
+            overlay.remove();
+            try {
+                await dbClear();
+                batteryHistory = [];
+                sessions = [];
+                dischargeRate = null;
+                if (mainChart) { mainChart.destroy(); mainChart = null; }
+                initChart();
+                analyzePatterns();
+                renderTips();
+                renderSessions();
+                updateDataCount();
+                showToast('Semua data berhasil dihapus', 'success');
+            } catch (e) {
+                showToast('Gagal menghapus data', 'error');
+            }
+        };
+    }
+
+    // ================================================================
+    // SCROLL REVEAL
+    // ================================================================
+    function initScrollReveal() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.section-reveal').forEach(el => observer.observe(el));
+    }
+
+    // ================================================================
+    // KOMPATIBILITAS
+    // ================================================================
+    function showCompatibility() {
+        const checks = {
+            'Battery API': 'getBattery' in navigator,
+            'IndexedDB': 'indexedDB' in window,
+            'Notification': 'Notification' in window,
+        };
+        const container = document.getElementById('compatInfo');
+        container.innerHTML = Object.entries(checks).map(([name, ok]) =>
+            `<span class="text-[10px] font-display ${ok ? 'text-green-400/40' : 'text-red-400/60'}">
+                <i class="fas fa-${ok ? 'check' : 'xmark'} mr-1"></i>${name}
+            </span>`
+        ).join('<span class="text-white/10 mx-2">|</span>');
+    }
+
+    // ================================================================
+    // KEYBOARD SUPPORT UNTUK TOGGLES
+    // ================================================================
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('toggle-track')) {
+            e.preventDefault();
+            e.target.click();
+        }
     });
 
-    // update chart dari histori
-    async function refreshChart() {
-      try {
-        const history = await getLastHistory(20);
-        const labels = history.map((_, idx) => `T-${history.length - idx}`);
-        const data = history.map(h => Math.round(h.level * 100));
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = data;
-        chart.update();
-        const count = await getHistoryCount();
-        historyCount.innerText = count;
-      } catch (e) { console.warn('chart update error', e); }
-    }
+    // ================================================================
+    // INISIALISASI UTAMA
+    // ================================================================
+    async function init() {
+        try {
+            // 1. Buka database
+            await initDB();
 
-    // ---- notifikasi ----
-    async function requestNotifPermission() {
-      if (!('Notification' in window)) {
-        notifMessage.innerText = 'Tidak support';
-        return;
-      }
-      if (Notification.permission === 'granted') {
-        notifMessage.innerText = 'Izin diberikan ✅';
-        return;
-      }
-      if (Notification.permission === 'denied') {
-        notifMessage.innerText = 'Izin ditolak';
-        return;
-      }
-      const result = await Notification.requestPermission();
-      if (result === 'granted') {
-        notifMessage.innerText = 'Notifikasi aktif!';
-        // kirim test
-        new Notification('⚡ NeoBattery siap', { body: 'Peringatan baterai akan dikirim.', icon: '🔋' });
-      } else {
-        notifMessage.innerText = 'Izin diperlukan';
-      }
-    }
-    document.getElementById('notifBtn').addEventListener('click', requestNotifPermission);
+            // 2. Muat histori 24 jam terakhir
+            const now = Date.now();
+            batteryHistory = await dbGetRange(now - 24 * 60 * 60 * 1000, now);
+            batteryHistory.sort((a, b) => a.timestamp - b.timestamp);
+            updateDataCount();
 
-    // kirim notifikasi jika level rendah ( < 20% )
-    function sendLowBatteryNotif(level) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      if (level < 0.2) {
-        new Notification('⚠️ Baterai rendah', { body: `Level ${Math.round(level*100)}%. Segera charge.`, icon: '🔋' });
-      } else if (level > 0.85 && navigator.getBattery) {
-        // notifikasi hampir penuh (opsional)
-        new Notification('🔋 Baterai hampir penuh', { body: `Level ${Math.round(level*100)}%`, icon: '🔋' });
-      }
-    }
+            // 3. Muat pengaturan notifikasi
+            loadNotifSettings();
+            renderNotifSettings();
 
-    // ---- tips kontekstual ----
-    function updateTips(level, charging) {
-      let msg = '';
-      if (charging) {
-        if (level < 0.3) msg = '⚡ Isi daya cepat: hindari penggunaan berat saat charging.';
-        else if (level < 0.7) msg = '🔋 Pengisian stabil. Jaga suhu baterai tidak terlalu panas.';
-        else msg = '✅ Hampir penuh! Cabut charger di 100% untuk menjaga umur baterai.';
-      } else {
-        if (level < 0.15) msg = '🚨 Baterai kritis! Aktifkan mode hemat segera.';
-        else if (level < 0.35) msg = '📉 Kurangi kecerahan & matikan GPS untuk hemat daya.';
-        else if (level < 0.6) msg = '⚖️ Konsumsi normal. Tutup aplikasi yang tidak digunakan.';
-        else msg = '👍 Baterai sehat. Pertahankan pola penggunaan ini.';
-      }
-      tipText.innerText = msg;
-    }
+            // 4. Cek kompatibilitas
+            showCompatibility();
 
-    // ---- update UI dari Battery API ----
-    async function updateBatteryUI(battery) {
-      const level = battery.level; // 0..1
-      const charging = battery.charging;
-      const chargingTime = battery.chargingTime;
-      const dischargingTime = battery.dischargingTime;
+            // 5. Inisialisasi chart
+            initChart();
 
-      // stat
-      battLevel.innerText = `${Math.round(level * 100)}%`;
-      battStatus.innerText = charging ? '🔌 Mengisi' : '🔋 Memakai';
-      if (charging && chargingTime !== Infinity && chargingTime > 0) {
-        const mins = Math.ceil(chargingTime / 60);
-        chargeTime.innerText = `${mins} mnt`;
-      } else if (charging) {
-        chargeTime.innerText = '~ menghitung';
-      } else {
-        chargeTime.innerText = '--';
-      }
+            // 6. Hubungkan Battery API
+            if (!('getBattery' in navigator)) {
+                throw new Error('Battery API tidak tersedia. Gunakan browser berbasis Chromium (Brave, Chrome, Edge). Di Brave Android, pastikan tidak diblokir di pengaturan privasi.');
+            }
 
-      if (!charging && dischargingTime !== Infinity && dischargingTime > 0) {
-        const mins = Math.ceil(dischargingTime / 60);
-        dischargeTime.innerText = `${mins} mnt`;
-      } else if (!charging) {
-        dischargeTime.innerText = '~ menghitung';
-      } else {
-        dischargeTime.innerText = '--';
-      }
+            battery = await connectBattery();
+            updateBatteryData();
 
-      // tips
-      updateTips(level, charging);
+            // Event listeners untuk real-time update
+            battery.addEventListener('chargingchange', updateBatteryData);
+            battery.addEventListener('chargingtimechange', updateBatteryData);
+            battery.addEventListener('dischargingtimechange', updateBatteryData);
+            battery.addEventListener('levelchange', updateBatteryData);
 
-      // simpan ke indexedDB
-      const entry = { level, charging, timestamp: Date.now() };
-      await saveHistory(entry);
+            // 7. Simpan data berkala
+            await recordData(); // Segera simpan data pertama
+            setInterval(recordData, RECORD_INTERVAL);
 
-      // refresh chart & count
-      await refreshChart();
+            // 8. Refresh chart & analisis berkala
+            setInterval(() => {
+                refreshChartData();
+                analyzePatterns();
+                renderTips();
+                renderSessions();
+            }, CHART_UPDATE_INTERVAL);
 
-      // notifikasi peringatan
-      sendLowBatteryNotif(level);
+            // 9. Cleanup data lama (sekali saat init)
+            dbCleanup();
 
-      // notif box info
-      if (level < 0.2 && !charging) {
-        notifMessage.innerText = '⚠️ Baterai rendah!';
-      } else if (charging && level > 0.9) {
-        notifMessage.innerText = '🔋 Hampir penuh';
-      } else {
-        notifMessage.innerText = charging ? '⚡ Mengisi daya' : '📊 Memantau';
-      }
-    }
+            // 10. Jam
+            updateClock();
+            setInterval(updateClock, 1000);
 
-    // ---- main loop: ambil baterai & update ----
-    async function batteryLoop() {
-      try {
-        if (!navigator.getBattery) {
-          battStatus.innerText = 'Tidak support';
-          return;
+            // 11. Scroll reveal
+            initScrollReveal();
+
+            // 12. Sembunyikan loading
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.add('fade-out');
+                    setTimeout(() => loading.remove(), 600);
+                }
+            }, 600);
+
+            console.log('BatteryVision Pro initialized. Data points:', batteryHistory.length);
+
+        } catch (error) {
+            console.error('Init error:', error);
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.innerHTML = `
+                    <div class="text-center p-8 max-w-sm">
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style="background: rgba(255,45,107,0.1); border: 1px solid rgba(255,45,107,0.2);">
+                            <i class="fas fa-exclamation-triangle text-2xl" style="color: var(--pink);"></i>
+                        </div>
+                        <p class="font-display text-sm tracking-wider mb-3" style="color: var(--pink);">GAGAL TERHUBUNG</p>
+                        <p class="text-white/50 text-sm leading-relaxed mb-4">${error.message || 'Terjadi kesalahan saat menghubungkan sensor baterai.'}</p>
+                        <div class="text-left glass-card p-4 text-xs text-white/40 space-y-2">
+                            <p><i class="fas fa-check-circle text-green-400/50 mr-2"></i>Gunakan <strong class="text-white/60">Brave</strong> atau <strong class="text-white/60">Chrome</strong> di Android</p>
+                            <p><i class="fas fa-check-circle text-green-400/50 mr-2"></i>Di desktop: <strong class="text-white/60">Chrome</strong>, <strong class="text-white/60">Edge</strong>, atau <strong class="text-white/60">Brave</strong></p>
+                            <p><i class="fas fa-check-circle text-green-400/50 mr-2"></i>Di Brave Android: Settings → Site Settings → Additional permissions → Battery</p>
+                            <p><i class="fas fa-times-circle text-red-400/50 mr-2"></i>Firefox & Safari <strong class="text-white/60">tidak mendukung</strong> Battery API</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
-        const battery = await navigator.getBattery();
-        // update pertama
-        await updateBatteryUI(battery);
-        // event listener
-        battery.addEventListener('levelchange', () => updateBatteryUI(battery));
-        battery.addEventListener('chargingchange', () => updateBatteryUI(battery));
-        battery.addEventListener('chargingtimechange', () => updateBatteryUI(battery));
-        battery.addEventListener('dischargingtimechange', () => updateBatteryUI(battery));
-
-        // interval tambahan (real-time) setiap 30 detik refresh chart & count
-        setInterval(async () => {
-          try {
-            const bat = await navigator.getBattery();
-            await updateBatteryUI(bat);
-          } catch (e) {}
-        }, 30000);
-
-        // request notifikasi di awal
-        if (Notification.permission === 'default') {
-          // minta izin pasif
-          setTimeout(() => requestNotifPermission(), 2000);
-        }
-      } catch (err) {
-        battStatus.innerText = 'Error';
-        console.warn(err);
-      }
     }
 
-    // inisialisasi
-    batteryLoop();
-
-    // load histori awal
-    refreshChart();
-
-    // request izin notifikasi via tombol sudah di atas
-
-    // fungsi tambahan: jika tidak ada data, tampilkan contoh dummy (agar grafik tidak kosong)
-    setTimeout(async () => {
-      try {
-        const count = await getHistoryCount();
-        if (count === 0) {
-          // seed dummy
-          for (let i = 0; i < 6; i++) {
-            const lvl = 0.3 + (i * 0.1) + Math.random() * 0.05;
-            await saveHistory({ level: Math.min(lvl, 0.95), charging: false, timestamp: Date.now() - (60000 * (6-i)) });
-          }
-          await refreshChart();
-        }
-      } catch (_) {}
-    }, 800);
-
-  })();
-</script>
+    // Jalankan inisialisasi
+    init();
+    </script>
 </body>
 </html>
