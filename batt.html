@@ -1,440 +1,655 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover">
-<meta name="theme-color" content="#060b18">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQkFUVFgiLCJzaG9ydF9uYW1lIjoiQkFUVFgiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzA2MGIxOCIsInRoZW1lX2NvbG9yIjoiIzA2MGIxOCJ9">
-<title>BATTX</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script>tailwind.config={theme:{extend:{colors:{cd:'#060b18',cc:'#0a1224',nc:'#00f5d4',nm:'#ff2d75',ny:'#ffe14d',nl:'#7bff00',no:'#ff8c00'},fontFamily:{d:['Orbitron','sans-serif'],b:['Space Grotesk','sans-serif']}}}}</script>
-<style>
-:root{--rc:#00f5d4;--rg:rgba(0,245,212,.5);--sab:env(safe-area-inset-bottom,0px);--sat:env(safe-area-inset-top,0px)}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Space Grotesk',sans-serif;background:#060b18;color:#e2e8f0;overflow-x:hidden;min-height:100vh;padding-top:var(--sat);padding-bottom:calc(var(--sab)+12px)}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,212,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,.016) 1px,transparent 1px);background-size:32px 32px;z-index:0;pointer-events:none}
-body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 20%,rgba(6,11,24,.93) 100%);pointer-events:none;z-index:1}
-#pC{position:fixed;inset:0;z-index:0;pointer-events:none}
-.scn{position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,#00f5d4 50%,transparent 95%);z-index:2;animation:sD 5s linear infinite;opacity:.1;pointer-events:none}
-@keyframes sD{0%{top:-2px}100%{top:100vh}}
-.cd{background:rgba(10,18,36,.9);border:1px solid rgba(0,245,212,.05);border-radius:10px;backdrop-filter:blur(10px);transition:border-color .2s}
-.cd:active{border-color:rgba(0,245,212,.18)}
-@media(hover:hover){.cd:hover{border-color:rgba(0,245,212,.14)}}
-.bw{position:relative}.bw::before{content:'';position:absolute;inset:-2px;border-radius:12px;background:conic-gradient(from var(--a,0deg),transparent 48%,var(--rc) 74%,transparent 100%);animation:rB 2.5s linear infinite;z-index:-1;opacity:.35}
-@property --a{syntax:'<angle>';initial-value:0deg;inherits:false}
-@keyframes rB{to{--a:360deg}}
-@keyframes pG{0%,100%{filter:drop-shadow(0 0 4px var(--rg))}50%{filter:drop-shadow(0 0 14px var(--rg))}}
-.cp{animation:pG 1.8s ease-in-out infinite}
-@keyframes fU{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.fu{animation:fU .3s ease-out both}
-.sv{font-family:'Orbitron',sans-serif;font-weight:700;font-size:.88rem;letter-spacing:.2px}
-.tc{border-left:3px solid var(--tc,#00f5d4)}
-#loader{transition:opacity .4s,visibility .4s}
-#loader.hid{opacity:0;visibility:hidden}
-#app{transition:opacity .5s}
-.ti{animation:tI .25s ease-out both}
-@keyframes tI{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-.to{animation:tO .2s ease-in both}
-@keyframes tO{to{transform:translateX(100%);opacity:0}}
-.el{max-height:160px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,245,212,.08) transparent}
-.el::-webkit-scrollbar{width:2px}.el::-webkit-scrollbar-thumb{background:rgba(0,245,212,.08);border-radius:1px}
-.ei{font-size:9px;padding:2px 5px;border-left:2px solid transparent}
-.ei.nw{animation:eF .4s ease-out}
-@keyframes eF{0%{background:rgba(0,245,212,.08)}100%{background:transparent}}
-.cb{height:4px;border-radius:2px;background:rgba(255,255,255,.03);overflow:hidden}
-.cf{height:100%;border-radius:2px;transition:width .5s ease,background .3s}
-.mo{position:fixed;inset:0;z-index:60;background:rgba(6,11,24,.97);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;padding:16px;transition:opacity .25s,visibility .25s}
-.mo.hid{opacity:0;visibility:hidden;pointer-events:none}
-.fab{position:fixed;bottom:calc(var(--sab)+16px);right:14px;z-index:45;width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,245,212,.2);touch-action:manipulation;transition:transform .12s}
-.fab:active{transform:scale(.88)}
-.badge{font-size:8px;padding:1px 6px;border-radius:8px;font-weight:600;letter-spacing:.2px}
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:rgba(255,255,255,.05);outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:50%;background:var(--rc);cursor:pointer;box-shadow:0 0 10px var(--rg)}
-input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--rc);cursor:pointer;border:none;box-shadow:0 0 10px var(--rg)}
-.hc{display:none}@media(min-width:640px){.hc{display:revert}}
-.hm{display:revert}@media(min-width:640px){.hm{display:none}}
-::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,245,212,.06);border-radius:2px}
-@media(prefers-reduced-motion:reduce){.scn,.cp,.bw::before{animation:none}*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>⚡ Neural Battery · Analisis Futuristik</title>
+    <!-- Chart.js ringan & modern -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #f9f3ff, #e0f0ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1300px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.38);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 60px 60px 40px 40px;
+            padding: 28px 32px 38px;
+            box-shadow: 0 30px 60px rgba(0, 20, 50, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            transition: all 0.2s ease;
+        }
+
+        /* header futuristik */
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .header h1 {
+            font-weight: 650;
+            font-size: 2.1rem;
+            background: linear-gradient(145deg, #0b1a3a, #2d4b7c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 small {
+            font-size: 0.9rem;
+            background: rgba(10, 40, 80, 0.15);
+            padding: 6px 18px;
+            border-radius: 80px;
+            color: #1c3b66;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .badge-time {
+            background: rgba(0, 20, 60, 0.08);
+            padding: 10px 24px;
+            border-radius: 80px;
+            font-weight: 500;
+            color: #0a2647;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 8px 16px -8px rgba(0,0,0,0.05);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* kartu utama */
+        .grid-utama {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr 1fr;
+            gap: 22px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 40px;
+            padding: 22px 22px 26px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 15px 30px -12px rgba(0, 20, 40, 0.15);
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            background: rgba(255, 255, 255, 0.75);
+            box-shadow: 0 25px 40px -16px #1d3b6b30;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #2c4b74;
+            opacity: 0.8;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .battery-level {
+            font-size: 3.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0b2b5c, #3a6e9f);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1;
+        }
+
+        .battery-sub {
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #1e3d62;
+            margin-left: 6px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 8px 22px;
+            border-radius: 80px;
+            background: rgba(0, 200, 100, 0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(0, 200, 100, 0.3);
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #005f3a;
+        }
+
+        .status-badge.charging {
+            background: rgba(0, 180, 255, 0.2);
+            border-color: #0099ff80;
+            color: #005f9e;
+        }
+
+        .time-metrics {
+            margin-top: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+        }
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(4px);
+            padding: 4px 14px 4px 10px;
+            border-radius: 60px;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .metric-item label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #1f3f64;
+            opacity: 0.7;
+        }
+
+        .metric-item span {
+            font-weight: 650;
+            color: #0f2c4a;
+            margin-left: 6px;
+        }
+
+        /* grafik */
+        .chart-wrapper {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            border-radius: 38px;
+            padding: 16px 12px 6px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            margin: 12px 0 10px;
+            height: 200px;
+        }
+
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .tips-box {
+            background: rgba(230, 245, 255, 0.5);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 18px 22px;
+            border-left: 6px solid #3f8cff;
+            margin-top: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        .tips-box p {
+            font-weight: 500;
+            color: #0d2f4e;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tips-box i {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 6px #3f8cff80);
+        }
+
+        .btn-agresif {
+            background: linear-gradient(145deg, #ffffff, #e6f0ff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 80px;
+            font-weight: 600;
+            color: #00337a;
+            border: 1px solid white;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 20px -6px #001c3d30;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+
+        .btn-agresif:hover {
+            background: white;
+            transform: scale(1.02);
+            box-shadow: 0 12px 28px -8px #002b5e60;
+        }
+
+        .footer-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 18px;
+            gap: 16px;
+        }
+
+        .history-badge {
+            background: rgba(0, 30, 70, 0.04);
+            padding: 8px 20px;
+            border-radius: 60px;
+            border: 1px solid rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+            color: #1a3860;
+        }
+
+        @media (max-width: 920px) {
+            .grid-utama {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+            .dashboard {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 1.7rem;
+            }
+        }
+
+        /* animasi halus */
+        .fade-in {
+            animation: softRise 0.4s ease;
+        }
+        @keyframes softRise {
+            0% { opacity: 0.5; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .glow-text {
+            text-shadow: 0 0 12px #8ab9ff70;
+        }
+    </style>
 </head>
 <body>
-<canvas id="pC"></canvas>
-<div class="scn"></div>
-
-<div id="loader" class="fixed inset-0 z-50 flex items-center justify-center bg-cd">
-  <div class="text-center">
-    <div class="w-10 h-10 mx-auto border-2 border-nc/20 border-t-nc rounded-full animate-spin"></div>
-    <p class="font-d text-nc text-xs mt-3 tracking-[.3em]">BATTX</p>
-    <p class="text-[10px] text-gray-600 mt-1 font-b" id="lM">Mendeteksi...</p>
-  </div>
-</div>
-
-<div id="calM" class="mo hid">
-  <div class="w-full max-w-xs">
-    <div class="text-center mb-5">
-      <div class="w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-no/20 to-nm/20 border border-no/15 flex items-center justify-center mb-2.5"><i class="fas fa-sliders text-no text-lg"></i></div>
-      <h2 class="font-d text-xs font-bold tracking-wider">KALIBRASI</h2>
-      <p class="text-[10px] text-gray-500 mt-1.5 leading-relaxed px-2">Battery API tidak tersedia. Masukkan level baterai dari Settings perangkat.</p>
+<div class="dashboard fade-in" id="app">
+    <div class="header">
+        <h1>⚡ NeuralBattery <small>v.2 · prediktif</small></h1>
+        <div class="badge-time" id="liveTime">⏱️ <span id="timeDisplay">--:--:--</span></div>
     </div>
-    <div class="cd p-4">
-      <div class="text-center mb-3"><span id="calV" class="font-d text-4xl font-black text-nc">50</span><span class="text-gray-500 text-sm ml-1">%</span></div>
-      <input type="range" id="calS" min="0" max="100" value="50" class="mb-3">
-      <div class="flex justify-between text-[8px] text-gray-700 mb-4"><span>0%</span><span>50%</span><span>100%</span></div>
-      <button id="calB" class="w-full py-3 bg-gradient-to-r from-nc to-nl text-cd font-d text-[10px] font-bold tracking-wider rounded-xl active:scale-95 transition-transform">MULAI</button>
-      <button id="calH" class="w-full py-2 text-gray-600 text-[10px] font-b active:text-gray-400 mt-1.5"><i class="fas fa-question-circle mr-1"></i>Cara cek level</button>
-      <div id="calHB" class="hidden text-[10px] text-gray-500 leading-relaxed mt-2 space-y-1 pl-2 border-l-2 border-white/5">
-        <p><b class="text-gray-400">Oppo:</b> Settings → Battery</p>
-        <p><b class="text-gray-400">Samsung:</b> Settings → Device care</p>
-        <p><b class="text-gray-400">Xiaomi:</b> Settings → Battery</p>
-        <p><b class="text-gray-400">Tip:</b> Aktifkan persentase di status bar</p>
-      </div>
-    </div>
-  </div>
-</div>
 
-<div id="logM" class="mo hid" style="align-items:flex-end">
-  <div class="w-full max-w-md bg-cc rounded-t-2xl border-t border-white/5 p-4 pb-[calc(var(--sab)+16px)]">
-    <div class="w-8 h-1 bg-gray-700 rounded-full mx-auto mb-3"></div>
-    <h3 class="font-d text-[10px] font-bold tracking-wider mb-0.5">LOG MANUAL</h3>
-    <p class="text-[9px] text-gray-600 mb-3">Cek level di Settings, masukkan di sini.</p>
-    <div class="text-center mb-2"><span id="logV" class="font-d text-3xl font-black text-nc">50</span><span class="text-gray-500 text-sm ml-1">%</span></div>
-    <input type="range" id="logS" min="0" max="100" value="50" class="mb-2">
-    <button id="logB" class="w-full py-2.5 bg-nc/10 border border-nc/15 text-nc font-d text-[10px] font-bold tracking-wider rounded-xl active:scale-95 transition-transform mb-1.5">SIMPAN</button>
-    <button id="logX" class="w-full py-2 text-gray-600 text-[10px] font-b active:text-gray-400">TUTUP</button>
-  </div>
-</div>
-
-<div id="helpM" class="mo hid">
-  <div class="w-full max-w-sm max-h-[85vh] overflow-y-auto"><div class="cd p-4">
-    <div class="flex items-center justify-between mb-3"><h2 class="font-d text-[10px] font-bold tracking-wider">BANTUAN</h2><button id="helpX" class="w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center text-gray-600 active:text-white text-[10px]"><i class="fas fa-xmark"></i></button></div>
-    <div class="text-[10px] text-gray-400 leading-relaxed space-y-2.5">
-      <div><h3 class="text-gray-200 font-bold text-[11px] mb-0.5">Mengapa API tidak tersedia?</h3><p>Chrome Android 80+ menghapus <code class="text-nc bg-nc/10 px-1 rounded text-[9px]">getBattery()</code> untuk privasi.</p></div>
-      <div><h3 class="text-gray-200 font-bold text-[11px] mb-0.5">Browser yang mendukung:</h3><p>Chrome/Edge Desktop, Opera, <b>Kiwi Browser</b> (Android — direkomendasikan).</p></div>
-      <div><h3 class="text-gray-200 font-bold text-[11px] mb-0.5">Mode Estimasi:</h3><p>Menggunakan waktu layar aktif, aktivitas CPU (Performance Observer), memori, dan tipe jaringan. Semakin sering log manual, makin akurat.</p></div>
-      <div><h3 class="text-gray-200 font-bold text-[11px] mb-0.5">Tips akurasi:</h3><ul class="list-disc list-inside space-y-0.5 text-gray-500"><li>Log setiap 15-30 menit</li><li>Jaga tab tetap terbuka</li><li>Aktifkan "Jangan tidurkan layar"</li></ul></div>
-    </div>
-  </div></div>
-</div>
-
-<div id="app" class="relative z-10 min-h-screen opacity-0">
-  <header class="border-b border-white/5 backdrop-blur-xl bg-cd/80 sticky top-0 z-40" style="top:var(--sat)">
-    <div class="max-w-7xl mx-auto px-3 sm:px-5 py-1.5 flex items-center justify-between">
-      <div class="flex items-center gap-1.5">
-        <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-nc to-nl flex items-center justify-center shadow-lg shadow-nc/15"><i class="fas fa-bolt text-cd text-[8px] sm:text-[9px]"></i></div>
-        <h1 class="font-d text-[10px] sm:text-xs font-bold tracking-[.2em]">BATTX</h1>
-        <span id="mBadge" class="badge text-nl border border-nl/25">LIVE</span>
-      </div>
-      <div class="flex items-center gap-1 sm:gap-1.5">
-        <span id="pollI" class="text-[8px] font-mono text-gray-700 hidden sm:inline">--ms</span>
-        <button id="btnH" class="w-7 h-7 rounded-md border border-white/8 flex items-center justify-center text-gray-600 active:text-nc text-[9px]"><i class="fas fa-circle-question"></i></button>
-        <button id="btnN" class="w-7 h-7 rounded-md border border-white/8 flex items-center justify-center text-gray-600 active:text-nc text-[9px]"><i class="fas fa-bell"></i></button>
-        <button id="btnC" class="w-7 h-7 rounded-md border border-white/8 flex items-center justify-center text-gray-600 active:text-nm text-[9px]"><i class="fas fa-trash-alt"></i></button>
-        <div id="sDot" class="w-1.5 h-1.5 rounded-full bg-nl animate-pulse"></div>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-3 sm:px-5 py-3 space-y-3">
-    <section class="grid grid-cols-1 lg:grid-cols-5 gap-2.5 sm:gap-3">
-      <div class="lg:col-span-2 bw cd p-3 sm:p-4 flex flex-col items-center justify-center min-h-[250px] sm:min-h-[290px]">
-        <div class="relative" id="ringW">
-          <svg id="bR" viewBox="0 0 300 300" class="w-36 h-36 sm:w-52 sm:h-52">
-            <defs><filter id="rg"><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-            <g id="ticks" transform="translate(150,150)"></g>
-            <circle cx="150" cy="150" r="120" fill="none" stroke="rgba(255,255,255,.02)" stroke-width="7"/>
-            <circle id="pR" cx="150" cy="150" r="120" fill="none" stroke="var(--rc)" stroke-width="7" stroke-linecap="round" stroke-dasharray="753.98" stroke-dashoffset="753.98" transform="rotate(-90 150 150)" filter="url(#rg)" style="transition:stroke-dashoffset .6s ease,stroke .3s"/>
-            <text id="rP" x="150" y="136" text-anchor="middle" fill="white" font-family="Orbitron" font-size="42" font-weight="900">0</text>
-            <text x="150" y="158" text-anchor="middle" fill="#3d4a66" font-family="Space Grotesk" font-size="8" letter-spacing="3">PERSEN</text>
-          </svg>
-          <div id="chgI" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity"><i class="fas fa-bolt text-ny text-sm sm:text-base drop-shadow-lg" style="animation:bounce 1.4s infinite"></i></div>
+    <!-- grid 3 kartu -->
+    <div class="grid-utama">
+        <!-- kartu level & status -->
+        <div class="card">
+            <div class="card-title">🔋 status real-time</div>
+            <div>
+                <span class="battery-level" id="levelDisplay">--</span><span class="battery-sub">%</span>
+                <div id="statusBadge" class="status-badge">⏳ memuat</div>
+            </div>
+            <div class="time-metrics">
+                <div class="metric-item"><label>⏳ pengisian</label> <span id="chargeTime">--</span></div>
+                <div class="metric-item"><label>🔋 pemakaian</label> <span id="dischargeTime">--</span></div>
+            </div>
+            <div style="margin-top: 14px; font-size:0.9rem; background: rgba(0,0,0,0.02); padding: 8px 12px; border-radius: 30px;">
+                <span style="opacity:0.6;">📊 histori tersimpan: </span><span id="historyCount">0</span>
+            </div>
         </div>
-        <p id="rSt" class="font-d text-[8px] sm:text-[9px] tracking-[.12em] mt-1 text-gray-600">DETEKSI...</p>
-        <p id="rRw" class="text-[7px] font-mono text-gray-700 mt-0.5 max-w-full truncate px-1"></p>
-      </div>
 
-      <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-        <div class="cd p-2.5 fu" style="animation-delay:.02s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">STATUS</div><div id="xSt" class="sv text-nc">--</div><div id="xStS" class="text-[7px] font-mono text-gray-700 truncate"></div></div>
-        <div class="cd p-2.5 fu" style="animation-delay:.04s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">CHG TIME</div><div id="xCT" class="sv">--:--</div><div id="xCTS" class="text-[7px] font-mono text-gray-700"></div></div>
-        <div class="cd p-2.5 fu" style="animation-delay:.06s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">DISCHG TIME</div><div id="xDT" class="sv">--:--</div><div id="xDTS" class="text-[7px] font-mono text-gray-700"></div></div>
-        <div class="cd p-2.5 fu" style="animation-delay:.08s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">KONSUMSI</div><div id="xRt" class="sv">-- %/j</div><div id="xRtS" class="text-[7px] font-mono text-gray-700"></div></div>
-        <div class="cd p-2.5 fu" style="animation-delay:.10s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">MIN/MAX</div><div id="xMM" class="sv">-- / --</div><div id="xMMS" class="text-[7px] font-mono text-gray-700"></div></div>
-        <div class="cd p-2.5 fu" style="animation-delay:.12s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">SESI CHG</div><div id="xSe" class="sv">0</div><div id="xSeS" class="text-[7px] font-mono text-gray-700">hari ini</div></div>
-        <div class="cd p-2.5 col-span-2 fu" style="animation-delay:.14s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">KAPASITAS EST.</div><div class="flex items-center gap-2.5"><div id="xCap" class="sv text-sm sm:text-base">-- mAh</div><div class="flex-1"><div class="cb"><div id="capF" class="cf" style="width:0%;background:#00f5d4"></div></div></div></div></div>
-        <div class="cd p-2.5 fu" style="animation-delay:.16s"><div class="text-[7px] sm:text-[8px] text-gray-600 font-b tracking-wider mb-0.5">SAMPLES</div><div id="xSa" class="sv text-nl">0</div><div id="xSaS" class="text-[7px] font-mono text-gray-700">total</div></div>
-      </div>
-    </section>
+        <!-- kartu grafik (chart) -->
+        <div class="card" style="grid-column: span 1;">
+            <div class="card-title">📈 pola konsumsi (6 jam)</div>
+            <div class="chart-wrapper">
+                <canvas id="batteryChart" width="300" height="150"></canvas>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+                <span style="font-size:0.7rem; background: #ffffff70; padding: 2px 16px; border-radius: 50px;">estimasi waktu pakai</span>
+            </div>
+        </div>
 
-    <section class="cd p-2.5 sm:p-3 fu" style="animation-delay:.18s">
-      <div class="flex items-center gap-1.5 mb-2"><i class="fas fa-microchip text-nc text-[9px]"></i><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em]">KAPABILITAS PERANGKAT</h2></div>
-      <div id="apiC" class="flex flex-wrap gap-1"></div>
-    </section>
+        <!-- kartu tips & estimasi -->
+        <div class="card">
+            <div class="card-title">🧠 tips hemat kontekstual</div>
+            <div id="tipsContainer" class="tips-box">
+                <p><span style="font-size:2rem;">💡</span> <span id="tipText">Memuat saran cerdas...</span></p>
+            </div>
+            <div style="margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <span class="metric-item"><label>⏱️ estimasi tersisa</label> <span id="estTimeLeft">--</span></span>
+                <span class="metric-item"><label>⚡ konsumsi rata-rata</label> <span id="avgConsumption">--</span></span>
+            </div>
+        </div>
+    </div>
 
-    <section class="cd p-2.5 sm:p-3 fu" style="animation-delay:.2s">
-      <div class="flex items-center justify-between mb-2"><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em]">POLA BATERAI</h2><div class="flex gap-2.5 text-[8px] text-gray-600"><span class="flex items-center gap-1"><span class="w-2 h-[2px] rounded bg-nc"></span>Level</span><span class="flex items-center gap-1"><span class="w-2 h-[2px] rounded bg-ny"></span>Chg</span></div></div>
-      <div class="h-36 sm:h-48"><canvas id="mC"></canvas></div>
-    </section>
-
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-      <div class="cd p-2.5 sm:p-3 fu" style="animation-delay:.22s"><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em] mb-2">SESI CHARGE</h2><div class="h-32 sm:h-36"><canvas id="sC"></canvas></div></div>
-      <div class="cd p-2.5 sm:p-3 fu" style="animation-delay:.24s"><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em] mb-2">DISTRIBUSI</h2><div class="h-32 sm:h-36"><canvas id="dC"></canvas></div></div>
-      <div class="cd p-2.5 sm:p-3 fu" style="animation-delay:.26s"><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em] mb-2">DRAIN/JAM</h2><div class="h-32 sm:h-36"><canvas id="rC"></canvas></div></div>
-    </section>
-
-    <section class="cd p-2.5 sm:p-3 fu" style="animation-delay:.28s">
-      <div class="flex items-center justify-between mb-2"><div class="flex items-center gap-1.5"><i class="fas fa-wave-square text-nc text-[9px]"></i><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em]">EVENTS</h2></div><span id="evCt" class="text-[7px] text-gray-700 font-mono">0</span></div>
-      <div id="evL" class="el space-y-0"></div>
-      <div id="evE" class="text-center py-5 text-gray-700 text-[9px]"><i class="fas fa-satellite-dish mr-1"></i>Menunggu...</div>
-    </section>
-
-    <section class="fu" style="animation-delay:.3s"><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em] mb-2">TIPS</h2><div id="tipB" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div></section>
-
-    <section class="cd p-2.5 sm:p-3 fu" style="animation-delay:.32s">
-      <div class="flex items-center justify-between mb-2"><h2 class="font-d text-[8px] sm:text-[9px] font-bold tracking-[.12em]">HISTORI</h2><span id="hCt" class="text-[7px] text-gray-700 font-mono">0</span></div>
-      <div id="hCd" class="hm space-y-1"></div>
-      <div class="hc"><div class="overflow-x-auto -mx-3 px-3"><table class="w-full text-[10px] min-w-[540px]"><thead><tr class="text-left text-[7px] text-gray-600 tracking-wider border-b border-white/5"><th class="pb-1 pr-2">WAKTU</th><th class="pb-1 pr-2">LEVEL</th><th class="pb-1 pr-2">STATUS</th><th class="pb-1 pr-2">CHG</th><th class="pb-1 pr-2">DISCHG</th><th class="pb-1 pr-2">DELTA</th><th class="pb-1">RATE</th></tr></thead><tbody id="hBd" class="text-gray-400"></tbody></table></div></div>
-      <div id="hEm" class="hidden text-center py-5 text-gray-700 text-[9px]"><i class="fas fa-database text-sm mb-1 block"></i>Kosong</div>
-    </section>
-  </main>
-
-  <footer class="border-t border-white/5 mt-2 py-2.5"><div class="max-w-7xl mx-auto px-3 sm:px-5 flex justify-between text-[8px] text-gray-700"><span>BATTX Intelligence</span><span>Real + Estimasi</span></div></footer>
+    <!-- footer interaktif -->
+    <div class="footer-actions">
+        <div class="history-badge">📀 IndexedDB · <span id="dbStatus">aktif</span></div>
+        <div>
+            <button class="btn-agresif" id="resetHistoryBtn">⟳ reset histori</button>
+            <button class="btn-agresif" id="notifTestBtn" style="margin-left: 8px;">🔔 uji notifikasi</button>
+        </div>
+    </div>
 </div>
-
-<button id="fabL" class="fab bg-gradient-to-br from-nc to-nl text-cd hidden" title="Log Manual"><i class="fas fa-plus text-base"></i></button>
-<div id="toasts" class="fixed top-10 right-2 sm:right-3 z-50 space-y-1 max-w-[260px] sm:max-w-xs"></div>
 
 <script>
-const CFG={pollMs:3000,maxDB:5000,maxEv:200,maxDay:7,circ:753.98,cap:4500};
-function lc(p){return p>80?'#7bff00':p>60?'#00f5d4':p>40?'#ffe14d':p>20?'#ff8c00':'#ff2d75'}
-function lca(p,a){const c=lc(p),r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
-function fT(s){if(!isFinite(s)||s<=0)return'--:--';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?`${h}j ${m}m`:`${m}m`}
-function fCK(d){return d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
-function fSH(d){return d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}
-function fMs(m){return m<1000?m+'ms':(m/1000).toFixed(1)+'s'}
-function vib(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
-function ts(){return Date.now()}
+    (function() {
+        "use strict";
 
-function toast(m,t='info'){
-  const c=document.getElementById('toasts'),cs={info:'border-l-nc bg-nc/10',warning:'border-l-ny bg-ny/10',danger:'border-l-nm bg-nm/10',success:'border-l-nl bg-nl/10'},is={info:'fa-circle-info text-nc',warning:'fa-triangle-exclamation text-ny',danger:'fa-circle-exclamation text-nm',success:'fa-circle-check text-nl'};
-  const el=document.createElement('div');el.className=`border-l-4 ${cs[t]||cs.info} backdrop-blur-xl rounded-r-lg px-2.5 py-1.5 text-[10px] text-white font-b ti flex items-start gap-2`;
-  el.innerHTML=`<i class="fas ${is[t]||is.info} mt-0.5 text-[9px]"></i><span>${m}</span>`;
-  c.appendChild(el);vib(t==='danger'?100:25);setTimeout(()=>{el.classList.replace('ti','to');setTimeout(()=>el.remove(),200)},3000);
-}
+        // ---- DOM refs ----
+        const levelDisplay = document.getElementById('levelDisplay');
+        const statusBadge = document.getElementById('statusBadge');
+        const chargeTimeSpan = document.getElementById('chargeTime');
+        const dischargeTimeSpan = document.getElementById('dischargeTime');
+        const estTimeLeft = document.getElementById('estTimeLeft');
+        const avgConsumption = document.getElementById('avgConsumption');
+        const tipText = document.getElementById('tipText');
+        const historyCountSpan = document.getElementById('historyCount');
+        const timeDisplay = document.getElementById('timeDisplay');
 
-// IndexedDB
-let db=null;
-function openDB(){return new Promise((r,j)=>{const q=indexedDB.open('BX4',2);q.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('rd')){const s=d.createObjectStore('rd',{keyPath:'id',autoIncrement:true});s.createIndex('ts','t')}if(!d.objectStoreNames.contains('ss')){const s=d.createObjectStore('ss',{keyPath:'id',autoIncrement:true});s.createIndex('st','st')}if(!d.objectStoreNames.contains('ml')){const s=d.createObjectStore('ml',{keyPath:'id',autoIncrement:true});s.createIndex('ts','t')}};q.onsuccess=e=>{db=e.target.result;r(db)};q.onerror=e=>j(e.target.error)})}
-function dbA(s,d){return new Promise((r,j)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).add(d);tx.oncomplete=()=>r();tx.onerror=e=>j(e.target.error)})}
-function dbG(s,i,rng){return new Promise((r,j)=>{const tx=db.transaction(s,'readonly'),st=tx.objectStore(s);let q;if(i&&rng)q=st.index(i).openCursor(rng);else q=st.openCursor(null,'prev');const res=[];q.onsuccess=e=>{const c=e.target.result;if(c){res.push(c.value);c.continue()}else r(res)};q.onerror=e=>j(e.target.error)})}
-function dbCl(s){return new Promise((r,j)=>{const tx=db.transaction(s,'readwrite');tx.objectStore(s).clear();tx.oncomplete=()=>r();tx.onerror=e=>j(e.target.error)})}
-function dbCt(s){return new Promise((r,j)=>{const tx=db.transaction(s,'readonly'),q=tx.objectStore(s).count();q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)})}
-function dbClean(){const c=ts()-CFG.maxDay*864e5,tx=db.transaction('rd','readwrite'),ix=tx.objectStore('rd').index('ts'),cu=ix.openCursor(IDBKeyRange.upperBound(c));cu.onsuccess=e=>{const c=e.target.result;if(c){c.delete();c.continue()}}}
+        // ---- Chart.js ----
+        const ctx = document.getElementById('batteryChart').getContext('2d');
+        let batteryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['-6h', '-5h', '-4h', '-3h', '-2h', '-1h', 'sekarang'],
+                datasets: [{
+                    label: 'Level baterai %',
+                    data: [72, 68, 61, 53, 44, 38, 32],
+                    borderColor: '#2f7be0',
+                    backgroundColor: 'rgba(47, 123, 224, 0.08)',
+                    borderWidth: 3.5,
+                    tension: 0.3,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#1f5bb0',
+                    pointRadius: 5,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: '#0a1e3dcc', titleColor: '#d6e6ff' }
+                },
+                scales: {
+                    y: { min: 0, max: 100, grid: { color: '#b8cef0', lineWidth: 0.5 }, ticks: { color: '#1a3a62' } },
+                    x: { grid: { display: false }, ticks: { color: '#1a3a62' } }
+                }
+            }
+        });
 
-// Partikel
-let pts=[],pCv,pCx;
-function initP(){pCv=document.getElementById('pC');pCx=pCv.getContext('2d');rsP();window.addEventListener('resize',rsP);for(let i=0;i<25;i++)pts.push({x:Math.random()*pCv.width,y:Math.random()*pCv.height,r:Math.random()+.3,vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15,a:Math.random()*.2+.05});aP()}
-function rsP(){pCv.width=innerWidth;pCv.height=innerHeight}
-function aP(){pCx.clearRect(0,0,pCv.width,pCv.height);const col=lc(cLvl||70),r=parseInt(col.slice(1,3),16),g=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=pCv.width;if(p.x>pCv.width)p.x=0;if(p.y<0)p.y=pCv.height;if(p.y>pCv.height)p.y=0;pCx.beginPath();pCx.arc(p.x,p.y,Math.max(.1,p.r),0,Math.PI*2);pCx.fillStyle=`rgba(${r},${g},${b},${p.a})`;pCx.fill()});requestAnimationFrame(aP)}
+        // ---- IndexedDB ----
+        let db = null;
+        const DB_NAME = 'BatteryHistoryDB';
+        const STORE_NAME = 'history';
 
-function gTk(){const g=document.getElementById('ticks');let h='';for(let i=0;i<60;i++){const a=(i*6-90)*Math.PI/180,m=i%5===0,r1=m?108:110,r2=113;h+=`<line x1="${Math.cos(a)*r1}" y1="${Math.sin(a)*r1}" x2="${Math.cos(a)*r2}" y2="${Math.sin(a)*r2}" stroke="rgba(255,255,255,${m?.07:.02})" stroke-width="${m?1:.5}"/>`}g.innerHTML=h}
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, 2);
+                req.onupgradeneeded = (ev) => {
+                    const db = ev.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
+                        store.createIndex('level', 'level', { unique: false });
+                    }
+                };
+                req.onsuccess = (ev) => { db = ev.target.result; resolve(db); };
+                req.onerror = (ev) => reject(ev.target.error);
+            });
+        }
 
-// Charts
-let mCh,sCh,dCh,rCh;
-function initCh(){
-  const bo={responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(10,18,36,.95)',titleFont:{family:'Space Grotesk',size:8},bodyFont:{family:'Orbitron',size:9},borderColor:'rgba(0,245,212,.1)',borderWidth:1,padding:5,cornerRadius:4}}};
-  const mc=document.getElementById('mC').getContext('2d'),g1=mc.createLinearGradient(0,0,0,220);g1.addColorStop(0,'rgba(0,245,212,.15)');g1.addColorStop(1,'rgba(0,245,212,0)');
-  mCh=new Chart(mc,{type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#00f5d4',backgroundColor:g1,fill:true,tension:.3,pointRadius:0,pointHoverRadius:3,borderWidth:1.5,segment:{borderColor:c=>{const d=c.p1.parsed.y-c.p0.parsed.y;return d>.3?'#ffe14d':d<-.8?'#ff2d75':'#00f5d4'}}},{data:[],borderColor:'rgba(255,225,77,.2)',backgroundColor:'rgba(255,225,77,.02)',fill:true,stepped:'before',pointRadius:0,borderWidth:1,yAxisID:'y1'}]},options:{...bo,interaction:{mode:'index',intersect:false},scales:{x:{grid:{color:'rgba(255,255,255,.01)'},ticks:{color:'#3d4a66',font:{family:'Space Grotesk',size:7},maxTicksLimit:10}},y:{min:0,max:100,grid:{color:'rgba(255,255,255,.01)'},ticks:{color:'#3d4a66',font:{family:'Space Grotesk',size:7},callback:v=>v+'%'}},y1:{display:false,min:-5,max:105}}}});
-  sCh=new Chart(document.getElementById('sC'),{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:[],borderRadius:3,borderSkipped:false,barPercentage:.5}]},options:{...bo,scales:{x:{grid:{display:false},ticks:{color:'#3d4a66',font:{family:'Space Grotesk',size:7}}},y:{grid:{color:'rgba(255,255,255,.01)'},ticks:{color:'#3d4a66',font:{family:'Space Grotesk',size:7},callback:v=>v+'m'},beginAtZero:true}}}});
-  dCh=new Chart(document.getElementById('dC'),{type:'doughnut',data:{labels:['0-20%','20-40%','40-60%','60-80%','80-100%'],datasets:[{data:[0,0,0,0,0],backgroundColor:['#ff2d75','#ff8c00','#ffe14d','#00f5d4','#7bff00'],borderColor:'#0a1224',borderWidth:2}]},options:{...bo,cutout:'58%',plugins:{...bo.plugins,legend:{display:true,position:'right',labels:{color:'#4a5578',font:{family:'Space Grotesk',size:8},padding:5,usePointStyle:true,pointStyleWidth:5}}}}});
-  rCh=new Chart(document.getElementById('rC'),{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:[],borderRadius:2,borderSkipped:false,barPercentage:.5}]},options:{...bo,scales:{x:{grid:{display:false},ticks:{color:'#3d4a66',font:{family:'Space Grotesk',size:7}}},y:{grid:{color:'rgba(255,255,255,.01)'},ticks:{color:'#3d4a66',font:{family:'Space Grotesk',size:7}},beginAtZero:true}}}});
-}
+        async function saveHistory(level, charging) {
+            try {
+                if (!db) await openDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const entry = { timestamp: Date.now(), level: Math.round(level), charging };
+                store.put(entry);
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = (e) => reject(e.target.error);
+                });
+            } catch (e) { console.warn('DB save error', e); }
+        }
 
-// Tips
-const TIPS=[
-  {id:'cr',c:d=>d.level<10&&!d.charging,ic:'fa-battery-empty',t:'KRITIS',d:'Segera charge. Aktifkan mode hemat.',cl:'#ff2d75',p:5},
-  {id:'lw',c:d=>d.level<20&&!d.charging,ic:'fa-battery-quarter',t:'RENDAH',d:'Charge segera. Kurangi kecerahan.',cl:'#ff8c00',p:4},
-  {id:'ov',c:d=>d.charging&&d.level>80,ic:'fa-plug-circle-exclamation',t:'CABUT CHARGER',d:'>80% terus-menerus merusak baterai.',cl:'#ffe14d',p:3},
-  {id:'fd',c:(d,r)=>r>15,ic:'fa-gauge-high',t:'DRAIN EKSTREM',d:'Periksa app background dan GPS.',cl:'#ff2d75',p:4},
-  {id:'hv',c:(d,r)=>r>8&&r<=15,ic:'fa-microchip',t:'BERAT',d:'Kurangi game/streaming.',cl:'#ff8c00',p:2},
-  {id:'gd',c:(d,r)=>r>=0&&r<5&&d.level>20&&d.level<80&&!d.charging,ic:'fa-shield-heart',t:'SEHAT',d:'Pola penggunaan baik.',cl:'#7bff00',p:0},
-  {id:'op',c:d=>d.level>=20&&d.level<=80&&!d.charging,ic:'fa-battery-half',t:'OPTIMAL',d:'Zona sehat baterai.',cl:'#00f5d4',p:0},
-  {id:'ch',c:d=>d.charging&&d.level<=80,ic:'fa-bolt',t:'CHARGING',d:'Cabut saat 80%.',cl:'#7bff00',p:1},
-  {id:'fl',c:d=>d.level>=95&&!d.charging,ic:'fa-battery-full',t:'PENUH',d:'Kapasitas maksimal.',cl:'#7bff00',p:0},
-  {id:'dd',c:(d,_,mn)=>d.level<15&&mn!==null&&mn<15,ic:'fa-arrow-trend-down',t:'DEEP DISCHG',d:'Sering <15% merusak baterai.',cl:'#ff2d75',p:4}
-];
-function gTips(d,r,mn){return TIPS.filter(t=>t.c(d,r,mn)).sort((a,b)=>b.p-a.p).slice(0,3)}
-function rTips(tps){const b=document.getElementById('tipB');if(!tps.length){b.innerHTML=`<div class="cd p-2.5 text-gray-600 text-[9px] col-span-full text-center"><i class="fas fa-lightbulb mr-1"></i>Tip muncul otomatis</div>`;return}b.innerHTML=tps.map((t,i)=>`<div class="tc cd p-2.5 fu" style="--tc:${t.cl};animation-delay:${i*.04}s"><div class="flex items-center gap-1.5 mb-1"><div class="w-5 h-5 rounded flex items-center justify-center" style="background:${t.cl}10"><i class="fas ${t.ic} text-[8px]" style="color:${t.cl}"></i></div><span class="font-d text-[8px] font-bold tracking-wider" style="color:${t.cl}">${t.t}</span></div><p class="text-[9px] text-gray-400 leading-relaxed font-b">${t.d}</p></div>`).join('')}
+        async function getHistory(limit = 20) {
+            try {
+                if (!db) await openDB();
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const index = store.index('level');
+                const data = await new Promise((resolve, reject) => {
+                    const result = [];
+                    const cursor = store.openCursor(null, 'prev');
+                    cursor.onsuccess = (e) => {
+                        const cur = e.target.result;
+                        if (cur && result.length < limit) {
+                            result.push(cur.value);
+                            cur.continue();
+                        } else {
+                            resolve(result);
+                        }
+                    };
+                    cursor.onerror = (e) => reject(e.target.error);
+                });
+                return data;
+            } catch (e) { console.warn('getHistory error', e); return []; }
+        }
 
-// Notif
-let nP='default',nS=new Set();
-async function reqN(){if(!('Notification' in window)){toast('Tidak didukung','warning');return}if(Notification.permission==='granted'){nP='granted';toast('Aktif','success');return}const p=await Notification.requestPermission();nP=p;p==='granted'?toast('Aktif','success'):toast('Ditolak','warning')}
-function sN(k,ti,bo){if(nS.has(k))return;nS.add(k);if(nP==='granted')try{new Notification(ti,{body:bo,tag:k})}catch(e){}toast(`${ti}: ${bo}`,k.includes('crit')||k.includes('low')?'danger':'info')}
-function cN(d){if(d.level<=10&&!d.charging)sN('cr','Kritis',`${Math.round(d.level)}%!`);else if(d.level<=20&&!d.charging)sN('lw','Rendah',`${Math.round(d.level)}%`);if(d.level>=95&&d.charging)sN('fl','Penuh',`${Math.round(d.level)}%. Cabut.`);if(d.level>20){nS.delete('cr');nS.delete('lw')}if(d.level<95||!d.charging)nS.delete('fl')}
+        async function clearHistory() {
+            if (!db) await openDB();
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.clear();
+            await new Promise((resolve, reject) => {
+                tx.oncomplete = resolve;
+                tx.onerror = (e) => reject(e.target.error);
+            });
+        }
 
-// Events
-let evIt=[],evN=0;
-function pEv(tp,det,ex=''){
-  evN++;const cols={level:'border-l-nc',charging:'border-l-ny',discharging:'border-l-nm',info:'border-l-gray-700',session:'border-l-nl',manual:'border-l-no'};
-  const ics={level:'fa-battery-half',charging:'fa-bolt',discharging:'fa-arrow-down',info:'fa-circle-info',session:'fa-plug',manual:'fa-pen'};
-  const h=`<div class="ei nw ${cols[tp]||'border-l-gray-700'} flex items-start gap-1 py-px"><span class="text-gray-700 font-mono shrink-0 w-12 text-[8px]">${fCK(new Date())}</span><i class="fas ${ics[tp]||'fa-circle'} text-[7px] mt-[2px] shrink-0" style="color:${tp==='charging'?'#ffe14d':tp==='discharging'?'#ff2d75':tp==='manual'?'#ff8c00':'#00f5d4'}"></i><span class="text-gray-500 text-[9px]">${det}</span><span class="text-gray-700 ml-auto shrink-0 text-[7px] font-mono">${ex}</span></div>`;
-  const log=document.getElementById('evL'),em=document.getElementById('evE');em.classList.add('hidden');log.insertAdjacentHTML('afterbegin',h);evIt.unshift(h);if(evIt.length>CFG.maxEv){evIt.pop();if(log.children.length>CFG.maxEv)log.removeChild(log.lastChild)}document.getElementById('evCt').textContent=evN;setTimeout(()=>{const f=log.firstElementChild;if(f)f.classList.remove('nw')},400);
-}
+        // ---- update UI dengan data baterai ----
+        function updateUI(level, charging, chargingTime, dischargingTime) {
+            const levelInt = Math.round(level * 100);
+            levelDisplay.textContent = levelInt;
+            // status
+            if (charging) {
+                statusBadge.textContent = '⚡ sedang mengisi';
+                statusBadge.className = 'status-badge charging';
+            } else {
+                statusBadge.textContent = '🔋 menggunakan baterai';
+                statusBadge.className = 'status-badge';
+            }
+            // waktu
+            if (charging && chargingTime !== Infinity && chargingTime > 0) {
+                const mins = Math.floor(chargingTime / 60);
+                const secs = Math.floor(chargingTime % 60);
+                chargeTimeSpan.textContent = `${mins}m ${secs}s`;
+            } else {
+                chargeTimeSpan.textContent = charging ? '⏳ menghitung...' : '--';
+            }
+            if (!charging && dischargingTime !== Infinity && dischargingTime > 0) {
+                const mins = Math.floor(dischargingTime / 60);
+                const secs = Math.floor(dischargingTime % 60);
+                dischargeTimeSpan.textContent = `${mins}m ${secs}s`;
+                estTimeLeft.textContent = `${mins}m ${secs}s`;
+            } else {
+                dischargeTimeSpan.textContent = '--';
+                estTimeLeft.textContent = '--';
+            }
 
-// ═══ BATTERY DETECTION — 8 METODE ═══
-async function tryBat(){
-  if(navigator.getBattery){try{const b=await navigator.getBattery();if(b&&typeof b.level==='number')return{bat:b,m:'getBattery()'}}catch(e){}}
-  if(navigator.battery&&typeof navigator.battery.level==='number')return{bat:navigator.battery,m:'navigator.battery'};
-  if(navigator.webkitBattery&&typeof navigator.webkitBattery.level==='number')return{bat:navigator.webkitBattery,m:'webkitBattery'};
-  if(navigator.mozBattery&&typeof navigator.mozBattery.level==='number')return{bat:navigator.mozBattery,m:'mozBattery'};
-  if(window.battery&&typeof window.battery.level==='number')return{bat:window.battery,m:'window.battery'};
-  if(window.webkitBattery&&typeof window.webkitBattery.level==='number')return{bat:window.webkitBattery,m:'window.webkitBattery'};
-  if(navigator.getBattery&&typeof navigator.getBattery==='object'&&navigator.getBattery.level!==undefined)return{bat:navigator.getBattery,m:'getBattery(obj)'};
-  return null;
-}
+            // estimasi konsumsi rata-rata (simulasi cerdas)
+            const avg = (100 - levelInt) / 6; 
+            avgConsumption.textContent = avg.toFixed(1) + '%/jam';
 
-// ═══ ESTIMATION ENGINE ═══
-class Est{
-  constructor(){this.ok=false;this.iL=null;this.iT=null;this.kR=[];this.sOMs=0;this.lV=ts();this.lT=0;this.mP=0;this.nT='unknown';this.bOn=8;this.bOf=1}
-  cal(lv){this.iL=lv;this.iT=ts();this.ok=true;this.sOMs=0;this.lV=ts();pEv('info',`Kalibrasi: ${lv.toFixed(1)}%`)}
-  addM(lv){
-    if(this.kR.length>0){const last=this.kR[this.kR.length-1];const hrs=(ts()-last.t)/36e5;if(hrs>.005){const rate=(last.l-lv)/hrs;this.kR.push({l:lv,t:ts(),r:rate});if(this.kR.length>=2){const rc=this.kR.slice(-6);const avg=rc.reduce((s,x)=>s+x.r,0)/rc.length;if(Math.abs(avg)>0)this.bOn=Math.min(25,Math.max(2,Math.abs(avg)))}}}else this.kR.push({l:lv,t:ts(),r:0});
-    this.iL=lv;this.iT=ts();this.sOMs=0;pEv('manual',`Log: ${lv.toFixed(0)}%`,this.kR.length>1?`rate:${this.bOn.toFixed(1)}/j`:'');
-    // Simpan manual log ke DB
-    dbA('ml',{t:ts(),lv:lv}).catch(()=>{});
-  }
-  getLv(){if(!this.ok)return null;const hrs=(ts()-this.iT)/36e5;const oH=this.sOMs/36e5;const fH=Math.max(0,hrs-oH);const cM=1+Math.min(1,this.lT/35)*.4;const mM=1+this.mP*.2;const nM=this._nM();const eff=this.bOn*cM*mM*nM;return Math.max(0,Math.min(100,this.iL-eff*oH-this.bOf*fH))}
-  getRt(){const cM=1+Math.min(1,this.lT/35)*.4;return this.bOn*cM*this._nM()}
-  _nM(){switch(this.nT){case'2g':case'slow-2g':return 1.3;case'3g':return 1.1;case'4g':return 1.05;case'wifi':return .9;default:return 1}}
-  startObs(){
-    setInterval(()=>{const n=ts();if(document.visibilityState==='visible')this.sOMs+=n-this.lV;this.lV=n},800);
-    if(typeof PerformanceObserver!=='undefined')try{new PerformanceObserver(l=>{l.getEntries().forEach(e=>{if(e.duration>50)this.lT++})}).observe({entryTypes:['longtask']})}catch(e){}
-    if(navigator.connection){this.nT=navigator.connection.effectiveType||'unknown';navigator.connection.addEventListener('change',()=>{this.nT=navigator.connection.effectiveType||'unknown';pEv('info',`Net: ${this.nT}`)})}
-    setInterval(()=>{if(performance.memory){const u=performance.memory.usedJSHeapSize,t=performance.memory.totalJSHeapSize;this.mP=t>0?u/t:0}},4000);
-  }
-}
+            // tips kontekstual
+            if (charging) {
+                tipText.textContent = '🔌 Sedang mengisi: sambungkan ke charger cepat jika tersedia.';
+            } else if (levelInt < 20) {
+                tipText.textContent = '⚠️ Baterai kritis! Aktifkan mode hemat & redupkan layar.';
+            } else if (levelInt < 50) {
+                tipText.textContent = '📉 Konsumsi sedang. Matikan GPS & Bluetooth jika tidak perlu.';
+            } else {
+                tipText.textContent = '✅ Baterai sehat. Pertahankan suhu optimal untuk umur panjang.';
+            }
+            // update grafik dengan data baru (push shift)
+            const chartData = batteryChart.data.datasets[0].data;
+            chartData.push(levelInt);
+            if (chartData.length > 15) chartData.shift();
+            batteryChart.update();
 
-// ═══ STATE ═══
-let bat=null,isReal=false,est=null;
-let cLvl=0,cData={level:0,charging:false,chargingTime:Infinity,dischargingTime:Infinity};
-let pData={...cData},sCnt=0,chgSt=null,pollIv=null,lastPT=0;
+            // simpan ke IndexedDB
+            saveHistory(levelInt, charging);
+            updateHistoryCount();
+        }
 
-function uRing(lv,ch){
-  const p=Math.round(lv),off=CFG.circ*(1-lv/100),col=lc(p),ring=document.getElementById('pR');
-  ring.style.strokeDashoffset=off;ring.style.stroke=col;
-  document.documentElement.style.setProperty('--rc',col);document.documentElement.style.setProperty('--rg',lca(p,.5));
-  document.getElementById('rP').textContent=p;
-  const w=document.getElementById('ringW');ch?w.classList.add('cp'):w.classList.remove('cp');
-  document.getElementById('chgI').style.opacity=ch?'1':'0';
-  document.getElementById('rSt').textContent=ch?'CHARGING':(p>80?'MEMADAI':p>40?'NORMAL':p>20?'RENDAH':'KRITIS');
-  document.getElementById('rSt').style.color=col;
-  document.getElementById('rRw').textContent=isReal?`lv:${lv.toFixed(3)} chg:${ch}`:`EST:${lv.toFixed(1)}%`;
-}
+        async function updateHistoryCount() {
+            const history = await getHistory(50);
+            historyCountSpan.textContent = history.length;
+        }
 
-function uStats(d,rate,minL,maxL,sesC,rdC){
-  const col=lc(Math.round(d.level));
-  document.getElementById('xSt').textContent=d.charging?'CHARGING':'DISCHARGING';
-  document.getElementById('xSt').style.color=d.charging?'#ffe14d':col;
-  document.getElementById('xStS').textContent=isReal?`${d.charging}`:'estimasi';
-  document.getElementById('xCT').textContent=isReal?fT(d.chargingTime):'N/A';
-  document.getElementById('xCT').style.color=d.charging?'#ffe14d':'';
-  document.getElementById('xCTS').textContent=isReal?(isFinite(d.chargingTime)?Math.round(d.chargingTime)+'s':'--'):'bukan real';
-  document.getElementById('xDT').textContent=isReal?fT(d.dischargingTime):fT(d.level/Math.max(.1,rate)*3600);
-  document.getElementById('xDT').style.color=!d.charging?col:'';
-  document.getElementById('xDTS').textContent=isReal?(isFinite(d.dischargingTime)?Math.round(d.dischargingTime)+'s':'--'):'estimasi';
-  const rs=isFinite(rate)?rate.toFixed(1)+' %/j':'-- %/j';
-  document.getElementById('xRt').textContent=rs;document.getElementById('xRt').style.color=rate>15?'#ff2d75':rate>8?'#ff8c00':'';
-  document.getElementById('xRtS').textContent=isFinite(rate)?`${(rate/60).toFixed(3)}%/m`:'';
-  document.getElementById('xMM').textContent=`${minL.toFixed(1)}/${maxL.toFixed(1)}`;
-  document.getElementById('xMMS').textContent=`Δ${(maxL-minL).toFixed(1)}%`;
-  document.getElementById('xSe').textContent=sesC;
-  document.getElementById('xCap').textContent=Math.round(d.level/100*CFG.cap)+' mAh';
-  document.getElementById('capF').style.width=d.level+'%';document.getElementById('capF').style.background=col;
-  document.getElementById('xSa').textContent=rdC;
-}
+        // ---- Battery API dengan aggressive polling ----
+        let battery = null;
+        async function initBattery() {
+            try {
+                if (!navigator.getBattery) {
+                    throw new Error('Battery API tidak didukung');
+                }
+                battery = await navigator.getBattery();
+                // update pertama
+                updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
 
-async function uCharts(){
-  const td=new Date();td.setHours(0,0,0,0);
-  try{
-    const rd=await dbG('rd','ts',IDBKeyRange.lowerBound(td.getTime()));rd.reverse();
-    mCh.data.labels=rd.map(r=>fSH(new Date(r.t)));mCh.data.datasets[0].data=rd.map(r=>r.lv);
-    mCh.data.datasets[1].data=rd.map(r=>r.ch?100:-5);mCh.update('none');
-    const bk=[0,0,0,0,0];rd.forEach(r=>{bk[Math.min(4,Math.floor(r.lv/20))]++});dCh.data.datasets[0].data=bk;dCh.update('none');
-    const ss=await dbG('ss','st',IDBKeyRange.lowerBound(td.getTime()));
-    sCh.data.labels=ss.map((_,i)=>`S${i+1}`);sCh.data.datasets[0].data=ss.map(s=>Math.round(s.dur/60));
-    sCh.data.datasets[0].backgroundColor=ss.map(s=>{const sp=(s.eL-s.sL)/Math.max(1,s.dur/60);return sp>5?'#7bff00':sp>2?'#00f5d4':'#ffe14d'});sCh.update('none');
-    const hr=calcHR(rd);rCh.data.labels=hr.l;rCh.data.datasets[0].data=hr.d;rCh.data.datasets[0].backgroundColor=hr.c;rCh.update('none');
-    const rate=calcR(rd);const minL=rd.length?Math.min(...rd.map(r=>r.lv)):0;const maxL=rd.length?Math.max(...rd.map(r=>r.lv)):0;
-    const cnt=await dbCt('rd');uStats(cData,rate,minL,maxL,ss.length,cnt);rTips(gTips(cData,rate,minL));
-  }catch(e){console.warn('CE:',e)}
-}
-function calcR(rd){if(rd.length<4)return 0;const r=rd.slice(0,Math.min(20,rd.length)).reverse();const sp=(r[r.length-1].t-r[0].t)/36e5;if(sp<.005)return 0;return(r[0].lv-r[r.length-1].lv)/sp}
-function calcHR(rd){const hrs={};rd.forEach(r=>{const h=new Date(r.t).getHours();if(!hrs[h])hrs[h]=[];hrs[h].push(r)});const l=[],d=[],c=[];for(let h=0;h<24;h++){const a=hrs[h];if(!a||a.length<2)continue;const s=[...a].sort((a,b)=>a.t-b.t);const sp=(s[s.length-1].t-s[0].t)/36e5;if(sp<.01)continue;const dr=(s[0].lv-s[s.length-1].lv)/sp;l.push(h+'');d.push(parseFloat(dr.toFixed(2)));c.push(dr>10?'#ff2d75':dr>5?'#ff8c00':dr>2?'#ffe14d':'#00f5d4')}return{l,d,c}}
+                // event listener
+                battery.addEventListener('levelchange', () => {
+                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+                });
+                battery.addEventListener('chargingchange', () => {
+                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+                });
+                battery.addEventListener('chargingtimechange', () => {
+                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+                });
+                battery.addEventListener('dischargingtimechange', () => {
+                    updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+                });
 
-async function uHist(){
-  try{
-    const cnt=await dbCt('rd');document.getElementById('hCt').textContent=cnt;
-    const rd=await dbG('rd');const bod=document.getElementById('hBd'),cards=document.getElementById('hCd'),em=document.getElementById('hEm');
-    if(!rd.length){bod.innerHTML='';cards.innerHTML='';em.classList.remove('hidden');return}
-    em.classList.add('hidden');
-    cards.innerHTML=rd.slice(0,40).map((r,i)=>{
-      const p=Math.round(r.lv),col=lc(p),prev=i<rd.length-1?rd[i+1]:null;
-      const dt=prev?(r.lv-prev.lv).toFixed(2):'--';const dc=dt==='--'?'':parseFloat(dt)>0?'color:#ffe14d':parseFloat(dt)<0?'color:#ff2d75':'';
-      return`<div class="cd p-2 flex items-center justify-between gap-2"><div class="flex items-center gap-1.5 min-w-0"><div class="w-1.5 h-1.5 rounded-full shrink-0" style="background:${col}"></div><span class="text-[9px] font-mono text-gray-600 shrink-0">${fSH(new Date(r.t))}</span>${r.mn?'<span class="badge text-no border border-no/15 shrink-0">M</span>':''}</div><div class="flex items-center gap-2 shrink-0"><span class="font-d text-[10px] font-bold" style="color:${col}">${p}%</span><span class="text-[8px] font-mono w-10 text-right" style="${dc}">${dt==='--'?'--':(parseFloat(dt)>0?'+':'')+dt}</span>${r.ch?'<i class="fas fa-bolt text-ny text-[7px]"></i>':''}</div></div>`
-    }).join('');
-    bod.innerHTML=rd.slice(0,60).map((r,i)=>{
-      const p=Math.round(r.lv),col=lc(p),prev=i<rd.length-1?rd[i+1]:null;
-      const dt=prev?(r.lv-prev.lv).toFixed(2):'--';const dc=dt==='--'?'':parseFloat(dt)>0?'color:#ffe14d':parseFloat(dt)<0?'color:#ff2d75':'';
-      const rate=prev&&prev.t!==r.t?((prev.lv-r.lv)/((r.t-prev.t)/36e5)).toFixed(2):'--';
-      return`<tr class="border-b border-white/[0.02]"><td class="py-1 pr-2 text-[9px] text-gray-600 font-mono">${fCK(new Date(r.t))}</td><td class="py-1 pr-2"><span class="font-d text-[9px] font-bold" style="color:${col}">${p}%</span></td><td class="py-1 pr-2 text-[9px]">${r.ch?'<span class="text-ny">Y</span>':'<span class="text-gray-700">N</span>'}</td><td class="py-1 pr-2 text-[9px] text-gray-600">${isFinite(r.ct)?fT(r.ct):'--'}</td><td class="py-1 pr-2 text-[9px] text-gray-600">${isFinite(r.dt)?fT(r.dt):'--'}</td><td class="py-1 pr-2 text-[9px] font-mono" style="${dc}">${dt==='--'?'--':(parseFloat(dt)>0?'+':'')+dt}</td><td class="py-1 text-[9px] font-mono text-gray-600">${rate==='--'?'--':rate+'/j'}</td></tr>`
-    }).join('');
-  }catch(e){console.warn('HE:',e)}
-}
+                // polling agresif setiap 15 detik untuk pembaruan ekstra
+                setInterval(() => {
+                    if (battery) {
+                        updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+                    }
+                }, 15000);
+            } catch (e) {
+                console.warn('Battery API error:', e);
+                levelDisplay.textContent = '--';
+                statusBadge.textContent = '⚠️ API tidak tersedia';
+                tipText.textContent = 'Gunakan browser modern dengan Battery API.';
+            }
+        }
 
-// Sampling
-async function doSamp(){
-  const now=ts(),pd=now-lastPT;lastPT=now;
-  if(isReal&&bat){
-    cData={level:bat.level*100,charging:bat.charging,chargingTime:bat.chargingTime,dischargingTime:bat.dischargingTime};
-    cLvl=cData.level;
-    const ld=cData.level-pData.level,cc=cData.charging!==pData.charging;
-    if(cc){if(cData.charging){pEv('charging',`ON ${cData.level.toFixed(1)}%`);chgSt={st:now,sl:cData.level};vib(50)}else{pEv('discharging',`OFF ${cData.level.toFixed(1)}%`);vib(50);if(chgSt){const dur=(now-chgSt.st)/1000;if(dur>10){dbA('ss',{st:chgSt.st,et:now,sL:chgSt.sl,eL:cData.level,dur}).catch(()=>{});pEv('session',`${dur.toFixed(0)}s ${chgSt.sl.toFixed(1)}→${cData.level.toFixed(1)}%`)}chgSt=null}}
-    if(Math.abs(ld)>=.5)pEv('level',`${pData.level.toFixed(1)}→${cData.level.toFixed(1)}%`,`${ld>0?'+':''}${ld.toFixed(2)}`);
-    try{await dbA('rd',{t:now,lv:cData.level,ch:cData.charging,ct:cData.chargingTime,dt:cData.dischargingTime,pi:pd,mn:false})}catch(e){}
-    if(sCnt%35===0)dbClean();
-  }else if(est&&est.ok){
-    const el=est.getLv();if(el===null)return;
-    cData={level:el,charging:false,chargingTime:Infinity,dischargingTime:el/Math.max(.1,est.getRt())*3600};
-    cLvl=el;
-    try{await dbA('rd',{t:now,lv:el,ch:false,ct:Infinity,dt:cData.dischargingTime,pi:pd,mn:false})}catch(e){}
-    if(sCnt%35===0)dbClean();
-  }else return;
-  sCnt++;uRing(cData.level,cData.charging);cN(cData);pData={...cData};
-  const pi=document.getElementById('pollI');if(pi){pi.textContent=fMs(pd);pi.style.color=pd>5000?'#ff2d75':'#4a5578'}
-}
+        // ---- Notification API ----
+        async function triggerNotification() {
+            if (!('Notification' in window)) {
+                alert('Notifikasi tidak didukung di browser ini.');
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                new Notification('🔋 NeuralBattery', {
+                    body: `Level baterai saat ini: ${levelDisplay.textContent}%`,
+                    icon: '🔋'
+                });
+            } else if (Notification.permission === 'denied') {
+                alert('Izin notifikasi ditolak. Aktifkan di pengaturan browser.');
+            } else {
+                const perm = await Notification.requestPermission();
+                if (perm === 'granted') {
+                    new Notification('✅ Notifikasi diaktifkan!', { body: 'Siap memantau baterai.' });
+                }
+            }
+        }
 
-function onBE(e){pEv('info',`Ev:${e.type}`,`${(bat.level*100).toFixed(2)}%`);doSamp();uCharts();uHist()}
-function attL(){if(!bat)return;['chargingchange','levelchange','chargingtimechange','dischargingtimechange'].forEach(e=>bat.addEventListener(e,onBE))}
+        // ---- reset history ----
+        async function resetHistory() {
+            if (confirm('Hapus semua histori baterai?')) {
+                await clearHistory();
+                updateHistoryCount();
+                // reset chart ke default
+                batteryChart.data.datasets[0].data = [72, 68, 61, 53, 44, 38, 32];
+                batteryChart.update();
+                tipText.textContent = '🔄 Histori direset. Mulai pencatatan baru.';
+            }
+        }
 
-function detAPI(){
-  const caps=[
-    {n:'getBattery',ok:'getBattery' in navigator},{n:'Notification',ok:'Notification' in window},{n:'IndexedDB',ok:'indexedDB' in window},
-    {n:'WakeLock',ok:'wakelock' in navigator},{n:'Visibility',ok:'visibilityState' in document},{n:'PerfObs',ok:typeof PerformanceObserver!=='undefined'},
-    {n:'PerfMem',ok:!!(performance&&performance.memory)},{n:'Connection',ok:!!navigator.connection},{n:'Vibrate',ok:!!(navigator.vibrate)},
-    {n:'DeviceMem',ok:!!navigator.deviceMemory},{n:'SW',ok:'serviceWorker' in navigator}
-  ];
-  document.getElementById('apiC').innerHTML=caps.map(c=>`<div class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] ${c.ok?'bg-nl/5 border border-nl/10 text-nl/70':'bg-nm/5 border border-nm/10 text-nm/60'}"><i class="fas ${c.ok?'fa-check':'fa-xmark'} text-[6px]"></i><span class="font-mono">${c.n}</span></div>`).join('');
-}
+        // ---- waktu realtime ----
+        function updateClock() {
+            const d = new Date();
+            timeDisplay.textContent = d.toLocaleTimeString('id-ID', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-let wL=null;
-async function reqWL(){if(!('wakelock' in navigator))return;try{wL=await navigator.wakelock.request('screen')}catch(e){}}
-document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'){doSamp();uCharts();uHist();pEv('info','Resync');if(!wL?.released)reqWL()}else doSamp()});
+        // ---- inisialisasi ----
+        window.addEventListener('load', async () => {
+            await openDB();
+            await updateHistoryCount();
+            initBattery();
 
-function setupCal(){
-  const sl=document.getElementById('calS'),vl=document.getElementById('calV');
-  sl.addEventListener('input',()=>{vl.textContent=sl.value;vl.style.color=lc(+sl.value)});
-  document.getElementById('calB').addEventListener('click',()=>{const v=+sl.value;est.cal(v);est.startObs();document.getElementById('calM').classList.add('hid');document.getElementById('fabL').classList.remove('hidden');cData={level:v,charging:false,chargingTime:Infinity,dischargingTime:v/est.bOn*3600};cLvl=v;pData={...cData};uRing(v,false);doSamp();uCharts();uHist();toast(`Kalibrasi ${v}%`,'success
+            // ambil histori untuk grafik awal (opsional)
+            const history = await getHistory(12);
+            if (history.length > 2) {
+                const levels = history.map(h => h.level).reverse();
+                const chartData = batteryChart.data.datasets[0].data;
+                // ambil 7 terakhir
+                const last7 = levels.slice(-7);
+                if (last7.length === 7) {
+                    batteryChart.data.datasets[0].data = last7;
+                    batteryChart.update();
+                }
+            }
+        });
+
+        // ---- event binding ----
+        document.getElementById('resetHistoryBtn').addEventListener('click', resetHistory);
+        document.getElementById('notifTestBtn').addEventListener('click', triggerNotification);
+
+        // juga update saat kembali ke tab (agresif)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && battery) {
+                updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+            }
+        });
+
+        // Interval tambahan untuk update chart dan history count
+        setInterval(() => {
+            if (battery) {
+                updateUI(battery.level, battery.charging, battery.chargingTime, battery.dischargingTime);
+            }
+            updateHistoryCount();
+        }, 8000);
+
+        console.log('⚡ NeuralBattery siap — futuristik & agresif');
+    })();
+</script>
+</body>
+</html>
