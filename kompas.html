@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>KOMPAS ULTRA AGRESIF</title>
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --fg: #e8e6e1;
+    --accent: #ff3d00;
+    --accent2: #ffab00;
+    --muted: #4a4a52;
+    --card: rgba(18,18,22,0.92);
+    --border: rgba(255,61,0,0.25);
+    --glow: rgba(255,61,0,0.4);
+    --green: #00e676;
+    --red: #ff1744;
+    --cyan: #00e5ff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Latar belakang atmosferik */
+  .bg-layer {
+    position: fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(255,61,0,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 80%, rgba(0,229,255,0.03) 0%, transparent 50%),
+      var(--bg);
+  }
+
+  .scanline {
+    position: fixed; inset:0; z-index:1; pointer-events:none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.008) 2px,
+      rgba(255,255,255,0.008) 4px
+    );
+  }
+
+  .container {
+    position: relative; z-index:2;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 8px;
+  }
+
+  /* Header */
+  .header {
+    width: 100%;
+    text-align: center;
+    padding: 6px 0 2px;
+  }
+  .header h1 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--accent);
+    text-transform: uppercase;
+    text-shadow: 0 0 20px var(--glow);
+  }
+  .header .sub {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    margin-top: 2px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    margin: 4px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 9px;
+  }
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    transition: background 0.3s;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .status-dot.active { background: var(--green); color: var(--green); }
+  .status-dot.warn { background: var(--accent2); color: var(--accent2); }
+
+  /* Area Kompas Utama */
+  .compass-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+  }
+
+  .compass-ring {
+    position: relative;
+    width: min(80vw, 340px);
+    height: min(80vw, 340px);
+  }
+
+  /* Lingkaran luar dekoratif */
+  .compass-ring::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    animation: ringPulse 3s ease-in-out infinite;
+  }
+  .compass-ring::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,61,0,0.08);
+  }
+
+  @keyframes ringPulse {
+    0%,100% { opacity:0.4; }
+    50% { opacity:1; }
+  }
+
+  .compass-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 15px rgba(255,61,0,0.15));
+  }
+
+  /* Penunjuk tetap atas */
+  .fixed-pointer {
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 22px solid var(--accent);
+    filter: drop-shadow(0 2px 8px var(--glow));
+    z-index: 10;
+  }
+
+  /* Display derajat besar */
+  .degree-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .degree-value {
+    font-size: clamp(42px, 14vw, 64px);
+    font-weight: 900;
+    color: var(--fg);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 30px rgba(255,255,255,0.1);
+  }
+  .degree-unit {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+  .direction-label {
+    font-size: clamp(20px, 6vw, 28px);
+    font-weight: 900;
+    color: var(--accent2);
+    letter-spacing: 4px;
+    margin-top: 2px;
+    text-shadow: 0 0 20px rgba(255,171,0,0.3);
+    min-height: 30px;
+  }
+
+  /* Info grid bawah */
+  .info-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .info-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 4px;
+    text-align: center;
+  }
+  .info-cell .label {
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .info-cell .value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fg);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .info-cell .value.accent { color: var(--accent); }
+  .info-cell .value.cyan { color: var(--cyan); }
+  .info-cell .value.green { color: var(--green); }
+
+  /* Tombol aksi */
+  .actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    margin-top: 6px;
+    padding-bottom: 10px;
+  }
+  .btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 10px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .btn:active {
+    background: var(--accent);
+    color: var(--bg);
+    transform: scale(0.96);
+    border-color: var(--accent);
+  }
+  .btn.locked {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--glow);
+  }
+  .btn.calibrating {
+    animation: calPulse 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes calPulse {
+    from { border-color: var(--accent2); box-shadow: 0 0 5px rgba(255,171,0,0.2); }
+    to { border-color: var(--accent); box-shadow: 0 0 25px var(--glow); }
+  }
+
+  /* Kalibrasi overlay */
+  .cal-overlay {
+    position: fixed; inset:0; z-index: 100;
+    background: rgba(0,0,0,0.92);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .cal-overlay.show { display: flex; }
+  .cal-circle {
+    width: 180px; height: 180px;
+    border: 3px solid var(--accent);
+    border-radius: 50%;
+    position: relative;
+    animation: calRotate 2s linear infinite;
+  }
+  .cal-circle::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    top: -10px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 20px var(--glow);
+  }
+  @keyframes calRotate {
+    to { transform: rotate(360deg); }
+  }
+  .cal-text {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-align: center;
+    line-height: 1.8;
+  }
+  .cal-progress {
+    width: 200px; height: 4px;
+    background: var(--muted);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .cal-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 2px;
+  }
+  .cal-done {
+    display: none;
+    color: var(--green);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    animation: donePop 0.4s ease-out;
+  }
+  @keyframes donePop {
+    0% { transform: scale(0.5); opacity:0; }
+    100% { transform: scale(1); opacity:1; }
+  }
+
+  /* Toast notifikasi */
+  .toast {
+    position: fixed;
+    top: 60px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--card);
+    border: 1px solid var(--accent);
+    color: var(--fg);
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    z-index: 200;
+    transition: transform 0.3s ease-out;
+    box-shadow: 0 4px 30px rgba(255,61,0,0.2);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Indikator gerakan */
+  .motion-indicator {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+  .motion-bar {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 12px;
+  }
+  .motion-bar span {
+    width: 3px;
+    background: var(--muted);
+    border-radius: 1px;
+    transition: height 0.1s, background 0.2s;
+  }
+  .motion-bar.active span { background: var(--green); }
+
+  /* Respons rate indicator */
+  .fps-badge {
+    position: fixed;
+    top: 4px; right: 6px;
+    font-size: 8px;
+    color: var(--muted);
+    z-index: 50;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Grafik mini derajat */
+  .mini-graph {
+    width: 100%;
+    height: 30px;
+    margin-top: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .mini-graph canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Permission overlay */
+  .perm-overlay {
+    position: fixed; inset:0; z-index: 300;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px;
+    text-align: center;
+  }
+  .perm-overlay.hidden { display: none; }
+  .perm-icon {
+    font-size: 48px;
+    color: var(--accent);
+    animation: permPulse 2s ease-in-out infinite;
+  }
+  @keyframes permPulse {
+    0%,100% { opacity:0.5; transform:scale(1); }
+    50% { opacity:1; transform:scale(1.1); }
+  }
+  .perm-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--fg);
+    letter-spacing: 2px;
+  }
+  .perm-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    max-width: 280px;
+  }
+  .perm-btn {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 14px 40px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 0 30px var(--glow);
+  }
+  .perm-btn:active { transform: scale(0.95); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="scanline"></div>
+<div class="fps-badge" id="fps">-- FPS</div>
+
+<!-- Permission Overlay -->
+<div class="perm-overlay" id="permOverlay">
+  <div class="perm-icon">&#9678;</div>
+  <div class="perm-title">AKSES SENSOR</div>
+  <div class="perm-desc">
+    Kompas ultra agresif membutuhkan akses penuh ke sensor orientasi perangkat. Aktifkan untuk memulai navigasi real-time.
+  </div>
+  <button class="perm-btn" id="permBtn" aria-label="Aktifkan sensor kompas">AKTIFKAN</button>
+</div>
+
+<!-- Kalibrasi Overlay -->
+<div class="cal-overlay" id="calOverlay" role="dialog" aria-label="Kalibrasi kompas">
+  <div class="cal-circle" id="calCircle"></div>
+  <div class="cal-text" id="calText">
+    PUTAR HP MEMBENTUK ANGKA 8<br>
+    <span style="font-size:11px;color:var(--muted)">Ulangi 10-15 kali</span>
+  </div>
+  <div class="cal-progress"><div class="cal-progress-bar" id="calBar"></div></div>
+  <div class="cal-done" id="calDone">KALIBRASI SELESAI</div>
+  <button class="btn" id="calClose" style="width:160px;display:none" aria-label="Tutup kalibrasi">SELESAI</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Main UI -->
+<div class="container" id="mainUI" style="opacity:0.3;pointer-events:none;">
+  <header class="header">
+    <h1>Kompas Ultra</h1>
+    <div class="sub">REAL-TIME AGGRESSIVE SENSOR</div>
+  </header>
+
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot" id="sensorDot"></div>
+      <span id="sensorStatus">MENUNGGU SENSOR</span>
+    </div>
+    <div class="status-item">
+      <span id="modeLabel">MODE: FREE</span>
+    </div>
+    <div class="status-item">
+      <span id="smoothLabel">SMOOTH: OFF</span>
+    </div>
+  </div>
+
+  <div class="compass-area">
+    <div class="compass-ring" id="compassRing">
+      <div class="fixed-pointer"></div>
+      <svg class="compass-svg" viewBox="0 0 400 400" id="compassSvg">
+        <defs>
+          <linearGradient id="needleGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ff3d00"/>
+            <stop offset="50%" stop-color="#ff6e40"/>
+            <stop offset="51%" stop-color="#455a64"/>
+            <stop offset="100%" stop-color="#263238"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Lingkaran luar -->
+        <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,61,0,0.15)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,61,0,0.08)" stroke-width="0.5"/>
+        <circle cx="200" cy="200" r="160" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+
+        <!-- Tick marks dan label - akan dirotasi -->
+        <g id="compassDial">
+          <!-- Tick besar setiap 30° -->
+          <g id="ticks30"></g>
+          <!-- Tick kecil setiap 10° -->
+          <g id="ticks10"></g>
+          <!-- Tick mikro setiap 5° -->
+          <g id="ticks5"></g>
+          <!-- Label derajat -->
+          <g id="degreeLabels"></g>
+          <!-- Label arah mata angin -->
+          <text x="200" y="38" text-anchor="middle" fill="#ff3d00" font-size="22" font-weight="900" font-family="Courier New">U</text>
+          <text x="368" y="206" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">T</text>
+          <text x="200" y="375" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">S</text>
+          <text x="32" y="206" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">B</text>
+          <!-- Arah intercardinal -->
+          <text x="326" y="74" text-anchor="middle" fill="rgba(255,171,0,0.6)" font-size="10" font-weight="700" font-family="Courier New">TL</text>
+          <text x="326" y="340" text-anchor="middle" fill="rgba(255,171,0,0.6)" font-size="10" font-weight="700" font-family="Courier New">TG</text>
+          <text x="74" y="340" text-anchor="middle" fill="rgba(255,171,0,0.6)" font-size="10" font-weight="700" font-family="Courier New">BD</text>
+          <text x="74" y="74" text-anchor="middle" fill="rgba(255,171,0,0.6)" font-size="10" font-weight="700" font-family="Courier New">BL</text>
+        </g>
+
+        <!-- Jarum kompas -->
+        <g id="needle" filter="url(#glow)">
+          <polygon points="200,55 192,195 200,185 208,195" fill="url(#needleGrad)" opacity="0.95"/>
+          <polygon points="200,345 192,205 200,215 208,205" fill="#37474f" opacity="0.7"/>
+          <circle cx="200" cy="200" r="8" fill="#ff3d00" stroke="#0a0a0c" stroke-width="3"/>
+          <circle cx="200" cy="200" r="3" fill="#fff"/>
+        </g>
+      </svg>
+
+      <div class="degree-display">
+        <div class="degree-value" id="degValue">---</div>
+        <div class="degree-unit">DERAJAT</div>
+        <div class="direction-label" id="dirLabel">---</div>
+      </div>
+
+      <div class="motion-indicator">
+        <div class="motion-bar" id="motionBar">
+          <span style="height:4px"></span>
+          <span style="height:7px"></span>
+          <span style="height:10px"></span>
+          <span style="height:6px"></span>
+          <span style="height:9px"></span>
+        </div>
+        <span id="motionLabel">STABIL</span>
+      </div>
+    </div>
+
+    <!-- Info grid -->
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="label">AZIMUTH RAW</div>
+        <div class="value accent" id="rawAz">---</div>
+      </div>
+      <div class="info-cell">
+        <div class="label">MAG FIELD (μT)</div>
+        <div class="value cyan" id="magField">---</div>
+      </div>
+      <div class="info-cell">
+        <div class="label">UPDATE/SEC</div>
+        <div class="value green" id="updateRate">0</div>
+      </div>
+      <div class="info-cell">
+        <div class="label">PITCH</div>
+        <div class="value" id="pitchVal">---</div>
+      </div>
+      <div class="info-cell">
+        <div class="label">ROLL</div>
+        <div class="value" id="rollVal">---</div>
+      </div>
+      <div class="info-cell">
+        <div class="label">DELTA</div>
+        <div class="value accent" id="deltaVal">---</div>
+      </div>
+    </div>
+
+    <!-- Mini grafik -->
+    <div class="mini-graph">
+      <canvas id="graphCanvas"></canvas>
+    </div>
+
+    <!-- Aksi -->
+    <div class="actions">
+      <button class="btn" id="btnCal" aria-label="Kalibrasi kompas">KALIBRASI</button>
+      <button class="btn" id="btnLock" aria-label="Kunci arah">KUNCI ARAH</button>
+      <button class="btn" id="btnSmooth" aria-label="Toggle smooth">SMOOTH</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// KOMPAS ULTRA AGRESIF - Engine Inti
+// ============================================================
+
+(function() {
+  'use strict';
+
+  // --- Elemen DOM ---
+  const $ = id => document.getElementById(id);
+  const permOverlay = $('permOverlay');
+  const permBtn = $('permBtn');
+  const mainUI = $('mainUI');
+  const calOverlay = $('calOverlay');
+  const calCircle = $('calCircle');
+  const calText = $('calText');
+  const calBar = $('calBar');
+  const calDone = $('calDone');
+  const calClose = $('calClose');
+  const toast = $('toast');
+  const compassDial = $('compassDial');
+  const needle = $('needle');
+  const degValue = $('degValue');
+  const dirLabel = $('dirLabel');
+  const sensorDot = $('sensorDot');
+  const sensorStatus = $('sensorStatus');
+  const modeLabel = $('modeLabel');
+  const smoothLabel = $('smoothLabel');
+  const rawAz = $('rawAz');
+  const magField = $('magField');
+  const updateRate = $('updateRate');
+  const pitchVal = $('pitchVal');
+  const rollVal = $('rollVal');
+  const deltaVal = $('deltaVal');
+  const motionBar = $('motionBar');
+  const motionLabel = $('motionLabel');
+  const fpsEl = $('fps');
+  const btnCal = $('btnCal');
+  const btnLock = $('btnLock');
+  const btnSmooth = $('btnSmooth');
+  const graphCanvas = $('graphCanvas');
+  const graphCtx = graphCanvas.getContext('2d');
+
+  // --- State ---
+  let sensorActive = false;
+  let isLocked = false;
+  let lockedDegree = 0;
+  let smoothMode = false;
+  let isCalibrating = false;
+  let calProgress = 0;
+  let calDone_flag = false;
+
+  // Data sensor mentah
+  let currentAzimuth = 0;
+  let currentPitch = 0;
+  let currentRoll = 0;
+  let rawMagX = 0, rawMagY = 0, rawMagZ = 0;
+  let lastAzimuth = 0;
+  let smoothedAzimuth = 0;
+  let firstReading = true;
+
+  // Tracking performa
+  let updateCount = 0;
+  let lastSecond = performance.now();
+  let currentFPS = 0;
+  let frameCount = 0;
+  let lastFPSTime = performance.now();
+
+  // Riwayat derajat untuk grafik
+  const degreeHistory = new Array(120).fill(0);
+  let historyIdx = 0;
+
+  // Deteksi gerakan
+  let accelBuffer = [];
+  let isMoving = false;
+
+  // Arah mata angin
+  const directions = [
+    { min: 348.75, max: 360, label: 'U', full: 'UTARA' },
+    { min: 0, max: 11.25, label: 'U', full: 'UTARA' },
+    { min: 11.25, max: 33.75, label: 'UTL', full: 'UTARA TIMUR LAUT' },
+    { min: 33.75, max: 56.25, label: 'TL', full: 'TIMUR LAUT' },
+    { min: 56.25, max: 78.75, label: 'TLT', full: 'TIMUR LAUT TIMUR' },
+    { min: 78.75, max: 101.25, label: 'T', full: 'TIMUR' },
+    { min: 101.25, max: 123.75, label: 'TTG', full: 'TIMUR TENGGARA' },
+    { min: 123.75, max: 146.25, label: 'TG', full: 'TENGGARA' },
+    { min: 146.25, max: 168.75, label: 'TGS', full: 'TENGGARA SELATAN' },
+    { min: 168.75, max: 191.25, label: 'S', full: 'SELATAN' },
+    { min: 191.25, max: 213.75, label: 'SBD', full: 'SELATAN BARAT DAYA' },
+    { min: 213.75, max: 236.25, label: 'BD', full: 'BARAT DAYA' },
+    { min: 236.25, max: 258.75, label: 'BDB', full: 'BARAT DAYA BARAT' },
+    { min: 258.75, max: 281.25, label: 'B', full: 'BARAT' },
+    { min: 281.25, max: 303.75, label: 'BBL', full: 'BARAT BARAT LAUT' },
+    { min: 303.75, max: 326.25, label: 'BL', full: 'BARAT LAUT' },
+    { min: 326.25, max: 348.75, label: 'BLU', full: 'BARAT LAUT UTARA' },
+  ];
+
+  // --- Generate tick marks SVG ---
+  function generateTicks() {
+    const ticks30 = $('ticks30');
+    const ticks10 = $('ticks10');
+    const ticks5 = $('ticks5');
+    const degreeLabels = $('degreeLabels');
+
+    for (let deg = 0; deg < 360; deg += 5) {
+      const rad = (deg - 90) * Math.PI / 180;
+      const is30 = deg % 30 === 0;
+      const is10 = deg % 10 === 0;
+      const r1 = is30 ? 165 : (is10 ? 170 : 175);
+      const r2 = 185;
+      const x1 = 200 + r1 * Math.cos(rad);
+      const y1 = 200 + r1 * Math.sin(rad);
+      const x2 = 200 + r2 * Math.cos(rad);
+      const y2 = 200 + r2 * Math.sin(rad);
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+
+      if (is30) {
+        line.setAttribute('stroke', 'rgba(255,61,0,0.7)');
+        line.setAttribute('stroke-width', '2');
+        ticks30.appendChild(line);
+      } else if (is10) {
+        line.setAttribute('stroke', 'rgba(255,255,255,0.25)');
+        line.setAttribute('stroke-width', '1');
+        ticks10.appendChild(line);
+      } else {
+        line.setAttribute('stroke', 'rgba(255,255,255,0.08)');
+        line.setAttribute('stroke-width', '0.5');
+        ticks5.appendChild(line);
+      }
+
+      // Label derajat setiap 30°
+      if (is30 && deg % 90 !== 0) {
+        const lr = 150;
+        const lx = 200 + lr * Math.cos(rad);
+        const ly = 200 + lr * Math.sin(rad);
+        const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', lx);
+        txt.setAttribute('y', ly + 3);
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('fill', 'rgba(255,255,255,0.3)');
+        txt.setAttribute('font-size', '9');
+        txt.setAttribute('font-family', 'Courier New');
+        txt.textContent = deg + '°';
+        degreeLabels.appendChild(txt);
+      }
+    }
+  }
+
+  // --- Cari arah mata angin ---
+  function getDirection(deg) {
+    for (const d of directions) {
+      if (d.min <= d.max) {
+        if (deg >= d.min && deg < d.max) return d;
+      } else {
+        if (deg >= d.min || deg < d.max) return d;
+      }
+    }
+    return directions[0];
+  }
+
+  // --- Shortest angle difference ---
+  function angleDiff(a, b) {
+    let d = a - b;
+    while (d > 180) d -= 360;
+    while (d < -180) d += 360;
+    return d;
+  }
+
+  // --- Smooth dengan low-pass filter ringan ---
+  function smoothAngle(raw, prev, alpha) {
+    const diff = angleDiff(raw, prev);
+    let result = prev + diff * alpha;
+    if (result < 0) result += 360;
+    if (result >= 360) result -= 360;
+    return result;
+  }
+
+  // --- Toast ---
+  let toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // --- Setup grafik canvas ---
+  function setupGraph() {
+    const rect = graphCanvas.parentElement.getBoundingClientRect();
+    graphCanvas.width = rect.width * 2;
+    graphCanvas.height = rect.height * 2;
+    graphCtx.scale(2, 2);
+  }
+
+  function drawGraph() {
+    const w = graphCanvas.width / 2;
+    const h = graphCanvas.height / 2;
+    graphCtx.clearRect(0, 0, w, h);
+
+    // Garis tengah
+    graphCtx.strokeStyle = 'rgba(255,61,0,0.15)';
+    graphCtx.lineWidth = 0.5;
+    graphCtx.setLineDash([2, 2]);
+    graphCtx.beginPath();
+    graphCtx.moveTo(0, h / 2);
+    graphCtx.lineTo(w, h / 2);
+    graphCtx.stroke();
+    graphCtx.setLineDash([]);
+
+    // Data
+    graphCtx.strokeStyle = 'rgba(255,61,0,0.8)';
+    graphCtx.lineWidth = 1;
+    graphCtx.beginPath();
+    const len = degreeHistory.length;
+    for (let i = 0; i < len; i++) {
+      const idx = (historyIdx + i) % len;
+      const val = degreeHistory[idx];
+      const x = (i / len) * w;
+      const y = h / 2 - (val - 180) / 180 * (h / 2 - 2);
+      if (i === 0) graphCtx.moveTo(x, y);
+      else graphCtx.lineTo(x, y);
+    }
+    graphCtx.stroke();
+
+    // Titik terakhir
+    const lastVal = degreeHistory[(historyIdx - 1 + len) % len];
+    const lx = w - 1;
+    const ly = h / 2 - (lastVal - 180) / 180 * (h / 2 - 2);
+    graphCtx.fillStyle = '#ff3d00';
+    graphCtx.beginPath();
+    graphCtx.arc(lx, ly, 2, 0, Math.PI * 2);
+    graphCtx.fill();
+  }
+
+  // --- Update deteksi gerakan ---
+  function updateMotion(accel) {
+    const mag = Math.sqrt(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z);
+    accelBuffer.push(mag);
+    if (accelBuffer.length > 15) accelBuffer.shift();
+    const avg = accelBuffer.reduce((a, b) => a + b, 0) / accelBuffer.length;
+    const variance = accelBuffer.reduce((a, v) => a + (v - avg) * (v - avg), 0) / accelBuffer.length;
+
+    isMoving = variance > 0.5;
+    const bars = motionBar.querySelectorAll('span');
+    const heights = isMoving ? [8, 12, 6, 10, 4] : [4, 7, 10, 6, 9];
+    bars.forEach((b, i) => {
+      b.style.height = (isMoving ? Math.random() * 10 + 3 : heights[i]) + 'px';
+    });
+    motionBar.classList.toggle('active', isMoving);
+    motionLabel.textContent = isMoving ? 'BERGERAK' : 'STABIL';
+    motionLabel.style.color = isMoving ? 'var(--green)' : 'var(--muted)';
+  }
+
+  // --- Sensor event handlers ---
+  function handleOrientation(e) {
+    if (!sensorActive) return;
+
+    // Ambil azimuth - coba property yang tersedia
+    let az;
+    if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+      // iOS style
+      az = e.webkitCompassHeading;
+    } else if (e.alpha !== null && e.alpha !== undefined) {
+      // Android style - perlu konversi
+      az = e.alpha;
+      // Gunakan absolute orientation jika tersedia
+      if (e.absolute === false) {
+        az = (360 - az) % 360;
+      } else {
+        az = (360 - az) % 360;
+      }
+    } else return;
+
+    currentAzimuth = az % 360;
+    if (currentAzimuth < 0) currentAzimuth += 360;
+    currentPitch = e.beta || 0;
+    currentRoll = e.gamma || 0;
+
+    // Smooth atau raw
+    if (smoothMode) {
+      if (firstReading) {
+        smoothedAzimuth = currentAzimuth;
+        firstReading = false;
+      } else {
+        smoothedAzimuth = smoothAngle(currentAzimuth, smoothedAzimuth, 0.35);
+      }
+    } else {
+      smoothedAzimuth = currentAzimuth;
+      firstReading = false;
+    }
+
+    // Hitung delta
+    const delta = Math.abs(angleDiff(smoothedAzimuth, lastAzimuth));
+    lastAzimuth = smoothedAzimuth;
+
+    // Update count
+    updateCount++;
+    const now = performance.now();
+    if (now - lastSecond >= 1000) {
+      updateRate.textContent = updateCount;
+      updateCount = 0;
+      lastSecond = now;
+    }
+
+    // Update history grafik
+    degreeHistory[historyIdx] = smoothedAzimuth;
+    historyIdx = (historyIdx + 1) % degreeHistory.length;
+
+    // Update UI
+    renderCompass(smoothedAzimuth, delta);
+  }
+
+  function handleMotion(e) {
+    if (!sensorActive) return;
+    const accel = e.accelerationIncludingGravity || {};
+    if (accel.x !== undefined) {
+      updateMotion(accel);
+    }
+  }
+
+  // --- Render kompas ---
+  function renderCompass(deg, delta) {
+    // Rotasi dial (berlawanan arah jarum jam)
+    compassDial.setAttribute('transform', `rotate(${-deg}, 200, 200)`);
+    // Jarum tetap - sudah berada di atas dial yang berputar
+    // Tapi kita biarkan jarum statis dan dial berputar = efek sama
+
+    // Update angka derajat
+    const displayDeg = isLocked ? lockedDegree : Math.round(deg);
+    degValue.textContent = displayDeg.toFixed(0).padStart(3, '0');
+
+    // Update arah
+    const dir = getDirection(deg);
+    dirLabel.textContent = isLocked ? 'KUNCI' : dir.label;
+
+    // Raw azimuth
+    rawAz.textContent = currentAzimuth.toFixed(1) + '°';
+
+    // Magnetic field estimate
+    const magMag = Math.sqrt(rawMagX * rawMagX + rawMagY * rawMagY + rawMagZ * rawMagZ);
+    magField.textContent = magMag.toFixed(1);
+
+    // Pitch & Roll
+    pitchVal.textContent = currentPitch.toFixed(1) + '°';
+    rollVal.textContent = currentRoll.toFixed(1) + '°';
+
+    // Delta
+    deltaVal.textContent = delta.toFixed(1) + '°';
+    deltaVal.style.color = delta > 10 ? 'var(--red)' : delta > 3 ? 'var(--accent2)' : 'var(--green)';
+
+    // FPS
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFPSTime >= 500) {
+      currentFPS = Math.round(frameCount / ((now - lastFPSTime) / 1000));
+      fpsEl.textContent = currentFPS + ' FPS';
+      frameCount = 0;
+      lastFPSTime = now;
+    }
+  }
+
+  // --- Animation loop untuk grafik ---
+  function animLoop() {
+    if (sensorActive) {
+      drawGraph();
+    }
+    requestAnimationFrame(animLoop);
+  }
+
+  // --- Inisialisasi sensor ---
+  async function initSensors() {
+    try {
+      // Coba DeviceOrientationEvent yang baru (membutuhkan permission di iOS 13+)
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm !== 'granted') {
+          showToast('PERMISSION DITOLAK');
+          return false;
+        }
+      }
+
+      // Listener dengan frekuensi tertinggi
+      window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+      window.addEventListener('devicemotion', handleMotion, { passive: true });
+
+      // Tunggu data pertama
+      return new Promise(resolve => {
+        let checkCount = 0;
+        const checker = setInterval(() => {
+          checkCount++;
+          if (currentAzimuth !== 0 || checkCount > 30) {
+            clearInterval(checker);
+            resolve(currentAzimuth !== 0);
+          }
+        }, 100);
+      });
+
+    } catch (err) {
+      showToast('ERROR: ' + err.message);
+      return false;
+    }
+  }
+
+  // --- Kalibrasi mode ---
+  function startCalibration() {
+    if (isCalibrating) return;
+    isCalibrating = true;
+    calDone_flag = false;
+    calProgress = 0;
+    calBar.style.width = '0%';
+    calDone.style.display = 'none';
+    calClose.style.display = 'none';
+    calText.style.display = '';
+    calCircle.style.display = '';
+    calOverlay.classList.add('show');
+    btnCal.classList.add('calibrating');
+
+    // Simulasi progress berdasarkan perubahan azimuth
+    let lastCalAz = currentAzimuth;
+    let totalChange = 0;
+
+    const calInterval = setInterval(() => {
+      const change = Math.abs(angleDiff(currentAzimuth, lastCalAz));
+      totalChange += change;
+      lastCalAz = currentAzimuth;
+
+      // Estimasi: butuh ~3000° total rotasi
+      calProgress = Math.min(100, (totalChange / 3000) * 100);
+      calBar.style.width = calProgress + '%';
+
+      if (calProgress >= 100 && !calDone_flag) {
+        calDone_flag = true;
+        clearInterval(calInterval);
+        calText.style.display = 'none';
+        calCircle.style.display = 'none';
+        calDone.style.display = '';
+        calClose.style.display = '';
+        btnCal.classList.remove('calibrating');
+        showToast('KALIBRASI SELESAI');
+      }
+    }, 100);
+
+    // Simpan interval untuk cleanup
+    calOverlay._interval = calInterval;
+  }
+
+  function stopCalibration() {
+    isCalibrating = false;
+    if (calOverlay._interval) clearInterval(calOverlay._interval);
+    calOverlay.classList.remove('show');
+    btnCal.classList.remove('calibrating');
+  }
+
+  // --- Event listeners ---
+  permBtn.addEventListener('click', async () => {
+    permBtn.textContent = 'MENGAKTIFKAN...';
+    permBtn.style.pointerEvents = 'none';
+
+    const ok = await initSensors();
+    if (ok) {
+      sensorActive = true;
+      permOverlay.classList.add('hidden');
+      mainUI.style.opacity = '1';
+      mainUI.style.pointerEvents = 'auto';
+      sensorDot.classList.add('active');
+      sensorStatus.textContent = 'SENSOR AKTIF';
+      showToast('SENSOR TERHUBUNG - SIAP NAVIGASI');
+      setupGraph();
+    } else {
+      // Tetap coba - mungkin data datang lambat
+      sensorActive = true;
+      permOverlay.classList.add('hidden');
+      mainUI.style.opacity = '1';
+      mainUI.style.pointerEvents = 'auto';
+      sensorDot.classList.add('warn');
+      sensorStatus.textContent = 'WAITING DATA...';
+      showToast('MENUNGGU DATA SENSOR...');
+      setupGraph();
+
+      // Cek lagi setelah 3 detik
+      setTimeout(() => {
+        if (currentAzimuth === 0) {
+          sensorDot.classList.remove('warn');
+          sensorDot.classList.remove('active');
+          sensorStatus.textContent = 'NO SENSOR DATA';
+          showToast('TIDAK ADA DATA - Goyangkan HP');
+        } else {
+          sensorDot.classList.remove('warn');
+          sensorDot.classList.add('active');
+          sensorStatus.textContent = 'SENSOR AKTIF';
+        }
+      }, 3000);
+    }
+  });
+
+  btnCal.addEventListener('click', startCalibration);
+  calClose.addEventListener('click', stopCalibration);
+
+  btnLock.addEventListener('click', () => {
+    isLocked = !isLocked;
+    if (isLocked) {
+      lockedDegree = Math.round(smoothedAzimuth);
+      btnLock.classList.add('locked');
+      btnLock.textContent = 'LEPAS KUNCI';
+      modeLabel.textContent = 'MODE: LOCKED';
+      showToast('ARAH DIKUNCI DI ' + lockedDegree + '°');
+    } else {
+      btnLock.classList.remove('locked');
+      btnLock.textContent = 'KUNCI ARAH';
+      modeLabel.textContent = 'MODE: FREE';
+      showToast('ARAH BEBAS');
+    }
+  });
+
+  btnSmooth.addEventListener('click', () => {
+    smoothMode = !smoothMode;
+    firstReading = true;
+    if (smoothMode) {
+      btnSmooth.classList.add('locked');
+      btnSmooth.textContent = 'RAW';
+      smoothLabel.textContent = 'SMOOTH: ON';
+      showToast('SMOOTH FILTER AKTIF');
+    } else {
+      btnSmooth.classList.remove('locked');
+      btnSmooth.textContent = 'SMOOTH';
+      smoothLabel.textContent = 'SMOOTH: OFF';
+      showToast('DATA RAW - MAKSIMUM RESPON');
+    }
+  });
+
+  // Coba baca magnetometer mentah via getComputedStyle hack / fallback
+  // Di Chrome Android, bisa akses melalui sensor khusus
+  if ('Magnetometer' in window) {
+    try {
+      const magSensor = new Magnetometer({ frequency: 60 });
+      magSensor.addEventListener('reading', () => {
+        rawMagX = magSensor.x;
+        rawMagY = magSensor.y;
+        rawMagZ = magSensor.z;
+      });
+      magSensor.start();
+    } catch(e) {
+      // Fallback - estimasi dari orientation
+    }
+  }
+
+  // --- Inisialisasi ---
+  generateTicks();
+  animLoop();
+
+  // Warning jika bukan HTTPS atau localhost
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    showToast('PERINGATAN: Butuh HTTPS untuk sensor');
+  }
+
+})();
+</script>
+</body>
+</html>
