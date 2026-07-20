@@ -3,941 +3,966 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>⚡ KOMPAS AGGRESSIVE ⚡</title>
+<title>KOMPAS OPPO A9 - AGGRESSIVE REWRITE</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  
-  body {
-    background: #0a0a0c;
-    color: #e8e6e1;
-    font-family: 'Courier New', monospace;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    touch-action: none;
-    user-select: none;
+  :root {
+    --bg: #06080a;
+    --fg: #e8e6e1;
+    --accent: #ff3d00;
+    --accent2: #ffab00;
+    --muted: #4a4a52;
+    --card: rgba(14,16,20,0.95);
+    --border: rgba(255,61,0,0.2);
+    --glow: rgba(255,61,0,0.45);
+    --green: #00e676;
+    --red: #ff1744;
+    --cyan: #00e5ff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:'Courier New',monospace;
+    overflow:hidden;height:100vh;width:100vw;
+    touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  .bg-layer{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(ellipse at 50% 20%,rgba(255,61,0,0.05)0%,transparent 60%),
+      radial-gradient(ellipse at 80% 90%,rgba(0,229,255,0.025)0%,transparent 40%),
+      var(--bg);
+  }
+  .scanline{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.006)3px,rgba(255,255,255,0.006)4px);
+  }
+  .container{
+    position:relative;z-index:2;height:100vh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:6px 8px;
+  }
+  .header{text-align:center;padding:4px 0 2px}
+  .header h1{font-size:11px;font-weight:900;letter-spacing:5px;color:var(--accent);text-shadow:0 0 18px var(--glow)}
+  .header .sub{font-size:8px;color:var(--muted);letter-spacing:3px;margin-top:1px}
+
+  /* Status bar */
+  .sbar{
+    width:100%;display:flex;justify-content:space-between;align-items:center;
+    padding:4px 8px;margin:3px 0;
+    background:var(--card);border:1px solid var(--border);border-radius:4px;font-size:8px;
+  }
+  .si{display:flex;align-items:center;gap:4px}
+  .sdot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--red);box-shadow:0 0 6px currentColor;transition:all .3s;
+  }
+  .sdot.on{background:var(--green);color:var(--green)}
+  .sdot.warn{background:var(--accent2);color:var(--accent2)}
+  .sdot.manual{background:var(--cyan);color:var(--cyan)}
+
+  /* Kompas area */
+  .carea{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;width:100%;max-width:400px;position:relative;
+  }
+  .cring{
+    position:relative;
+    width:min(78vw,320px);height:min(78vw,320px);
+  }
+  .cring::before{
+    content:'';position:absolute;inset:-5px;border-radius:50%;
+    border:1px solid var(--border);animation:rp 3s ease-in-out infinite;
+  }
+  .cring::after{
+    content:'';position:absolute;inset:-14px;border-radius:50%;
+    border:1px solid rgba(255,61,0,0.06);
+  }
+  @keyframes rp{0%,100%{opacity:.3}50%{opacity:1}}
+
+  .fptr{
+    position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+    width:0;height:0;
+    border-left:9px solid transparent;border-right:9px solid transparent;
+    border-top:20px solid var(--accent);
+    filter:drop-shadow(0 2px 8px var(--glow));z-index:10;
+  }
+  .ddisp{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    text-align:center;pointer-events:none;
+  }
+  .dval{
+    font-size:clamp(38px,13vw,60px);font-weight:900;line-height:1;
+    font-variant-numeric:tabular-nums;text-shadow:0 0 25px rgba(255,255,255,0.08);
+  }
+  .dunit{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:2px}
+  .dlabel{
+    font-size:clamp(18px,5.5vw,26px);font-weight:900;
+    color:var(--accent2);letter-spacing:3px;margin-top:2px;
+    text-shadow:0 0 18px rgba(255,171,0,0.25);min-height:28px;
   }
 
-  #app {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
+  /* Info grid */
+  .igrid{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:6px}
+  .icell{
+    background:var(--card);border:1px solid var(--border);border-radius:3px;
+    padding:5px 3px;text-align:center;
+  }
+  .icell .lb{font-size:7px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
+  .icell .vl{font-size:12px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
+  .vl.ac{color:var(--accent)}.vl.cy{color:var(--cyan)}.vl.gn{color:var(--green)}
+
+  /* Mini graph */
+  .mgraph{
+    width:100%;height:28px;margin-top:3px;
+    background:var(--card);border:1px solid var(--border);border-radius:3px;overflow:hidden;
+  }
+  .mgraph canvas{width:100%;height:100%}
+
+  /* Actions */
+  .acts{
+    width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;
+    margin-top:4px;padding-bottom:8px;
+  }
+  .btn{
+    background:var(--card);border:1px solid var(--border);border-radius:5px;
+    color:var(--fg);font-family:inherit;font-size:9px;font-weight:700;
+    letter-spacing:1px;padding:9px 3px;cursor:pointer;transition:all .12s;text-transform:uppercase;
+  }
+  .btn:active{background:var(--accent);color:var(--bg);transform:scale(.96);border-color:var(--accent)}
+  .btn.locked{background:var(--accent);color:var(--bg);border-color:var(--accent);box-shadow:0 0 18px var(--glow)}
+  .btn.cal{animation:cp .5s ease-in-out infinite alternate}
+  @keyframes cp{from{border-color:var(--accent2)}to{border-color:var(--accent);box-shadow:0 0 22px var(--glow)}}
+
+  /* Diagnostic panel */
+  .diag{
+    width:100%;max-height:0;overflow:hidden;transition:max-height .3s ease;
+    background:var(--card);border:1px solid var(--border);border-radius:4px;
+    margin-bottom:4px;
+  }
+  .diag.open{max-height:300px;overflow-y:auto}
+  .diag-inner{padding:8px;font-size:8px;line-height:1.7;color:var(--muted)}
+  .diag-inner .ok{color:var(--green)}.diag-inner .err{color:var(--red)}.diag-inner .wrn{color:var(--accent2)}
+  .diag-toggle{
+    width:100%;background:var(--card);border:1px solid var(--border);border-radius:4px;
+    color:var(--muted);font-family:inherit;font-size:8px;font-weight:700;
+    letter-spacing:2px;padding:4px;cursor:pointer;margin-bottom:3px;text-transform:uppercase;
   }
 
-  /* === PERMISSION OVERLAY === */
-  #permOverlay {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    background: #0a0a0c;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    padding: 30px;
-    text-align: center;
+  /* Permission overlay */
+  .pov{
+    position:fixed;inset:0;z-index:300;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:16px;padding:30px;text-align:center;
   }
-  #permOverlay.hidden { display: none; }
-  #permOverlay .icon { font-size: 60px; color: #ff3d00; animation: pulse 1.5s infinite; }
-  #permOverlay h1 { font-size: 20px; font-weight: 900; letter-spacing: 4px; color: #ff3d00; }
-  #permOverlay p { font-size: 13px; color: #666; line-height: 1.6; max-width: 300px; }
-  #permBtn {
-    background: #ff3d00;
-    color: #000;
-    border: none;
-    padding: 14px 40px;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 16px;
-    font-weight: 900;
-    letter-spacing: 3px;
-    cursor: pointer;
-    text-transform: uppercase;
-    box-shadow: 0 0 40px rgba(255,61,0,0.4);
+  .pov.hide{display:none}
+  .pov-icon{font-size:42px;color:var(--accent);animation:pp 2s ease-in-out infinite}
+  @keyframes pp{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+  .pov-title{font-size:16px;font-weight:900;letter-spacing:2px}
+  .pov-desc{font-size:11px;color:var(--muted);line-height:1.8;max-width:300px}
+  .pov-check{
+    width:100%;max-width:300px;text-align:left;
+    font-size:10px;line-height:2;color:var(--muted);
   }
-  #permBtn:active { transform: scale(0.95); }
-  #permBtn:disabled { opacity: 0.5; }
-
-  @keyframes pulse {
-    0%,100% { opacity: 0.5; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.1); }
+  .pov-check .ck{margin-right:6px}
+  .pov-check .pass{color:var(--green)}.pov-check .fail{color:var(--red)}
+  .pov-btn{
+    background:var(--accent);color:var(--bg);border:none;
+    padding:14px 36px;border-radius:7px;font-family:inherit;
+    font-size:13px;font-weight:900;letter-spacing:3px;cursor:pointer;
+    text-transform:uppercase;box-shadow:0 0 28px var(--glow);
+  }
+  .pov-btn:active{transform:scale(.95)}
+  .pov-btn:disabled{opacity:.4;pointer-events:none}
+  .pov-sub{
+    font-size:9px;color:var(--accent2);letter-spacing:1px;
+    margin-top:4px;cursor:pointer;text-decoration:underline;
   }
 
-  /* === COMPASS === */
-  .compass-container {
-    position: relative;
-    width: min(85vw, 350px);
-    height: min(85vw, 350px);
-    flex-shrink: 0;
+  /* Kalibrasi overlay */
+  .cov{
+    position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
   }
+  .cov.show{display:flex}
+  .ccir{
+    width:160px;height:160px;border:3px solid var(--accent);border-radius:50%;
+    position:relative;animation:cr 2s linear infinite;
+  }
+  .ccir::after{
+    content:'';position:absolute;width:18px;height:18px;background:var(--accent);
+    border-radius:50%;top:-9px;left:50%;transform:translateX(-50%);box-shadow:0 0 18px var(--glow);
+  }
+  @keyframes cr{to{transform:rotate(360deg)}}
+  .ctxt{font-size:13px;color:var(--accent);font-weight:700;letter-spacing:2px;text-align:center;line-height:1.8}
+  .cprog{width:180px;height:4px;background:var(--muted);border-radius:2px;overflow:hidden}
+  .cbar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .3s;border-radius:2px}
+  .cdone{display:none;color:var(--green);font-size:16px;font-weight:900;letter-spacing:3px;animation:dp .4s ease-out}
+  @keyframes dp{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 
-  canvas#compassCanvas {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    box-shadow: 0 0 60px rgba(255,61,0,0.1), inset 0 0 60px rgba(255,61,0,0.05);
+  /* Toast */
+  .tst{
+    position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-100px);
+    background:var(--card);border:1px solid var(--accent);color:var(--fg);
+    padding:7px 18px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:1px;
+    z-index:200;transition:transform .3s ease-out;box-shadow:0 4px 25px rgba(255,61,0,.2);white-space:nowrap;
   }
+  .tst.show{transform:translateX(-50%) translateY(0)}
 
-  .center-display {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-    z-index: 10;
+  /* Manual mode indicator */
+  .manual-badge{
+    position:absolute;top:8px;right:8px;
+    background:rgba(0,229,255,0.15);border:1px solid var(--cyan);
+    color:var(--cyan);font-size:8px;font-weight:700;letter-spacing:2px;
+    padding:3px 8px;border-radius:3px;display:none;
+    animation:mb 1.5s ease-in-out infinite;
   }
-  .center-display .deg {
-    font-size: clamp(40px, 14vw, 60px);
-    font-weight: 900;
-    color: #fff;
-    line-height: 1;
-    text-shadow: 0 0 30px rgba(255,255,255,0.1);
-  }
-  .center-display .label {
-    font-size: clamp(18px, 5vw, 26px);
-    font-weight: 900;
-    color: #ffab00;
-    letter-spacing: 4px;
-    text-shadow: 0 0 20px rgba(255,171,0,0.3);
-    min-height: 30px;
-  }
-  .center-display .sub {
-    font-size: 10px;
-    color: #666;
-    letter-spacing: 2px;
-  }
+  .manual-badge.show{display:block}
+  @keyframes mb{0%,100%{opacity:.6}50%{opacity:1}}
 
-  .fixed-pointer {
-    position: absolute;
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 20;
-    width: 0;
-    height: 0;
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-top: 26px solid #ff3d00;
-    filter: drop-shadow(0 0 20px rgba(255,61,0,0.8));
-  }
+  .fps-b{position:fixed;top:3px;right:5px;font-size:7px;color:var(--muted);z-index:50;font-variant-numeric:tabular-nums}
 
-  /* === STATUS BAR === */
-  .status-bar {
-    width: 100%;
-    max-width: 400px;
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 10px;
-    margin-top: 8px;
-    background: rgba(18,18,22,0.9);
-    border: 1px solid rgba(255,61,0,0.2);
-    border-radius: 6px;
-    font-size: 9px;
-    letter-spacing: 1px;
-  }
-  .status-bar .dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-  .status-bar .dot.green { background: #00e676; box-shadow: 0 0 10px #00e676; }
-  .status-bar .dot.red { background: #ff1744; box-shadow: 0 0 10px #ff1744; }
-  .status-bar .dot.yellow { background: #ffab00; box-shadow: 0 0 10px #ffab00; }
-
-  /* === INFO GRID === */
-  .info-grid {
-    width: 100%;
-    max-width: 400px;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    margin-top: 6px;
-  }
-  .info-cell {
-    background: rgba(18,18,22,0.9);
-    border: 1px solid rgba(255,61,0,0.15);
-    border-radius: 4px;
-    padding: 4px 2px;
-    text-align: center;
-  }
-  .info-cell .lbl { font-size: 7px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
-  .info-cell .val { font-size: 12px; font-weight: 700; color: #e8e6e1; font-variant-numeric: tabular-nums; }
-  .info-cell .val.accent { color: #ff3d00; }
-  .info-cell .val.cyan { color: #00e5ff; }
-  .info-cell .val.green { color: #00e676; }
-
-  /* === BUTTONS === */
-  .actions {
-    width: 100%;
-    max-width: 400px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-top: 6px;
-  }
-  .btn {
-    background: rgba(18,18,22,0.9);
-    border: 1px solid rgba(255,61,0,0.25);
-    border-radius: 6px;
-    color: #e8e6e1;
-    font-family: inherit;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    padding: 10px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.1s;
-  }
-  .btn:active {
-    background: #ff3d00;
-    color: #000;
-    transform: scale(0.96);
-  }
-  .btn.active {
-    background: #ff3d00;
-    color: #000;
-    border-color: #ff3d00;
-    box-shadow: 0 0 30px rgba(255,61,0,0.3);
-  }
-
-  /* === TOAST === */
-  #toast {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: rgba(18,18,22,0.95);
-    border: 1px solid #ff3d00;
-    color: #fff;
-    padding: 8px 20px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    z-index: 100;
-    opacity: 0;
-    transition: all 0.3s ease;
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  #toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  /* === GRAPH === */
-  .graph-container {
-    width: 100%;
-    max-width: 400px;
-    height: 30px;
-    margin-top: 6px;
-    background: rgba(18,18,22,0.9);
-    border: 1px solid rgba(255,61,0,0.15);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  canvas#graphCanvas {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* === RESPONSIVE === */
-  @media (max-width: 400px) {
-    .info-grid { grid-template-columns: repeat(4, 1fr); }
-    .info-cell .val { font-size: 10px; }
-  }
-
-  .fps {
-    position: fixed;
-    top: 4px;
-    right: 6px;
-    font-size: 8px;
-    color: #333;
-    z-index: 50;
-  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 
-<div id="app">
-  <!-- Permission Overlay -->
-  <div id="permOverlay">
-    <div class="icon">🧭</div>
-    <h1>AKSES SENSOR</h1>
-    <p>Kompas membutuhkan akses ke sensor orientasi. Aktifkan untuk navigasi real-time.</p>
-    <button id="permBtn">AKTIFKAN</button>
-    <p style="font-size:10px;color:#444;margin-top:5px;" id="debugInfo">Oppo A9 • Sensor Ready</p>
-  </div>
+<div class="bg-layer"></div>
+<div class="scanline"></div>
+<div class="fps-b" id="fps">-- FPS</div>
 
-  <!-- Compass -->
-  <div class="compass-container">
-    <div class="fixed-pointer"></div>
-    <canvas id="compassCanvas"></canvas>
-    <div class="center-display">
-      <div class="deg" id="degDisplay">---</div>
-      <div class="label" id="dirDisplay">---</div>
-      <div class="sub" id="subDisplay">⚡ AGGRESSIVE MODE</div>
+<!-- PERMISSION OVERLAY -->
+<div class="pov" id="pov">
+  <div class="pov-icon">&#9678;</div>
+  <div class="pov-title">KOMPAS AGRESIF</div>
+  <div class="pov-desc">
+    Menggunakan 5 strategi sensor berlapis untuk Oppo A9. Pastikan kondisi berikut terpenuhi:
+  </div>
+  <div class="pov-check" id="povCheck"></div>
+  <button class="pov-btn" id="povBtn" aria-label="Aktifkan sensor">AKTIFKAN SENSOR</button>
+  <div class="pov-sub" id="povForce">Tidak ada sensor? Gunakan mode manual</div>
+</div>
+
+<!-- KALIBRASI OVERLAY -->
+<div class="cov" id="cov" role="dialog" aria-label="Kalibrasi kompas">
+  <div class="ccir" id="ccir"></div>
+  <div class="ctxt" id="ctxt">PUTAR HP MEMBENTUK ANGKA 8<br><span style="font-size:10px;color:var(--muted)">Ulangi 10-15 kali</span></div>
+  <div class="cprog"><div class="cbar" id="cbar"></div></div>
+  <div class="cdone" id="cdone">KALIBRASI SELESAI</div>
+  <button class="btn" id="ccls" style="width:150px;display:none" aria-label="Tutup kalibrasi">SELESAI</button>
+</div>
+
+<!-- TOAST -->
+<div class="tst" id="tst"></div>
+
+<!-- MAIN UI -->
+<div class="container" id="mainUI" style="opacity:0;pointer-events:none">
+  <header class="header">
+    <h1>Kompas Ultra</h1>
+    <div class="sub" id="stratLabel">STRATEGY: --</div>
+  </header>
+
+  <div class="sbar">
+    <div class="si">
+      <div class="sdot" id="sDot"></div>
+      <span id="sStat">MENUNGGU</span>
     </div>
+    <div class="si"><span id="mLabel">MODE: FREE</span></div>
+    <div class="si"><span id="smLabel">SMOOTH: OFF</span></div>
   </div>
 
-  <!-- Status -->
-  <div class="status-bar">
-    <span><span class="dot red" id="statusDot"></span><span id="statusText">MENUNGGU</span></span>
-    <span id="freqDisplay">0 Hz</span>
-    <span id="lockStatus">🔓 BEBAS</span>
+  <button class="diag-toggle" id="diagBtn" aria-label="Toggle diagnostic">DIAGNOSTIK SENSOR</button>
+  <div class="diag" id="diag">
+    <div class="diag-inner" id="diagIn"></div>
   </div>
 
-  <!-- Info -->
-  <div class="info-grid">
-    <div class="info-cell"><div class="lbl">RAW</div><div class="val accent" id="rawVal">---</div></div>
-    <div class="info-cell"><div class="lbl">DELTA</div><div class="val" id="deltaVal">---</div></div>
-    <div class="info-cell"><div class="lbl">PITCH</div><div class="val cyan" id="pitchVal">---</div></div>
-    <div class="info-cell"><div class="lbl">ROLL</div><div class="val cyan" id="rollVal">---</div></div>
-  </div>
+  <div class="carea">
+    <div class="cring" id="cring">
+      <div class="fptr"></div>
+      <div class="manual-badge" id="manBadge">MODE MANUAL - GESER</div>
+      <svg class="compass-svg" viewBox="0 0 400 400" id="csvg" style="width:100%;height:100%;filter:drop-shadow(0 0 12px rgba(255,61,0,0.12))">
+        <defs>
+          <linearGradient id="ng" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ff3d00"/>
+            <stop offset="50%" stop-color="#ff6e40"/>
+            <stop offset="51%" stop-color="#455a64"/>
+            <stop offset="100%" stop-color="#263238"/>
+          </linearGradient>
+          <filter id="gl"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,61,0,0.12)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,61,0,0.06)" stroke-width="0.5"/>
+        <circle cx="200" cy="200" r="158" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <g id="dial">
+          <g id="t30"></g>
+          <g id="t10"></g>
+          <g id="t5"></g>
+          <g id="dLbl"></g>
+          <text x="200" y="38" text-anchor="middle" fill="#ff3d00" font-size="22" font-weight="900" font-family="Courier New">U</text>
+          <text x="368" y="206" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">T</text>
+          <text x="200" y="375" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">S</text>
+          <text x="32" y="206" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">B</text>
+          <text x="326" y="74" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">TL</text>
+          <text x="326" y="340" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">TG</text>
+          <text x="74" y="340" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">BD</text>
+          <text x="74" y="74" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">BL</text>
+        </g>
+        <g id="needle" filter="url(#gl)">
+          <polygon points="200,55 192,195 200,185 208,195" fill="url(#ng)" opacity="0.95"/>
+          <polygon points="200,345 192,205 200,215 208,205" fill="#37474f" opacity="0.7"/>
+          <circle cx="200" cy="200" r="8" fill="#ff3d00" stroke="#06080a" stroke-width="3"/>
+          <circle cx="200" cy="200" r="3" fill="#fff"/>
+        </g>
+      </svg>
+      <div class="ddisp">
+        <div class="dval" id="dVal">---</div>
+        <div class="dunit">DERAJAT</div>
+        <div class="dlabel" id="dLbl">---</div>
+      </div>
+    </div>
 
-  <!-- Graph -->
-  <div class="graph-container">
-    <canvas id="graphCanvas"></canvas>
-  </div>
+    <div class="igrid">
+      <div class="icell"><div class="lb">AZIMUTH RAW</div><div class="vl ac" id="vRaw">---</div></div>
+      <div class="icell"><div class="lb">MAG FIELD (uT)</div><div class="vl cy" id="vMag">---</div></div>
+      <div class="icell"><div class="lb">UPDATE/SEC</div><div class="vl gn" id="vUpd">0</div></div>
+      <div class="icell"><div class="lb">PITCH</div><div class="vl" id="vPitch">---</div></div>
+      <div class="icell"><div class="lb">ROLL</div><div class="vl" id="vRoll">---</div></div>
+      <div class="icell"><div class="lb">DELTA</div><div class="vl ac" id="vDelta">---</div></div>
+    </div>
 
-  <!-- Actions -->
-  <div class="actions">
-    <button class="btn" id="btnCal">📡 KALIBRASI</button>
-    <button class="btn" id="btnLock">🔒 KUNCI</button>
+    <div class="mgraph"><canvas id="gCan"></canvas></div>
+
+    <div class="acts">
+      <button class="btn" id="bCal" aria-label="Kalibrasi">KALIBRASI</button>
+      <button class="btn" id="bLock" aria-label="Kunci arah">KUNCI ARAH</button>
+      <button class="btn" id="bSmooth" aria-label="Smooth">SMOOTH</button>
+    </div>
   </div>
 </div>
 
-<div id="toast"></div>
-<div class="fps" id="fps">--</div>
-
 <script>
+(function(){
+'use strict';
+
 // ============================================================
-// KOMPAS AGGRESSIVE - OPTIMIZED FOR OPPO A9
+// UTILITAS
 // ============================================================
+const $=id=>document.getElementById(id);
+const PI=Math.PI, RAD=PI/180, DEG=180/PI;
 
-(function() {
-  'use strict';
+// Elemen DOM
+const pov=$('pov'), povBtn=$('povBtn'), povCheck=$('povCheck'), povForce=$('povForce');
+const mainUI=$('mainUI'), tst=$('tst');
+const dial=$('dial'), needle=$('needle');
+const dVal=$('dVal'), dLbl=$('dLbl');
+const sDot=$('sDot'), sStat=$('sStat'), mLabel=$('mLabel'), smLabel=$('smLabel'), stratLabel=$('stratLabel');
+const vRaw=$('vRaw'), vMag=$('vMag'), vUpd=$('vUpd'), vPitch=$('vPitch'), vRoll=$('vRoll'), vDelta=$('vDelta');
+const fpsEl=$('fps'), gCan=$('gCan'), gCtx=gCan.getContext('2d');
+const bCal=$('bCal'), bLock=$('bLock'), bSmooth=$('bSmooth');
+const diagBtn=$('diagBtn'), diag=$('diag'), diagIn=$('diagIn');
+const cov=$('cov'), cbar=$('cbar'), cdone=$('cdone'), ccls=$('ccls'), ctxt=$('ctxt'), ccir=$('ccir');
+const cring=$('cring'), manBadge=$('manBadge');
 
-  // === DOM REFS ===
-  const $ = id => document.getElementById(id);
-  const permOverlay = $('permOverlay');
-  const permBtn = $('permBtn');
-  const compassCanvas = $('compassCanvas');
-  const ctx = compassCanvas.getContext('2d');
-  const degDisplay = $('degDisplay');
-  const dirDisplay = $('dirDisplay');
-  const subDisplay = $('subDisplay');
-  const rawVal = $('rawVal');
-  const deltaVal = $('deltaVal');
-  const pitchVal = $('pitchVal');
-  const rollVal = $('rollVal');
-  const statusDot = $('statusDot');
-  const statusText = $('statusText');
-  const freqDisplay = $('freqDisplay');
-  const lockStatus = $('lockStatus');
-  const graphCanvas = $('graphCanvas');
-  const gctx = graphCanvas.getContext('2d');
-  const toast = $('toast');
-  const fps = $('fps');
-  const btnCal = $('btnCal');
-  const btnLock = $('btnLock');
-  const debugInfo = $('debugInfo');
+// ============================================================
+// STATE
+// ============================================================
+let sensorActive=false, isLocked=false, lockedDeg=0;
+let smoothMode=false, isFirstSmooth=true, smoothedAz=0;
+let isCalibrating=false, calInterval=null;
 
-  // === STATE ===
-  let heading = 0;
-  let rawHeading = 0;
-  let pitch = 0;
-  let roll = 0;
-  let prevHeading = 0;
-  let isLocked = false;
-  let lockedValue = 0;
-  let isCalibrating = false;
-  let sensorActive = false;
-  let firstData = true;
-  let updateCount = 0;
-  let lastFreqTime = performance.now();
+// Data sensor
+let curAz=0, curPitch=0, curRoll=0;
+let rawMX=0, rawMY=0, rawMZ=0;
+let rawAX=0, rawAY=0, rawAZ=0;
+let lastAz=0;
 
-  // History for graph
-  const history = new Array(100).fill(0);
-  let histIdx = 0;
+// Strategi aktif
+let activeStrategy='NONE';
+let manualMode=false;
 
-  // === DIRECTIONS ===
-  const dirs = [
-    { min: 348.75, max: 360, label: 'U', full: 'UTARA' },
-    { min: 0, max: 11.25, label: 'U', full: 'UTARA' },
-    { min: 11.25, max: 33.75, label: 'UTL', full: 'UTARA TIMUR LAUT' },
-    { min: 33.75, max: 56.25, label: 'TL', full: 'TIMUR LAUT' },
-    { min: 56.25, max: 78.75, label: 'TLT', full: 'TIMUR LAUT TIMUR' },
-    { min: 78.75, max: 101.25, label: 'T', full: 'TIMUR' },
-    { min: 101.25, max: 123.75, label: 'TTG', full: 'TIMUR TENGGARA' },
-    { min: 123.75, max: 146.25, label: 'TG', full: 'TENGGARA' },
-    { min: 146.25, max: 168.75, label: 'TGS', full: 'TENGGARA SELATAN' },
-    { min: 168.75, max: 191.25, label: 'S', full: 'SELATAN' },
-    { min: 191.25, max: 213.75, label: 'SBD', full: 'SELATAN BARAT DAYA' },
-    { min: 213.75, max: 236.25, label: 'BD', full: 'BARAT DAYA' },
-    { min: 236.25, max: 258.75, label: 'BDB', full: 'BARAT DAYA BARAT' },
-    { min: 258.75, max: 281.25, label: 'B', full: 'BARAT' },
-    { min: 281.25, max: 303.75, label: 'BBL', full: 'BARAT BARAT LAUT' },
-    { min: 303.75, max: 326.25, label: 'BL', full: 'BARAT LAUT' },
-    { min: 326.25, max: 348.75, label: 'BLU', full: 'BARAT LAUT UTARA' },
-  ];
+// Tracking event untuk diagnostik
+let diagData={
+  doaFired:false, doaData:false, doaCount:0, doaLast:null,
+  doFired:false, doData:false, doCount:0, doLast:null,
+  doAbsolute:false,
+  magApi:false, magFired:false, magCount:0, magLast:null,
+  dmFired:false, dmCount:0,
+  secureContext:false,
+  hasGyroscope:false, hasMagnetometer:false, hasAccelerometer:false,
+};
 
-  function getDir(deg) {
-    for (const d of dirs) {
-      if (d.min <= d.max) {
-        if (deg >= d.min && deg < d.max) return d;
-      } else {
-        if (deg >= d.min || deg < d.max) return d;
+// Performa
+let updCount=0, lastSec=performance.now();
+let fCount=0, lastFT=performance.now(), curFPS=0;
+
+// Grafik
+const hist=new Array(120).fill(0);
+let hIdx=0;
+
+// Touch manual
+let touchActive=false, touchStartAng=0, touchStartAz=0;
+
+// Arah mata angin
+const dirs=[
+  {min:348.75,max:360,l:'U',f:'UTARA'},{min:0,max:11.25,l:'U',f:'UTARA'},
+  {min:11.25,max:33.75,l:'UTL',f:'UTARA TIMUR LAUT'},
+  {min:33.75,max:56.25,l:'TL',f:'TIMUR LAUT'},
+  {min:56.25,max:78.75,l:'TLT',f:'TIMUR LAUT TIMUR'},
+  {min:78.75,max:101.25,l:'T',f:'TIMUR'},
+  {min:101.25,max:123.75,l:'TTG',f:'TIMUR TENGGARA'},
+  {min:123.75,max:146.25,l:'TG',f:'TENGGARA'},
+  {min:146.25,max:168.75,l:'TGS',f:'TENGGARA SELATAN'},
+  {min:168.75,max:191.25,l:'S',f:'SELATAN'},
+  {min:191.25,max:213.75,l:'SBD',f:'SELATAN BARAT DAYA'},
+  {min:213.75,max:236.25,l:'BD',f:'BARAT DAYA'},
+  {min:236.25,max:258.75,l:'BDB',f:'BARAT DAYA BARAT'},
+  {min:258.75,max:281.25,l:'B',f:'BARAT'},
+  {min:281.25,max:303.75,l:'BBL',f:'BARAT BARAT LAUT'},
+  {min:303.75,max:326.25,l:'BL',f:'BARAT LAUT'},
+  {min:326.25,max:348.75,l:'BLU',f:'BARAT LAUT UTARA'},
+];
+
+// ============================================================
+// FUNGSI HELPER
+// ============================================================
+function getDir(d){
+  for(const x of dirs){
+    if(x.min<=x.max){if(d>=x.min&&d<x.max)return x}
+    else{if(d>=x.min||d<x.max)return x}
+  }
+  return dirs[0];
+}
+function angDiff(a,b){let d=a-b;while(d>180)d-=360;while(d<-180)d+=360;return d}
+function smoothAng(raw,prev,alpha){
+  const diff=angDiff(raw,prev);
+  let r=prev+diff*alpha;
+  if(r<0)r+=360;if(r>=360)r-=360;return r;
+}
+function normAz(a){a=a%360;if(a<0)a+=360;return a}
+
+let tstT=null;
+function toast(m){tst.textContent=m;tst.classList.add('show');clearTimeout(tstT);tstT=setTimeout(()=>tst.classList.remove('show'),2500)}
+
+// ============================================================
+// GENERATE TICK MARKS
+// ============================================================
+function genTicks(){
+  const g30=$('t30'),g10=$('t10'),g5=$('t5'),gDL=$('dLbl');
+  for(let d=0;d<360;d+=5){
+    const rad=(d-90)*RAD;
+    const is30=d%30===0, is10=d%10===0;
+    const r1=is30?163:(is10?168:174), r2=185;
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',200+r1*Math.cos(rad));
+    ln.setAttribute('y1',200+r1*Math.sin(rad));
+    ln.setAttribute('x2',200+r2*Math.cos(rad));
+    ln.setAttribute('y2',200+r2*Math.sin(rad));
+    if(is30){ln.setAttribute('stroke','rgba(255,61,0,0.65)');ln.setAttribute('stroke-width','2');g30.appendChild(ln)}
+    else if(is10){ln.setAttribute('stroke','rgba(255,255,255,0.2)');ln.setAttribute('stroke-width','1');g10.appendChild(ln)}
+    else{ln.setAttribute('stroke','rgba(255,255,255,0.06)');ln.setAttribute('stroke-width','0.5');g5.appendChild(ln)}
+    if(is30&&d%90!==0){
+      const lr=148,lx=200+lr*Math.cos(rad),ly=200+lr*Math.sin(rad);
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',lx);t.setAttribute('y',ly+3);t.setAttribute('text-anchor','middle');
+      t.setAttribute('fill','rgba(255,255,255,0.25)');t.setAttribute('font-size','9');
+      t.setAttribute('font-family','Courier New');t.textContent=d+'°';gDL.appendChild(t);
+    }
+  }
+}
+
+// ============================================================
+// TILT-COMPENSATED HEADING DARI MAGNETOMETER + ACCELEROMETER
+// ============================================================
+function computeHeading(mx,my,mz,ax,ay,az){
+  const aM=Math.sqrt(ax*ax+ay*ay+az*az);
+  if(aM<1)return null; // free fall
+  const nax=ax/aM,nay=ay/aM,naz=az/aM;
+  const pitch=Math.asin(Math.max(-1,Math.min(1,-nax)));
+  const cosP=Math.cos(pitch),sinP=Math.sin(pitch);
+  const roll=Math.atan2(nay,naz);
+  const cosR=Math.cos(roll),sinR=Math.sin(roll);
+  const Xh=mx*cosP+mz*sinP;
+  const Yh=mx*sinR*sinP+my*cosR-mz*sinR*cosP;
+  let h=Math.atan2(-Yh,Xh)*DEG;
+  if(h<0)h+=360;return h;
+}
+
+// ============================================================
+// DIAGNOSTIK
+// ============================================================
+function updateDiag(){
+  const d=diagData;
+  let html='';
+  html+=`<div>Secure Context: <span class="${d.secureContext?'ok':'err'}">${d.secureContext?'YES':'NO - SENSOR TIDAK AKAN BERJALAN'}</span></div>`;
+  html+=`<div>HTTPS: <span class="${location.protocol==='https:'?'ok':'err'}">${location.protocol}</span></div>`;
+  html+=`<div>&nbsp;</div>`;
+  html+=`<div>deviceorientationabsolute: <span class="${d.doaFired?(d.doaData?'ok':'wrn'):'err'}">${d.doaFired?(d.doaData?'FIRED + DATA ('+d.doaCount+'x)':'FIRED TANPA DATA'):'TIDAK FIRING'}</span></div>`;
+  if(d.doaLast)html+=`<div>&nbsp;&nbsp;alpha:${d.doaLast.a?.toFixed(1)} beta:${d.doaLast.b?.toFixed(1)} gamma:${d.doaLast.g?.toFixed(1)}</div>`;
+  html+=`<div>deviceorientation: <span class="${d.doFired?(d.doData?'ok':'wrn'):'err'}">${d.doFired?(d.doData?'FIRED + DATA ('+d.doCount+'x)':'FIRED TANPA DATA'):'TIDAK FIRING'}</span></div>`;
+  html+=`<div>&nbsp;&nbsp;absolute: <span class="${d.doAbsolute?'ok':'err'}">${d.doAbsolute?'true':'false/undefined'}</span></div>`;
+  if(d.doLast)html+=`<div>&nbsp;&nbsp;alpha:${d.doLast.a?.toFixed(1)} beta:${d.doLast.b?.toFixed(1)} gamma:${d.doLast.g?.toFixed(1)}</div>`;
+  html+=`<div>devicemotion: <span class="${d.dmFired?'ok':'err'}">${d.dmFired?'FIRED ('+d.dmCount+'x)':'TIDAK FIRING'}</span></div>`;
+  html+=`<div>&nbsp;</div>`;
+  html+=`<div>Generic Sensor API (Magnetometer): <span class="${d.magApi?(d.magFired?'ok':'wrn'):'err'}">${d.magApi?(d.magFired?'AKTIF ('+d.magCount+'x)':'API ADA, TIDAK FIRING'):'TIDAK TERSEDIA'}</span></div>`;
+  if(d.magLast)html+=`<div>&nbsp;&nbsp;x:${d.magLast.x?.toFixed(1)} y:${d.magLast.y?.toFixed(1)} z:${d.magLast.z?.toFixed(1)}</div>`;
+  html+=`<div>&nbsp;</div>`;
+  html+=`<div>Aktif Strategy: <span class="ok">${activeStrategy}</span></div>`;
+  html+=`<div>Manual Mode: <span class="${manualMode?'wrn':'ok'}">${manualMode?'YA':'TIDAK'}</span></div>`;
+  html+=`<div>&nbsp;</div>`;
+  html+=`<div style="color:var(--accent2)">TIPS OPPO A9:</div>`;
+  html+=`<div>1. Pastikan halaman dibuka via HTTPS</div>`;
+  html+=`<div>2. Chrome > Setelan > Setelan Situs > Gerak & Orientasi > Izinkan</div>`;
+  html+=`<div>3. Setelan > Baterai > Optimasi Baterai > Chrome > Nonaktifkan</div>`;
+  html+=`<div>4. Aktifkan "Putar Otomatis" di quick settings</div>`;
+  html+=`<div>5. Jika tetap gagal, gunakan MODE MANUAL (geser kompas)</div>`;
+  diagIn.innerHTML=html;
+}
+
+// ============================================================
+// CEK LINGKUNGAN SEBELUM MULAI
+// ============================================================
+function checkEnvironment(){
+  diagData.secureContext=window.isSecureContext;
+  const ua=navigator.userAgent||'';
+  let html='';
+  // Cek HTTPS
+  const isHTTPS=location.protocol==='https:';
+  html+=`<span class="ck ${isHTTPS?'pass':'fail'}">${isHTTPS?'&#10003;':'&#10007;'}</span> HTTPS / Secure Context<br>`;
+  // Cek DeviceOrientationEvent ada
+  const hasDOE=typeof DeviceOrientationEvent!=='undefined';
+  html+=`<span class="ck ${hasDOE?'pass':'fail'}">${hasDOE?'&#10003;':'&#10007;'}</span> DeviceOrientationEvent API<br>`;
+  // Cek DeviceMotionEvent ada
+  const hasDME=typeof DeviceMotionEvent!=='undefined';
+  html+=`<span class="ck ${hasDME?'pass':'fail'}">${hasDME?'&#10003;':'&#10007;'}</span> DeviceMotionEvent API<br>`;
+  // Cek Generic Sensor API
+  const hasGen='Magnetometer' in window;
+  html+=`<span class="ck ${hasGen?'pass':'fail'}">${hasGen?'&#10003;':'&#10007;'}</span> Generic Sensor API (Magnetometer)<br>`;
+  // Cek touch
+  const hasTouch='ontouchstart' in window;
+  html+=`<span class="ck ${hasTouch?'pass':'fail'}">${hasTouch?'&#10003;':'&#10007;'}</span> Touch API (fallback manual)<br>`;
+  // Cek mobile
+  const isMob=/Android|iPhone|iPad|iPod/i.test(ua);
+  html+=`<span class="ck ${isMob?'pass':'fail'}">${isMob?'&#10003;':'&#10007;'}</span> Perangkat Mobile<br>`;
+  // Warning khusus
+  if(!isHTTPS){
+    html+=`<br><span class="fail" style="font-size:9px">KRITIS: Buka via HTTPS! Sensor tidak akan jalan di HTTP.</span>`;
+  }
+  povCheck.innerHTML=html;
+  return isHTTPS&&hasDOE;
+}
+
+// ============================================================
+// STRATEGI SENSOR - 5 LAPISAN AGRESIF
+// ============================================================
+let hasAnyData=false;
+let dataTimeout=null;
+
+function registerAllSensors(){
+  // ==== STRATEGI 1: deviceorientationabsolute ====
+  // Ini API CHROME ANDROID utama untuk kompas - memberikan heading langsung
+  window.addEventListener('deviceorientationabsolute',function(e){
+    diagData.doaFired=true;
+    diagData.doaCount++;
+    diagData.doaLast={a:e.alpha,b:e.beta,g:e.gamma};
+    // alpha BISA null di beberapa device - cek strict
+    if(e.alpha!==null&&e.alpha!==undefined&&!isNaN(e.alpha)){
+      diagData.doaData=true;
+      // Hanya gunakan strategi ini jika belum ada yang lebih prioritas,
+      // atau jika strategi 2 belum mengirim data
+      if(activeStrategy==='NONE'||activeStrategy==='ORI_ABS'){
+        activeStrategy='ORI_ABS';
+        curAz=normAz(e.alpha);
+        curPitch=e.beta||0;
+        curRoll=e.gamma||0;
+        hasAnyData=true;
       }
     }
-    return dirs[0];
-  }
+  },{passive:true});
 
-  function angleDiff(a, b) {
-    let d = a - b;
-    while (d > 180) d -= 360;
-    while (d < -180) d += 360;
-    return d;
-  }
+  // ==== STRATEGI 2: deviceorientation dengan e.absolute === true ====
+  window.addEventListener('deviceorientation',function(e){
+    diagData.doFired=true;
+    diagData.doCount++;
+    diagData.doLast={a:e.alpha,b:e.beta,g:e.gamma};
+    if(e.absolute===true)diagData.doAbsolute=true;
 
-  // === TOAST ===
-  let toastTimer = null;
-  function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
-  }
-
-  // === DRAW COMPASS ===
-  function drawCompass(deg) {
-    const w = compassCanvas.width;
-    const h = compassCanvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const r = w / 2 - 4;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Background glow
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    grad.addColorStop(0, 'rgba(255,61,0,0.05)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Outer ring
-    ctx.strokeStyle = 'rgba(255,61,0,0.3)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Ticks
-    const dialRot = -deg * Math.PI / 180;
-    for (let i = 0; i < 72; i++) {
-      const angle = (i / 72) * Math.PI * 2 + dialRot;
-      const isMain = i % 6 === 0;
-      const isSub = i % 2 === 0;
-      const r1 = isMain ? r * 0.88 : (isSub ? r * 0.91 : r * 0.93);
-      const r2 = r * 0.96;
-      const x1 = cx + r1 * Math.cos(angle);
-      const y1 = cy + r1 * Math.sin(angle);
-      const x2 = cx + r2 * Math.cos(angle);
-      const y2 = cy + r2 * Math.sin(angle);
-
-      ctx.strokeStyle = isMain ? 'rgba(255,61,0,0.7)' : 'rgba(255,255,255,0.15)';
-      ctx.lineWidth = isMain ? 2 : 0.5;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-
-      // Labels
-      if (isMain) {
-        const lr = r * 0.78;
-        const lx = cx + lr * Math.cos(angle);
-        const ly = cy + lr * Math.sin(angle) + 3;
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.font = '8px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const val = (i / 72 * 360) % 360;
-        ctx.fillText(Math.round(val) + '°', lx, ly);
-      }
-    }
-
-    // Cardinal directions
-    const cardLabels = ['U', 'T', 'S', 'B'];
-    const cardAngles = [-90, 0, 90, 180];
-    for (let i = 0; i < 4; i++) {
-      const angle = (cardAngles[i] + deg) * Math.PI / 180;
-      const lr = r * 0.75;
-      const lx = cx + lr * Math.cos(angle);
-      const ly = cy + lr * Math.sin(angle) + 4;
-      ctx.fillStyle = i === 0 ? '#ff3d00' : 'rgba(255,255,255,0.4)';
-      ctx.font = i === 0 ? 'bold 18px "Courier New"' : '14px "Courier New"';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(cardLabels[i], lx, ly);
-    }
-
-    // Intercardinal
-    const interLabels = ['TL', 'TG', 'BD', 'BL'];
-    const interAngles = [-45, 45, 135, 225];
-    for (let i = 0; i < 4; i++) {
-      const angle = (interAngles[i] + deg) * Math.PI / 180;
-      const lr = r * 0.82;
-      const lx = cx + lr * Math.cos(angle);
-      const ly = cy + lr * Math.sin(angle) + 3;
-      ctx.fillStyle = 'rgba(255,171,0,0.3)';
-      ctx.font = '9px "Courier New"';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(interLabels[i], lx, ly);
-    }
-
-    // Needle
-    ctx.save();
-    ctx.translate(cx, cy);
-
-    // North needle
-    ctx.shadowColor = 'rgba(255,61,0,0.6)';
-    ctx.shadowBlur = 20;
-    const grad2 = ctx.createLinearGradient(0, -r * 0.85, 0, 0);
-    grad2.addColorStop(0, '#ff3d00');
-    grad2.addColorStop(1, '#ff6e40');
-    ctx.fillStyle = grad2;
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.85);
-    ctx.lineTo(-5, 0);
-    ctx.lineTo(0, -r * 0.7);
-    ctx.lineTo(5, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // South needle
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#37474f';
-    ctx.beginPath();
-    ctx.moveTo(0, r * 0.75);
-    ctx.lineTo(-4, 0);
-    ctx.lineTo(0, r * 0.6);
-    ctx.lineTo(4, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Center
-    ctx.shadowColor = 'rgba(255,61,0,0.4)';
-    ctx.shadowBlur = 15;
-    ctx.fillStyle = '#ff3d00';
-    ctx.beginPath();
-    ctx.arc(0, 0, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(0, 0, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-
-    // Crosshair
-    ctx.strokeStyle = 'rgba(255,61,0,0.06)';
-    ctx.lineWidth = 0.5;
-    ctx.setLineDash([3, 5]);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - r * 0.5);
-    ctx.lineTo(cx, cy + r * 0.5);
-    ctx.moveTo(cx - r * 0.5, cy);
-    ctx.lineTo(cx + r * 0.5, cy);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // === DRAW GRAPH ===
-  function drawGraph() {
-    const w = graphCanvas.width;
-    const h = graphCanvas.height;
-    gctx.clearRect(0, 0, w, h);
-
-    // Center line
-    gctx.strokeStyle = 'rgba(255,61,0,0.1)';
-    gctx.lineWidth = 0.5;
-    gctx.setLineDash([2, 3]);
-    gctx.beginPath();
-    gctx.moveTo(0, h / 2);
-    gctx.lineTo(w, h / 2);
-    gctx.stroke();
-    gctx.setLineDash([]);
-
-    // Data
-    gctx.strokeStyle = 'rgba(255,61,0,0.7)';
-    gctx.lineWidth = 1.5;
-    gctx.beginPath();
-    for (let i = 0; i < history.length; i++) {
-      const idx = (histIdx + i) % history.length;
-      const val = history[idx];
-      const x = (i / history.length) * w;
-      const y = h / 2 - (val - 180) / 180 * (h / 2 - 2);
-      if (i === 0) gctx.moveTo(x, y);
-      else gctx.lineTo(x, y);
-    }
-    gctx.stroke();
-
-    // Last point
-    const lastVal = history[(histIdx - 1 + history.length) % history.length];
-    const lx = w - 1;
-    const ly = h / 2 - (lastVal - 180) / 180 * (h / 2 - 2);
-    gctx.fillStyle = '#ff3d00';
-    gctx.shadowColor = '#ff3d00';
-    gctx.shadowBlur = 10;
-    gctx.beginPath();
-    gctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
-    gctx.fill();
-    gctx.shadowBlur = 0;
-  }
-
-  // === UPDATE UI ===
-  function updateUI(deg) {
-    const displayDeg = isLocked ? lockedValue : Math.round(deg);
-    degDisplay.textContent = String(displayDeg).padStart(3, '0');
-
-    const dir = getDir(deg);
-    dirDisplay.textContent = isLocked ? '🔒' : dir.label;
-
-    rawVal.textContent = rawHeading.toFixed(0) + '°';
-
-    const delta = Math.abs(angleDiff(deg, prevHeading));
-    deltaVal.textContent = delta.toFixed(1) + '°';
-    deltaVal.style.color = delta > 10 ? '#ff1744' : delta > 3 ? '#ffab00' : '#00e676';
-
-    pitchVal.textContent = pitch.toFixed(1) + '°';
-    rollVal.textContent = roll.toFixed(1) + '°';
-
-    prevHeading = deg;
-
-    // Graph
-    history[histIdx] = deg;
-    histIdx = (histIdx + 1) % history.length;
-    drawGraph();
-
-    // FPS / Frequency
-    updateCount++;
-    const now = performance.now();
-    if (now - lastFreqTime >= 1000) {
-      freqDisplay.textContent = updateCount + ' Hz';
-      fps.textContent = updateCount + ' FPS';
-      updateCount = 0;
-      lastFreqTime = now;
-    }
-  }
-
-  // === SENSOR HANDLER ===
-  function handleOrientation(e) {
-    let az = e.alpha || 0;
-    const beta = e.beta || 0;
-    const gamma = e.gamma || 0;
-
-    // Konversi ke compass heading
-    // Untuk Android standard: alpha adalah rotasi terhadap sumbu Z
-    // Tapi perlu dikalibrasi dengan beta/gamma untuk akurasi
-    // Pendekatan agresif: gunakan alpha langsung dan kompensasi dengan beta/gamma
-
-    // Kompensasi tilt (sederhana)
-    const tiltComp = Math.sin(beta * Math.PI / 180) * 5;
-    const rollComp = Math.sin(gamma * Math.PI / 180) * 3;
-
-    // Heading dari alpha (0° = north)
-    let heading = (360 - az + tiltComp + rollComp) % 360;
-    if (heading < 0) heading += 360;
-
-    // Raw untuk display
-    rawHeading = heading;
-
-    // Smoothing agresif - hanya jika bergerak sedikit
-    if (firstData) {
-      heading = heading;
-      firstData = false;
-    } else {
-      // Filter low-pass agresif dengan alpha tinggi untuk respon cepat
-      const diff = angleDiff(heading, heading);
-      // Gunakan filter EMA dengan alpha 0.7 untuk respon cepat
-      heading = smoothAngle(heading, heading, 0.7);
-    }
-
-    // Update state
-    heading = heading;
-    pitch = beta;
-    roll = gamma;
-
-    // Update UI
-    updateUI(heading);
-    drawCompass(heading);
-
-    // Update status
-    statusDot.className = 'dot green';
-    statusText.textContent = 'AKTIF';
-    sensorActive = true;
-  }
-
-  function smoothAngle(raw, prev, alpha) {
-    const diff = angleDiff(raw, prev);
-    let result = prev + diff * alpha;
-    if (result < 0) result += 360;
-    if (result >= 360) result -= 360;
-    return result;
-  }
-
-  // === FALLBACK: Gyroscope + Accelerometer untuk device tanpa orientation ===
-  let gyroHeading = 0;
-  let lastGyroTime = 0;
-
-  function handleMotion(e) {
-    if (sensorActive) return;
-
-    const accel = e.accelerationIncludingGravity || {};
-    const gyro = e.rotationRate || {};
-
-    // Coba estimasi heading dari gyro
-    if (gyro.alpha !== undefined && gyro.alpha !== null) {
-      const now = performance.now();
-      const dt = (now - lastGyroTime) / 1000;
-      lastGyroTime = now;
-
-      // Integrasi gyro
-      gyroHeading += gyro.alpha * dt * 3; // scale untuk respons lebih agresif
-      gyroHeading = ((gyroHeading % 360) + 360) % 360;
-
-      // Gunakan accelerometer untuk pitch/roll
-      if (accel.x !== undefined && accel.y !== undefined && accel.z !== undefined) {
-        pitch = Math.atan2(accel.y, accel.z) * 180 / Math.PI;
-        roll = Math.atan2(-accel.x, Math.sqrt(accel.y * accel.y + accel.z * accel.z)) * 180 / Math.PI;
-      }
-
-      heading = gyroHeading;
-      rawHeading = heading;
-
-      updateUI(heading);
-      drawCompass(heading);
-
-      statusDot.className = 'dot yellow';
-      statusText.textContent = 'GYRO MODE';
-      sensorActive = true;
-      showToast('🔄 Mode Gyro aktif');
-    }
-  }
-
-  // === INIT SENSORS ===
-  async function initSensors() {
-    try {
-      // Coba permission API (iOS 13+)
-      if (typeof DeviceOrientationEvent !== 'undefined' &&
-          typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const perm = await DeviceOrientationEvent.requestPermission();
-        if (perm !== 'granted') {
-          showToast('❌ Permission ditolak');
-          return false;
+    if(e.alpha!==null&&e.alpha!==undefined&&!isNaN(e.alpha)){
+      diagData.doData=true;
+      if(e.absolute===true){
+        // Absolute orientation - ini compass heading langsung
+        if(activeStrategy==='NONE'||activeStrategy==='ORI_REL'||activeStrategy==='GEN_SENSOR'){
+          activeStrategy='ORI_ABS_FLAG';
+          curAz=normAz(e.alpha);
+          curPitch=e.beta||0;
+          curRoll=e.gamma||0;
+          hasAnyData=true;
         }
+      } else if(!hasAnyData){
+        // Relative orientation - bukan compass heading, tapi
+        // masih lebih baik daripada tidak ada sama sekali
+        activeStrategy='ORI_REL';
+        curAz=normAz(e.alpha);
+        curPitch=e.beta||0;
+        curRoll=e.gamma||0;
+        hasAnyData=true;
       }
+    }
+  },{passive:true});
 
-      // Daftarkan listener
-      window.addEventListener('deviceorientation', handleOrientation, { passive: true });
-      window.addEventListener('devicemotion', handleMotion, { passive: true });
-
-      // Cek apakah data datang
-      return new Promise((resolve) => {
-        let attempts = 0;
-        const maxAttempts = 30;
-        const checker = setInterval(() => {
-          attempts++;
-          if (heading > 0 || heading < 0) { // heading bisa 0, jadi cek undefined
-            clearInterval(checker);
-            resolve(true);
-          } else if (attempts >= maxAttempts) {
-            clearInterval(checker);
-            // Coba fallback ke gyro
-            if (window.DeviceMotionEvent) {
-              showToast('🔄 Menggunakan mode fallback');
-              resolve(true);
-            } else {
-              resolve(false);
+  // ==== STRATEGI 3: Generic Sensor API - Magnetometer ====
+  if('Magnetometer' in window){
+    diagData.magApi=true;
+    try{
+      const mag=new Magnetometer({frequency:60});
+      mag.addEventListener('reading',function(){
+        diagData.magFired=true;
+        diagData.magCount++;
+        diagData.magLast={x:mag.x,y:mag.y,z:mag.z};
+        rawMX=mag.x;rawMY=mag.y;rawMZ=mag.z;
+        // Kalau belum ada data dari strategi 1/2, hitung manual
+        if(!hasAnyData||activeStrategy==='GEN_SENSOR'){
+          // Cek apakah ada accel data untuk tilt compensation
+          if(rawAX!==0||rawAY!==0||rawAZ!==0){
+            const h=computeHeading(mag.x,mag.y,mag.z,rawAX,rawAY,rawAZ);
+            if(h!==null){
+              activeStrategy='GEN_SENSOR';
+              curAz=h;
+              hasAnyData=true;
             }
+          } else {
+            // Fallback tanpa tilt compensation (harus pegang hp datar)
+            let h=Math.atan2(-mag.x,mag.y)*DEG;
+            if(h<0)h+=360;
+            activeStrategy='GEN_SENSOR_NO_TILT';
+            curAz=h;
+            hasAnyData=true;
           }
-        }, 200);
+        }
       });
-
-    } catch (err) {
-      console.error('Sensor init error:', err);
-      showToast('⚠️ Error: ' + err.message);
-      return false;
-    }
-  }
-
-  // === CALIBRATION ===
-  function startCalibration() {
-    if (isCalibrating) return;
-    isCalibrating = true;
-    btnCal.textContent = '⏳ KALIBRASI...';
-    showToast('🔁 Putar HP membentuk angka 8');
-
-    let totalChange = 0;
-    let lastVal = heading;
-    let progress = 0;
-
-    const interval = setInterval(() => {
-      const change = Math.abs(angleDiff(heading, lastVal));
-      totalChange += change;
-      lastVal = heading;
-
-      // Butuh ~2000° total rotasi
-      progress = Math.min(100, (totalChange / 2000) * 100);
-
-      if (progress >= 100) {
-        clearInterval(interval);
-        isCalibrating = false;
-        btnCal.textContent = '✅ KALIBRASI';
-        showToast('✅ Kalibrasi selesai!');
-        // Reset offset
-        firstData = true;
-      }
-    }, 100);
-
-    // Safety timeout
-    setTimeout(() => {
-      if (isCalibrating) {
-        clearInterval(interval);
-        isCalibrating = false;
-        btnCal.textContent = '📡 KALIBRASI';
-        showToast('⏱️ Timeout kalibrasi');
-      }
-    }, 15000);
-  }
-
-  // === EVENTS ===
-  permBtn.addEventListener('click', async () => {
-    permBtn.disabled = true;
-    permBtn.textContent = '⏳ MENGINISIALISASI...';
-    showToast('🔄 Mengaktifkan sensor...');
-
-    const ok = await initSensors();
-
-    if (ok) {
-      permOverlay.classList.add('hidden');
-      statusDot.className = 'dot green';
-      statusText.textContent = 'AKTIF';
-      showToast('✅ Kompas aktif!');
-    } else {
-      permBtn.disabled = false;
-      permBtn.textContent = '🔄 COBA LAGI';
-      showToast('❌ Gagal akses sensor. Coba restart HP.');
-      debugInfo.textContent = '⚠️ Sensor tidak merespons. Coba restart.';
-    }
-  });
-
-  btnCal.addEventListener('click', startCalibration);
-
-  btnLock.addEventListener('click', () => {
-    isLocked = !isLocked;
-    if (isLocked) {
-      lockedValue = Math.round(heading);
-      btnLock.classList.add('active');
-      btnLock.textContent = '🔓 LEPAS';
-      lockStatus.textContent = '🔒 TERKUNCI';
-      showToast('🔒 Dikunci di ' + lockedValue + '°');
-    } else {
-      btnLock.classList.remove('active');
-      btnLock.textContent = '🔒 KUNCI';
-      lockStatus.textContent = '🔓 BEBAS';
-      showToast('🔓 Bebas');
-    }
-  });
-
-  // === RESIZE CANVAS ===
-  function resizeCanvas() {
-    const container = compassCanvas.parentElement;
-    const rect = container.getBoundingClientRect();
-    const size = Math.floor(rect.width);
-    compassCanvas.width = size * 2;
-    compassCanvas.height = size * 2;
-    compassCanvas.style.width = size + 'px';
-    compassCanvas.style.height = size + 'px';
-    ctx.scale(2, 2);
-
-    // Graph
-    const gRect = graphCanvas.parentElement.getBoundingClientRect();
-    graphCanvas.width = gRect.width * 2;
-    graphCanvas.height = gRect.height * 2;
-    graphCanvas.style.width = gRect.width + 'px';
-    graphCanvas.style.height = gRect.height + 'px';
-    gctx.scale(2, 2);
-
-    drawCompass(heading);
-    drawGraph();
-  }
-
-  window.addEventListener('resize', resizeCanvas);
-  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 300));
-
-  // === ANIMATION LOOP ===
-  function animate() {
-    if (sensorActive) {
-      // Redraw terus untuk animasi smooth
-      drawCompass(heading);
-    }
-    requestAnimationFrame(animate);
-  }
-
-  // === INIT ===
-  resizeCanvas();
-  animate();
-
-  // Cek support sensor
-  if (!window.DeviceOrientationEvent && !window.DeviceMotionEvent) {
-    showToast('⚠️ Device tidak support sensor orientasi');
-    debugInfo.textContent = '❌ No sensor support';
-  }
-
-  // Fallback: coba akses langsung setelah 5 detik jika belum aktif
-  setTimeout(() => {
-    if (!sensorActive) {
-      showToast('🔄 Goyangkan HP untuk aktivasi sensor');
-    }
-  }, 3000);
-
-  // === MAGNETOMETER FALLBACK via Generic Sensor API ===
-  try {
-    if ('Magnetometer' in window) {
-      const mag = new Magnetometer({ frequency: 30 });
-      mag.addEventListener('reading', () => {
-        // Gunakan untuk kalibrasi jika tersedia
-        console.log('Mag:', mag.x, mag.y, mag.z);
+      mag.addEventListener('error',function(err){
+        console.warn('Magnetometer API error:',err.error?.name);
       });
       mag.start();
+    }catch(ex){
+      console.warn('Magnetometer API tidak bisa start:',ex);
     }
-  } catch(e) {}
+  }
 
-  console.log('🧭 Kompas Aggressive loaded for Oppo A9');
+  // ==== STRATEGI 4: DeviceMotion untuk accel data (pendukung strategi 3) ====
+  window.addEventListener('devicemotion',function(e){
+    diagData.dmFired=true;
+    diagData.dmCount++;
+    const a=e.accelerationIncludingGravity;
+    if(a&&a.x!==null&&a.x!==undefined){
+      rawAX=a.x;rawAY=a.y;rawAZ=a.z;
+      // Jika strategi 3 aktif, recompute dengan tilt compensation
+      if(activeStrategy==='GEN_SENSOR_NO_TILT'&&diagData.magFired){
+        const h=computeHeading(rawMX,rawMY,rawMZ,rawAX,rawAY,rawAZ);
+        if(h!==null){curAz=h;activeStrategy='GEN_SENSOR'}
+      }
+    }
+  },{passive:true});
+}
+
+// ============================================================
+// TOUCH MANUAL FALLBACK (STRATEGI 5)
+// ============================================================
+function initTouchManual(){
+  cring.addEventListener('touchstart',function(e){
+    if(!manualMode)return;
+    e.preventDefault();
+    touchActive=true;
+    const t=e.touches[0];
+    const r=cring.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    touchStartAng=Math.atan2(t.clientY-cy,t.clientX-cx)*DEG;
+    touchStartAz=curAz;
+  },{passive:false});
+
+  cring.addEventListener('touchmove',function(e){
+    if(!manualMode||!touchActive)return;
+    e.preventDefault();
+    const t=e.touches[0];
+    const r=cring.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const ang=Math.atan2(t.clientY-cy,t.clientX-cx)*DEG;
+    let diff=ang-touchStartAng;
+    curAz=normAz(touchStartAz+diff);
+    hasAnyData=true;
+  },{passive:false});
+
+  cring.addEventListener('touchend',function(){
+    touchActive=false;
+  },{passive:true});
+
+  // Mouse fallback untuk testing di desktop
+  cring.addEventListener('mousedown',function(e){
+    if(!manualMode)return;
+    touchActive=true;
+    const r=cring.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    touchStartAng=Math.atan2(e.clientY-cy,e.clientX-cx)*DEG;
+    touchStartAz=curAz;
+  });
+  window.addEventListener('mousemove',function(e){
+    if(!manualMode||!touchActive)return;
+    const r=cring.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const ang=Math.atan2(e.clientY-cy,e.clientX-cx)*DEG;
+    let diff=ang-touchStartAng;
+    curAz=normAz(touchStartAz+diff);
+    hasAnyData=true;
+  });
+  window.addEventListener('mouseup',function(){touchActive=false});
+}
+
+// ============================================================
+// RENDER KOMPAS
+// ============================================================
+function render(){
+  let deg=curAz;
+
+  // Smooth filter
+  if(smoothMode&&!manualMode){
+    if(isFirstSmooth){smoothedAz=deg;isFirstSmooth=false}
+    else{smoothedAz=smoothAng(deg,smoothedAz,0.3)}
+    deg=smoothedAz;
+  }else{
+    smoothedAz=deg;isFirstSmooth=true;
+  }
+
+  const delta=Math.abs(angDiff(deg,lastAz));
+  lastAz=deg;
+
+  // Rotasi dial
+  dial.setAttribute('transform',`rotate(${-deg},200,200)`);
+
+  // Display
+  const showDeg=isLocked?lockedDeg:Math.round(deg);
+  dVal.textContent=String(showDeg).padStart(3,'0');
+  const dir=getDir(deg);
+  dLbl.textContent=isLocked?'KUNCI':dir.l;
+
+  // Info grid
+  vRaw.textContent=curAz.toFixed(1)+'°';
+  const magM=Math.sqrt(rawMX*rawMX+rawMY*rawMY+rawMZ*rawMZ);
+  vMag.textContent=magM>0?magM.toFixed(1):'---';
+  vPitch.textContent=curPitch.toFixed(1)+'°';
+  vRoll.textContent=curRoll.toFixed(1)+'°';
+  vDelta.textContent=delta.toFixed(1)+'°';
+  vDelta.style.color=delta>10?'var(--red)':delta>3?'var(--accent2)':'var(--green)';
+
+  // Update count
+  updCount++;
+  const now=performance.now();
+  if(now-lastSec>=1000){vUpd.textContent=updCount;updCount=0;lastSec=now}
+
+  // History
+  hist[hIdx]=deg;hIdx=(hIdx+1)%hist.length;
+
+  // FPS
+  fCount++;
+  if(now-lastFT>=500){curFPS=Math.round(fCount/((now-lastFT)/1000));fpsEl.textContent=curFPS+' FPS';fCount=0;lastFT=now}
+
+  // Strategi label
+  stratLabel.textContent='STRATEGY: '+activeStrategy+(manualMode?' + MANUAL':'');
+}
+
+// ============================================================
+// GRAFIK MINI
+// ============================================================
+function setupGraph(){
+  const r=gCan.parentElement.getBoundingClientRect();
+  gCan.width=r.width*2;gCan.height=r.height*2;
+  gCtx.scale(2,2);
+}
+function drawGraph(){
+  const w=gCan.width/2, h=gCan.height/2;
+  gCtx.clearRect(0,0,w,h);
+  gCtx.strokeStyle='rgba(255,61,0,0.12)';gCtx.lineWidth=0.5;
+  gCtx.setLineDash([2,2]);gCtx.beginPath();gCtx.moveTo(0,h/2);gCtx.lineTo(w,h/2);gCtx.stroke();
+  gCtx.setLineDash([]);
+  gCtx.strokeStyle='rgba(255,61,0,0.7)';gCtx.lineWidth=1;gCtx.beginPath();
+  const len=hist.length;
+  for(let i=0;i<len;i++){
+    const idx=(hIdx+i)%len,val=hist[idx];
+    const x=(i/len)*w,y=h/2-(val-180)/180*(h/2-2);
+    if(i===0)gCtx.moveTo(x,y);else gCtx.lineTo(x,y);
+  }
+  gCtx.stroke();
+  const lv=hist[(hIdx-1+len)%len];
+  const lx=w-1,ly=h/2-(lv-180)/180*(h/2-2);
+  gCtx.fillStyle='#ff3d00';gCtx.beginPath();gCtx.arc(lx,ly,2,0,PI*2);gCtx.fill();
+}
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+function loop(){
+  if(sensorActive){render();drawGraph()}
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// KALIBRASI
+// ============================================================
+function startCal(){
+  if(isCalibrating)return;
+  if(manualMode){toast('KALIBRASI TIDAK BERLAKU DI MODE MANUAL');return}
+  isCalibrating=true;
+  cbar.style.width='0%';cdone.style.display='none';ccls.style.display='none';
+  ctxt.style.display='';ccir.style.display='';
+  cov.classList.add('show');bCal.classList.add('cal');
+  let lastCAz=curAz,totalCh=0;
+  calInterval=setInterval(()=>{
+    const ch=Math.abs(angDiff(curAz,lastCAz));
+    totalCh+=ch;lastCAz=curAz;
+    const p=Math.min(100,(totalCh/3000)*100);
+    cbar.style.width=p+'%';
+    if(p>=100){
+      clearInterval(calInterval);isCalibrating=false;
+      ctxt.style.display='none';ccir.style.display='none';
+      cdone.style.display='';ccls.style.display='';
+      bCal.classList.remove('cal');toast('KALIBRASI SELESAI');
+    }
+  },100);
+}
+function stopCal(){
+  isCalibrating=false;
+  if(calInterval)clearInterval(calInterval);
+  cov.classList.remove('show');bCal.classList.remove('cal');
+}
+
+// ============================================================
+// AKTIVASI UTAMA
+// ============================================================
+async function activate(){
+  povBtn.disabled=true;
+  povBtn.textContent='MENGAKTIFKAN...';
+
+  // iOS permission request (tidak ada di Android, tapi aman dipanggil)
+  if(typeof DeviceOrientationEvent!=='undefined'&&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    try{
+      const p=await DeviceOrientationEvent.requestPermission();
+      if(p!=='granted'){toast('PERMISSION DITOLAK');povBtn.disabled=false;povBtn.textContent='COBA LAGI';return}
+    }catch(ex){/* bukan iOS, abaikan */}
+  }
+
+  // Daftarkan SEMUA sensor sekaligus
+  registerAllSensors();
+
+  // Tampilkan UI utama
+  pov.classList.add('hide');
+  mainUI.style.opacity='1';mainUI.style.pointerEvents='auto';
+  sensorActive=true;
+  setupGraph();
+
+  // Status awal - menunggu data
+  sDot.className='sdot warn';
+  sStat.textContent='SCANNING SENSOR...';
+  updateDiag();
+
+  // Tunggu data dengan timeout AGRESIF - 8 detik
+  let elapsed=0;
+  dataTimeout=setInterval(()=>{
+    elapsed+=200;
+    updateDiag();
+
+    if(hasAnyData){
+      // DATA DITERIMA!
+      clearInterval(dataTimeout);
+      sDot.className='sdot on';
+      sStat.textContent='AKTIF ('+activeStrategy+')';
+      toast('SENSOR AKTIF - '+activeStrategy);
+      return;
+    }
+
+    if(elapsed>=8000){
+      // TIMEOUT - cek apakah event pernah fires
+      clearInterval(dataTimeout);
+      if(diagData.doaFired||diagData.doFired){
+        // Event fires tapi tidak ada data (alpha null)
+        sDot.className='sdot warn';
+        sStat.textContent='EVENT TANPA DATA';
+        toast('EVENT FIRE TAPI DATA NULL - Coba mode manual');
+      }else if(diagData.dmFired){
+        // Hanya DeviceMotion yang jalan
+        sDot.className='sdot warn';
+        sStat.textContent='Hanya MOTION, tidak ORIENTATION';
+        toast('ORIENTATION TIDAK TERSEDIA - Coba mode manual');
+      }else{
+        // Tidak ada event sama sekali
+        sDot.className='sdot';
+        sStat.textContent='NO SENSOR DATA';
+        toast('TIDAK ADA SENSOR - Gunakan MODE MANUAL');
+      }
+      // Buka panel diag otomatis
+      diag.classList.add('open');
+    }
+  },200);
+}
+
+function forceManual(){
+  manualMode=true;
+  manBadge.classList.add('show');
+  sDot.className='sdot manual';
+  sStat.textContent='MODE MANUAL';
+  activeStrategy='MANUAL_TOUCH';
+  hasAnyData=true;
+  curAz=0;
+  toast('MODE MANUAL AKTIF - GESER KOMPAS UNTUK NAVIGASI');
+  updateDiag();
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+povBtn.addEventListener('click',activate);
+povForce.addEventListener('click',function(){
+  pov.classList.add('hide');
+  mainUI.style.opacity='1';mainUI.style.pointerEvents='auto';
+  sensorActive=true;setupGraph();
+  forceManual();
+});
+
+diagBtn.addEventListener('click',function(){diag.classList.toggle('open')});
+
+bCal.addEventListener('click',startCal);
+ccls.addEventListener('click',stopCal);
+
+bLock.addEventListener('click',function(){
+  isLocked=!isLocked;
+  if(isLocked){
+    lockedDeg=Math.round(curAz);bLock.classList.add('locked');
+    bLock.textContent='LEPAS';mLabel.textContent='MODE: LOCKED';
+    toast('KUNCI DI '+lockedDeg+'°');
+  }else{
+    bLock.classList.remove('locked');bLock.textContent='KUNCI ARAH';
+    mLabel.textContent='MODE: FREE';toast('ARAH BEBAS');
+  }
+});
+
+bSmooth.addEventListener('click',function(){
+  smoothMode=!smoothMode;isFirstSmooth=true;
+  if(smoothMode){
+    bSmooth.classList.add('locked');bSmooth.textContent='RAW';
+    smLabel.textContent='SMOOTH: ON';toast('SMOOTH FILTER AKTIF');
+  }else{
+    bSmooth.classList.remove('locked');bSmooth.textContent='SMOOTH';
+    smLabel.textContent='SMOOTH: OFF';toast('DATA RAW');
+  }
+});
+
+// ============================================================
+// INISIALISASI
+// ============================================================
+genTicks();
+initTouchManual();
+checkEnvironment();
+loop();
+
+// Cek ulang environment tiap 2 detik (untuk update diag)
+setInterval(updateDiag,2000);
 
 })();
 </script>
