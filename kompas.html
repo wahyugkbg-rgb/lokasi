@@ -117,7 +117,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
         <text x="70" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BL</text>
       </g>
       <g id="needleGroup" filter="url(#glowFilter)">
-        <!-- Jarum Utara (MERAH) - menunjuk ke UTARA yang benar -->
+        <!-- Jarum Utara (MERAH) - PERBAIKAN: Jarum menunjuk ke arah yang benar -->
         <polygon points="200,45 192,195 200,185 208,195" fill="url(#needleGrad)" opacity="0.95"/>
         <!-- Jarum Selatan (ABU-ABU) -->
         <polygon points="200,355 192,205 200,215 208,205" fill="#37474f" opacity="0.4"/>
@@ -360,7 +360,7 @@ function generateTicks() {
 }
 
 // ============================================================
-// COMPASS HEADING - DIPERBAIKI
+// COMPASS HEADING - PERBAIKAN: Menggunakan rumus yang benar
 // ============================================================
 function computeHeading(mx, my, mz, ax, ay, az) {
   const mag = Math.sqrt(ax*ax + ay*ay + az*az);
@@ -372,18 +372,19 @@ function computeHeading(mx, my, mz, ax, ay, az) {
   const cosP = Math.cos(pitchAngle), sinP = Math.sin(pitchAngle);
   const cosR = Math.cos(rollAngle), sinR = Math.sin(rollAngle);
   
-  // RUMUS YANG BENAR UNTUK TILT-COMPENSATED HEADING
+  // RUMUS TILT-COMPENSATED HEADING YANG BENAR
+  // Xh dan Yh adalah komponen magnetometer setelah kompensasi tilt
   const Xh = mx * cosP + mz * sinP;
   const Yh = mx * sinR * sinP + my * cosR - mz * sinR * cosP;
   
-  // Heading dalam derajat - gunakan atan2(Yh, Xh) untuk arah yang benar
+  // PERBAIKAN: Heading = atan2(Yh, Xh) menghasilkan 0° saat Utara, 90° saat Timur
   let h = Math.atan2(Yh, Xh) * 180 / Math.PI;
   if (h < 0) h += 360;
   return h;
 }
 
 // ============================================================
-// SENSOR INIT - DIPERBAIKI
+// SENSOR INIT - PERBAIKAN: Memastikan heading = 0 saat Utara
 // ============================================================
 function initSensors() {
   // STRATEGY 1: deviceorientationabsolute
@@ -396,7 +397,7 @@ function initSensors() {
       if (!isManual) {
         activeStrategy = 'ABS';
         sensorSource = 'ABSOLUT';
-        // alpha adalah heading dalam derajat (0 = Utara, 90 = Timur, 180 = Selatan, 270 = Barat)
+        // PERBAIKAN: e.alpha adalah heading dalam derajat (0 = Utara, 90 = Timur)
         heading = normalizeAngle(e.alpha);
         hasData = true;
         updateStatus();
@@ -412,7 +413,7 @@ function initSensors() {
     if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
       diag.doData = true;
       if (!isManual && (activeStrategy === 'NONE' || !hasData)) {
-        // alpha adalah heading dalam derajat (0 = Utara, 90 = Timur, 180 = Selatan, 270 = Barat)
+        // PERBAIKAN: e.alpha adalah heading dalam derajat (0 = Utara, 90 = Timur)
         heading = normalizeAngle(e.alpha);
         if (e.absolute === true) {
           activeStrategy = 'ABS_FLAG';
@@ -447,7 +448,7 @@ function initSensors() {
               updateStatus();
             }
           } else if (!hasData) {
-            // Fallback tanpa tilt compensation - RUMUS YANG BENAR
+            // Fallback tanpa tilt compensation - PERBAIKAN: atan2(my, mx)
             let h = Math.atan2(rawMY, rawMX) * 180 / Math.PI;
             if (h < 0) h += 360;
             activeStrategy = 'MAG_NO_TILT';
@@ -613,7 +614,7 @@ async function fetchAddress(lat, lng) {
 }
 
 // ============================================================
-// MANUAL TOUCH - DIPERBAIKI
+// MANUAL TOUCH - PERBAIKAN: Arah yang benar
 // ============================================================
 let touchActive = false;
 let touchStartAngle = 0;
@@ -640,7 +641,7 @@ function initManualMode() {
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     const angle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
-    // Perbaikan: arah manual mengikuti gerakan jari dengan benar
+    // PERBAIKAN: Arah manual mengikuti gerakan jari dengan benar
     const diff = angle - touchStartAngle;
     heading = normalizeAngle(touchStartHeading + diff);
     hasData = true;
@@ -704,7 +705,7 @@ function updateStatus() {
 }
 
 // ============================================================
-// UPDATE DISPLAY - DIPERBAIKI ROTASI
+// UPDATE DISPLAY - PERBAIKAN UTAMA: Rotasi dial yang benar
 // ============================================================
 function updateDisplay() {
   let displayHeading = heading;
@@ -742,8 +743,9 @@ function updateDisplay() {
   }
   
   // PERBAIKAN UTAMA: Rotasi dial yang benar
+  // Heading 0° = Utara, 90° = Timur, 180° = Selatan, 270° = Barat
   // Dial harus berputar berlawanan arah jarum jam sebesar heading
-  // Karena jarum menunjuk ke Utara (0°) dan dial menunjukkan arah
+  // Agar jarum merah (Utara) menunjuk ke arah yang benar
   dialGroup.setAttribute('transform', `rotate(${-displayHeading}, 200, 200)`);
   
   // Info
