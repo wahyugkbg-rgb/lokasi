@@ -3,109 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KOMPAS OPPO A9 - FORCE REAL TIME</title>
+<title>KOMPAS REAL-TIME - OPPO A9</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#0a0c10;--fg:#e8e6e1;--red:#ff1744;--green:#00e676;--cyan:#00e5ff;--gold:#ffab00;--glow:rgba(255,23,68,0.6)}
-body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;overflow:hidden;height:100vh;width:100vw;touch-action:none;user-select:none}
-#app{height:100vh;display:flex;flex-direction:column;padding:8px;position:relative}
-.header{text-align:center;padding:4px 0}
-.header h1{font-size:13px;font-weight:900;letter-spacing:6px;color:var(--red);text-shadow:0 0 30px var(--glow)}
-.header .sub{font-size:8px;color:#555;letter-spacing:2px;margin-top:2px}
-#statusBar{display:flex;justify-content:space-between;padding:6px 10px;background:rgba(20,22,28,0.95);border:1px solid rgba(255,23,68,0.2);border-radius:6px;margin:4px 0;font-size:8px}
-#statusBar .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
-.dot.red{background:var(--red);box-shadow:0 0 12px var(--red)}
-.dot.green{background:var(--green);box-shadow:0 0 12px var(--green)}
-.dot.gold{background:var(--gold);box-shadow:0 0 12px var(--gold)}
-.dot.cyan{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
-.compass-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0}
-.compass-wrap svg{width:min(85vw,380px);height:min(85vw,380px);filter:drop-shadow(0 0 40px rgba(255,23,68,0.15))}
+:root{--bg:#0a0c10;--fg:#e8e6e1;--red:#ff1744;--green:#00e676;--cyan:#00e5ff;--gold:#ffab00;--glow:rgba(255,23,68,0.8)}
+body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;overflow:hidden;height:100vh;width:100vw;touch-action:none}
+#app{height:100vh;display:flex;flex-direction:column;padding:6px;position:relative;background:radial-gradient(ellipse at center, rgba(255,23,68,0.03) 0%, transparent 70%)}
+.header{text-align:center;padding:2px 0;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:12px;font-weight:900;letter-spacing:4px;color:var(--red);text-shadow:0 0 30px var(--glow);animation:pulseText 1.5s ease-in-out infinite}
+@keyframes pulseText{0%,100%{opacity:1}50%{opacity:0.6}}
+.header .status{font-size:7px;color:#555;letter-spacing:1px;display:flex;gap:8px;align-items:center}
+.status .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.green{background:var(--green);box-shadow:0 0 15px var(--green);animation:blink 0.8s ease-in-out infinite}
+.dot.red{background:var(--red);box-shadow:0 0 15px var(--red)}
+.dot.cyan{background:var(--cyan);box-shadow:0 0 15px var(--cyan)}
+.dot.gold{background:var(--gold);box-shadow:0 0 15px var(--gold)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.compass-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0;margin:2px 0}
+.compass-wrap svg{width:min(82vw,360px);height:min(82vw,360px);filter:drop-shadow(0 0 50px rgba(255,23,68,0.08))}
 #compassDisplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:10}
-#compassDisplay .deg{font-size:clamp(44px,15vw,72px);font-weight:900;font-variant-numeric:tabular-nums;text-shadow:0 0 40px rgba(255,255,255,0.08)}
-#compassDisplay .dir{font-size:clamp(22px,7vw,34px);font-weight:900;color:var(--gold);letter-spacing:4px;text-shadow:0 0 30px rgba(255,171,0,0.25)}
-.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0}
-.info-cell{background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;padding:6px 2px;text-align:center}
-.info-cell .label{font-size:6px;color:#555;letter-spacing:1px;text-transform:uppercase}
-.info-cell .value{font-size:11px;font-weight:700;margin-top:2px}
+#compassDisplay .deg{font-size:clamp(48px,16vw,80px);font-weight:900;font-variant-numeric:tabular-nums;text-shadow:0 0 50px rgba(255,255,255,0.05);letter-spacing:-2px}
+#compassDisplay .dir{font-size:clamp(20px,6vw,32px);font-weight:900;color:var(--gold);letter-spacing:5px;text-shadow:0 0 40px rgba(255,171,0,0.2);margin-top:-4px}
+#compassDisplay .subdir{font-size:8px;color:#555;letter-spacing:2px;margin-top:2px}
+
+.info-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:3px 0}
+.info-cell{background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.04);border-radius:4px;padding:4px 2px;text-align:center}
+.info-cell .label{font-size:5px;color:#444;letter-spacing:1px;text-transform:uppercase}
+.info-cell .value{font-size:10px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
 .value.red{color:var(--red)}.value.cyan{color:var(--cyan)}.value.green{color:var(--green)}.value.gold{color:var(--gold)}
-.actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:4px 0}
-.actions button{background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:var(--fg);font-family:inherit;font-size:8px;font-weight:700;padding:10px 2px;cursor:pointer;transition:all .1s;text-transform:uppercase;letter-spacing:1px}
-.actions button:active{transform:scale(.95);background:var(--red);color:#000;border-color:var(--red)}
+
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:3px;padding:2px 0}
+.actions button{background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.06);border-radius:5px;color:var(--fg);font-family:inherit;font-size:7px;font-weight:700;padding:8px 2px;cursor:pointer;transition:all 0.08s;text-transform:uppercase;letter-spacing:1px;position:relative}
+.actions button:active{transform:scale(0.92);background:var(--red);color:#000;border-color:var(--red)}
 .actions button.active{background:var(--red);color:#000;border-color:var(--red);box-shadow:0 0 25px var(--glow)}
-.actions button.calibrating{animation:pulse .5s ease-in-out infinite alternate;border-color:var(--gold)}
-@keyframes pulse{from{box-shadow:0 0 10px var(--gold)}to{box-shadow:0 0 30px var(--gold)}}
-#manualBadge{position:absolute;top:10px;right:10px;background:rgba(0,229,255,0.15);border:1px solid var(--cyan);color:var(--cyan);font-size:7px;font-weight:700;padding:4px 10px;border-radius:4px;display:none;letter-spacing:2px;animation:blink 1.2s ease-in-out infinite}
-@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
-#manualBadge.show{display:block}
-.diag-toggle{background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;color:#555;font-size:7px;padding:4px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;margin:2px 0;font-family:inherit}
-.diag-panel{max-height:0;overflow:hidden;transition:max-height .3s ease;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;font-size:7px}
-.diag-panel.open{max-height:400px;overflow-y:auto;padding:8px}
-.diag-panel .ok{color:var(--green)}.diag-panel .err{color:var(--red)}.diag-panel .warn{color:var(--gold)}
-#fps{position:fixed;top:4px;right:6px;font-size:7px;color:#333;z-index:50;font-variant-numeric:tabular-nums}
-#graph{width:100%;height:30px;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;margin:4px 0;overflow:hidden}
+.actions button.calibrating{animation:pulse 0.4s ease-in-out infinite alternate;border-color:var(--gold)}
+@keyframes pulse{from{box-shadow:0 0 10px var(--gold)}to{box-shadow:0 0 40px var(--gold)}}
+.actions button .badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#000;font-size:6px;padding:1px 4px;border-radius:3px;font-weight:900}
+
+#graph{width:100%;height:28px;background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.04);border-radius:4px;margin:2px 0;overflow:hidden}
 #graph canvas{width:100%;height:100%}
+#fps{position:fixed;top:2px;right:4px;font-size:6px;color:#333;z-index:50}
+#manualBadge{position:absolute;top:8px;right:8px;background:rgba(0,229,255,0.12);border:1px solid var(--cyan);color:var(--cyan);font-size:6px;font-weight:700;padding:3px 8px;border-radius:3px;display:none;letter-spacing:2px;animation:blink 0.8s ease-in-out infinite}
+#manualBadge.show{display:block}
+.diag-toggle{background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.04);border-radius:3px;color:#444;font-size:6px;padding:2px 4px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;margin:1px 0;font-family:inherit;width:100%}
+.diag-panel{max-height:0;overflow:hidden;transition:max-height 0.3s ease;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.04);border-radius:3px;font-size:6px;line-height:1.8}
+.diag-panel.open{max-height:500px;overflow-y:auto;padding:6px}
+.diag-panel .ok{color:var(--green)}.diag-panel .err{color:var(--red)}.diag-panel .warn{color:var(--gold)}
+
+#calibrationOverlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;gap:15px}
+#calibrationOverlay.show{display:flex}
+#calOverlay .circle{width:150px;height:150px;border:3px solid var(--red);border-radius:50%;position:relative;animation:spin 2s linear infinite}
+#calOverlay .circle::after{content:'';position:absolute;width:20px;height:20px;background:var(--red);border-radius:50%;top:-10px;left:50%;transform:translateX(-50%);box-shadow:0 0 30px var(--glow)}
+@keyframes spin{to{transform:rotate(360deg)}}
+#calOverlay .text{font-size:12px;color:var(--red);font-weight:700;letter-spacing:2px;text-align:center;line-height:2}
+#calOverlay .progress{width:200px;height:4px;background:#222;border-radius:2px;overflow:hidden}
+#calOverlay .bar{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width 0.2s;border-radius:2px}
+#calOverlay .done{display:none;color:var(--green);font-size:18px;font-weight:900;letter-spacing:3px;animation:popIn 0.4s ease-out}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
+#calOverlay .closeBtn{background:var(--red);color:#000;border:none;padding:10px 30px;border-radius:5px;font-family:inherit;font-size:11px;font-weight:900;cursor:pointer;display:none;letter-spacing:2px}
+
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,0.95);color:#fff;padding:8px 20px;border-radius:6px;font-size:9px;font-family:'Courier New',monospace;z-index:999;border:1px solid rgba(255,23,68,0.2);box-shadow:0 4px 30px rgba(0,0,0,0.6);opacity:0;transition:all 0.3s ease;pointer-events:none;font-weight:700;letter-spacing:0.5px;max-width:90%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 <div id="app">
   <div class="header">
-    <h1>⚡ KOMPAS FORCE</h1>
-    <div class="sub" id="strategyLabel">STRATEGY: INIT</div>
+    <h1>⚡ KOMPAS LIVE</h1>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">INIT</span>
+      <span id="strategyLabel" style="color:#444">STR:--</span>
+    </div>
   </div>
 
-  <div id="statusBar">
-    <div><span class="dot" id="statusDot"></span><span id="statusText">MENUNGGU</span></div>
-    <div id="modeLabel">MODE: BEBAS</div>
-    <div id="smoothLabel">SMOOTH: OFF</div>
-  </div>
-
-  <button class="diag-toggle" id="diagToggle">📊 DIAGNOSTIK SENSOR</button>
+  <button class="diag-toggle" id="diagToggle">🔍 DIAGNOSTIK</button>
   <div class="diag-panel" id="diagPanel"></div>
 
-  <div class="compass-wrap">
+  <div class="compass-wrap" id="compassWrap">
     <svg viewBox="0 0 400 400" id="compassSvg">
       <defs>
-        <filter id="glow"><feGaussianBlur stdDeviation="3"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-      <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,23,68,0.08)" stroke-width="1"/>
-      <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
-      <circle cx="200" cy="200" r="160" fill="none" stroke="rgba(255,23,68,0.04)" stroke-width="0.5"/>
-      
-      <g id="dialGroup">
-        <!-- Ticks akan di-generate oleh JS -->
-        <g id="tickContainer"></g>
-        <text x="200" y="32" text-anchor="middle" fill="var(--red)" font-size="24" font-weight="900" font-family="Courier New">U</text>
-        <text x="370" y="206" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="Courier New">T</text>
-        <text x="200" y="380" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="Courier New">S</text>
-        <text x="30" y="206" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="Courier New">B</text>
-        <text x="325" y="68" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">TL</text>
-        <text x="325" y="345" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">TG</text>
-        <text x="75" y="345" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">BD</text>
-        <text x="75" y="68" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">BL</text>
-      </g>
-      
-      <g id="needleGroup" filter="url(#glow)">
-        <polygon points="200,50 193,195 200,185 207,195" fill="url(#needleGrad)" opacity="0.95"/>
-        <polygon points="200,350 193,205 200,215 207,205" fill="#37474f" opacity="0.6"/>
-        <circle cx="200" cy="200" r="10" fill="var(--red)" stroke="#0a0c10" stroke-width="3"/>
-        <circle cx="200" cy="200" r="4" fill="#fff"/>
-      </g>
-      
-      <defs>
+        <filter id="glowFilter"><feGaussianBlur stdDeviation="2"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         <linearGradient id="needleGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--red)"/>
-          <stop offset="50%" stop-color="#ff5252"/>
-          <stop offset="51%" stop-color="#455a64"/>
+          <stop offset="0%" stop-color="#ff1744"/>
+          <stop offset="45%" stop-color="#ff5252"/>
+          <stop offset="55%" stop-color="#455a64"/>
           <stop offset="100%" stop-color="#263238"/>
         </linearGradient>
       </defs>
+      <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,23,68,0.06)" stroke-width="0.5"/>
+      <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+      <circle cx="200" cy="200" r="158" fill="none" stroke="rgba(255,23,68,0.03)" stroke-width="0.5"/>
+      
+      <g id="dialGroup">
+        <g id="tickContainer"></g>
+        <text x="200" y="28" text-anchor="middle" fill="var(--red)" font-size="26" font-weight="900" font-family="Courier New">N</text>
+        <text x="376" y="206" text-anchor="middle" fill="var(--fg)" font-size="18" font-weight="700" font-family="Courier New">E</text>
+        <text x="200" y="384" text-anchor="middle" fill="var(--fg)" font-size="18" font-weight="700" font-family="Courier New">S</text>
+        <text x="24" y="206" text-anchor="middle" fill="var(--fg)" font-size="18" font-weight="700" font-family="Courier New">W</text>
+        <text x="330" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="10" font-weight="700">NE</text>
+        <text x="330" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="10" font-weight="700">SE</text>
+        <text x="70" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="10" font-weight="700">SW</text>
+        <text x="70" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="10" font-weight="700">NW</text>
+      </g>
+      
+      <g id="needleGroup" filter="url(#glowFilter)">
+        <polygon points="200,45 192,195 200,185 208,195" fill="url(#needleGrad)" opacity="0.95"/>
+        <polygon points="200,355 192,205 200,215 208,205" fill="#37474f" opacity="0.5"/>
+        <circle cx="200" cy="200" r="12" fill="var(--red)" stroke="#0a0c10" stroke-width="3"/>
+        <circle cx="200" cy="200" r="4" fill="#fff"/>
+      </g>
     </svg>
 
     <div id="compassDisplay">
       <div class="deg" id="degDisplay">---</div>
       <div class="dir" id="dirDisplay">---</div>
+      <div class="subdir" id="subDirDisplay">---</div>
     </div>
-    <div id="manualBadge">✋ MODE MANUAL</div>
+    <div id="manualBadge">✋ MANUAL</div>
   </div>
 
   <div class="info-grid">
@@ -113,6 +129,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
     <div class="info-cell"><div class="label">MAGNET</div><div class="value cyan" id="infoMag">---</div></div>
     <div class="info-cell"><div class="label">UPD/S</div><div class="value green" id="infoUpd">0</div></div>
     <div class="info-cell"><div class="label">DELTA</div><div class="value gold" id="infoDelta">---</div></div>
+    <div class="info-cell"><div class="label">SENSOR</div><div class="value" id="infoSensor" style="font-size:7px;color:#666">---</div></div>
   </div>
 
   <div id="graph"><canvas id="graphCanvas"></canvas></div>
@@ -120,11 +137,22 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
   <div class="actions">
     <button id="btnCalibrate">⚡ KALIBRASI</button>
     <button id="btnLock">🔒 KUNCI</button>
-    <button id="btnSmooth">🌀 SMOOTH</button>
+    <button id="btnSmooth">🌀 HALUS</button>
     <button id="btnManual">✋ MANUAL</button>
+    <button id="btnReset">↺ RESET</button>
   </div>
 </div>
-<div id="fps">-- FPS</div>
+<div id="fps">0 FPS</div>
+
+<div id="calibrationOverlay">
+  <div class="circle"></div>
+  <div class="text">PUTAR HP MEMBENTUK ANGKA 8<br><span style="font-size:9px;color:#666">Ulangi hingga progress penuh</span></div>
+  <div class="progress"><div class="bar" id="calBar"></div></div>
+  <div class="done" id="calDone">✅ KALIBRASI SELESAI</div>
+  <button class="closeBtn" id="calClose">SELESAI</button>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 (function(){
@@ -140,15 +168,15 @@ const needleGroup = $('needleGroup');
 const tickContainer = $('tickContainer');
 const degDisplay = $('degDisplay');
 const dirDisplay = $('dirDisplay');
+const subDirDisplay = $('subDirDisplay');
 const statusDot = $('statusDot');
 const statusText = $('statusText');
-const modeLabel = $('modeLabel');
-const smoothLabel = $('smoothLabel');
 const strategyLabel = $('strategyLabel');
 const infoAz = $('infoAz');
 const infoMag = $('infoMag');
 const infoUpd = $('infoUpd');
 const infoDelta = $('infoDelta');
+const infoSensor = $('infoSensor');
 const fpsEl = $('fps');
 const graphCanvas = $('graphCanvas');
 const ctx = graphCanvas.getContext('2d');
@@ -158,10 +186,17 @@ const btnCalibrate = $('btnCalibrate');
 const btnLock = $('btnLock');
 const btnSmooth = $('btnSmooth');
 const btnManual = $('btnManual');
+const btnReset = $('btnReset');
 const manualBadge = $('manualBadge');
+const compassWrap = $('compassWrap');
+const toast = $('toast');
+const calOverlay = $('calibrationOverlay');
+const calBar = $('calBar');
+const calDone = $('calDone');
+const calClose = $('calClose');
 
 // ============================================================
-// STATE
+// STATE - REAL TIME UPDATE
 // ============================================================
 let heading = 0;
 let lockedHeading = 0;
@@ -169,61 +204,67 @@ let isLocked = false;
 let isSmooth = false;
 let isManual = false;
 let isCalibrating = false;
-let calibrateProgress = 0;
 let lastHeading = 0;
 let updateCount = 0;
 let lastUpdateTime = performance.now();
+let hasData = false;
+let activeStrategy = 'NONE';
+let sensorSource = 'NONE';
 
-// Sensor data
+// Sensor raw data
 let rawMX = 0, rawMY = 0, rawMZ = 0;
 let rawAX = 0, rawAY = 0, rawAZ = 0;
 let pitch = 0, roll = 0;
-let hasData = false;
-let activeStrategy = 'NONE';
 
 // Smoothing
 let smoothHeading = 0;
 let smoothInitialized = false;
+const SMOOTH_ALPHA = 0.2;
 
 // FPS
 let fpsCount = 0;
 let fpsTime = performance.now();
 let currentFps = 0;
 
-// History for graph
+// History (100 points for graph)
 const history = new Array(100).fill(0);
 let historyIndex = 0;
 
 // Diag data
 let diag = {
-  doaFired: false,
-  doFired: false,
-  dmFired: false,
-  magFired: false,
-  doaData: false,
-  doData: false,
-  doaCount: 0,
-  doCount: 0,
-  dmCount: 0,
-  magCount: 0,
-  doaLast: null,
-  doLast: null,
-  magLast: null
+  doaFired: false, doFired: false, dmFired: false, magFired: false,
+  doaData: false, doData: false,
+  doaCount: 0, doCount: 0, dmCount: 0, magCount: 0,
+  doaLast: null, doLast: null, magLast: null,
+  lastUpdate: Date.now()
 };
 
+// Calibration
+let calTotal = 0;
+let calLastHeading = 0;
+let calInterval = null;
+
 // ============================================================
-// DIRECTION LOOKUP
+// DIRECTION LOOKUP (16 arah)
 // ============================================================
 const directions = [
-  {min:337.5, max:360, short:'U', long:'UTARA'},
-  {min:0, max:22.5, short:'U', long:'UTARA'},
-  {min:22.5, max:67.5, short:'TL', long:'TIMUR LAUT'},
-  {min:67.5, max:112.5, short:'T', long:'TIMUR'},
-  {min:112.5, max:157.5, short:'TG', long:'TENGGARA'},
-  {min:157.5, max:202.5, short:'S', long:'SELATAN'},
-  {min:202.5, max:247.5, short:'BD', long:'BARAT DAYA'},
-  {min:247.5, max:292.5, short:'B', long:'BARAT'},
-  {min:292.5, max:337.5, short:'BL', long:'BARAT LAUT'}
+  {min:348.75, max:360, short:'U', long:'UTARA', emoji:'⬆️'},
+  {min:0, max:11.25, short:'U', long:'UTARA', emoji:'⬆️'},
+  {min:11.25, max:33.75, short:'UTL', long:'UTARA TIMUR LAUT', emoji:'↗️'},
+  {min:33.75, max:56.25, short:'TL', long:'TIMUR LAUT', emoji:'↗️'},
+  {min:56.25, max:78.75, short:'TLT', long:'TIMUR LAUT TIMUR', emoji:'↗️'},
+  {min:78.75, max:101.25, short:'T', long:'TIMUR', emoji:'➡️'},
+  {min:101.25, max:123.75, short:'TTG', long:'TIMUR TENGGARA', emoji:'↘️'},
+  {min:123.75, max:146.25, short:'TG', long:'TENGGARA', emoji:'↘️'},
+  {min:146.25, max:168.75, short:'TGS', long:'TENGGARA SELATAN', emoji:'↘️'},
+  {min:168.75, max:191.25, short:'S', long:'SELATAN', emoji:'⬇️'},
+  {min:191.25, max:213.75, short:'SBD', long:'SELATAN BARAT DAYA', emoji:'↙️'},
+  {min:213.75, max:236.25, short:'BD', long:'BARAT DAYA', emoji:'↙️'},
+  {min:236.25, max:258.75, short:'BDB', long:'BARAT DAYA BARAT', emoji:'↙️'},
+  {min:258.75, max:281.25, short:'B', long:'BARAT', emoji:'⬅️'},
+  {min:281.25, max:303.75, short:'BBL', long:'BARAT BARAT LAUT', emoji:'↖️'},
+  {min:303.75, max:326.25, short:'BL', long:'BARAT LAUT', emoji:'↖️'},
+  {min:326.25, max:348.75, short:'BLU', long:'BARAT LAUT UTARA', emoji:'↖️'}
 ];
 
 function getDirection(deg) {
@@ -250,42 +291,51 @@ function angleDiff(a, b) {
 // GENERATE COMPASS TICKS
 // ============================================================
 function generateTicks() {
-  for (let deg = 0; deg < 360; deg += 5) {
+  for (let deg = 0; deg < 360; deg += 2) {
     const rad = (deg - 90) * Math.PI / 180;
     const is30 = deg % 30 === 0;
     const is10 = deg % 10 === 0;
-    const inner = is30 ? 155 : (is10 ? 162 : 170);
-    const outer = 185;
+    const is5 = deg % 5 === 0;
     
+    let inner, stroke, width;
+    if (is30) {
+      inner = 152;
+      stroke = 'rgba(255,23,68,0.7)';
+      width = '2.5';
+    } else if (is10) {
+      inner = 162;
+      stroke = 'rgba(255,255,255,0.2)';
+      width = '1.5';
+    } else if (is5) {
+      inner = 170;
+      stroke = 'rgba(255,255,255,0.08)';
+      width = '1';
+    } else {
+      inner = 175;
+      stroke = 'rgba(255,255,255,0.03)';
+      width = '0.5';
+    }
+    
+    const outer = 185;
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', 200 + inner * Math.cos(rad));
     line.setAttribute('y1', 200 + inner * Math.sin(rad));
     line.setAttribute('x2', 200 + outer * Math.cos(rad));
     line.setAttribute('y2', 200 + outer * Math.sin(rad));
-    
-    if (is30) {
-      line.setAttribute('stroke', 'rgba(255,23,68,0.6)');
-      line.setAttribute('stroke-width', '2');
-    } else if (is10) {
-      line.setAttribute('stroke', 'rgba(255,255,255,0.15)');
-      line.setAttribute('stroke-width', '1');
-    } else {
-      line.setAttribute('stroke', 'rgba(255,255,255,0.05)');
-      line.setAttribute('stroke-width', '0.5');
-    }
+    line.setAttribute('stroke', stroke);
+    line.setAttribute('stroke-width', width);
     tickContainer.appendChild(line);
     
-    // Degree labels
     if (is30 && deg % 90 !== 0) {
-      const labelR = 140;
+      const labelR = 138;
       const lx = 200 + labelR * Math.cos(rad);
       const ly = 200 + labelR * Math.sin(rad);
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', lx);
-      text.setAttribute('y', ly + 3);
+      text.setAttribute('y', ly + 2);
       text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('fill', 'rgba(255,255,255,0.15)');
-      text.setAttribute('font-size', '8');
+      text.setAttribute('fill', 'rgba(255,255,255,0.12)');
+      text.setAttribute('font-size', '7');
       text.setAttribute('font-family', 'Courier New');
       text.textContent = deg + '°';
       tickContainer.appendChild(text);
@@ -294,17 +344,17 @@ function generateTicks() {
 }
 
 // ============================================================
-// COMPASS HEADING COMPUTATION
+// COMPASS HEADING COMPUTATION (Tilt Compensated)
 // ============================================================
 function computeHeading(mx, my, mz, ax, ay, az) {
   const mag = Math.sqrt(ax*ax + ay*ay + az*az);
   if (mag < 0.1) return null;
   
   const nax = ax / mag, nay = ay / mag, naz = az / mag;
-  const pitch = Math.asin(Math.max(-1, Math.min(1, -nax)));
-  const roll = Math.atan2(nay, naz);
-  const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
-  const cosR = Math.cos(roll), sinR = Math.sin(roll);
+  const pitchAngle = Math.asin(Math.max(-1, Math.min(1, -nax)));
+  const rollAngle = Math.atan2(nay, naz);
+  const cosP = Math.cos(pitchAngle), sinP = Math.sin(pitchAngle);
+  const cosR = Math.cos(rollAngle), sinR = Math.sin(rollAngle);
   
   const Xh = mx * cosP + mz * sinP;
   const Yh = mx * sinR * sinP + my * cosR - mz * sinR * cosP;
@@ -315,19 +365,21 @@ function computeHeading(mx, my, mz, ax, ay, az) {
 }
 
 // ============================================================
-// SENSOR STRATEGIES - AGGRESSIVE MULTI-LAYER
+// SENSOR STRATEGIES - MULTI-LAYER AGGRESSIVE
 // ============================================================
 function initSensors() {
-  // STRATEGY 1: deviceorientationabsolute (priority)
+  // STRATEGY 1: deviceorientationabsolute (PRIORITY 1)
   window.addEventListener('deviceorientationabsolute', function(e) {
     diag.doaFired = true;
     diag.doaCount++;
     diag.doaLast = {alpha: e.alpha, beta: e.beta, gamma: e.gamma};
+    diag.lastUpdate = Date.now();
     
     if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
       diag.doaData = true;
-      if (activeStrategy === 'NONE' || activeStrategy === 'ORIENTATION') {
-        activeStrategy = 'DOA_ABSOLUTE';
+      if (!isManual) {
+        activeStrategy = 'DOA_ABS';
+        sensorSource = 'ABSOLUTE';
         heading = normalizeAngle(e.alpha);
         pitch = e.beta || 0;
         roll = e.gamma || 0;
@@ -337,37 +389,38 @@ function initSensors() {
     }
   }, {passive: true});
 
-  // STRATEGY 2: deviceorientation with absolute flag
+  // STRATEGY 2: deviceorientation with absolute flag (PRIORITY 2)
   window.addEventListener('deviceorientation', function(e) {
     diag.doFired = true;
     diag.doCount++;
     diag.doLast = {alpha: e.alpha, beta: e.beta, gamma: e.gamma};
+    diag.lastUpdate = Date.now();
     
     if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
       diag.doData = true;
-      
-      // If absolute and we don't have better data
-      if (e.absolute === true && (activeStrategy === 'NONE' || activeStrategy === 'ORIENTATION')) {
-        activeStrategy = 'DO_ABSOLUTE';
-        heading = normalizeAngle(e.alpha);
-        pitch = e.beta || 0;
-        roll = e.gamma || 0;
-        hasData = true;
-        updateStatus();
-      } 
-      // Fallback to relative if nothing else works
-      else if (!hasData || activeStrategy === 'ORIENTATION') {
-        activeStrategy = 'DO_RELATIVE';
-        heading = normalizeAngle(e.alpha);
-        pitch = e.beta || 0;
-        roll = e.gamma || 0;
-        hasData = true;
-        updateStatus();
+      if (!isManual && (activeStrategy === 'NONE' || activeStrategy === 'ORIENTATION')) {
+        if (e.absolute === true) {
+          activeStrategy = 'DO_ABS_FLAG';
+          sensorSource = 'ABSOLUTE';
+          heading = normalizeAngle(e.alpha);
+          pitch = e.beta || 0;
+          roll = e.gamma || 0;
+          hasData = true;
+          updateStatus();
+        } else if (!hasData) {
+          activeStrategy = 'DO_REL';
+          sensorSource = 'RELATIVE';
+          heading = normalizeAngle(e.alpha);
+          pitch = e.beta || 0;
+          roll = e.gamma || 0;
+          hasData = true;
+          updateStatus();
+        }
       }
     }
   }, {passive: true});
 
-  // STRATEGY 3: Generic Magnetometer API
+  // STRATEGY 3: Generic Magnetometer API (PRIORITY 3)
   if ('Magnetometer' in window) {
     try {
       const mag = new Magnetometer({frequency: 60});
@@ -375,16 +428,27 @@ function initSensors() {
         diag.magFired = true;
         diag.magCount++;
         diag.magLast = {x: mag.x, y: mag.y, z: mag.z};
+        diag.lastUpdate = Date.now();
         rawMX = mag.x;
         rawMY = mag.y;
         rawMZ = mag.z;
         
-        // If we have accelerometer data, compute tilt-compensated heading
-        if ((rawAX !== 0 || rawAY !== 0 || rawAZ !== 0) && 
-            (activeStrategy === 'NONE' || activeStrategy === 'MAGNETOMETER' || !hasData)) {
-          const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
-          if (h !== null) {
-            activeStrategy = 'MAGNETOMETER';
+        if (!isManual && (activeStrategy === 'NONE' || activeStrategy === 'MAGNET' || !hasData)) {
+          if (rawAX !== 0 || rawAY !== 0 || rawAZ !== 0) {
+            const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
+            if (h !== null) {
+              activeStrategy = 'MAGNET';
+              sensorSource = 'MAGNETOMETER';
+              heading = h;
+              hasData = true;
+              updateStatus();
+            }
+          } else if (!hasData) {
+            // Fallback tanpa tilt compensation
+            let h = Math.atan2(-rawMX, rawMY) * 180 / Math.PI;
+            if (h < 0) h += 360;
+            activeStrategy = 'MAGNET_NO_TILT';
+            sensorSource = 'MAGNETOMETER';
             heading = h;
             hasData = true;
             updateStatus();
@@ -404,6 +468,7 @@ function initSensors() {
   window.addEventListener('devicemotion', function(e) {
     diag.dmFired = true;
     diag.dmCount++;
+    diag.lastUpdate = Date.now();
     
     const accel = e.accelerationIncludingGravity;
     if (accel && accel.x !== null && accel.x !== undefined) {
@@ -412,10 +477,12 @@ function initSensors() {
       rawAZ = accel.z;
       
       // Recompute with magnetometer if available
-      if (diag.magFired && (activeStrategy === 'MAGNETOMETER' || !hasData)) {
+      if (!isManual && diag.magFired && 
+          (activeStrategy === 'MAGNET' || activeStrategy === 'MAGNET_NO_TILT' || !hasData)) {
         const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
         if (h !== null) {
-          activeStrategy = 'MAGNETOMETER';
+          activeStrategy = 'MAGNET';
+          sensorSource = 'MAGNETOMETER';
           heading = h;
           hasData = true;
           updateStatus();
@@ -423,35 +490,71 @@ function initSensors() {
       }
     }
   }, {passive: true});
+
+  // STRATEGY 5: Fallback - Use gyroscope integration if available
+  if ('Gyroscope' in window) {
+    try {
+      const gyro = new Gyroscope({frequency: 60});
+      let gyroHeading = heading;
+      let gyroInitialized = false;
+      let lastGyroTime = performance.now();
+      
+      gyro.addEventListener('reading', function() {
+        if (!hasData && !isManual) {
+          const now = performance.now();
+          const dt = (now - lastGyroTime) / 1000;
+          lastGyroTime = now;
+          
+          if (!gyroInitialized) {
+            gyroHeading = heading || 0;
+            gyroInitialized = true;
+          }
+          
+          // Integrate gyroscope (z-axis rotation)
+          if (gyro.z !== null && gyro.z !== undefined) {
+            gyroHeading += gyro.z * dt * 180 / Math.PI;
+            gyroHeading = normalizeAngle(gyroHeading);
+            activeStrategy = 'GYRO';
+            sensorSource = 'GYROSCOPE';
+            heading = gyroHeading;
+            hasData = true;
+            updateStatus();
+          }
+        }
+      });
+      gyro.start();
+    } catch(e) {}
+  }
 }
 
 // ============================================================
-// MANUAL MODE (TOUCH DRIVEN)
+// MANUAL TOUCH MODE - REAL TIME DRAG
 // ============================================================
 let touchActive = false;
 let touchStartAngle = 0;
 let touchStartHeading = 0;
+let lastTouchAngle = 0;
 
 function initManualMode() {
-  const wrap = document.querySelector('.compass-wrap');
-  
-  wrap.addEventListener('touchstart', function(e) {
+  // Touch events for mobile
+  compassWrap.addEventListener('touchstart', function(e) {
     if (!isManual) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = wrap.getBoundingClientRect();
+    const rect = compassWrap.getBoundingClientRect();
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     touchStartAngle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
     touchStartHeading = heading;
+    lastTouchAngle = touchStartAngle;
     touchActive = true;
   }, {passive: false});
   
-  wrap.addEventListener('touchmove', function(e) {
+  compassWrap.addEventListener('touchmove', function(e) {
     if (!isManual || !touchActive) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = wrap.getBoundingClientRect();
+    const rect = compassWrap.getBoundingClientRect();
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     const angle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
@@ -459,27 +562,30 @@ function initManualMode() {
     heading = normalizeAngle(touchStartHeading + diff);
     hasData = true;
     activeStrategy = 'MANUAL';
+    sensorSource = 'TOUCH';
     updateStatus();
   }, {passive: false});
   
-  wrap.addEventListener('touchend', function() {
+  compassWrap.addEventListener('touchend', function() {
     touchActive = false;
   }, {passive: true});
   
-  // Mouse support (desktop fallback)
-  wrap.addEventListener('mousedown', function(e) {
+  // Mouse support for desktop
+  compassWrap.addEventListener('mousedown', function(e) {
     if (!isManual) return;
-    const rect = wrap.getBoundingClientRect();
+    const rect = compassWrap.getBoundingClientRect();
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     touchStartAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
     touchStartHeading = heading;
+    lastTouchAngle = touchStartAngle;
     touchActive = true;
+    e.preventDefault();
   });
   
   document.addEventListener('mousemove', function(e) {
     if (!isManual || !touchActive) return;
-    const rect = wrap.getBoundingClientRect();
+    const rect = compassWrap.getBoundingClientRect();
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
@@ -487,6 +593,7 @@ function initManualMode() {
     heading = normalizeAngle(touchStartHeading + diff);
     hasData = true;
     activeStrategy = 'MANUAL';
+    sensorSource = 'TOUCH';
     updateStatus();
   });
   
@@ -496,26 +603,28 @@ function initManualMode() {
 }
 
 // ============================================================
-// UPDATE UI
+// UPDATE UI - REAL TIME
 // ============================================================
 function updateStatus() {
   if (isManual) {
     statusDot.className = 'dot cyan';
     statusText.textContent = 'MANUAL';
     manualBadge.classList.add('show');
+    strategyLabel.textContent = 'STR:MANUAL';
   } else if (hasData) {
     statusDot.className = 'dot green';
-    statusText.textContent = 'AKTIF';
+    statusText.textContent = 'LIVE';
     manualBadge.classList.remove('show');
+    strategyLabel.textContent = 'STR:' + activeStrategy.substring(0, 6);
   } else {
     statusDot.className = 'dot red';
-    statusText.textContent = 'TIDAK ADA DATA';
+    statusText.textContent = 'WAITING';
     manualBadge.classList.remove('show');
+    strategyLabel.textContent = 'STR:NONE';
   }
   
-  strategyLabel.textContent = `STRATEGY: ${activeStrategy}`;
-  modeLabel.textContent = isLocked ? '🔒 TERKUNCI' : 'MODE: BEBAS';
-  smoothLabel.textContent = isSmooth ? 'SMOOTH: ON' : 'SMOOTH: OFF';
+  modeLabel.textContent = isLocked ? '🔒 LOCK' : 'FREE';
+  smoothLabel.textContent = isSmooth ? 'SMOOTH' : 'RAW';
 }
 
 function updateDisplay() {
@@ -527,9 +636,8 @@ function updateDisplay() {
       smoothHeading = heading;
       smoothInitialized = true;
     } else {
-      smoothHeading = smoothHeading + angleDiff(heading, smoothHeading) * 0.25;
-      if (smoothHeading < 0) smoothHeading += 360;
-      if (smoothHeading >= 360) smoothHeading -= 360;
+      const diff = angleDiff(heading, smoothHeading);
+      smoothHeading = normalizeAngle(smoothHeading + diff * SMOOTH_ALPHA);
     }
     displayHeading = smoothHeading;
   } else {
@@ -537,7 +645,7 @@ function updateDisplay() {
     smoothInitialized = true;
   }
   
-  // Lock
+  // Apply lock
   if (isLocked) {
     displayHeading = lockedHeading;
   }
@@ -545,13 +653,15 @@ function updateDisplay() {
   const displayDeg = Math.round(displayHeading);
   const dir = getDirection(displayHeading);
   
+  // Update display
   degDisplay.textContent = String(displayDeg).padStart(3, '0');
-  dirDisplay.textContent = isLocked ? '🔒 LOCKED' : dir.long;
+  dirDisplay.textContent = isLocked ? '🔒' : dir.emoji + ' ' + dir.short;
+  subDirDisplay.textContent = isLocked ? 'TERKUNCI ' + lockedHeading + '°' : dir.long;
   
   // Rotate compass
   dialGroup.setAttribute('transform', `rotate(${-displayHeading}, 200, 200)`);
   
-  // Info
+  // Info panel
   infoAz.textContent = displayDeg + '°';
   
   const magStrength = Math.sqrt(rawMX*rawMX + rawMY*rawMY + rawMZ*rawMZ);
@@ -559,8 +669,10 @@ function updateDisplay() {
   
   const delta = Math.abs(angleDiff(displayHeading, lastHeading));
   infoDelta.textContent = delta.toFixed(1) + '°';
-  infoDelta.style.color = delta > 10 ? 'var(--red)' : delta > 3 ? 'var(--gold)' : 'var(--green)';
+  infoDelta.style.color = delta > 15 ? 'var(--red)' : delta > 5 ? 'var(--gold)' : 'var(--green)';
   lastHeading = displayHeading;
+  
+  infoSensor.textContent = sensorSource;
   
   // Update counter
   updateCount++;
@@ -591,9 +703,9 @@ function drawGraph() {
   ctx.clearRect(0, 0, w, h);
   
   // Center line
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
   ctx.lineWidth = 0.5;
-  ctx.setLineDash([3, 3]);
+  ctx.setLineDash([2, 4]);
   ctx.beginPath();
   ctx.moveTo(0, h/2);
   ctx.lineTo(w, h/2);
@@ -601,8 +713,15 @@ function drawGraph() {
   ctx.setLineDash([]);
   
   // Plot
-  ctx.strokeStyle = 'rgba(255,23,68,0.7)';
+  const gradient = ctx.createLinearGradient(0, 0, w, 0);
+  gradient.addColorStop(0, 'rgba(255,23,68,0.2)');
+  gradient.addColorStop(0.5, 'rgba(255,23,68,0.7)');
+  gradient.addColorStop(1, 'rgba(255,23,68,1)');
+  
+  ctx.strokeStyle = gradient;
   ctx.lineWidth = 1.5;
+  ctx.shadowColor = 'rgba(255,23,68,0.3)';
+  ctx.shadowBlur = 4;
   ctx.beginPath();
   
   const len = history.length;
@@ -615,27 +734,32 @@ function drawGraph() {
     else ctx.lineTo(x, y);
   }
   ctx.stroke();
+  ctx.shadowBlur = 0;
   
   // Current point
   const lastVal = history[(historyIndex - 1 + len) % len];
   const lastX = w - 2;
   const lastY = h/2 - (lastVal - 180) / 180 * (h/2 - 2);
   ctx.fillStyle = 'var(--red)';
+  ctx.shadowColor = 'var(--red)';
+  ctx.shadowBlur = 10;
   ctx.beginPath();
-  ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.shadowBlur = 0;
 }
 
 // ============================================================
-// RENDER LOOP
+// RENDER LOOP - REAL TIME UPDATE SETIAP FRAME
 // ============================================================
 function render() {
+  // Update display every frame if we have data
   if (hasData || isManual) {
     updateDisplay();
     drawGraph();
   }
   
-  // FPS
+  // FPS counter
   fpsCount++;
   const now = performance.now();
   if (now - fpsTime >= 500) {
@@ -653,80 +777,117 @@ function render() {
 // ============================================================
 function updateDiag() {
   let html = '';
-  html += `<div>Secure Context: <span class="${window.isSecureContext ? 'ok' : 'err'}">${window.isSecureContext ? '✅' : '❌'}</span></div>`;
-  html += `<div>HTTPS: <span class="${location.protocol === 'https:' ? 'ok' : 'err'}">${location.protocol}</span></div>`;
-  html += `<div>DeviceOrientation API: <span class="${typeof DeviceOrientationEvent !== 'undefined' ? 'ok' : 'err'}">${typeof DeviceOrientationEvent !== 'undefined' ? '✅' : '❌'}</span></div>`;
-  html += `<div>&nbsp;</div>`;
-  html += `<div>deviceorientationabsolute: <span class="${diag.doaFired ? (diag.doaData ? 'ok' : 'warn') : 'err'}">${diag.doaFired ? (diag.doaData ? '✅ DATA ('+diag.doaCount+'x)' : '⚠️ FIRED NO DATA') : '❌'}</span></div>`;
-  if (diag.doaLast) html += `<div>&nbsp;&nbsp;α:${diag.doaLast.alpha?.toFixed(1) || 'null'} β:${diag.doaLast.beta?.toFixed(1) || 'null'} γ:${diag.doaLast.gamma?.toFixed(1) || 'null'}</div>`;
-  html += `<div>deviceorientation: <span class="${diag.doFired ? (diag.doData ? 'ok' : 'warn') : 'err'}">${diag.doFired ? (diag.doData ? '✅ DATA ('+diag.doCount+'x)' : '⚠️ FIRED NO DATA') : '❌'}</span></div>`;
-  if (diag.doLast) html += `<div>&nbsp;&nbsp;α:${diag.doLast.alpha?.toFixed(1) || 'null'} β:${diag.doLast.beta?.toFixed(1) || 'null'} γ:${diag.doLast.gamma?.toFixed(1) || 'null'}</div>`;
-  html += `<div>devicemotion: <span class="${diag.dmFired ? 'ok' : 'err'}">${diag.dmFired ? '✅ ('+diag.dmCount+'x)' : '❌'}</span></div>`;
-  html += `<div>Magnetometer API: <span class="${'Magnetometer' in window ? (diag.magFired ? 'ok' : 'warn') : 'err'}">${'Magnetometer' in window ? (diag.magFired ? '✅ ('+diag.magCount+'x)' : '⚠️ AVAILABLE NO DATA') : '❌'}</span></div>`;
-  if (diag.magLast) html += `<div>&nbsp;&nbsp;x:${diag.magLast.x?.toFixed(1)} y:${diag.magLast.y?.toFixed(1)} z:${diag.magLast.z?.toFixed(1)}</div>`;
-  html += `<div>&nbsp;</div>`;
-  html += `<div>Active Strategy: <span class="ok">${activeStrategy}</span></div>`;
-  html += `<div>Has Data: <span class="${hasData ? 'ok' : 'err'}">${hasData ? '✅' : '❌'}</span></div>`;
-  html += `<div>&nbsp;</div>`;
-  html += `<div style="color:var(--gold);font-size:8px">📌 FORCE STRATEGIES:</div>`;
-  html += `<div style="font-size:7px;color:#666">1. deviceorientationabsolute (priority)</div>`;
-  html += `<div style="font-size:7px;color:#666">2. deviceorientation (absolute flag)</div>`;
-  html += `<div style="font-size:7px;color:#666">3. Magnetometer API + tilt compensation</div>`;
-  html += `<div style="font-size:7px;color:#666">4. Manual touch (fallback)</div>`;
-  html += `<div style="font-size:7px;color:#666;margin-top:4px">💡 Tips Oppo A9: Buka Chrome &gt; Setelan &gt; Setelan Situs &gt; Gerak &gt; Izinkan</div>`;
+  const sec = window.isSecureContext;
+  const https = location.protocol === 'https:';
+  
+  html += `<div style="display:flex;gap:10px;flex-wrap:wrap">`;
+  html += `<span>Secure: <span class="${sec ? 'ok' : 'err'}">${sec ? '✅' : '❌'}</span></span>`;
+  html += `<span>HTTPS: <span class="${https ? 'ok' : 'err'}">${https ? '✅' : '❌'}</span></span>`;
+  html += `<span>DOA API: <span class="${typeof DeviceOrientationEvent !== 'undefined' ? 'ok' : 'err'}">${typeof DeviceOrientationEvent !== 'undefined' ? '✅' : '❌'}</span></span>`;
+  html += `</div><br>`;
+  
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px">`;
+  html += `<div>deviceorientationabsolute: <span class="${diag.doaFired ? (diag.doaData ? 'ok' : 'warn') : 'err'}">${diag.doaFired ? (diag.doaData ? '✅ DATA' : '⚠️ NO DATA') : '❌'}</span></div>`;
+  html += `<div style="font-size:5px;color:#444">${diag.doaCount}x</div>`;
+  html += `<div>deviceorientation: <span class="${diag.doFired ? (diag.doData ? 'ok' : 'warn') : 'err'}">${diag.doFired ? (diag.doData ? '✅ DATA' : '⚠️ NO DATA') : '❌'}</span></div>`;
+  html += `<div style="font-size:5px;color:#444">${diag.doCount}x</div>`;
+  html += `<div>devicemotion: <span class="${diag.dmFired ? 'ok' : 'err'}">${diag.dmFired ? '✅' : '❌'}</span></div>`;
+  html += `<div style="font-size:5px;color:#444">${diag.dmCount}x</div>`;
+  html += `<div>Magnetometer: <span class="${'Magnetometer' in window ? (diag.magFired ? 'ok' : 'warn') : 'err'}">${'Magnetometer' in window ? (diag.magFired ? '✅' : '⚠️') : '❌'}</span></div>`;
+  html += `<div style="font-size:5px;color:#444">${diag.magCount}x</div>`;
+  html += `</div><br>`;
+  
+  html += `<div>Active: <span class="ok">${activeStrategy}</span> | Source: <span class="ok">${sensorSource}</span></div>`;
+  html += `<div>Has Data: <span class="${hasData ? 'ok' : 'err'}">${hasData ? '✅ LIVE' : '❌'}</span></div>`;
+  html += `<div>Last Update: ${new Date(diag.lastUpdate).toLocaleTimeString()}</div>`;
+  html += `<div style="margin-top:4px;color:#666;font-size:5px">💡 Tips: Buka Chrome → Setelan Situs → Gerak & Orientasi → Izinkan</div>`;
   
   diagPanel.innerHTML = html;
 }
 
 // ============================================================
-// BUTTON HANDLERS
+// TOAST NOTIFICATION
 // ============================================================
-btnCalibrate.addEventListener('click', function() {
+let toastTimeout = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
+}
+
+// ============================================================
+// CALIBRATION
+// ============================================================
+function startCalibration() {
   if (isManual) {
-    alert('Kalibrasi tidak tersedia dalam mode manual');
+    showToast('Kalibrasi tidak tersedia dalam mode manual');
     return;
   }
   
   if (isCalibrating) {
-    isCalibrating = false;
-    btnCalibrate.classList.remove('calibrating');
-    btnCalibrate.textContent = '⚡ KALIBRASI';
+    stopCalibration();
     return;
   }
   
   isCalibrating = true;
+  calTotal = 0;
+  calLastHeading = heading;
+  calBar.style.width = '0%';
+  calDone.style.display = 'none';
+  calClose.style.display = 'none';
+  calOverlay.classList.add('show');
   btnCalibrate.classList.add('calibrating');
-  btnCalibrate.textContent = '⏳ KALIBRASI...';
+  btnCalibrate.textContent = '⏳ KALIBRASI';
+  showToast('Putar HP membentuk angka 8');
   
-  let totalChange = 0;
-  let lastCalHeading = heading;
-  let calCount = 0;
-  
-  const calInterval = setInterval(() => {
-    const change = Math.abs(angleDiff(heading, lastCalHeading));
-    totalChange += change;
-    lastCalHeading = heading;
-    calCount++;
+  calInterval = setInterval(() => {
+    const change = Math.abs(angleDiff(heading, calLastHeading));
+    calTotal += change;
+    calLastHeading = heading;
     
-    if (totalChange > 500 || calCount > 120) {
-      clearInterval(calInterval);
-      isCalibrating = false;
-      btnCalibrate.classList.remove('calibrating');
-      btnCalibrate.textContent = '⚡ KALIBRASI';
-      alert('✅ Kalibrasi selesai! Putar HP membentuk angka 8 untuk hasil terbaik.');
+    const progress = Math.min(100, (calTotal / 2000) * 100);
+    calBar.style.width = progress + '%';
+    
+    if (progress >= 100) {
+      stopCalibration();
+      calDone.style.display = 'block';
+      calClose.style.display = 'block';
+      showToast('✅ Kalibrasi selesai!');
     }
   }, 100);
+}
+
+function stopCalibration() {
+  isCalibrating = false;
+  clearInterval(calInterval);
+  calInterval = null;
+  btnCalibrate.classList.remove('calibrating');
+  btnCalibrate.textContent = '⚡ KALIBRASI';
+}
+
+// ============================================================
+// BUTTON HANDLERS
+// ============================================================
+btnCalibrate.addEventListener('click', startCalibration);
+calClose.addEventListener('click', function() {
+  calOverlay.classList.remove('show');
+  stopCalibration();
 });
 
 btnLock.addEventListener('click', function() {
   isLocked = !isLocked;
   if (isLocked) {
     lockedHeading = Math.round(heading);
-    btnLock.textContent = '🔓 LEPAS';
     btnLock.classList.add('active');
+    btnLock.textContent = '🔓 LEPAS';
+    showToast('🔒 Terkunci di ' + lockedHeading + '°');
   } else {
-    btnLock.textContent = '🔒 KUNCI';
     btnLock.classList.remove('active');
+    btnLock.textContent = '🔒 KUNCI';
+    showToast('🔓 Bebas');
   }
   updateStatus();
 });
@@ -737,9 +898,11 @@ btnSmooth.addEventListener('click', function() {
   if (isSmooth) {
     btnSmooth.classList.add('active');
     btnSmooth.textContent = '🌀 RAW';
+    showToast('Smooth filter ON');
   } else {
     btnSmooth.classList.remove('active');
-    btnSmooth.textContent = '🌀 SMOOTH';
+    btnSmooth.textContent = '🌀 HALUS';
+    showToast('Smooth filter OFF');
   }
   updateStatus();
 });
@@ -752,17 +915,28 @@ btnManual.addEventListener('click', function() {
     manualBadge.classList.add('show');
     hasData = true;
     activeStrategy = 'MANUAL';
-    toast('Mode manual aktif - geser kompas!');
+    sensorSource = 'TOUCH';
+    showToast('✋ Mode manual aktif - geser kompas!');
   } else {
     btnManual.classList.remove('active');
     btnManual.textContent = '✋ MANUAL';
     manualBadge.classList.remove('show');
     if (!hasData) {
       activeStrategy = 'NONE';
-      toast('Kembali ke mode sensor');
+      sensorSource = 'NONE';
     }
+    showToast('🤖 Kembali ke mode sensor');
   }
   updateStatus();
+});
+
+btnReset.addEventListener('click', function() {
+  // Reset heading to 0
+  heading = 0;
+  smoothHeading = 0;
+  smoothInitialized = false;
+  history.fill(0);
+  showToast('↺ Reset ke 0°');
 });
 
 diagToggle.addEventListener('click', function() {
@@ -773,68 +947,39 @@ diagToggle.addEventListener('click', function() {
 });
 
 // ============================================================
-// TOAST
+// AUTO-START
 // ============================================================
-function toast(msg) {
-  const old = document.querySelector('.toast-msg');
-  if (old) old.remove();
-  
-  const el = document.createElement('div');
-  el.className = 'toast-msg';
-  el.style.cssText = `
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.9); color: #fff; padding: 10px 20px;
-    border-radius: 8px; font-size: 11px; font-family: 'Courier New', monospace;
-    z-index: 999; border: 1px solid rgba(255,23,68,0.3);
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5); max-width: 90%;
-    text-align: center; font-weight: 700; letter-spacing: 0.5px;
-  `;
-  el.textContent = msg;
-  document.body.appendChild(el);
-  
-  setTimeout(() => {
-    if (el.parentNode) el.remove();
-  }, 3000);
-}
-
-// ============================================================
-// AUTO-START WITH PERMISSION CHECK
-// ============================================================
-async function start() {
-  // Request permission for iOS
+async function startApp() {
+  // iOS permission
   if (typeof DeviceOrientationEvent !== 'undefined' && 
       typeof DeviceOrientationEvent.requestPermission === 'function') {
     try {
       const result = await DeviceOrientationEvent.requestPermission();
       if (result !== 'granted') {
-        toast('⚠️ Izin sensor diperlukan');
-        // Still try to start with manual fallback
+        showToast('⚠️ Izin sensor diperlukan untuk kompas akurat');
       }
     } catch(e) {}
   }
   
-  // Initialize everything
   generateTicks();
   initSensors();
   initManualMode();
   
-  // Update status after sensors initialized
+  // Initial status
   setTimeout(() => {
     updateStatus();
     updateDiag();
     
-    // If no data after 5 seconds, show manual suggestion
-    if (!hasData && !isManual) {
-      setTimeout(() => {
-        if (!hasData && !isManual) {
-          toast('💡 Tidak ada sensor? Aktifkan mode MANUAL');
-          btnManual.style.animation = 'pulse 0.8s ease-in-out 3';
-          setTimeout(() => {
-            btnManual.style.animation = '';
-          }, 2400);
-        }
-      }, 5000);
-    }
+    // Check if we have data after 3 seconds
+    setTimeout(() => {
+      if (!hasData && !isManual) {
+        showToast('💡 Tidak ada data sensor? Coba mode MANUAL');
+        btnManual.style.animation = 'pulse 0.6s ease-in-out 3';
+        setTimeout(() => {
+          btnManual.style.animation = '';
+        }, 2000);
+      }
+    }, 3000);
   }, 500);
   
   // Start render loop
@@ -848,12 +993,12 @@ async function start() {
 // BOOT
 // ============================================================
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', start);
+  document.addEventListener('DOMContentLoaded', startApp);
 } else {
-  start();
+  startApp();
 }
 
-// Handle resize for graph
+// Handle resize
 window.addEventListener('resize', () => {
   drawGraph();
 });
