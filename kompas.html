@@ -3,966 +3,860 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KOMPAS OPPO A9 - AGGRESSIVE REWRITE</title>
+<title>KOMPAS OPPO A9 - FORCE REAL TIME</title>
 <style>
-  :root {
-    --bg: #06080a;
-    --fg: #e8e6e1;
-    --accent: #ff3d00;
-    --accent2: #ffab00;
-    --muted: #4a4a52;
-    --card: rgba(14,16,20,0.95);
-    --border: rgba(255,61,0,0.2);
-    --glow: rgba(255,61,0,0.45);
-    --green: #00e676;
-    --red: #ff1744;
-    --cyan: #00e5ff;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{
-    background:var(--bg);color:var(--fg);
-    font-family:'Courier New',monospace;
-    overflow:hidden;height:100vh;width:100vw;
-    touch-action:none;user-select:none;-webkit-user-select:none;
-  }
-  .bg-layer{
-    position:fixed;inset:0;z-index:0;
-    background:
-      radial-gradient(ellipse at 50% 20%,rgba(255,61,0,0.05)0%,transparent 60%),
-      radial-gradient(ellipse at 80% 90%,rgba(0,229,255,0.025)0%,transparent 40%),
-      var(--bg);
-  }
-  .scanline{
-    position:fixed;inset:0;z-index:1;pointer-events:none;
-    background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.006)3px,rgba(255,255,255,0.006)4px);
-  }
-  .container{
-    position:relative;z-index:2;height:100vh;
-    display:flex;flex-direction:column;align-items:center;
-    padding:6px 8px;
-  }
-  .header{text-align:center;padding:4px 0 2px}
-  .header h1{font-size:11px;font-weight:900;letter-spacing:5px;color:var(--accent);text-shadow:0 0 18px var(--glow)}
-  .header .sub{font-size:8px;color:var(--muted);letter-spacing:3px;margin-top:1px}
-
-  /* Status bar */
-  .sbar{
-    width:100%;display:flex;justify-content:space-between;align-items:center;
-    padding:4px 8px;margin:3px 0;
-    background:var(--card);border:1px solid var(--border);border-radius:4px;font-size:8px;
-  }
-  .si{display:flex;align-items:center;gap:4px}
-  .sdot{
-    width:6px;height:6px;border-radius:50%;
-    background:var(--red);box-shadow:0 0 6px currentColor;transition:all .3s;
-  }
-  .sdot.on{background:var(--green);color:var(--green)}
-  .sdot.warn{background:var(--accent2);color:var(--accent2)}
-  .sdot.manual{background:var(--cyan);color:var(--cyan)}
-
-  /* Kompas area */
-  .carea{
-    flex:1;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;width:100%;max-width:400px;position:relative;
-  }
-  .cring{
-    position:relative;
-    width:min(78vw,320px);height:min(78vw,320px);
-  }
-  .cring::before{
-    content:'';position:absolute;inset:-5px;border-radius:50%;
-    border:1px solid var(--border);animation:rp 3s ease-in-out infinite;
-  }
-  .cring::after{
-    content:'';position:absolute;inset:-14px;border-radius:50%;
-    border:1px solid rgba(255,61,0,0.06);
-  }
-  @keyframes rp{0%,100%{opacity:.3}50%{opacity:1}}
-
-  .fptr{
-    position:absolute;top:-3px;left:50%;transform:translateX(-50%);
-    width:0;height:0;
-    border-left:9px solid transparent;border-right:9px solid transparent;
-    border-top:20px solid var(--accent);
-    filter:drop-shadow(0 2px 8px var(--glow));z-index:10;
-  }
-  .ddisp{
-    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    text-align:center;pointer-events:none;
-  }
-  .dval{
-    font-size:clamp(38px,13vw,60px);font-weight:900;line-height:1;
-    font-variant-numeric:tabular-nums;text-shadow:0 0 25px rgba(255,255,255,0.08);
-  }
-  .dunit{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:2px}
-  .dlabel{
-    font-size:clamp(18px,5.5vw,26px);font-weight:900;
-    color:var(--accent2);letter-spacing:3px;margin-top:2px;
-    text-shadow:0 0 18px rgba(255,171,0,0.25);min-height:28px;
-  }
-
-  /* Info grid */
-  .igrid{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:6px}
-  .icell{
-    background:var(--card);border:1px solid var(--border);border-radius:3px;
-    padding:5px 3px;text-align:center;
-  }
-  .icell .lb{font-size:7px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
-  .icell .vl{font-size:12px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
-  .vl.ac{color:var(--accent)}.vl.cy{color:var(--cyan)}.vl.gn{color:var(--green)}
-
-  /* Mini graph */
-  .mgraph{
-    width:100%;height:28px;margin-top:3px;
-    background:var(--card);border:1px solid var(--border);border-radius:3px;overflow:hidden;
-  }
-  .mgraph canvas{width:100%;height:100%}
-
-  /* Actions */
-  .acts{
-    width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;
-    margin-top:4px;padding-bottom:8px;
-  }
-  .btn{
-    background:var(--card);border:1px solid var(--border);border-radius:5px;
-    color:var(--fg);font-family:inherit;font-size:9px;font-weight:700;
-    letter-spacing:1px;padding:9px 3px;cursor:pointer;transition:all .12s;text-transform:uppercase;
-  }
-  .btn:active{background:var(--accent);color:var(--bg);transform:scale(.96);border-color:var(--accent)}
-  .btn.locked{background:var(--accent);color:var(--bg);border-color:var(--accent);box-shadow:0 0 18px var(--glow)}
-  .btn.cal{animation:cp .5s ease-in-out infinite alternate}
-  @keyframes cp{from{border-color:var(--accent2)}to{border-color:var(--accent);box-shadow:0 0 22px var(--glow)}}
-
-  /* Diagnostic panel */
-  .diag{
-    width:100%;max-height:0;overflow:hidden;transition:max-height .3s ease;
-    background:var(--card);border:1px solid var(--border);border-radius:4px;
-    margin-bottom:4px;
-  }
-  .diag.open{max-height:300px;overflow-y:auto}
-  .diag-inner{padding:8px;font-size:8px;line-height:1.7;color:var(--muted)}
-  .diag-inner .ok{color:var(--green)}.diag-inner .err{color:var(--red)}.diag-inner .wrn{color:var(--accent2)}
-  .diag-toggle{
-    width:100%;background:var(--card);border:1px solid var(--border);border-radius:4px;
-    color:var(--muted);font-family:inherit;font-size:8px;font-weight:700;
-    letter-spacing:2px;padding:4px;cursor:pointer;margin-bottom:3px;text-transform:uppercase;
-  }
-
-  /* Permission overlay */
-  .pov{
-    position:fixed;inset:0;z-index:300;background:var(--bg);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:16px;padding:30px;text-align:center;
-  }
-  .pov.hide{display:none}
-  .pov-icon{font-size:42px;color:var(--accent);animation:pp 2s ease-in-out infinite}
-  @keyframes pp{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
-  .pov-title{font-size:16px;font-weight:900;letter-spacing:2px}
-  .pov-desc{font-size:11px;color:var(--muted);line-height:1.8;max-width:300px}
-  .pov-check{
-    width:100%;max-width:300px;text-align:left;
-    font-size:10px;line-height:2;color:var(--muted);
-  }
-  .pov-check .ck{margin-right:6px}
-  .pov-check .pass{color:var(--green)}.pov-check .fail{color:var(--red)}
-  .pov-btn{
-    background:var(--accent);color:var(--bg);border:none;
-    padding:14px 36px;border-radius:7px;font-family:inherit;
-    font-size:13px;font-weight:900;letter-spacing:3px;cursor:pointer;
-    text-transform:uppercase;box-shadow:0 0 28px var(--glow);
-  }
-  .pov-btn:active{transform:scale(.95)}
-  .pov-btn:disabled{opacity:.4;pointer-events:none}
-  .pov-sub{
-    font-size:9px;color:var(--accent2);letter-spacing:1px;
-    margin-top:4px;cursor:pointer;text-decoration:underline;
-  }
-
-  /* Kalibrasi overlay */
-  .cov{
-    position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);
-    display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-  }
-  .cov.show{display:flex}
-  .ccir{
-    width:160px;height:160px;border:3px solid var(--accent);border-radius:50%;
-    position:relative;animation:cr 2s linear infinite;
-  }
-  .ccir::after{
-    content:'';position:absolute;width:18px;height:18px;background:var(--accent);
-    border-radius:50%;top:-9px;left:50%;transform:translateX(-50%);box-shadow:0 0 18px var(--glow);
-  }
-  @keyframes cr{to{transform:rotate(360deg)}}
-  .ctxt{font-size:13px;color:var(--accent);font-weight:700;letter-spacing:2px;text-align:center;line-height:1.8}
-  .cprog{width:180px;height:4px;background:var(--muted);border-radius:2px;overflow:hidden}
-  .cbar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .3s;border-radius:2px}
-  .cdone{display:none;color:var(--green);font-size:16px;font-weight:900;letter-spacing:3px;animation:dp .4s ease-out}
-  @keyframes dp{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
-
-  /* Toast */
-  .tst{
-    position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-100px);
-    background:var(--card);border:1px solid var(--accent);color:var(--fg);
-    padding:7px 18px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:1px;
-    z-index:200;transition:transform .3s ease-out;box-shadow:0 4px 25px rgba(255,61,0,.2);white-space:nowrap;
-  }
-  .tst.show{transform:translateX(-50%) translateY(0)}
-
-  /* Manual mode indicator */
-  .manual-badge{
-    position:absolute;top:8px;right:8px;
-    background:rgba(0,229,255,0.15);border:1px solid var(--cyan);
-    color:var(--cyan);font-size:8px;font-weight:700;letter-spacing:2px;
-    padding:3px 8px;border-radius:3px;display:none;
-    animation:mb 1.5s ease-in-out infinite;
-  }
-  .manual-badge.show{display:block}
-  @keyframes mb{0%,100%{opacity:.6}50%{opacity:1}}
-
-  .fps-b{position:fixed;top:3px;right:5px;font-size:7px;color:var(--muted);z-index:50;font-variant-numeric:tabular-nums}
-
-  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0a0c10;--fg:#e8e6e1;--red:#ff1744;--green:#00e676;--cyan:#00e5ff;--gold:#ffab00;--glow:rgba(255,23,68,0.6)}
+body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;overflow:hidden;height:100vh;width:100vw;touch-action:none;user-select:none}
+#app{height:100vh;display:flex;flex-direction:column;padding:8px;position:relative}
+.header{text-align:center;padding:4px 0}
+.header h1{font-size:13px;font-weight:900;letter-spacing:6px;color:var(--red);text-shadow:0 0 30px var(--glow)}
+.header .sub{font-size:8px;color:#555;letter-spacing:2px;margin-top:2px}
+#statusBar{display:flex;justify-content:space-between;padding:6px 10px;background:rgba(20,22,28,0.95);border:1px solid rgba(255,23,68,0.2);border-radius:6px;margin:4px 0;font-size:8px}
+#statusBar .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot.red{background:var(--red);box-shadow:0 0 12px var(--red)}
+.dot.green{background:var(--green);box-shadow:0 0 12px var(--green)}
+.dot.gold{background:var(--gold);box-shadow:0 0 12px var(--gold)}
+.dot.cyan{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.compass-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0}
+.compass-wrap svg{width:min(85vw,380px);height:min(85vw,380px);filter:drop-shadow(0 0 40px rgba(255,23,68,0.15))}
+#compassDisplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:10}
+#compassDisplay .deg{font-size:clamp(44px,15vw,72px);font-weight:900;font-variant-numeric:tabular-nums;text-shadow:0 0 40px rgba(255,255,255,0.08)}
+#compassDisplay .dir{font-size:clamp(22px,7vw,34px);font-weight:900;color:var(--gold);letter-spacing:4px;text-shadow:0 0 30px rgba(255,171,0,0.25)}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0}
+.info-cell{background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;padding:6px 2px;text-align:center}
+.info-cell .label{font-size:6px;color:#555;letter-spacing:1px;text-transform:uppercase}
+.info-cell .value{font-size:11px;font-weight:700;margin-top:2px}
+.value.red{color:var(--red)}.value.cyan{color:var(--cyan)}.value.green{color:var(--green)}.value.gold{color:var(--gold)}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:4px 0}
+.actions button{background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:var(--fg);font-family:inherit;font-size:8px;font-weight:700;padding:10px 2px;cursor:pointer;transition:all .1s;text-transform:uppercase;letter-spacing:1px}
+.actions button:active{transform:scale(.95);background:var(--red);color:#000;border-color:var(--red)}
+.actions button.active{background:var(--red);color:#000;border-color:var(--red);box-shadow:0 0 25px var(--glow)}
+.actions button.calibrating{animation:pulse .5s ease-in-out infinite alternate;border-color:var(--gold)}
+@keyframes pulse{from{box-shadow:0 0 10px var(--gold)}to{box-shadow:0 0 30px var(--gold)}}
+#manualBadge{position:absolute;top:10px;right:10px;background:rgba(0,229,255,0.15);border:1px solid var(--cyan);color:var(--cyan);font-size:7px;font-weight:700;padding:4px 10px;border-radius:4px;display:none;letter-spacing:2px;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+#manualBadge.show{display:block}
+.diag-toggle{background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;color:#555;font-size:7px;padding:4px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;margin:2px 0;font-family:inherit}
+.diag-panel{max-height:0;overflow:hidden;transition:max-height .3s ease;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;font-size:7px}
+.diag-panel.open{max-height:400px;overflow-y:auto;padding:8px}
+.diag-panel .ok{color:var(--green)}.diag-panel .err{color:var(--red)}.diag-panel .warn{color:var(--gold)}
+#fps{position:fixed;top:4px;right:6px;font-size:7px;color:#333;z-index:50;font-variant-numeric:tabular-nums}
+#graph{width:100%;height:30px;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.05);border-radius:4px;margin:4px 0;overflow:hidden}
+#graph canvas{width:100%;height:100%}
 </style>
 </head>
 <body>
-
-<div class="bg-layer"></div>
-<div class="scanline"></div>
-<div class="fps-b" id="fps">-- FPS</div>
-
-<!-- PERMISSION OVERLAY -->
-<div class="pov" id="pov">
-  <div class="pov-icon">&#9678;</div>
-  <div class="pov-title">KOMPAS AGRESIF</div>
-  <div class="pov-desc">
-    Menggunakan 5 strategi sensor berlapis untuk Oppo A9. Pastikan kondisi berikut terpenuhi:
-  </div>
-  <div class="pov-check" id="povCheck"></div>
-  <button class="pov-btn" id="povBtn" aria-label="Aktifkan sensor">AKTIFKAN SENSOR</button>
-  <div class="pov-sub" id="povForce">Tidak ada sensor? Gunakan mode manual</div>
-</div>
-
-<!-- KALIBRASI OVERLAY -->
-<div class="cov" id="cov" role="dialog" aria-label="Kalibrasi kompas">
-  <div class="ccir" id="ccir"></div>
-  <div class="ctxt" id="ctxt">PUTAR HP MEMBENTUK ANGKA 8<br><span style="font-size:10px;color:var(--muted)">Ulangi 10-15 kali</span></div>
-  <div class="cprog"><div class="cbar" id="cbar"></div></div>
-  <div class="cdone" id="cdone">KALIBRASI SELESAI</div>
-  <button class="btn" id="ccls" style="width:150px;display:none" aria-label="Tutup kalibrasi">SELESAI</button>
-</div>
-
-<!-- TOAST -->
-<div class="tst" id="tst"></div>
-
-<!-- MAIN UI -->
-<div class="container" id="mainUI" style="opacity:0;pointer-events:none">
-  <header class="header">
-    <h1>Kompas Ultra</h1>
-    <div class="sub" id="stratLabel">STRATEGY: --</div>
-  </header>
-
-  <div class="sbar">
-    <div class="si">
-      <div class="sdot" id="sDot"></div>
-      <span id="sStat">MENUNGGU</span>
-    </div>
-    <div class="si"><span id="mLabel">MODE: FREE</span></div>
-    <div class="si"><span id="smLabel">SMOOTH: OFF</span></div>
+<div id="app">
+  <div class="header">
+    <h1>⚡ KOMPAS FORCE</h1>
+    <div class="sub" id="strategyLabel">STRATEGY: INIT</div>
   </div>
 
-  <button class="diag-toggle" id="diagBtn" aria-label="Toggle diagnostic">DIAGNOSTIK SENSOR</button>
-  <div class="diag" id="diag">
-    <div class="diag-inner" id="diagIn"></div>
+  <div id="statusBar">
+    <div><span class="dot" id="statusDot"></span><span id="statusText">MENUNGGU</span></div>
+    <div id="modeLabel">MODE: BEBAS</div>
+    <div id="smoothLabel">SMOOTH: OFF</div>
   </div>
 
-  <div class="carea">
-    <div class="cring" id="cring">
-      <div class="fptr"></div>
-      <div class="manual-badge" id="manBadge">MODE MANUAL - GESER</div>
-      <svg class="compass-svg" viewBox="0 0 400 400" id="csvg" style="width:100%;height:100%;filter:drop-shadow(0 0 12px rgba(255,61,0,0.12))">
-        <defs>
-          <linearGradient id="ng" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ff3d00"/>
-            <stop offset="50%" stop-color="#ff6e40"/>
-            <stop offset="51%" stop-color="#455a64"/>
-            <stop offset="100%" stop-color="#263238"/>
-          </linearGradient>
-          <filter id="gl"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,61,0,0.12)" stroke-width="1"/>
-        <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,61,0,0.06)" stroke-width="0.5"/>
-        <circle cx="200" cy="200" r="158" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
-        <g id="dial">
-          <g id="t30"></g>
-          <g id="t10"></g>
-          <g id="t5"></g>
-          <g id="dLbl"></g>
-          <text x="200" y="38" text-anchor="middle" fill="#ff3d00" font-size="22" font-weight="900" font-family="Courier New">U</text>
-          <text x="368" y="206" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">T</text>
-          <text x="200" y="375" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">S</text>
-          <text x="32" y="206" text-anchor="middle" fill="#e8e6e1" font-size="16" font-weight="700" font-family="Courier New">B</text>
-          <text x="326" y="74" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">TL</text>
-          <text x="326" y="340" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">TG</text>
-          <text x="74" y="340" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">BD</text>
-          <text x="74" y="74" text-anchor="middle" fill="rgba(255,171,0,0.5)" font-size="10" font-weight="700" font-family="Courier New">BL</text>
-        </g>
-        <g id="needle" filter="url(#gl)">
-          <polygon points="200,55 192,195 200,185 208,195" fill="url(#ng)" opacity="0.95"/>
-          <polygon points="200,345 192,205 200,215 208,205" fill="#37474f" opacity="0.7"/>
-          <circle cx="200" cy="200" r="8" fill="#ff3d00" stroke="#06080a" stroke-width="3"/>
-          <circle cx="200" cy="200" r="3" fill="#fff"/>
-        </g>
-      </svg>
-      <div class="ddisp">
-        <div class="dval" id="dVal">---</div>
-        <div class="dunit">DERAJAT</div>
-        <div class="dlabel" id="dLbl">---</div>
-      </div>
-    </div>
+  <button class="diag-toggle" id="diagToggle">📊 DIAGNOSTIK SENSOR</button>
+  <div class="diag-panel" id="diagPanel"></div>
 
-    <div class="igrid">
-      <div class="icell"><div class="lb">AZIMUTH RAW</div><div class="vl ac" id="vRaw">---</div></div>
-      <div class="icell"><div class="lb">MAG FIELD (uT)</div><div class="vl cy" id="vMag">---</div></div>
-      <div class="icell"><div class="lb">UPDATE/SEC</div><div class="vl gn" id="vUpd">0</div></div>
-      <div class="icell"><div class="lb">PITCH</div><div class="vl" id="vPitch">---</div></div>
-      <div class="icell"><div class="lb">ROLL</div><div class="vl" id="vRoll">---</div></div>
-      <div class="icell"><div class="lb">DELTA</div><div class="vl ac" id="vDelta">---</div></div>
-    </div>
+  <div class="compass-wrap">
+    <svg viewBox="0 0 400 400" id="compassSvg">
+      <defs>
+        <filter id="glow"><feGaussianBlur stdDeviation="3"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,23,68,0.08)" stroke-width="1"/>
+      <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+      <circle cx="200" cy="200" r="160" fill="none" stroke="rgba(255,23,68,0.04)" stroke-width="0.5"/>
+      
+      <g id="dialGroup">
+        <!-- Ticks akan di-generate oleh JS -->
+        <g id="tickContainer"></g>
+        <text x="200" y="32" text-anchor="middle" fill="var(--red)" font-size="24" font-weight="900" font-family="Courier New">U</text>
+        <text x="370" y="206" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="Courier New">T</text>
+        <text x="200" y="380" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="Courier New">S</text>
+        <text x="30" y="206" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700" font-family="Courier New">B</text>
+        <text x="325" y="68" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">TL</text>
+        <text x="325" y="345" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">TG</text>
+        <text x="75" y="345" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">BD</text>
+        <text x="75" y="68" text-anchor="middle" fill="rgba(255,171,0,0.4)" font-size="10" font-weight="700">BL</text>
+      </g>
+      
+      <g id="needleGroup" filter="url(#glow)">
+        <polygon points="200,50 193,195 200,185 207,195" fill="url(#needleGrad)" opacity="0.95"/>
+        <polygon points="200,350 193,205 200,215 207,205" fill="#37474f" opacity="0.6"/>
+        <circle cx="200" cy="200" r="10" fill="var(--red)" stroke="#0a0c10" stroke-width="3"/>
+        <circle cx="200" cy="200" r="4" fill="#fff"/>
+      </g>
+      
+      <defs>
+        <linearGradient id="needleGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--red)"/>
+          <stop offset="50%" stop-color="#ff5252"/>
+          <stop offset="51%" stop-color="#455a64"/>
+          <stop offset="100%" stop-color="#263238"/>
+        </linearGradient>
+      </defs>
+    </svg>
 
-    <div class="mgraph"><canvas id="gCan"></canvas></div>
-
-    <div class="acts">
-      <button class="btn" id="bCal" aria-label="Kalibrasi">KALIBRASI</button>
-      <button class="btn" id="bLock" aria-label="Kunci arah">KUNCI ARAH</button>
-      <button class="btn" id="bSmooth" aria-label="Smooth">SMOOTH</button>
+    <div id="compassDisplay">
+      <div class="deg" id="degDisplay">---</div>
+      <div class="dir" id="dirDisplay">---</div>
     </div>
+    <div id="manualBadge">✋ MODE MANUAL</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-cell"><div class="label">AZIMUTH</div><div class="value red" id="infoAz">---</div></div>
+    <div class="info-cell"><div class="label">MAGNET</div><div class="value cyan" id="infoMag">---</div></div>
+    <div class="info-cell"><div class="label">UPD/S</div><div class="value green" id="infoUpd">0</div></div>
+    <div class="info-cell"><div class="label">DELTA</div><div class="value gold" id="infoDelta">---</div></div>
+  </div>
+
+  <div id="graph"><canvas id="graphCanvas"></canvas></div>
+
+  <div class="actions">
+    <button id="btnCalibrate">⚡ KALIBRASI</button>
+    <button id="btnLock">🔒 KUNCI</button>
+    <button id="btnSmooth">🌀 SMOOTH</button>
+    <button id="btnManual">✋ MANUAL</button>
   </div>
 </div>
+<div id="fps">-- FPS</div>
 
 <script>
 (function(){
 'use strict';
 
 // ============================================================
-// UTILITAS
+// DOM REFS
 // ============================================================
-const $=id=>document.getElementById(id);
-const PI=Math.PI, RAD=PI/180, DEG=180/PI;
-
-// Elemen DOM
-const pov=$('pov'), povBtn=$('povBtn'), povCheck=$('povCheck'), povForce=$('povForce');
-const mainUI=$('mainUI'), tst=$('tst');
-const dial=$('dial'), needle=$('needle');
-const dVal=$('dVal'), dLbl=$('dLbl');
-const sDot=$('sDot'), sStat=$('sStat'), mLabel=$('mLabel'), smLabel=$('smLabel'), stratLabel=$('stratLabel');
-const vRaw=$('vRaw'), vMag=$('vMag'), vUpd=$('vUpd'), vPitch=$('vPitch'), vRoll=$('vRoll'), vDelta=$('vDelta');
-const fpsEl=$('fps'), gCan=$('gCan'), gCtx=gCan.getContext('2d');
-const bCal=$('bCal'), bLock=$('bLock'), bSmooth=$('bSmooth');
-const diagBtn=$('diagBtn'), diag=$('diag'), diagIn=$('diagIn');
-const cov=$('cov'), cbar=$('cbar'), cdone=$('cdone'), ccls=$('ccls'), ctxt=$('ctxt'), ccir=$('ccir');
-const cring=$('cring'), manBadge=$('manBadge');
+const $ = id => document.getElementById(id);
+const compassSvg = $('compassSvg');
+const dialGroup = $('dialGroup');
+const needleGroup = $('needleGroup');
+const tickContainer = $('tickContainer');
+const degDisplay = $('degDisplay');
+const dirDisplay = $('dirDisplay');
+const statusDot = $('statusDot');
+const statusText = $('statusText');
+const modeLabel = $('modeLabel');
+const smoothLabel = $('smoothLabel');
+const strategyLabel = $('strategyLabel');
+const infoAz = $('infoAz');
+const infoMag = $('infoMag');
+const infoUpd = $('infoUpd');
+const infoDelta = $('infoDelta');
+const fpsEl = $('fps');
+const graphCanvas = $('graphCanvas');
+const ctx = graphCanvas.getContext('2d');
+const diagToggle = $('diagToggle');
+const diagPanel = $('diagPanel');
+const btnCalibrate = $('btnCalibrate');
+const btnLock = $('btnLock');
+const btnSmooth = $('btnSmooth');
+const btnManual = $('btnManual');
+const manualBadge = $('manualBadge');
 
 // ============================================================
 // STATE
 // ============================================================
-let sensorActive=false, isLocked=false, lockedDeg=0;
-let smoothMode=false, isFirstSmooth=true, smoothedAz=0;
-let isCalibrating=false, calInterval=null;
+let heading = 0;
+let lockedHeading = 0;
+let isLocked = false;
+let isSmooth = false;
+let isManual = false;
+let isCalibrating = false;
+let calibrateProgress = 0;
+let lastHeading = 0;
+let updateCount = 0;
+let lastUpdateTime = performance.now();
 
-// Data sensor
-let curAz=0, curPitch=0, curRoll=0;
-let rawMX=0, rawMY=0, rawMZ=0;
-let rawAX=0, rawAY=0, rawAZ=0;
-let lastAz=0;
+// Sensor data
+let rawMX = 0, rawMY = 0, rawMZ = 0;
+let rawAX = 0, rawAY = 0, rawAZ = 0;
+let pitch = 0, roll = 0;
+let hasData = false;
+let activeStrategy = 'NONE';
 
-// Strategi aktif
-let activeStrategy='NONE';
-let manualMode=false;
+// Smoothing
+let smoothHeading = 0;
+let smoothInitialized = false;
 
-// Tracking event untuk diagnostik
-let diagData={
-  doaFired:false, doaData:false, doaCount:0, doaLast:null,
-  doFired:false, doData:false, doCount:0, doLast:null,
-  doAbsolute:false,
-  magApi:false, magFired:false, magCount:0, magLast:null,
-  dmFired:false, dmCount:0,
-  secureContext:false,
-  hasGyroscope:false, hasMagnetometer:false, hasAccelerometer:false,
+// FPS
+let fpsCount = 0;
+let fpsTime = performance.now();
+let currentFps = 0;
+
+// History for graph
+const history = new Array(100).fill(0);
+let historyIndex = 0;
+
+// Diag data
+let diag = {
+  doaFired: false,
+  doFired: false,
+  dmFired: false,
+  magFired: false,
+  doaData: false,
+  doData: false,
+  doaCount: 0,
+  doCount: 0,
+  dmCount: 0,
+  magCount: 0,
+  doaLast: null,
+  doLast: null,
+  magLast: null
 };
 
-// Performa
-let updCount=0, lastSec=performance.now();
-let fCount=0, lastFT=performance.now(), curFPS=0;
-
-// Grafik
-const hist=new Array(120).fill(0);
-let hIdx=0;
-
-// Touch manual
-let touchActive=false, touchStartAng=0, touchStartAz=0;
-
-// Arah mata angin
-const dirs=[
-  {min:348.75,max:360,l:'U',f:'UTARA'},{min:0,max:11.25,l:'U',f:'UTARA'},
-  {min:11.25,max:33.75,l:'UTL',f:'UTARA TIMUR LAUT'},
-  {min:33.75,max:56.25,l:'TL',f:'TIMUR LAUT'},
-  {min:56.25,max:78.75,l:'TLT',f:'TIMUR LAUT TIMUR'},
-  {min:78.75,max:101.25,l:'T',f:'TIMUR'},
-  {min:101.25,max:123.75,l:'TTG',f:'TIMUR TENGGARA'},
-  {min:123.75,max:146.25,l:'TG',f:'TENGGARA'},
-  {min:146.25,max:168.75,l:'TGS',f:'TENGGARA SELATAN'},
-  {min:168.75,max:191.25,l:'S',f:'SELATAN'},
-  {min:191.25,max:213.75,l:'SBD',f:'SELATAN BARAT DAYA'},
-  {min:213.75,max:236.25,l:'BD',f:'BARAT DAYA'},
-  {min:236.25,max:258.75,l:'BDB',f:'BARAT DAYA BARAT'},
-  {min:258.75,max:281.25,l:'B',f:'BARAT'},
-  {min:281.25,max:303.75,l:'BBL',f:'BARAT BARAT LAUT'},
-  {min:303.75,max:326.25,l:'BL',f:'BARAT LAUT'},
-  {min:326.25,max:348.75,l:'BLU',f:'BARAT LAUT UTARA'},
+// ============================================================
+// DIRECTION LOOKUP
+// ============================================================
+const directions = [
+  {min:337.5, max:360, short:'U', long:'UTARA'},
+  {min:0, max:22.5, short:'U', long:'UTARA'},
+  {min:22.5, max:67.5, short:'TL', long:'TIMUR LAUT'},
+  {min:67.5, max:112.5, short:'T', long:'TIMUR'},
+  {min:112.5, max:157.5, short:'TG', long:'TENGGARA'},
+  {min:157.5, max:202.5, short:'S', long:'SELATAN'},
+  {min:202.5, max:247.5, short:'BD', long:'BARAT DAYA'},
+  {min:247.5, max:292.5, short:'B', long:'BARAT'},
+  {min:292.5, max:337.5, short:'BL', long:'BARAT LAUT'}
 ];
 
-// ============================================================
-// FUNGSI HELPER
-// ============================================================
-function getDir(d){
-  for(const x of dirs){
-    if(x.min<=x.max){if(d>=x.min&&d<x.max)return x}
-    else{if(d>=x.min||d<x.max)return x}
+function getDirection(deg) {
+  for (let d of directions) {
+    if (deg >= d.min && deg < d.max) return d;
   }
-  return dirs[0];
+  return directions[0];
 }
-function angDiff(a,b){let d=a-b;while(d>180)d-=360;while(d<-180)d+=360;return d}
-function smoothAng(raw,prev,alpha){
-  const diff=angDiff(raw,prev);
-  let r=prev+diff*alpha;
-  if(r<0)r+=360;if(r>=360)r-=360;return r;
-}
-function normAz(a){a=a%360;if(a<0)a+=360;return a}
 
-let tstT=null;
-function toast(m){tst.textContent=m;tst.classList.add('show');clearTimeout(tstT);tstT=setTimeout(()=>tst.classList.remove('show'),2500)}
+function normalizeAngle(a) {
+  a = a % 360;
+  if (a < 0) a += 360;
+  return a;
+}
+
+function angleDiff(a, b) {
+  let d = a - b;
+  while (d > 180) d -= 360;
+  while (d < -180) d += 360;
+  return d;
+}
 
 // ============================================================
-// GENERATE TICK MARKS
+// GENERATE COMPASS TICKS
 // ============================================================
-function genTicks(){
-  const g30=$('t30'),g10=$('t10'),g5=$('t5'),gDL=$('dLbl');
-  for(let d=0;d<360;d+=5){
-    const rad=(d-90)*RAD;
-    const is30=d%30===0, is10=d%10===0;
-    const r1=is30?163:(is10?168:174), r2=185;
-    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
-    ln.setAttribute('x1',200+r1*Math.cos(rad));
-    ln.setAttribute('y1',200+r1*Math.sin(rad));
-    ln.setAttribute('x2',200+r2*Math.cos(rad));
-    ln.setAttribute('y2',200+r2*Math.sin(rad));
-    if(is30){ln.setAttribute('stroke','rgba(255,61,0,0.65)');ln.setAttribute('stroke-width','2');g30.appendChild(ln)}
-    else if(is10){ln.setAttribute('stroke','rgba(255,255,255,0.2)');ln.setAttribute('stroke-width','1');g10.appendChild(ln)}
-    else{ln.setAttribute('stroke','rgba(255,255,255,0.06)');ln.setAttribute('stroke-width','0.5');g5.appendChild(ln)}
-    if(is30&&d%90!==0){
-      const lr=148,lx=200+lr*Math.cos(rad),ly=200+lr*Math.sin(rad);
-      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x',lx);t.setAttribute('y',ly+3);t.setAttribute('text-anchor','middle');
-      t.setAttribute('fill','rgba(255,255,255,0.25)');t.setAttribute('font-size','9');
-      t.setAttribute('font-family','Courier New');t.textContent=d+'°';gDL.appendChild(t);
+function generateTicks() {
+  for (let deg = 0; deg < 360; deg += 5) {
+    const rad = (deg - 90) * Math.PI / 180;
+    const is30 = deg % 30 === 0;
+    const is10 = deg % 10 === 0;
+    const inner = is30 ? 155 : (is10 ? 162 : 170);
+    const outer = 185;
+    
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', 200 + inner * Math.cos(rad));
+    line.setAttribute('y1', 200 + inner * Math.sin(rad));
+    line.setAttribute('x2', 200 + outer * Math.cos(rad));
+    line.setAttribute('y2', 200 + outer * Math.sin(rad));
+    
+    if (is30) {
+      line.setAttribute('stroke', 'rgba(255,23,68,0.6)');
+      line.setAttribute('stroke-width', '2');
+    } else if (is10) {
+      line.setAttribute('stroke', 'rgba(255,255,255,0.15)');
+      line.setAttribute('stroke-width', '1');
+    } else {
+      line.setAttribute('stroke', 'rgba(255,255,255,0.05)');
+      line.setAttribute('stroke-width', '0.5');
+    }
+    tickContainer.appendChild(line);
+    
+    // Degree labels
+    if (is30 && deg % 90 !== 0) {
+      const labelR = 140;
+      const lx = 200 + labelR * Math.cos(rad);
+      const ly = 200 + labelR * Math.sin(rad);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', lx);
+      text.setAttribute('y', ly + 3);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('fill', 'rgba(255,255,255,0.15)');
+      text.setAttribute('font-size', '8');
+      text.setAttribute('font-family', 'Courier New');
+      text.textContent = deg + '°';
+      tickContainer.appendChild(text);
     }
   }
 }
 
 // ============================================================
-// TILT-COMPENSATED HEADING DARI MAGNETOMETER + ACCELEROMETER
+// COMPASS HEADING COMPUTATION
 // ============================================================
-function computeHeading(mx,my,mz,ax,ay,az){
-  const aM=Math.sqrt(ax*ax+ay*ay+az*az);
-  if(aM<1)return null; // free fall
-  const nax=ax/aM,nay=ay/aM,naz=az/aM;
-  const pitch=Math.asin(Math.max(-1,Math.min(1,-nax)));
-  const cosP=Math.cos(pitch),sinP=Math.sin(pitch);
-  const roll=Math.atan2(nay,naz);
-  const cosR=Math.cos(roll),sinR=Math.sin(roll);
-  const Xh=mx*cosP+mz*sinP;
-  const Yh=mx*sinR*sinP+my*cosR-mz*sinR*cosP;
-  let h=Math.atan2(-Yh,Xh)*DEG;
-  if(h<0)h+=360;return h;
+function computeHeading(mx, my, mz, ax, ay, az) {
+  const mag = Math.sqrt(ax*ax + ay*ay + az*az);
+  if (mag < 0.1) return null;
+  
+  const nax = ax / mag, nay = ay / mag, naz = az / mag;
+  const pitch = Math.asin(Math.max(-1, Math.min(1, -nax)));
+  const roll = Math.atan2(nay, naz);
+  const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+  const cosR = Math.cos(roll), sinR = Math.sin(roll);
+  
+  const Xh = mx * cosP + mz * sinP;
+  const Yh = mx * sinR * sinP + my * cosR - mz * sinR * cosP;
+  
+  let h = Math.atan2(-Yh, Xh) * 180 / Math.PI;
+  if (h < 0) h += 360;
+  return h;
 }
 
 // ============================================================
-// DIAGNOSTIK
+// SENSOR STRATEGIES - AGGRESSIVE MULTI-LAYER
 // ============================================================
-function updateDiag(){
-  const d=diagData;
-  let html='';
-  html+=`<div>Secure Context: <span class="${d.secureContext?'ok':'err'}">${d.secureContext?'YES':'NO - SENSOR TIDAK AKAN BERJALAN'}</span></div>`;
-  html+=`<div>HTTPS: <span class="${location.protocol==='https:'?'ok':'err'}">${location.protocol}</span></div>`;
-  html+=`<div>&nbsp;</div>`;
-  html+=`<div>deviceorientationabsolute: <span class="${d.doaFired?(d.doaData?'ok':'wrn'):'err'}">${d.doaFired?(d.doaData?'FIRED + DATA ('+d.doaCount+'x)':'FIRED TANPA DATA'):'TIDAK FIRING'}</span></div>`;
-  if(d.doaLast)html+=`<div>&nbsp;&nbsp;alpha:${d.doaLast.a?.toFixed(1)} beta:${d.doaLast.b?.toFixed(1)} gamma:${d.doaLast.g?.toFixed(1)}</div>`;
-  html+=`<div>deviceorientation: <span class="${d.doFired?(d.doData?'ok':'wrn'):'err'}">${d.doFired?(d.doData?'FIRED + DATA ('+d.doCount+'x)':'FIRED TANPA DATA'):'TIDAK FIRING'}</span></div>`;
-  html+=`<div>&nbsp;&nbsp;absolute: <span class="${d.doAbsolute?'ok':'err'}">${d.doAbsolute?'true':'false/undefined'}</span></div>`;
-  if(d.doLast)html+=`<div>&nbsp;&nbsp;alpha:${d.doLast.a?.toFixed(1)} beta:${d.doLast.b?.toFixed(1)} gamma:${d.doLast.g?.toFixed(1)}</div>`;
-  html+=`<div>devicemotion: <span class="${d.dmFired?'ok':'err'}">${d.dmFired?'FIRED ('+d.dmCount+'x)':'TIDAK FIRING'}</span></div>`;
-  html+=`<div>&nbsp;</div>`;
-  html+=`<div>Generic Sensor API (Magnetometer): <span class="${d.magApi?(d.magFired?'ok':'wrn'):'err'}">${d.magApi?(d.magFired?'AKTIF ('+d.magCount+'x)':'API ADA, TIDAK FIRING'):'TIDAK TERSEDIA'}</span></div>`;
-  if(d.magLast)html+=`<div>&nbsp;&nbsp;x:${d.magLast.x?.toFixed(1)} y:${d.magLast.y?.toFixed(1)} z:${d.magLast.z?.toFixed(1)}</div>`;
-  html+=`<div>&nbsp;</div>`;
-  html+=`<div>Aktif Strategy: <span class="ok">${activeStrategy}</span></div>`;
-  html+=`<div>Manual Mode: <span class="${manualMode?'wrn':'ok'}">${manualMode?'YA':'TIDAK'}</span></div>`;
-  html+=`<div>&nbsp;</div>`;
-  html+=`<div style="color:var(--accent2)">TIPS OPPO A9:</div>`;
-  html+=`<div>1. Pastikan halaman dibuka via HTTPS</div>`;
-  html+=`<div>2. Chrome > Setelan > Setelan Situs > Gerak & Orientasi > Izinkan</div>`;
-  html+=`<div>3. Setelan > Baterai > Optimasi Baterai > Chrome > Nonaktifkan</div>`;
-  html+=`<div>4. Aktifkan "Putar Otomatis" di quick settings</div>`;
-  html+=`<div>5. Jika tetap gagal, gunakan MODE MANUAL (geser kompas)</div>`;
-  diagIn.innerHTML=html;
-}
-
-// ============================================================
-// CEK LINGKUNGAN SEBELUM MULAI
-// ============================================================
-function checkEnvironment(){
-  diagData.secureContext=window.isSecureContext;
-  const ua=navigator.userAgent||'';
-  let html='';
-  // Cek HTTPS
-  const isHTTPS=location.protocol==='https:';
-  html+=`<span class="ck ${isHTTPS?'pass':'fail'}">${isHTTPS?'&#10003;':'&#10007;'}</span> HTTPS / Secure Context<br>`;
-  // Cek DeviceOrientationEvent ada
-  const hasDOE=typeof DeviceOrientationEvent!=='undefined';
-  html+=`<span class="ck ${hasDOE?'pass':'fail'}">${hasDOE?'&#10003;':'&#10007;'}</span> DeviceOrientationEvent API<br>`;
-  // Cek DeviceMotionEvent ada
-  const hasDME=typeof DeviceMotionEvent!=='undefined';
-  html+=`<span class="ck ${hasDME?'pass':'fail'}">${hasDME?'&#10003;':'&#10007;'}</span> DeviceMotionEvent API<br>`;
-  // Cek Generic Sensor API
-  const hasGen='Magnetometer' in window;
-  html+=`<span class="ck ${hasGen?'pass':'fail'}">${hasGen?'&#10003;':'&#10007;'}</span> Generic Sensor API (Magnetometer)<br>`;
-  // Cek touch
-  const hasTouch='ontouchstart' in window;
-  html+=`<span class="ck ${hasTouch?'pass':'fail'}">${hasTouch?'&#10003;':'&#10007;'}</span> Touch API (fallback manual)<br>`;
-  // Cek mobile
-  const isMob=/Android|iPhone|iPad|iPod/i.test(ua);
-  html+=`<span class="ck ${isMob?'pass':'fail'}">${isMob?'&#10003;':'&#10007;'}</span> Perangkat Mobile<br>`;
-  // Warning khusus
-  if(!isHTTPS){
-    html+=`<br><span class="fail" style="font-size:9px">KRITIS: Buka via HTTPS! Sensor tidak akan jalan di HTTP.</span>`;
-  }
-  povCheck.innerHTML=html;
-  return isHTTPS&&hasDOE;
-}
-
-// ============================================================
-// STRATEGI SENSOR - 5 LAPISAN AGRESIF
-// ============================================================
-let hasAnyData=false;
-let dataTimeout=null;
-
-function registerAllSensors(){
-  // ==== STRATEGI 1: deviceorientationabsolute ====
-  // Ini API CHROME ANDROID utama untuk kompas - memberikan heading langsung
-  window.addEventListener('deviceorientationabsolute',function(e){
-    diagData.doaFired=true;
-    diagData.doaCount++;
-    diagData.doaLast={a:e.alpha,b:e.beta,g:e.gamma};
-    // alpha BISA null di beberapa device - cek strict
-    if(e.alpha!==null&&e.alpha!==undefined&&!isNaN(e.alpha)){
-      diagData.doaData=true;
-      // Hanya gunakan strategi ini jika belum ada yang lebih prioritas,
-      // atau jika strategi 2 belum mengirim data
-      if(activeStrategy==='NONE'||activeStrategy==='ORI_ABS'){
-        activeStrategy='ORI_ABS';
-        curAz=normAz(e.alpha);
-        curPitch=e.beta||0;
-        curRoll=e.gamma||0;
-        hasAnyData=true;
+function initSensors() {
+  // STRATEGY 1: deviceorientationabsolute (priority)
+  window.addEventListener('deviceorientationabsolute', function(e) {
+    diag.doaFired = true;
+    diag.doaCount++;
+    diag.doaLast = {alpha: e.alpha, beta: e.beta, gamma: e.gamma};
+    
+    if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
+      diag.doaData = true;
+      if (activeStrategy === 'NONE' || activeStrategy === 'ORIENTATION') {
+        activeStrategy = 'DOA_ABSOLUTE';
+        heading = normalizeAngle(e.alpha);
+        pitch = e.beta || 0;
+        roll = e.gamma || 0;
+        hasData = true;
+        updateStatus();
       }
     }
-  },{passive:true});
+  }, {passive: true});
 
-  // ==== STRATEGI 2: deviceorientation dengan e.absolute === true ====
-  window.addEventListener('deviceorientation',function(e){
-    diagData.doFired=true;
-    diagData.doCount++;
-    diagData.doLast={a:e.alpha,b:e.beta,g:e.gamma};
-    if(e.absolute===true)diagData.doAbsolute=true;
-
-    if(e.alpha!==null&&e.alpha!==undefined&&!isNaN(e.alpha)){
-      diagData.doData=true;
-      if(e.absolute===true){
-        // Absolute orientation - ini compass heading langsung
-        if(activeStrategy==='NONE'||activeStrategy==='ORI_REL'||activeStrategy==='GEN_SENSOR'){
-          activeStrategy='ORI_ABS_FLAG';
-          curAz=normAz(e.alpha);
-          curPitch=e.beta||0;
-          curRoll=e.gamma||0;
-          hasAnyData=true;
-        }
-      } else if(!hasAnyData){
-        // Relative orientation - bukan compass heading, tapi
-        // masih lebih baik daripada tidak ada sama sekali
-        activeStrategy='ORI_REL';
-        curAz=normAz(e.alpha);
-        curPitch=e.beta||0;
-        curRoll=e.gamma||0;
-        hasAnyData=true;
+  // STRATEGY 2: deviceorientation with absolute flag
+  window.addEventListener('deviceorientation', function(e) {
+    diag.doFired = true;
+    diag.doCount++;
+    diag.doLast = {alpha: e.alpha, beta: e.beta, gamma: e.gamma};
+    
+    if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
+      diag.doData = true;
+      
+      // If absolute and we don't have better data
+      if (e.absolute === true && (activeStrategy === 'NONE' || activeStrategy === 'ORIENTATION')) {
+        activeStrategy = 'DO_ABSOLUTE';
+        heading = normalizeAngle(e.alpha);
+        pitch = e.beta || 0;
+        roll = e.gamma || 0;
+        hasData = true;
+        updateStatus();
+      } 
+      // Fallback to relative if nothing else works
+      else if (!hasData || activeStrategy === 'ORIENTATION') {
+        activeStrategy = 'DO_RELATIVE';
+        heading = normalizeAngle(e.alpha);
+        pitch = e.beta || 0;
+        roll = e.gamma || 0;
+        hasData = true;
+        updateStatus();
       }
     }
-  },{passive:true});
+  }, {passive: true});
 
-  // ==== STRATEGI 3: Generic Sensor API - Magnetometer ====
-  if('Magnetometer' in window){
-    diagData.magApi=true;
-    try{
-      const mag=new Magnetometer({frequency:60});
-      mag.addEventListener('reading',function(){
-        diagData.magFired=true;
-        diagData.magCount++;
-        diagData.magLast={x:mag.x,y:mag.y,z:mag.z};
-        rawMX=mag.x;rawMY=mag.y;rawMZ=mag.z;
-        // Kalau belum ada data dari strategi 1/2, hitung manual
-        if(!hasAnyData||activeStrategy==='GEN_SENSOR'){
-          // Cek apakah ada accel data untuk tilt compensation
-          if(rawAX!==0||rawAY!==0||rawAZ!==0){
-            const h=computeHeading(mag.x,mag.y,mag.z,rawAX,rawAY,rawAZ);
-            if(h!==null){
-              activeStrategy='GEN_SENSOR';
-              curAz=h;
-              hasAnyData=true;
-            }
-          } else {
-            // Fallback tanpa tilt compensation (harus pegang hp datar)
-            let h=Math.atan2(-mag.x,mag.y)*DEG;
-            if(h<0)h+=360;
-            activeStrategy='GEN_SENSOR_NO_TILT';
-            curAz=h;
-            hasAnyData=true;
+  // STRATEGY 3: Generic Magnetometer API
+  if ('Magnetometer' in window) {
+    try {
+      const mag = new Magnetometer({frequency: 60});
+      mag.addEventListener('reading', function() {
+        diag.magFired = true;
+        diag.magCount++;
+        diag.magLast = {x: mag.x, y: mag.y, z: mag.z};
+        rawMX = mag.x;
+        rawMY = mag.y;
+        rawMZ = mag.z;
+        
+        // If we have accelerometer data, compute tilt-compensated heading
+        if ((rawAX !== 0 || rawAY !== 0 || rawAZ !== 0) && 
+            (activeStrategy === 'NONE' || activeStrategy === 'MAGNETOMETER' || !hasData)) {
+          const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
+          if (h !== null) {
+            activeStrategy = 'MAGNETOMETER';
+            heading = h;
+            hasData = true;
+            updateStatus();
           }
         }
       });
-      mag.addEventListener('error',function(err){
-        console.warn('Magnetometer API error:',err.error?.name);
+      mag.addEventListener('error', function(e) {
+        console.warn('Magnetometer error:', e.error?.name);
       });
       mag.start();
-    }catch(ex){
-      console.warn('Magnetometer API tidak bisa start:',ex);
+    } catch(e) {
+      console.warn('Magnetometer init failed:', e);
     }
   }
 
-  // ==== STRATEGI 4: DeviceMotion untuk accel data (pendukung strategi 3) ====
-  window.addEventListener('devicemotion',function(e){
-    diagData.dmFired=true;
-    diagData.dmCount++;
-    const a=e.accelerationIncludingGravity;
-    if(a&&a.x!==null&&a.x!==undefined){
-      rawAX=a.x;rawAY=a.y;rawAZ=a.z;
-      // Jika strategi 3 aktif, recompute dengan tilt compensation
-      if(activeStrategy==='GEN_SENSOR_NO_TILT'&&diagData.magFired){
-        const h=computeHeading(rawMX,rawMY,rawMZ,rawAX,rawAY,rawAZ);
-        if(h!==null){curAz=h;activeStrategy='GEN_SENSOR'}
+  // STRATEGY 4: DeviceMotion for accelerometer
+  window.addEventListener('devicemotion', function(e) {
+    diag.dmFired = true;
+    diag.dmCount++;
+    
+    const accel = e.accelerationIncludingGravity;
+    if (accel && accel.x !== null && accel.x !== undefined) {
+      rawAX = accel.x;
+      rawAY = accel.y;
+      rawAZ = accel.z;
+      
+      // Recompute with magnetometer if available
+      if (diag.magFired && (activeStrategy === 'MAGNETOMETER' || !hasData)) {
+        const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
+        if (h !== null) {
+          activeStrategy = 'MAGNETOMETER';
+          heading = h;
+          hasData = true;
+          updateStatus();
+        }
       }
     }
-  },{passive:true});
+  }, {passive: true});
 }
 
 // ============================================================
-// TOUCH MANUAL FALLBACK (STRATEGI 5)
+// MANUAL MODE (TOUCH DRIVEN)
 // ============================================================
-function initTouchManual(){
-  cring.addEventListener('touchstart',function(e){
-    if(!manualMode)return;
+let touchActive = false;
+let touchStartAngle = 0;
+let touchStartHeading = 0;
+
+function initManualMode() {
+  const wrap = document.querySelector('.compass-wrap');
+  
+  wrap.addEventListener('touchstart', function(e) {
+    if (!isManual) return;
     e.preventDefault();
-    touchActive=true;
-    const t=e.touches[0];
-    const r=cring.getBoundingClientRect();
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    touchStartAng=Math.atan2(t.clientY-cy,t.clientX-cx)*DEG;
-    touchStartAz=curAz;
-  },{passive:false});
-
-  cring.addEventListener('touchmove',function(e){
-    if(!manualMode||!touchActive)return;
+    const touch = e.touches[0];
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    touchStartAngle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
+    touchStartHeading = heading;
+    touchActive = true;
+  }, {passive: false});
+  
+  wrap.addEventListener('touchmove', function(e) {
+    if (!isManual || !touchActive) return;
     e.preventDefault();
-    const t=e.touches[0];
-    const r=cring.getBoundingClientRect();
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    const ang=Math.atan2(t.clientY-cy,t.clientX-cx)*DEG;
-    let diff=ang-touchStartAng;
-    curAz=normAz(touchStartAz+diff);
-    hasAnyData=true;
-  },{passive:false});
-
-  cring.addEventListener('touchend',function(){
-    touchActive=false;
-  },{passive:true});
-
-  // Mouse fallback untuk testing di desktop
-  cring.addEventListener('mousedown',function(e){
-    if(!manualMode)return;
-    touchActive=true;
-    const r=cring.getBoundingClientRect();
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    touchStartAng=Math.atan2(e.clientY-cy,e.clientX-cx)*DEG;
-    touchStartAz=curAz;
+    const touch = e.touches[0];
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const angle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
+    const diff = angle - touchStartAngle;
+    heading = normalizeAngle(touchStartHeading + diff);
+    hasData = true;
+    activeStrategy = 'MANUAL';
+    updateStatus();
+  }, {passive: false});
+  
+  wrap.addEventListener('touchend', function() {
+    touchActive = false;
+  }, {passive: true});
+  
+  // Mouse support (desktop fallback)
+  wrap.addEventListener('mousedown', function(e) {
+    if (!isManual) return;
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    touchStartAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+    touchStartHeading = heading;
+    touchActive = true;
   });
-  window.addEventListener('mousemove',function(e){
-    if(!manualMode||!touchActive)return;
-    const r=cring.getBoundingClientRect();
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    const ang=Math.atan2(e.clientY-cy,e.clientX-cx)*DEG;
-    let diff=ang-touchStartAng;
-    curAz=normAz(touchStartAz+diff);
-    hasAnyData=true;
+  
+  document.addEventListener('mousemove', function(e) {
+    if (!isManual || !touchActive) return;
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+    const diff = angle - touchStartAngle;
+    heading = normalizeAngle(touchStartHeading + diff);
+    hasData = true;
+    activeStrategy = 'MANUAL';
+    updateStatus();
   });
-  window.addEventListener('mouseup',function(){touchActive=false});
+  
+  document.addEventListener('mouseup', function() {
+    touchActive = false;
+  });
 }
 
 // ============================================================
-// RENDER KOMPAS
+// UPDATE UI
 // ============================================================
-function render(){
-  let deg=curAz;
-
-  // Smooth filter
-  if(smoothMode&&!manualMode){
-    if(isFirstSmooth){smoothedAz=deg;isFirstSmooth=false}
-    else{smoothedAz=smoothAng(deg,smoothedAz,0.3)}
-    deg=smoothedAz;
-  }else{
-    smoothedAz=deg;isFirstSmooth=true;
+function updateStatus() {
+  if (isManual) {
+    statusDot.className = 'dot cyan';
+    statusText.textContent = 'MANUAL';
+    manualBadge.classList.add('show');
+  } else if (hasData) {
+    statusDot.className = 'dot green';
+    statusText.textContent = 'AKTIF';
+    manualBadge.classList.remove('show');
+  } else {
+    statusDot.className = 'dot red';
+    statusText.textContent = 'TIDAK ADA DATA';
+    manualBadge.classList.remove('show');
   }
+  
+  strategyLabel.textContent = `STRATEGY: ${activeStrategy}`;
+  modeLabel.textContent = isLocked ? '🔒 TERKUNCI' : 'MODE: BEBAS';
+  smoothLabel.textContent = isSmooth ? 'SMOOTH: ON' : 'SMOOTH: OFF';
+}
 
-  const delta=Math.abs(angDiff(deg,lastAz));
-  lastAz=deg;
+function updateDisplay() {
+  let displayHeading = heading;
+  
+  // Apply smoothing
+  if (isSmooth && !isManual) {
+    if (!smoothInitialized) {
+      smoothHeading = heading;
+      smoothInitialized = true;
+    } else {
+      smoothHeading = smoothHeading + angleDiff(heading, smoothHeading) * 0.25;
+      if (smoothHeading < 0) smoothHeading += 360;
+      if (smoothHeading >= 360) smoothHeading -= 360;
+    }
+    displayHeading = smoothHeading;
+  } else {
+    smoothHeading = heading;
+    smoothInitialized = true;
+  }
+  
+  // Lock
+  if (isLocked) {
+    displayHeading = lockedHeading;
+  }
+  
+  const displayDeg = Math.round(displayHeading);
+  const dir = getDirection(displayHeading);
+  
+  degDisplay.textContent = String(displayDeg).padStart(3, '0');
+  dirDisplay.textContent = isLocked ? '🔒 LOCKED' : dir.long;
+  
+  // Rotate compass
+  dialGroup.setAttribute('transform', `rotate(${-displayHeading}, 200, 200)`);
+  
+  // Info
+  infoAz.textContent = displayDeg + '°';
+  
+  const magStrength = Math.sqrt(rawMX*rawMX + rawMY*rawMY + rawMZ*rawMZ);
+  infoMag.textContent = magStrength > 0 ? magStrength.toFixed(1) + 'µT' : '---';
+  
+  const delta = Math.abs(angleDiff(displayHeading, lastHeading));
+  infoDelta.textContent = delta.toFixed(1) + '°';
+  infoDelta.style.color = delta > 10 ? 'var(--red)' : delta > 3 ? 'var(--gold)' : 'var(--green)';
+  lastHeading = displayHeading;
+  
+  // Update counter
+  updateCount++;
+  const now = performance.now();
+  if (now - lastUpdateTime >= 1000) {
+    infoUpd.textContent = updateCount;
+    updateCount = 0;
+    lastUpdateTime = now;
+  }
+  
+  // History for graph
+  history[historyIndex] = displayHeading;
+  historyIndex = (historyIndex + 1) % history.length;
+}
 
-  // Rotasi dial
-  dial.setAttribute('transform',`rotate(${-deg},200,200)`);
+// ============================================================
+// GRAPH RENDER
+// ============================================================
+function drawGraph() {
+  const rect = graphCanvas.parentElement.getBoundingClientRect();
+  graphCanvas.width = rect.width * 2;
+  graphCanvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  
+  const w = graphCanvas.width / 2;
+  const h = graphCanvas.height / 2;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  // Center line
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(0, h/2);
+  ctx.lineTo(w, h/2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Plot
+  ctx.strokeStyle = 'rgba(255,23,68,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  
+  const len = history.length;
+  for (let i = 0; i < len; i++) {
+    const idx = (historyIndex + i) % len;
+    const val = history[idx];
+    const x = (i / len) * w;
+    const y = h/2 - (val - 180) / 180 * (h/2 - 2);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  // Current point
+  const lastVal = history[(historyIndex - 1 + len) % len];
+  const lastX = w - 2;
+  const lastY = h/2 - (lastVal - 180) / 180 * (h/2 - 2);
+  ctx.fillStyle = 'var(--red)';
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+}
 
-  // Display
-  const showDeg=isLocked?lockedDeg:Math.round(deg);
-  dVal.textContent=String(showDeg).padStart(3,'0');
-  const dir=getDir(deg);
-  dLbl.textContent=isLocked?'KUNCI':dir.l;
-
-  // Info grid
-  vRaw.textContent=curAz.toFixed(1)+'°';
-  const magM=Math.sqrt(rawMX*rawMX+rawMY*rawMY+rawMZ*rawMZ);
-  vMag.textContent=magM>0?magM.toFixed(1):'---';
-  vPitch.textContent=curPitch.toFixed(1)+'°';
-  vRoll.textContent=curRoll.toFixed(1)+'°';
-  vDelta.textContent=delta.toFixed(1)+'°';
-  vDelta.style.color=delta>10?'var(--red)':delta>3?'var(--accent2)':'var(--green)';
-
-  // Update count
-  updCount++;
-  const now=performance.now();
-  if(now-lastSec>=1000){vUpd.textContent=updCount;updCount=0;lastSec=now}
-
-  // History
-  hist[hIdx]=deg;hIdx=(hIdx+1)%hist.length;
-
+// ============================================================
+// RENDER LOOP
+// ============================================================
+function render() {
+  if (hasData || isManual) {
+    updateDisplay();
+    drawGraph();
+  }
+  
   // FPS
-  fCount++;
-  if(now-lastFT>=500){curFPS=Math.round(fCount/((now-lastFT)/1000));fpsEl.textContent=curFPS+' FPS';fCount=0;lastFT=now}
-
-  // Strategi label
-  stratLabel.textContent='STRATEGY: '+activeStrategy+(manualMode?' + MANUAL':'');
-}
-
-// ============================================================
-// GRAFIK MINI
-// ============================================================
-function setupGraph(){
-  const r=gCan.parentElement.getBoundingClientRect();
-  gCan.width=r.width*2;gCan.height=r.height*2;
-  gCtx.scale(2,2);
-}
-function drawGraph(){
-  const w=gCan.width/2, h=gCan.height/2;
-  gCtx.clearRect(0,0,w,h);
-  gCtx.strokeStyle='rgba(255,61,0,0.12)';gCtx.lineWidth=0.5;
-  gCtx.setLineDash([2,2]);gCtx.beginPath();gCtx.moveTo(0,h/2);gCtx.lineTo(w,h/2);gCtx.stroke();
-  gCtx.setLineDash([]);
-  gCtx.strokeStyle='rgba(255,61,0,0.7)';gCtx.lineWidth=1;gCtx.beginPath();
-  const len=hist.length;
-  for(let i=0;i<len;i++){
-    const idx=(hIdx+i)%len,val=hist[idx];
-    const x=(i/len)*w,y=h/2-(val-180)/180*(h/2-2);
-    if(i===0)gCtx.moveTo(x,y);else gCtx.lineTo(x,y);
+  fpsCount++;
+  const now = performance.now();
+  if (now - fpsTime >= 500) {
+    currentFps = Math.round(fpsCount / ((now - fpsTime) / 1000));
+    fpsEl.textContent = currentFps + ' FPS';
+    fpsCount = 0;
+    fpsTime = now;
   }
-  gCtx.stroke();
-  const lv=hist[(hIdx-1+len)%len];
-  const lx=w-1,ly=h/2-(lv-180)/180*(h/2-2);
-  gCtx.fillStyle='#ff3d00';gCtx.beginPath();gCtx.arc(lx,ly,2,0,PI*2);gCtx.fill();
+  
+  requestAnimationFrame(render);
 }
 
 // ============================================================
-// ANIMATION LOOP
+// DIAGNOSTICS
 // ============================================================
-function loop(){
-  if(sensorActive){render();drawGraph()}
-  requestAnimationFrame(loop);
+function updateDiag() {
+  let html = '';
+  html += `<div>Secure Context: <span class="${window.isSecureContext ? 'ok' : 'err'}">${window.isSecureContext ? '✅' : '❌'}</span></div>`;
+  html += `<div>HTTPS: <span class="${location.protocol === 'https:' ? 'ok' : 'err'}">${location.protocol}</span></div>`;
+  html += `<div>DeviceOrientation API: <span class="${typeof DeviceOrientationEvent !== 'undefined' ? 'ok' : 'err'}">${typeof DeviceOrientationEvent !== 'undefined' ? '✅' : '❌'}</span></div>`;
+  html += `<div>&nbsp;</div>`;
+  html += `<div>deviceorientationabsolute: <span class="${diag.doaFired ? (diag.doaData ? 'ok' : 'warn') : 'err'}">${diag.doaFired ? (diag.doaData ? '✅ DATA ('+diag.doaCount+'x)' : '⚠️ FIRED NO DATA') : '❌'}</span></div>`;
+  if (diag.doaLast) html += `<div>&nbsp;&nbsp;α:${diag.doaLast.alpha?.toFixed(1) || 'null'} β:${diag.doaLast.beta?.toFixed(1) || 'null'} γ:${diag.doaLast.gamma?.toFixed(1) || 'null'}</div>`;
+  html += `<div>deviceorientation: <span class="${diag.doFired ? (diag.doData ? 'ok' : 'warn') : 'err'}">${diag.doFired ? (diag.doData ? '✅ DATA ('+diag.doCount+'x)' : '⚠️ FIRED NO DATA') : '❌'}</span></div>`;
+  if (diag.doLast) html += `<div>&nbsp;&nbsp;α:${diag.doLast.alpha?.toFixed(1) || 'null'} β:${diag.doLast.beta?.toFixed(1) || 'null'} γ:${diag.doLast.gamma?.toFixed(1) || 'null'}</div>`;
+  html += `<div>devicemotion: <span class="${diag.dmFired ? 'ok' : 'err'}">${diag.dmFired ? '✅ ('+diag.dmCount+'x)' : '❌'}</span></div>`;
+  html += `<div>Magnetometer API: <span class="${'Magnetometer' in window ? (diag.magFired ? 'ok' : 'warn') : 'err'}">${'Magnetometer' in window ? (diag.magFired ? '✅ ('+diag.magCount+'x)' : '⚠️ AVAILABLE NO DATA') : '❌'}</span></div>`;
+  if (diag.magLast) html += `<div>&nbsp;&nbsp;x:${diag.magLast.x?.toFixed(1)} y:${diag.magLast.y?.toFixed(1)} z:${diag.magLast.z?.toFixed(1)}</div>`;
+  html += `<div>&nbsp;</div>`;
+  html += `<div>Active Strategy: <span class="ok">${activeStrategy}</span></div>`;
+  html += `<div>Has Data: <span class="${hasData ? 'ok' : 'err'}">${hasData ? '✅' : '❌'}</span></div>`;
+  html += `<div>&nbsp;</div>`;
+  html += `<div style="color:var(--gold);font-size:8px">📌 FORCE STRATEGIES:</div>`;
+  html += `<div style="font-size:7px;color:#666">1. deviceorientationabsolute (priority)</div>`;
+  html += `<div style="font-size:7px;color:#666">2. deviceorientation (absolute flag)</div>`;
+  html += `<div style="font-size:7px;color:#666">3. Magnetometer API + tilt compensation</div>`;
+  html += `<div style="font-size:7px;color:#666">4. Manual touch (fallback)</div>`;
+  html += `<div style="font-size:7px;color:#666;margin-top:4px">💡 Tips Oppo A9: Buka Chrome &gt; Setelan &gt; Setelan Situs &gt; Gerak &gt; Izinkan</div>`;
+  
+  diagPanel.innerHTML = html;
 }
 
 // ============================================================
-// KALIBRASI
+// BUTTON HANDLERS
 // ============================================================
-function startCal(){
-  if(isCalibrating)return;
-  if(manualMode){toast('KALIBRASI TIDAK BERLAKU DI MODE MANUAL');return}
-  isCalibrating=true;
-  cbar.style.width='0%';cdone.style.display='none';ccls.style.display='none';
-  ctxt.style.display='';ccir.style.display='';
-  cov.classList.add('show');bCal.classList.add('cal');
-  let lastCAz=curAz,totalCh=0;
-  calInterval=setInterval(()=>{
-    const ch=Math.abs(angDiff(curAz,lastCAz));
-    totalCh+=ch;lastCAz=curAz;
-    const p=Math.min(100,(totalCh/3000)*100);
-    cbar.style.width=p+'%';
-    if(p>=100){
-      clearInterval(calInterval);isCalibrating=false;
-      ctxt.style.display='none';ccir.style.display='none';
-      cdone.style.display='';ccls.style.display='';
-      bCal.classList.remove('cal');toast('KALIBRASI SELESAI');
+btnCalibrate.addEventListener('click', function() {
+  if (isManual) {
+    alert('Kalibrasi tidak tersedia dalam mode manual');
+    return;
+  }
+  
+  if (isCalibrating) {
+    isCalibrating = false;
+    btnCalibrate.classList.remove('calibrating');
+    btnCalibrate.textContent = '⚡ KALIBRASI';
+    return;
+  }
+  
+  isCalibrating = true;
+  btnCalibrate.classList.add('calibrating');
+  btnCalibrate.textContent = '⏳ KALIBRASI...';
+  
+  let totalChange = 0;
+  let lastCalHeading = heading;
+  let calCount = 0;
+  
+  const calInterval = setInterval(() => {
+    const change = Math.abs(angleDiff(heading, lastCalHeading));
+    totalChange += change;
+    lastCalHeading = heading;
+    calCount++;
+    
+    if (totalChange > 500 || calCount > 120) {
+      clearInterval(calInterval);
+      isCalibrating = false;
+      btnCalibrate.classList.remove('calibrating');
+      btnCalibrate.textContent = '⚡ KALIBRASI';
+      alert('✅ Kalibrasi selesai! Putar HP membentuk angka 8 untuk hasil terbaik.');
     }
-  },100);
-}
-function stopCal(){
-  isCalibrating=false;
-  if(calInterval)clearInterval(calInterval);
-  cov.classList.remove('show');bCal.classList.remove('cal');
-}
+  }, 100);
+});
 
-// ============================================================
-// AKTIVASI UTAMA
-// ============================================================
-async function activate(){
-  povBtn.disabled=true;
-  povBtn.textContent='MENGAKTIFKAN...';
-
-  // iOS permission request (tidak ada di Android, tapi aman dipanggil)
-  if(typeof DeviceOrientationEvent!=='undefined'&&
-     typeof DeviceOrientationEvent.requestPermission==='function'){
-    try{
-      const p=await DeviceOrientationEvent.requestPermission();
-      if(p!=='granted'){toast('PERMISSION DITOLAK');povBtn.disabled=false;povBtn.textContent='COBA LAGI';return}
-    }catch(ex){/* bukan iOS, abaikan */}
+btnLock.addEventListener('click', function() {
+  isLocked = !isLocked;
+  if (isLocked) {
+    lockedHeading = Math.round(heading);
+    btnLock.textContent = '🔓 LEPAS';
+    btnLock.classList.add('active');
+  } else {
+    btnLock.textContent = '🔒 KUNCI';
+    btnLock.classList.remove('active');
   }
+  updateStatus();
+});
 
-  // Daftarkan SEMUA sensor sekaligus
-  registerAllSensors();
+btnSmooth.addEventListener('click', function() {
+  isSmooth = !isSmooth;
+  smoothInitialized = false;
+  if (isSmooth) {
+    btnSmooth.classList.add('active');
+    btnSmooth.textContent = '🌀 RAW';
+  } else {
+    btnSmooth.classList.remove('active');
+    btnSmooth.textContent = '🌀 SMOOTH';
+  }
+  updateStatus();
+});
 
-  // Tampilkan UI utama
-  pov.classList.add('hide');
-  mainUI.style.opacity='1';mainUI.style.pointerEvents='auto';
-  sensorActive=true;
-  setupGraph();
+btnManual.addEventListener('click', function() {
+  isManual = !isManual;
+  if (isManual) {
+    btnManual.classList.add('active');
+    btnManual.textContent = '✋ AUTO';
+    manualBadge.classList.add('show');
+    hasData = true;
+    activeStrategy = 'MANUAL';
+    toast('Mode manual aktif - geser kompas!');
+  } else {
+    btnManual.classList.remove('active');
+    btnManual.textContent = '✋ MANUAL';
+    manualBadge.classList.remove('show');
+    if (!hasData) {
+      activeStrategy = 'NONE';
+      toast('Kembali ke mode sensor');
+    }
+  }
+  updateStatus();
+});
 
-  // Status awal - menunggu data
-  sDot.className='sdot warn';
-  sStat.textContent='SCANNING SENSOR...';
-  updateDiag();
-
-  // Tunggu data dengan timeout AGRESIF - 8 detik
-  let elapsed=0;
-  dataTimeout=setInterval(()=>{
-    elapsed+=200;
+diagToggle.addEventListener('click', function() {
+  diagPanel.classList.toggle('open');
+  if (diagPanel.classList.contains('open')) {
     updateDiag();
+  }
+});
 
-    if(hasAnyData){
-      // DATA DITERIMA!
-      clearInterval(dataTimeout);
-      sDot.className='sdot on';
-      sStat.textContent='AKTIF ('+activeStrategy+')';
-      toast('SENSOR AKTIF - '+activeStrategy);
-      return;
-    }
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg) {
+  const old = document.querySelector('.toast-msg');
+  if (old) old.remove();
+  
+  const el = document.createElement('div');
+  el.className = 'toast-msg';
+  el.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.9); color: #fff; padding: 10px 20px;
+    border-radius: 8px; font-size: 11px; font-family: 'Courier New', monospace;
+    z-index: 999; border: 1px solid rgba(255,23,68,0.3);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5); max-width: 90%;
+    text-align: center; font-weight: 700; letter-spacing: 0.5px;
+  `;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  
+  setTimeout(() => {
+    if (el.parentNode) el.remove();
+  }, 3000);
+}
 
-    if(elapsed>=8000){
-      // TIMEOUT - cek apakah event pernah fires
-      clearInterval(dataTimeout);
-      if(diagData.doaFired||diagData.doFired){
-        // Event fires tapi tidak ada data (alpha null)
-        sDot.className='sdot warn';
-        sStat.textContent='EVENT TANPA DATA';
-        toast('EVENT FIRE TAPI DATA NULL - Coba mode manual');
-      }else if(diagData.dmFired){
-        // Hanya DeviceMotion yang jalan
-        sDot.className='sdot warn';
-        sStat.textContent='Hanya MOTION, tidak ORIENTATION';
-        toast('ORIENTATION TIDAK TERSEDIA - Coba mode manual');
-      }else{
-        // Tidak ada event sama sekali
-        sDot.className='sdot';
-        sStat.textContent='NO SENSOR DATA';
-        toast('TIDAK ADA SENSOR - Gunakan MODE MANUAL');
+// ============================================================
+// AUTO-START WITH PERMISSION CHECK
+// ============================================================
+async function start() {
+  // Request permission for iOS
+  if (typeof DeviceOrientationEvent !== 'undefined' && 
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceOrientationEvent.requestPermission();
+      if (result !== 'granted') {
+        toast('⚠️ Izin sensor diperlukan');
+        // Still try to start with manual fallback
       }
-      // Buka panel diag otomatis
-      diag.classList.add('open');
+    } catch(e) {}
+  }
+  
+  // Initialize everything
+  generateTicks();
+  initSensors();
+  initManualMode();
+  
+  // Update status after sensors initialized
+  setTimeout(() => {
+    updateStatus();
+    updateDiag();
+    
+    // If no data after 5 seconds, show manual suggestion
+    if (!hasData && !isManual) {
+      setTimeout(() => {
+        if (!hasData && !isManual) {
+          toast('💡 Tidak ada sensor? Aktifkan mode MANUAL');
+          btnManual.style.animation = 'pulse 0.8s ease-in-out 3';
+          setTimeout(() => {
+            btnManual.style.animation = '';
+          }, 2400);
+        }
+      }, 5000);
     }
-  },200);
-}
-
-function forceManual(){
-  manualMode=true;
-  manBadge.classList.add('show');
-  sDot.className='sdot manual';
-  sStat.textContent='MODE MANUAL';
-  activeStrategy='MANUAL_TOUCH';
-  hasAnyData=true;
-  curAz=0;
-  toast('MODE MANUAL AKTIF - GESER KOMPAS UNTUK NAVIGASI');
-  updateDiag();
+  }, 500);
+  
+  // Start render loop
+  render();
+  
+  // Periodic diag update
+  setInterval(updateDiag, 3000);
 }
 
 // ============================================================
-// EVENT LISTENERS
+// BOOT
 // ============================================================
-povBtn.addEventListener('click',activate);
-povForce.addEventListener('click',function(){
-  pov.classList.add('hide');
-  mainUI.style.opacity='1';mainUI.style.pointerEvents='auto';
-  sensorActive=true;setupGraph();
-  forceManual();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start);
+} else {
+  start();
+}
+
+// Handle resize for graph
+window.addEventListener('resize', () => {
+  drawGraph();
 });
-
-diagBtn.addEventListener('click',function(){diag.classList.toggle('open')});
-
-bCal.addEventListener('click',startCal);
-ccls.addEventListener('click',stopCal);
-
-bLock.addEventListener('click',function(){
-  isLocked=!isLocked;
-  if(isLocked){
-    lockedDeg=Math.round(curAz);bLock.classList.add('locked');
-    bLock.textContent='LEPAS';mLabel.textContent='MODE: LOCKED';
-    toast('KUNCI DI '+lockedDeg+'°');
-  }else{
-    bLock.classList.remove('locked');bLock.textContent='KUNCI ARAH';
-    mLabel.textContent='MODE: FREE';toast('ARAH BEBAS');
-  }
-});
-
-bSmooth.addEventListener('click',function(){
-  smoothMode=!smoothMode;isFirstSmooth=true;
-  if(smoothMode){
-    bSmooth.classList.add('locked');bSmooth.textContent='RAW';
-    smLabel.textContent='SMOOTH: ON';toast('SMOOTH FILTER AKTIF');
-  }else{
-    bSmooth.classList.remove('locked');bSmooth.textContent='SMOOTH';
-    smLabel.textContent='SMOOTH: OFF';toast('DATA RAW');
-  }
-});
-
-// ============================================================
-// INISIALISASI
-// ============================================================
-genTicks();
-initTouchManual();
-checkEnvironment();
-loop();
-
-// Cek ulang environment tiap 2 detik (untuk update diag)
-setInterval(updateDiag,2000);
 
 })();
 </script>
