@@ -6,7 +6,7 @@
 <title>KOMPAS GPS LIVE - OPPO A9</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#0a0c10;--fg:#e8e6e1;--red:#ff1744;--green:#00e676;--cyan:#00e5ff;--gold:#ffab00;--purple:#b388ff;--glow:rgba(255,23,68,0.8)}
+:root{--bg:#0a0c10;--fg:#e8e6e1;--red:#ff1744;--green:#00e676;--cyan:#00e5ff;--gold:#ffab00;--white:#ffffff;--bright-yellow:#fff176;--bright-white:#f5f5f5;--glow:rgba(255,23,68,0.8)}
 body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;overflow:hidden;height:100vh;width:100vw;touch-action:none}
 #app{height:100vh;display:flex;flex-direction:column;padding:4px;position:relative;background:radial-gradient(ellipse at center, rgba(255,23,68,0.02) 0%, transparent 70%)}
 .header{text-align:center;padding:2px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.03)}
@@ -21,24 +21,29 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
 .compass-wrap{flex:0 0 auto;display:flex;align-items:center;justify-content:center;position:relative;padding:2px 0}
 .compass-wrap svg{width:min(60vw,260px);height:min(60vw,260px);filter:drop-shadow(0 0 30px rgba(255,23,68,0.05))}
 #compassDisplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:10}
-#compassDisplay .deg{font-size:clamp(32px,10vw,52px);font-weight:900;font-variant-numeric:tabular-nums;text-shadow:0 0 30px rgba(255,255,255,0.03);letter-spacing:-1px}
-#compassDisplay .dir{font-size:clamp(14px,4vw,22px);font-weight:900;color:var(--gold);letter-spacing:3px;text-shadow:0 0 30px rgba(255,171,0,0.12);margin-top:-2px}
-#compassDisplay .subdir{font-size:7px;color:#555;letter-spacing:1px;margin-top:1px}
+#compassDisplay .deg{font-size:clamp(32px,10vw,52px);font-weight:900;font-variant-numeric:tabular-nums;color:#ffffff;text-shadow:0 0 40px rgba(255,255,255,0.15),0 0 80px rgba(255,255,255,0.05);letter-spacing:-1px}
+#compassDisplay .dir{font-size:clamp(16px,5vw,26px);font-weight:900;color:#fff176;letter-spacing:4px;text-shadow:0 0 40px rgba(255,235,59,0.3),0 0 80px rgba(255,235,59,0.1);margin-top:-2px}
+#compassDisplay .subdir{font-size:8px;color:#ffab00;letter-spacing:2px;margin-top:1px;text-shadow:0 0 20px rgba(255,171,0,0.2);font-weight:700}
 
-.gps-section{background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.04);border-radius:4px;padding:4px 6px;margin:2px 0}
-.gps-section .title{font-size:6px;color:#444;letter-spacing:2px;text-transform:uppercase}
-.gps-section .coord{font-size:10px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums;display:flex;gap:12px;flex-wrap:wrap}
+.gps-section{background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:4px 6px;margin:2px 0}
+.gps-section .title{font-size:6px;color:#888;letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.gps-section .coord{font-size:10px;font-weight:700;color:#00e5ff;font-variant-numeric:tabular-nums;display:flex;gap:12px;flex-wrap:wrap;text-shadow:0 0 30px rgba(0,229,255,0.15)}
 .gps-section .coord span{display:flex;align-items:center;gap:4px}
-.gps-section .coord .label{font-size:6px;color:#555;font-weight:400}
-.gps-section .addr{font-size:8px;color:var(--gold);line-height:1.5;margin-top:2px;word-break:break-word}
-.gps-section .addr .rt{color:var(--green);font-weight:700}
-.gps-section .update-time{font-size:5px;color:#333;text-align:right;margin-top:1px}
+.gps-section .coord .label{font-size:6px;color:#888;font-weight:400}
+.gps-section .addr{font-size:11px;color:#fff176;line-height:1.6;margin-top:3px;word-break:break-word;text-shadow:0 0 30px rgba(255,235,59,0.15);font-weight:700;letter-spacing:0.5px}
+.gps-section .addr .rt{color:#00e676;font-weight:900;text-shadow:0 0 30px rgba(0,230,118,0.3)}
+.gps-section .addr .highlight{color:#ffffff;font-weight:900;text-shadow:0 0 30px rgba(255,255,255,0.2)}
+.gps-section .update-time{font-size:5px;color:#666;text-align:right;margin-top:2px}
 
 .info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin:2px 0}
 .info-cell{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:3px;padding:2px 1px;text-align:center}
-.info-cell .label{font-size:4px;color:#444;text-transform:uppercase;letter-spacing:0.5px}
+.info-cell .label{font-size:4px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
 .info-cell .value{font-size:8px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
-.value.red{color:var(--red)}.value.cyan{color:var(--cyan)}.value.green{color:var(--green)}.value.gold{color:var(--gold)}.value.purple{color:var(--purple)}
+.value.red{color:#ff1744;text-shadow:0 0 20px rgba(255,23,68,0.2)}
+.value.cyan{color:#00e5ff;text-shadow:0 0 20px rgba(0,229,255,0.2)}
+.value.green{color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.2)}
+.value.gold{color:#ffab00;text-shadow:0 0 20px rgba(255,171,0,0.2)}
+.value.white{color:#ffffff;text-shadow:0 0 20px rgba(255,255,255,0.15)}
 
 .actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:2px;padding:2px 0}
 .actions button{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.04);border-radius:4px;color:var(--fg);font-family:inherit;font-size:5px;font-weight:700;padding:6px 1px;cursor:pointer;transition:all 0.06s;text-transform:uppercase;letter-spacing:0.5px}
@@ -50,9 +55,9 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
 #graph{width:100%;height:20px;background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:3px;margin:1px 0;overflow:hidden}
 #graph canvas{width:100%;height:100%}
 #fps{position:fixed;top:2px;right:4px;font-size:4px;color:#222;z-index:50}
-#manualBadge{position:absolute;top:4px;right:4px;background:rgba(0,229,255,0.1);border:1px solid var(--cyan);color:var(--cyan);font-size:4px;font-weight:700;padding:2px 5px;border-radius:2px;display:none;letter-spacing:1px;animation:blink 0.6s ease-in-out infinite}
+#manualBadge{position:absolute;top:4px;right:4px;background:rgba(0,229,255,0.15);border:1px solid #00e5ff;color:#00e5ff;font-size:4px;font-weight:700;padding:2px 5px;border-radius:2px;display:none;letter-spacing:1px;animation:blink 0.6s ease-in-out infinite;text-shadow:0 0 20px rgba(0,229,255,0.3)}
 #manualBadge.show{display:block}
-.diag-toggle{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:2px;color:#333;font-size:4px;padding:2px;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;margin:1px 0;font-family:inherit;width:100%}
+.diag-toggle{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:2px;color:#444;font-size:4px;padding:2px;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;margin:1px 0;font-family:inherit;width:100%}
 .diag-panel{max-height:0;overflow:hidden;transition:max-height 0.3s ease;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.03);border-radius:2px;font-size:5px;line-height:1.6}
 .diag-panel.open{max-height:400px;overflow-y:auto;padding:4px}
 .diag-panel .ok{color:var(--green)}.diag-panel .err{color:var(--red)}.diag-panel .warn{color:var(--gold)}
@@ -102,20 +107,20 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
       <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
       <g id="dialGroup">
         <g id="tickContainer"></g>
-        <text x="200" y="28" text-anchor="middle" fill="var(--red)" font-size="20" font-weight="900" font-family="Courier New">U</text>
-        <text x="376" y="206" text-anchor="middle" fill="var(--fg)" font-size="14" font-weight="700" font-family="Courier New">T</text>
-        <text x="200" y="384" text-anchor="middle" fill="var(--fg)" font-size="14" font-weight="700" font-family="Courier New">S</text>
-        <text x="24" y="206" text-anchor="middle" fill="var(--fg)" font-size="14" font-weight="700" font-family="Courier New">B</text>
-        <text x="330" y="64" text-anchor="middle" fill="rgba(255,171,0,0.2)" font-size="8" font-weight="700">TL</text>
-        <text x="330" y="350" text-anchor="middle" fill="rgba(255,171,0,0.2)" font-size="8" font-weight="700">TG</text>
-        <text x="70" y="350" text-anchor="middle" fill="rgba(255,171,0,0.2)" font-size="8" font-weight="700">BD</text>
-        <text x="70" y="64" text-anchor="middle" fill="rgba(255,171,0,0.2)" font-size="8" font-weight="700">BL</text>
+        <text x="200" y="28" text-anchor="middle" fill="#ff1744" font-size="20" font-weight="900" font-family="Courier New" text-shadow="0 0 30px rgba(255,23,68,0.3)">U</text>
+        <text x="376" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New" text-shadow="0 0 20px rgba(255,255,255,0.1)">T</text>
+        <text x="200" y="384" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New" text-shadow="0 0 20px rgba(255,255,255,0.1)">S</text>
+        <text x="24" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New" text-shadow="0 0 20px rgba(255,255,255,0.1)">B</text>
+        <text x="330" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">TL</text>
+        <text x="330" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">TG</text>
+        <text x="70" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BD</text>
+        <text x="70" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BL</text>
       </g>
       <g id="needleGroup" filter="url(#glowFilter)">
         <polygon points="200,45 192,195 200,185 208,195" fill="url(#needleGrad)" opacity="0.95"/>
         <polygon points="200,355 192,205 200,215 208,205" fill="#37474f" opacity="0.4"/>
-        <circle cx="200" cy="200" r="9" fill="var(--red)" stroke="#0a0c10" stroke-width="2"/>
-        <circle cx="200" cy="200" r="3" fill="#fff"/>
+        <circle cx="200" cy="200" r="9" fill="#ff1744" stroke="#0a0c10" stroke-width="2"/>
+        <circle cx="200" cy="200" r="3" fill="#ffffff"/>
       </g>
     </svg>
     <div id="compassDisplay">
@@ -135,17 +140,17 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
       <span><span class="label">AKURASI</span> <span id="accDisplay">--</span></span>
     </div>
     <div class="addr" id="addrDisplay">
-      <span style="color:#555">Mengambil alamat...</span>
+      <span style="color:#888">Mengambil alamat...</span>
     </div>
     <div class="update-time" id="gpsTime">⏱ --:--:--</div>
   </div>
 
   <!-- INFO GRID -->
   <div class="info-grid">
-    <div class="info-cell"><div class="label">ARAH</div><div class="value red" id="infoAz">---°</div></div>
+    <div class="info-cell"><div class="label">ARAH</div><div class="value white" id="infoAz">---°</div></div>
     <div class="info-cell"><div class="label">MAGNET</div><div class="value cyan" id="infoMag">---</div></div>
     <div class="info-cell"><div class="label">UPDATE</div><div class="value green" id="infoUpd">0/dtk</div></div>
-    <div class="info-cell"><div class="label">SUMBER</div><div class="value" id="infoSensor" style="font-size:5px;color:#555">---</div></div>
+    <div class="info-cell"><div class="label">SUMBER</div><div class="value" id="infoSensor" style="font-size:5px;color:#888">---</div></div>
   </div>
 
   <div id="graph"><canvas id="graphCanvas"></canvas></div>
@@ -530,14 +535,13 @@ function initGPS() {
 }
 
 // ============================================================
-// REVERSE GEOCODING - ALAMAT LENGKAP
+// REVERSE GEOCODING - ALAMAT LENGKAP DENGAN HIGHLIGHT
 // ============================================================
 async function fetchAddress(lat, lng) {
   if (addressFetching) return;
   addressFetching = true;
   
   try {
-    // Gunakan Nominatim (OpenStreetMap) untuk reverse geocoding
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
     const response = await fetch(url);
     const data = await response.json();
@@ -545,74 +549,65 @@ async function fetchAddress(lat, lng) {
     if (data && data.address) {
       const addr = data.address;
       
-      // Bangun alamat lengkap dengan RT/RW jika tersedia
       let parts = [];
       
-      // Nama jalan
-      if (addr.road) parts.push('Jalan ' + addr.road);
-      else if (addr.pedestrian) parts.push(addr.pedestrian);
+      // Nama jalan - WHITE
+      if (addr.road) parts.push('<span class="highlight">Jalan ' + addr.road + '</span>');
+      else if (addr.pedestrian) parts.push('<span class="highlight">' + addr.pedestrian + '</span>');
       
-      // RT/RW (kadang ada di suburb atau neighbourhood)
-      if (addr.suburb) parts.push('RT ' + addr.suburb);
-      if (addr.neighbourhood) parts.push('RW ' + addr.neighbourhood);
-      
-      // Kelurahan/Desa
-      if (addr.village) parts.push('Kel. ' + addr.village);
-      else if (addr.suburb && !parts.includes(addr.suburb)) parts.push('Kel. ' + addr.suburb);
-      
-      // Kecamatan
-      if (addr.county) parts.push('Kec. ' + addr.county);
-      else if (addr.municipality) parts.push('Kec. ' + addr.municipality);
-      
-      // Kota/Kabupaten
-      if (addr.city) parts.push(addr.city);
-      else if (addr.town) parts.push(addr.town);
-      else if (addr.state_district) parts.push(addr.state_district);
-      
-      // Provinsi
-      if (addr.state) parts.push('Prov. ' + addr.state);
-      
-      // Kode pos
-      if (addr.postcode) parts.push(addr.postcode);
-      
-      // Negara
-      if (addr.country) parts.push(addr.country);
-      
-      // Cari RT/RW spesifik dari building atau house number
+      // RT/RW - GREEN HIGHLIGHT
       let rtRwInfo = '';
       if (addr.house_number) {
-        rtRwInfo = 'No. ' + addr.house_number;
+        rtRwInfo = '<span class="rt">No. ' + addr.house_number + '</span>';
       }
       if (addr.building) {
-        if (rtRwInfo) rtRwInfo += ' - ' + addr.building;
-        else rtRwInfo = addr.building;
+        if (rtRwInfo) rtRwInfo += ' - <span class="highlight">' + addr.building + '</span>';
+        else rtRwInfo = '<span class="highlight">' + addr.building + '</span>';
       }
       
-      let fullAddress = parts.join(', ');
+      // Kelurahan/Desa - YELLOW
+      if (addr.village) parts.push('<span style="color:#fff176;font-weight:700">' + addr.village + '</span>');
+      else if (addr.suburb) parts.push('<span style="color:#fff176;font-weight:700">' + addr.suburb + '</span>');
       
-      // Tambahkan RT/RW jika ada
+      // Kecamatan - YELLOW
+      if (addr.county) parts.push('<span style="color:#ffab00;font-weight:700">Kec. ' + addr.county + '</span>');
+      else if (addr.municipality) parts.push('<span style="color:#ffab00;font-weight:700">Kec. ' + addr.municipality + '</span>');
+      
+      // Kota - WHITE
+      if (addr.city) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.city + '</span>');
+      else if (addr.town) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.town + '</span>');
+      else if (addr.state_district) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.state_district + '</span>');
+      
+      // Provinsi - WHITE
+      if (addr.state) parts.push('<span style="color:#e0e0e0;font-weight:700">Prov. ' + addr.state + '</span>');
+      
+      // Kode pos - CYAN
+      if (addr.postcode) parts.push('<span style="color:#00e5ff;font-weight:700">' + addr.postcode + '</span>');
+      
+      // Negara - WHITE
+      if (addr.country) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.country + '</span>');
+      
+      let fullAddress = parts.join(' • ');
+      
+      // Tambahkan RT/RW di depan
       if (rtRwInfo) {
-        fullAddress = rtRwInfo + ', ' + fullAddress;
+        fullAddress = rtRwInfo + ' • ' + fullAddress;
       }
       
-      // Tambahkan highlight untuk RT/RW
-      // Cari pattern RT/RW di address
-      let rtRwHighlight = fullAddress;
-      const rtRwMatch = fullAddress.match(/(RT\s*\d+)\s*(RW\s*\d+)?/i);
-      if (rtRwMatch) {
-        rtRwHighlight = fullAddress.replace(/(RT\s*\d+\s*RW\s*\d+)/i, '<span class="rt">$1</span>');
-        rtRwHighlight = rtRwHighlight.replace(/(RT\s*\d+)/i, '<span class="rt">$1</span>');
-      }
+      // Highlight RT/RW yang sudah ada di text
+      fullAddress = fullAddress.replace(/(RT\s*\d+\s*RW\s*\d+)/gi, '<span class="rt">$1</span>');
+      fullAddress = fullAddress.replace(/(RT\s*\d+)/gi, '<span class="rt">$1</span>');
+      fullAddress = fullAddress.replace(/(RW\s*\d+)/gi, '<span class="rt">$1</span>');
       
-      addrDisplay.innerHTML = rtRwHighlight;
+      addrDisplay.innerHTML = fullAddress;
       currentAddress = fullAddress;
       lastAddressFetch = Date.now();
     } else {
-      addrDisplay.innerHTML = '📍 ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ' (alamat tidak ditemukan)';
+      addrDisplay.innerHTML = '📍 <span style="color:#ffffff;font-weight:700">' + lat.toFixed(6) + '</span>, <span style="color:#ffffff;font-weight:700">' + lng.toFixed(6) + '</span> <span style="color:#888">(alamat tidak ditemukan)</span>';
     }
   } catch (error) {
     console.warn('Reverse geocoding error:', error);
-    addrDisplay.innerHTML = '📍 ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ' (error fetching address)';
+    addrDisplay.innerHTML = '📍 <span style="color:#ffffff;font-weight:700">' + lat.toFixed(6) + '</span>, <span style="color:#ffffff;font-weight:700">' + lng.toFixed(6) + '</span> <span style="color:#888">(error fetching address)</span>';
   }
   
   addressFetching = false;
@@ -691,15 +686,11 @@ function initManualMode() {
 function updateStatus() {
   if (isManual) {
     statusDot.className = 'dot cyan';
-    if (!statusText.textContent.includes('MANUAL')) {
-      statusText.textContent = 'MANUAL';
-    }
+    statusText.textContent = 'MANUAL';
     manualBadge.classList.add('show');
   } else if (hasData && currentLat) {
     statusDot.className = 'dot green';
-    if (!statusText.textContent.includes('GPS')) {
-      statusText.textContent = 'GPS + KOMPAS';
-    }
+    statusText.textContent = 'GPS + KOMPAS';
     manualBadge.classList.remove('show');
   } else if (hasData) {
     statusDot.className = 'dot green';
@@ -739,7 +730,7 @@ function updateDisplay() {
   const displayDeg = Math.round(displayHeading);
   const dir = getDirection(displayHeading);
   
-  // Kompas display
+  // Kompas display - TEKS TERANG
   degDisplay.textContent = String(displayDeg).padStart(3, '0');
   
   if (isLocked) {
@@ -752,14 +743,14 @@ function updateDisplay() {
   
   dialGroup.setAttribute('transform', `rotate(${-displayHeading}, 200, 200)`);
   
-  // Info
+  // Info - TEKS TERANG
   infoAz.textContent = displayDeg + '° (' + dir.short + ')';
   
   const magStrength = Math.sqrt(rawMX*rawMX + rawMY*rawMY + rawMZ*rawMZ);
   infoMag.textContent = magStrength > 0 ? magStrength.toFixed(1) + ' µT' : '---';
   
   const delta = Math.abs(angleDiff(displayHeading, lastHeading));
-  infoAz.style.color = delta > 15 ? 'var(--red)' : delta > 5 ? 'var(--gold)' : 'var(--green)';
+  infoAz.style.color = delta > 15 ? '#ff1744' : delta > 5 ? '#ffab00' : '#ffffff';
   lastHeading = displayHeading;
   
   infoSensor.textContent = sensorSource + (currentLat ? ' 📡' : '');
@@ -822,8 +813,8 @@ function drawGraph() {
   const lastVal = history[(historyIndex - 1 + len) % len];
   const lastX = w - 2;
   const lastY = h/2 - (lastVal - 180) / 180 * (h/2 - 2);
-  ctx.fillStyle = 'var(--red)';
-  ctx.shadowColor = 'var(--red)';
+  ctx.fillStyle = '#ff1744';
+  ctx.shadowColor = '#ff1744';
   ctx.shadowBlur = 8;
   ctx.beginPath();
   ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
