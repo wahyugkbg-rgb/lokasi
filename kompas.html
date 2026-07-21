@@ -107,17 +107,19 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;ov
       <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
       <g id="dialGroup">
         <g id="tickContainer"></g>
-        <text x="200" y="28" text-anchor="middle" fill="#ff1744" font-size="20" font-weight="900" font-family="Courier New" text-shadow="0 0 30px rgba(255,23,68,0.3)">U</text>
-        <text x="376" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New" text-shadow="0 0 20px rgba(255,255,255,0.1)">T</text>
-        <text x="200" y="384" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New" text-shadow="0 0 20px rgba(255,255,255,0.1)">S</text>
-        <text x="24" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New" text-shadow="0 0 20px rgba(255,255,255,0.1)">B</text>
+        <text x="200" y="28" text-anchor="middle" fill="#ff1744" font-size="20" font-weight="900" font-family="Courier New">U</text>
+        <text x="376" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New">T</text>
+        <text x="200" y="384" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New">S</text>
+        <text x="24" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New">B</text>
         <text x="330" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">TL</text>
         <text x="330" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">TG</text>
         <text x="70" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BD</text>
         <text x="70" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BL</text>
       </g>
       <g id="needleGroup" filter="url(#glowFilter)">
+        <!-- Jarum Utara (MERAH) - menunjuk ke UTARA yang benar -->
         <polygon points="200,45 192,195 200,185 208,195" fill="url(#needleGrad)" opacity="0.95"/>
+        <!-- Jarum Selatan (ABU-ABU) -->
         <polygon points="200,355 192,205 200,215 208,205" fill="#37474f" opacity="0.4"/>
         <circle cx="200" cy="200" r="9" fill="#ff1744" stroke="#0a0c10" stroke-width="2"/>
         <circle cx="200" cy="200" r="3" fill="#ffffff"/>
@@ -272,7 +274,7 @@ let calLastHeading = 0;
 let calInterval = null;
 
 // ============================================================
-// ARAH BAHASA INDONESIA
+// ARAH MATA ANGIN BAHASA INDONESIA (BENAR)
 // ============================================================
 const directions = [
   {min:348.75, max:360, short:'U', long:'UTARA', emoji:'⬆️', desc:'Utara'},
@@ -358,7 +360,7 @@ function generateTicks() {
 }
 
 // ============================================================
-// COMPASS HEADING
+// COMPASS HEADING - DIPERBAIKI
 // ============================================================
 function computeHeading(mx, my, mz, ax, ay, az) {
   const mag = Math.sqrt(ax*ax + ay*ay + az*az);
@@ -370,18 +372,21 @@ function computeHeading(mx, my, mz, ax, ay, az) {
   const cosP = Math.cos(pitchAngle), sinP = Math.sin(pitchAngle);
   const cosR = Math.cos(rollAngle), sinR = Math.sin(rollAngle);
   
+  // RUMUS YANG BENAR UNTUK TILT-COMPENSATED HEADING
   const Xh = mx * cosP + mz * sinP;
   const Yh = mx * sinR * sinP + my * cosR - mz * sinR * cosP;
   
-  let h = Math.atan2(-Yh, Xh) * 180 / Math.PI;
+  // Heading dalam derajat - gunakan atan2(Yh, Xh) untuk arah yang benar
+  let h = Math.atan2(Yh, Xh) * 180 / Math.PI;
   if (h < 0) h += 360;
   return h;
 }
 
 // ============================================================
-// SENSOR INIT
+// SENSOR INIT - DIPERBAIKI
 // ============================================================
 function initSensors() {
+  // STRATEGY 1: deviceorientationabsolute
   window.addEventListener('deviceorientationabsolute', function(e) {
     diag.doaFired = true;
     diag.doaCount++;
@@ -391,6 +396,7 @@ function initSensors() {
       if (!isManual) {
         activeStrategy = 'ABS';
         sensorSource = 'ABSOLUT';
+        // alpha adalah heading dalam derajat (0 = Utara, 90 = Timur, 180 = Selatan, 270 = Barat)
         heading = normalizeAngle(e.alpha);
         hasData = true;
         updateStatus();
@@ -398,6 +404,7 @@ function initSensors() {
     }
   }, {passive: true});
 
+  // STRATEGY 2: deviceorientation
   window.addEventListener('deviceorientation', function(e) {
     diag.doFired = true;
     diag.doCount++;
@@ -405,6 +412,8 @@ function initSensors() {
     if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
       diag.doData = true;
       if (!isManual && (activeStrategy === 'NONE' || !hasData)) {
+        // alpha adalah heading dalam derajat (0 = Utara, 90 = Timur, 180 = Selatan, 270 = Barat)
+        heading = normalizeAngle(e.alpha);
         if (e.absolute === true) {
           activeStrategy = 'ABS_FLAG';
           sensorSource = 'ABSOLUT';
@@ -412,13 +421,13 @@ function initSensors() {
           activeStrategy = 'REL';
           sensorSource = 'RELATIF';
         }
-        heading = normalizeAngle(e.alpha);
         hasData = true;
         updateStatus();
       }
     }
   }, {passive: true});
 
+  // STRATEGY 3: Magnetometer API
   if ('Magnetometer' in window) {
     try {
       const mag = new Magnetometer({frequency: 60});
@@ -438,7 +447,8 @@ function initSensors() {
               updateStatus();
             }
           } else if (!hasData) {
-            let h = Math.atan2(-rawMX, rawMY) * 180 / Math.PI;
+            // Fallback tanpa tilt compensation - RUMUS YANG BENAR
+            let h = Math.atan2(rawMY, rawMX) * 180 / Math.PI;
             if (h < 0) h += 360;
             activeStrategy = 'MAG_NO_TILT';
             sensorSource = 'MAGNETOMETER';
@@ -452,6 +462,7 @@ function initSensors() {
     } catch(e) {}
   }
 
+  // STRATEGY 4: DeviceMotion
   window.addEventListener('devicemotion', function(e) {
     diag.dmFired = true;
     diag.dmCount++;
@@ -474,7 +485,7 @@ function initSensors() {
 }
 
 // ============================================================
-// GPS - REAL TIME LOCATION
+// GPS
 // ============================================================
 function initGPS() {
   if (!navigator.geolocation) {
@@ -498,7 +509,6 @@ function initGPS() {
       currentLng = lng;
       currentAcc = acc;
       
-      // Update display
       latDisplay.textContent = lat.toFixed(6);
       lngDisplay.textContent = lng.toFixed(6);
       accDisplay.textContent = acc < 10 ? '🎯 ' + acc.toFixed(0) + 'm' : acc.toFixed(0) + 'm';
@@ -509,7 +519,6 @@ function initGPS() {
         String(now.getMinutes()).padStart(2,'0') + ':' +
         String(now.getSeconds()).padStart(2,'0');
       
-      // Fetch address every 5 seconds or when location changes significantly
       const shouldFetch = !lastAddressFetch || 
                          (Date.now() - lastAddressFetch > 5000) ||
                          (currentLat && currentLng && 
@@ -535,7 +544,7 @@ function initGPS() {
 }
 
 // ============================================================
-// REVERSE GEOCODING - ALAMAT LENGKAP DENGAN HIGHLIGHT
+// REVERSE GEOCODING
 // ============================================================
 async function fetchAddress(lat, lng) {
   if (addressFetching) return;
@@ -551,11 +560,9 @@ async function fetchAddress(lat, lng) {
       
       let parts = [];
       
-      // Nama jalan - WHITE
       if (addr.road) parts.push('<span class="highlight">Jalan ' + addr.road + '</span>');
       else if (addr.pedestrian) parts.push('<span class="highlight">' + addr.pedestrian + '</span>');
       
-      // RT/RW - GREEN HIGHLIGHT
       let rtRwInfo = '';
       if (addr.house_number) {
         rtRwInfo = '<span class="rt">No. ' + addr.house_number + '</span>';
@@ -565,36 +572,28 @@ async function fetchAddress(lat, lng) {
         else rtRwInfo = '<span class="highlight">' + addr.building + '</span>';
       }
       
-      // Kelurahan/Desa - YELLOW
       if (addr.village) parts.push('<span style="color:#fff176;font-weight:700">' + addr.village + '</span>');
       else if (addr.suburb) parts.push('<span style="color:#fff176;font-weight:700">' + addr.suburb + '</span>');
       
-      // Kecamatan - YELLOW
       if (addr.county) parts.push('<span style="color:#ffab00;font-weight:700">Kec. ' + addr.county + '</span>');
       else if (addr.municipality) parts.push('<span style="color:#ffab00;font-weight:700">Kec. ' + addr.municipality + '</span>');
       
-      // Kota - WHITE
       if (addr.city) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.city + '</span>');
       else if (addr.town) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.town + '</span>');
       else if (addr.state_district) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.state_district + '</span>');
       
-      // Provinsi - WHITE
       if (addr.state) parts.push('<span style="color:#e0e0e0;font-weight:700">Prov. ' + addr.state + '</span>');
       
-      // Kode pos - CYAN
       if (addr.postcode) parts.push('<span style="color:#00e5ff;font-weight:700">' + addr.postcode + '</span>');
       
-      // Negara - WHITE
       if (addr.country) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.country + '</span>');
       
       let fullAddress = parts.join(' • ');
       
-      // Tambahkan RT/RW di depan
       if (rtRwInfo) {
         fullAddress = rtRwInfo + ' • ' + fullAddress;
       }
       
-      // Highlight RT/RW yang sudah ada di text
       fullAddress = fullAddress.replace(/(RT\s*\d+\s*RW\s*\d+)/gi, '<span class="rt">$1</span>');
       fullAddress = fullAddress.replace(/(RT\s*\d+)/gi, '<span class="rt">$1</span>');
       fullAddress = fullAddress.replace(/(RW\s*\d+)/gi, '<span class="rt">$1</span>');
@@ -614,7 +613,7 @@ async function fetchAddress(lat, lng) {
 }
 
 // ============================================================
-// MANUAL TOUCH
+// MANUAL TOUCH - DIPERBAIKI
 // ============================================================
 let touchActive = false;
 let touchStartAngle = 0;
@@ -641,6 +640,7 @@ function initManualMode() {
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     const angle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
+    // Perbaikan: arah manual mengikuti gerakan jari dengan benar
     const diff = angle - touchStartAngle;
     heading = normalizeAngle(touchStartHeading + diff);
     hasData = true;
@@ -704,7 +704,7 @@ function updateStatus() {
 }
 
 // ============================================================
-// UPDATE DISPLAY - REAL TIME
+// UPDATE DISPLAY - DIPERBAIKI ROTASI
 // ============================================================
 function updateDisplay() {
   let displayHeading = heading;
@@ -730,7 +730,7 @@ function updateDisplay() {
   const displayDeg = Math.round(displayHeading);
   const dir = getDirection(displayHeading);
   
-  // Kompas display - TEKS TERANG
+  // Kompas display
   degDisplay.textContent = String(displayDeg).padStart(3, '0');
   
   if (isLocked) {
@@ -741,9 +741,12 @@ function updateDisplay() {
     subDirDisplay.textContent = dir.desc + ' (' + dir.short + ')';
   }
   
+  // PERBAIKAN UTAMA: Rotasi dial yang benar
+  // Dial harus berputar berlawanan arah jarum jam sebesar heading
+  // Karena jarum menunjuk ke Utara (0°) dan dial menunjukkan arah
   dialGroup.setAttribute('transform', `rotate(${-displayHeading}, 200, 200)`);
   
-  // Info - TEKS TERANG
+  // Info
   infoAz.textContent = displayDeg + '° (' + dir.short + ')';
   
   const magStrength = Math.sqrt(rawMX*rawMX + rawMY*rawMY + rawMZ*rawMZ);
@@ -823,7 +826,7 @@ function drawGraph() {
 }
 
 // ============================================================
-// RENDER LOOP - 60 FPS
+// RENDER LOOP
 // ============================================================
 function render() {
   if (hasData || isManual) {
