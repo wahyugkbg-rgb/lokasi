@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Kompas Futuristik OPPO A9</title>
+    <title>Kompas 8 Mata Angin - OPPO A9</title>
 
     <!-- Font & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
@@ -23,20 +23,19 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 12px;
+            padding: 10px;
         }
 
         .container {
-            max-width: 460px;
+            max-width: 480px;
             width: 100%;
-            background: rgba(10, 14, 30, 0.65);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(0, 255, 255, 0.25);
+            background: rgba(10, 14, 30, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.2);
             border-radius: 48px 48px 32px 32px;
-            padding: 24px 20px 28px;
-            box-shadow: 0 20px 60px rgba(0, 180, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
-            transition: all 0.2s;
+            padding: 20px 16px 24px;
+            box-shadow: 0 20px 60px rgba(0, 180, 255, 0.15), inset 0 0 30px rgba(0, 255, 255, 0.05);
         }
 
         /* HEADER */
@@ -44,87 +43,83 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+            margin-bottom: 12px;
         }
         .header h1 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 900;
             background: linear-gradient(135deg, #00f0ff, #a855f7);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: 2px;
         }
-        .header i {
+        .header h1 i {
+            -webkit-text-fill-color: initial;
             color: #00f0ff;
-            font-size: 22px;
-            filter: drop-shadow(0 0 8px #00f0ff);
+            margin-right: 6px;
+        }
+        .header .status-dot {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: #4ade80;
+        }
+        .header .status-dot i {
+            font-size: 12px;
         }
 
-        /* KOMPAS */
+        /* KOMPAS UTAMA */
         .compass-wrapper {
             position: relative;
             width: 100%;
             aspect-ratio: 1/1;
-            max-width: 340px;
-            margin: 0 auto 10px;
+            max-width: 350px;
+            margin: 0 auto 8px;
         }
 
         .compass-ring {
             position: absolute;
             inset: 0;
             border-radius: 50%;
-            border: 3px solid rgba(0, 255, 255, 0.5);
-            box-shadow: 0 0 40px rgba(0, 180, 255, 0.25), inset 0 0 40px rgba(0, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 50px rgba(0, 180, 255, 0.15), inset 0 0 40px rgba(0, 255, 255, 0.05);
             background: radial-gradient(circle at 30% 30%, #12162b, #070a14);
         }
 
-        .compass-ring::after {
-            content: '';
+        /* 8 MATA ANGIN pada ring */
+        .wind-rose {
             position: absolute;
             inset: 8px;
             border-radius: 50%;
-            border: 1px dashed rgba(0, 255, 255, 0.2);
         }
-
-        /* Skala derajat */
-        .degree-marks {
+        .wind-rose .dir-label {
             position: absolute;
-            inset: 12px;
-            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.3);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+            transform-origin: center;
+            transition: all 0.3s;
         }
-        .degree-marks span {
-            position: absolute;
-            left: 50%;
-            top: -6px;
-            transform-origin: bottom center;
-            font-size: 11px;
-            font-weight: 700;
-            color: rgba(0, 255, 255, 0.7);
-            text-shadow: 0 0 10px #00f0ff;
-            width: 20px;
-            margin-left: -10px;
-            text-align: center;
+        .wind-rose .dir-label.active {
+            color: #00f0ff;
+            text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff;
+            transform: scale(1.2);
         }
-        .degree-marks span::before {
-            content: '';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 2px;
-            height: 10px;
-            background: rgba(0, 255, 255, 0.3);
+        .wind-rose .dir-label.primary {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
         }
-        .degree-marks span:nth-child(4n)::before { height: 16px; background: #00f0ff; }
 
         /* Jarum */
         .needle-container {
             position: absolute;
-            inset: 30px;
+            inset: 28px;
             border-radius: 50%;
-            transition: transform 0.08s linear;
+            transition: transform 0.05s linear;
             will-change: transform;
         }
 
@@ -132,125 +127,174 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 6px;
-            height: 50%;
+            width: 5px;
+            height: 48%;
             transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg);
-            border-radius: 12px;
+            border-radius: 10px;
             background: linear-gradient(to top, #ff2d75, #ff6b9d);
-            box-shadow: 0 0 30px #ff2d75, 0 0 60px rgba(255, 45, 117, 0.4);
+            box-shadow: 0 0 30px #ff2d75, 0 0 60px rgba(255, 45, 117, 0.3);
             z-index: 10;
             transition: transform 0.05s linear;
         }
         .needle::after {
             content: '';
             position: absolute;
-            top: -16px;
+            top: -14px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-bottom: 20px solid #ff2d75;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 18px solid #ff2d75;
             filter: drop-shadow(0 0 20px #ff2d75);
         }
-        /* Jarum selatan (putih) */
         .needle-south {
-            height: 40%;
+            height: 38%;
             background: linear-gradient(to top, #a0aec0, #e2e8f0);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
             top: 50%;
             transform-origin: top center;
             transform: translate(-50%, 0%) rotate(0deg);
-            border-radius: 12px;
+            border-radius: 10px;
         }
-        .needle-south::after {
-            display: none;
-        }
+        .needle-south::after { display: none; }
 
-        /* Center dot */
         .center-dot {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: radial-gradient(circle, #00f0ff, #0070a0);
-            box-shadow: 0 0 30px #00f0ff;
+            box-shadow: 0 0 30px #00f0ff, 0 0 60px rgba(0, 240, 255, 0.3);
             z-index: 20;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* Info arah (angka) */
-        .direction-text {
+        /* ARAH UTAMA (besar) */
+        .direction-main {
             text-align: center;
-            font-size: 28px;
+            margin: -4px 0 2px;
+        }
+        .direction-main .angle {
+            font-size: 32px;
             font-weight: 900;
             color: #00f0ff;
             text-shadow: 0 0 30px #00f0ff, 0 0 60px #00a0ff;
-            letter-spacing: 4px;
-            margin-top: -10px;
+            letter-spacing: 2px;
         }
-        .direction-text small {
-            font-size: 14px;
+        .direction-main .dir-name {
+            font-size: 18px;
+            font-weight: 700;
             color: #a855f7;
             text-shadow: 0 0 20px #a855f7;
-            margin-left: 10px;
+            margin-left: 12px;
         }
 
-        /* Tombol aksi */
+        /* 8 MATA ANGIN (horizontal) */
+        .windrose-horizontal {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 4px;
+            margin: 4px 0 10px;
+            background: rgba(0, 255, 255, 0.04);
+            border-radius: 30px;
+            border: 1px solid rgba(0, 255, 255, 0.08);
+        }
+        .windrose-horizontal .wd {
+            text-align: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.25);
+            padding: 4px 2px;
+            flex: 1;
+            transition: all 0.3s;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+        .windrose-horizontal .wd i {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 2px;
+            color: rgba(255, 255, 255, 0.15);
+        }
+        .windrose-horizontal .wd.active {
+            color: #00f0ff;
+            background: rgba(0, 255, 255, 0.1);
+            text-shadow: 0 0 20px #00f0ff;
+        }
+        .windrose-horizontal .wd.active i {
+            color: #00f0ff;
+        }
+        .windrose-horizontal .wd.primary-active {
+            color: #facc15;
+            background: rgba(250, 204, 21, 0.12);
+            text-shadow: 0 0 20px #facc15;
+        }
+        .windrose-horizontal .wd.primary-active i {
+            color: #facc15;
+        }
+
+        /* TOMBOL */
         .actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
-            margin: 16px 0 12px;
+            margin: 10px 0 8px;
         }
         .actions button {
-            background: rgba(0, 255, 255, 0.08);
+            background: rgba(0, 255, 255, 0.06);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            border-radius: 40px;
-            padding: 10px 16px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 30px;
+            padding: 8px 14px;
             font-family: 'Orbitron', sans-serif;
             font-weight: 700;
-            font-size: 11px;
-            color: #e0f0ff;
+            font-size: 10px;
+            color: #c0d0e0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             transition: 0.25s;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.05);
             flex: 1 0 auto;
             justify-content: center;
             cursor: pointer;
+            min-height: 40px;
         }
         .actions button i {
             color: #00f0ff;
-            font-size: 14px;
+            font-size: 13px;
         }
         .actions button.active {
-            background: rgba(0, 255, 255, 0.2);
+            background: rgba(0, 255, 255, 0.15);
             border-color: #00f0ff;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
         }
         .actions button:active { transform: scale(0.95); }
+        .actions button.btn-danger.active {
+            border-color: #ff2d75;
+            background: rgba(255, 45, 117, 0.15);
+            box-shadow: 0 0 25px rgba(255, 45, 117, 0.2);
+        }
 
-        /* Slider manual */
+        /* SLIDER MANUAL */
         .manual-slider {
             width: 100%;
-            margin: 6px 0 10px;
-            display: flex;
+            margin: 4px 0 8px;
+            display: none;
             align-items: center;
-            gap: 14px;
-            padding: 0 4px;
+            gap: 12px;
+            padding: 0 2px;
         }
         .manual-slider input[type="range"] {
             flex: 1;
-            height: 6px;
+            height: 5px;
             -webkit-appearance: none;
             background: linear-gradient(90deg, #00f0ff, #a855f7);
             border-radius: 20px;
@@ -258,8 +302,8 @@
         }
         .manual-slider input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: radial-gradient(circle, #00f0ff, #0080aa);
             cursor: pointer;
@@ -269,38 +313,38 @@
         .manual-slider span {
             color: #a855f7;
             font-weight: 700;
-            font-size: 14px;
-            min-width: 50px;
+            font-size: 13px;
+            min-width: 44px;
             text-shadow: 0 0 15px #a855f7;
         }
 
-        /* Info posisi & suhu */
+        /* INFO */
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin: 14px 0 8px;
+            gap: 10px;
+            margin: 10px 0 6px;
         }
         .info-card {
-            background: rgba(0, 255, 255, 0.04);
-            border: 1px solid rgba(0, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 12px 12px;
+            background: rgba(0, 255, 255, 0.03);
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 10px 10px;
             backdrop-filter: blur(4px);
         }
         .info-card .label {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             color: #64748b;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
         }
         .info-card .value {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: #b0e0ff;
             word-break: break-word;
-            text-shadow: 0 0 12px rgba(0, 200, 255, 0.3);
+            text-shadow: 0 0 12px rgba(0, 200, 255, 0.2);
             margin-top: 2px;
             line-height: 1.3;
         }
@@ -312,50 +356,49 @@
             grid-column: 1 / -1;
         }
 
-        /* Status kalibrasi */
         .calib-status {
             text-align: center;
-            font-size: 11px;
+            font-size: 10px;
             color: #94a3b8;
-            margin-top: 6px;
-            letter-spacing: 1px;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
         }
         .calib-status i {
+            margin-right: 5px;
+        }
+        .calib-status .highlight {
             color: #facc15;
-            margin-right: 6px;
         }
 
-        /* animasi pulse */
-        .pulse {
-            animation: pulseGlow 2s infinite;
-        }
-        @keyframes pulseGlow {
-            0% { opacity: 0.7; text-shadow: 0 0 10px #00f0ff; }
-            50% { opacity: 1; text-shadow: 0 0 30px #00f0ff, 0 0 60px #a855f7; }
-            100% { opacity: 0.7; text-shadow: 0 0 10px #00f0ff; }
-        }
-
-        /* responsif */
         @media (max-width: 400px) {
-            .container { padding: 16px 12px; }
-            .actions button { font-size: 9px; padding: 8px 10px; }
-            .info-card .value { font-size: 12px; }
+            .container { padding: 12px 10px; }
+            .actions button { font-size: 9px; padding: 6px 10px; min-height: 34px; }
+            .info-card .value { font-size: 11px; }
+            .direction-main .angle { font-size: 26px; }
+            .windrose-horizontal .wd { font-size: 8px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container" id="app">
-    <!-- Header -->
+    <!-- HEADER -->
     <div class="header">
-        <h1><i class="fas fa-satellite" style="margin-right:8px;"></i> AZIMUTH</h1>
-        <i class="fas fa-bolt"></i>
+        <h1><i class="fas fa-compass"></i> AZIMUTH</h1>
+        <div class="status-dot">
+            <i class="fas fa-circle" style="color:#4ade80;"></i>
+            <span>LIVE</span>
+        </div>
     </div>
 
-    <!-- Kompas -->
+    <!-- KOMPAS -->
     <div class="compass-wrapper">
         <div class="compass-ring"></div>
-        <div class="degree-marks" id="degreeMarks"></div>
+
+        <!-- 8 Mata Angin di Ring -->
+        <div class="wind-rose" id="windRose">
+            <!-- diisi JS -->
+        </div>
 
         <div class="needle-container" id="needleContainer">
             <div class="needle" id="needleNorth"></div>
@@ -364,25 +407,33 @@
         <div class="center-dot"></div>
     </div>
 
-    <div class="direction-text" id="directionText">
-        0° <small>UTARA</small>
+    <!-- ARAH UTAMA -->
+    <div class="direction-main">
+        <span class="angle" id="mainAngle">0°</span>
+        <span class="dir-name" id="mainDirName">UTARA</span>
     </div>
 
-    <!-- Tombol aksi -->
+    <!-- 8 MATA ANGIN HORIZONTAL -->
+    <div class="windrose-horizontal" id="windroseHorizontal">
+        <!-- diisi JS -->
+    </div>
+
+    <!-- TOMBOL -->
     <div class="actions">
         <button id="btnCalibrate"><i class="fas fa-sync-alt"></i> Kalibrasi</button>
         <button id="btnLock" class=""><i class="fas fa-lock"></i> Lock</button>
         <button id="btnManualToggle"><i class="fas fa-sliders-h"></i> Manual</button>
+        <button id="btnReset" class=""><i class="fas fa-undo"></i> Reset</button>
     </div>
 
-    <!-- Slider manual -->
-    <div class="manual-slider" id="manualSlider" style="display:none;">
-        <i class="fas fa-undo-alt" style="color:#00f0ff;"></i>
+    <!-- SLIDER MANUAL -->
+    <div class="manual-slider" id="manualSlider">
+        <i class="fas fa-arrow-left" style="color:#00f0ff; font-size:12px;"></i>
         <input type="range" id="manualAngle" min="0" max="360" value="0" step="0.5" />
         <span id="manualAngleDisplay">0°</span>
     </div>
 
-    <!-- Info Grid -->
+    <!-- INFO -->
     <div class="info-grid">
         <div class="info-card">
             <div class="label"><i class="fas fa-map-pin"></i> Koordinat</div>
@@ -394,317 +445,355 @@
         </div>
         <div class="info-card full">
             <div class="label"><i class="fas fa-location-dot"></i> Alamat</div>
-            <div class="value" id="addressDisplay">Jl. Contoh No. 123, RT 01/RW 02, Kel. Pusat, Kec. Kota, Jakarta</div>
+            <div class="value" id="addressDisplay">Jl. Contoh No. 123, RT 01/RW 02</div>
         </div>
     </div>
 
     <div class="calib-status" id="calibStatus">
-        <i class="fas fa-circle-check"></i> Siap · GPS aktif
+        <i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif
     </div>
 </div>
 
 <script>
-    (function() {
-        // ---------- DOM refs ----------
-        const needleContainer = document.getElementById('needleContainer');
-        const needleNorth = document.getElementById('needleNorth');
-        const needleSouth = document.getElementById('needleSouth');
-        const directionText = document.getElementById('directionText');
-        const coordDisplay = document.getElementById('coordDisplay');
-        const tempDisplay = document.getElementById('tempDisplay');
-        const addressDisplay = document.getElementById('addressDisplay');
-        const calibStatus = document.getElementById('calibStatus');
+(function() {
+    // ---------- DOM ----------
+    const needleContainer = document.getElementById('needleContainer');
+    const needleNorth = document.getElementById('needleNorth');
+    const needleSouth = document.getElementById('needleSouth');
+    const mainAngle = document.getElementById('mainAngle');
+    const mainDirName = document.getElementById('mainDirName');
+    const coordDisplay = document.getElementById('coordDisplay');
+    const tempDisplay = document.getElementById('tempDisplay');
+    const addressDisplay = document.getElementById('addressDisplay');
+    const calibStatus = document.getElementById('calibStatus');
+    const windRose = document.getElementById('windRose');
+    const windroseHorizontal = document.getElementById('windroseHorizontal');
 
-        const btnCalibrate = document.getElementById('btnCalibrate');
-        const btnLock = document.getElementById('btnLock');
-        const btnManualToggle = document.getElementById('btnManualToggle');
-        const manualSlider = document.getElementById('manualSlider');
-        const manualAngle = document.getElementById('manualAngle');
-        const manualAngleDisplay = document.getElementById('manualAngleDisplay');
+    const btnCalibrate = document.getElementById('btnCalibrate');
+    const btnLock = document.getElementById('btnLock');
+    const btnManualToggle = document.getElementById('btnManualToggle');
+    const btnReset = document.getElementById('btnReset');
+    const manualSlider = document.getElementById('manualSlider');
+    const manualAngle = document.getElementById('manualAngle');
+    const manualAngleDisplay = document.getElementById('manualAngleDisplay');
 
-        // ---------- State ----------
-        let currentHeading = 0;              // derajat 0-360
-        let targetHeading = 0;
-        let isLocked = false;
-        let lockedBearing = 0;
-        let isManual = false;
-        let manualValue = 0;
-        let isCalibrating = false;
+    // ---------- DATA MATA ANGIN ----------
+    const WINDS = [
+        { name: 'U', full: 'UTARA', angle: 0, icon: 'fa-arrow-up' },
+        { name: 'TL', full: 'TIMUR LAUT', angle: 45, icon: 'fa-arrow-up-right' },
+        { name: 'T', full: 'TIMUR', angle: 90, icon: 'fa-arrow-right' },
+        { name: 'TG', full: 'TENGGARA', angle: 135, icon: 'fa-arrow-down-right' },
+        { name: 'S', full: 'SELATAN', angle: 180, icon: 'fa-arrow-down' },
+        { name: 'BD', full: 'BARAT DAYA', angle: 225, icon: 'fa-arrow-down-left' },
+        { name: 'B', full: 'BARAT', angle: 270, icon: 'fa-arrow-left' },
+        { name: 'BL', full: 'BARAT LAUT', angle: 315, icon: 'fa-arrow-up-left' }
+    ];
 
-        // GPS
-        let watchId = null;
-        let lastCoords = { lat: -6.2088, lng: 106.8456 };
+    // ---------- STATE ----------
+    let currentHeading = 0;
+    let targetHeading = 0;
+    let isLocked = false;
+    let lockedBearing = 0;
+    let isManual = false;
+    let manualValue = 0;
+    let isCalibrating = false;
 
-        // API Key OpenWeatherMap (ganti dengan key Anda, atau gunakan mock)
-        const WEATHER_API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // ganti dengan key asli
+    let lastCoords = { lat: -6.2088, lng: 106.8456 };
+    let watchId = null;
 
-        // ---------- Generate degree marks ----------
-        (function buildMarks() {
-            const container = document.getElementById('degreeMarks');
-            for (let i = 0; i < 36; i++) {
-                const angle = i * 10;
-                const span = document.createElement('span');
-                span.textContent = angle;
-                span.style.transform = `rotate(${angle}deg) translateY(-32px)`;
-                container.appendChild(span);
+    // ---------- BUILD WIND ROSE (di ring) ----------
+    function buildWindRose() {
+        windRose.innerHTML = '';
+        WINDS.forEach(w => {
+            const div = document.createElement('div');
+            div.className = 'dir-label primary';
+            div.dataset.angle = w.angle;
+            div.dataset.name = w.name;
+            div.textContent = w.name;
+            // posisi di lingkaran
+            const rad = (w.angle - 90) * Math.PI / 180;
+            const r = 42; // persen
+            const cx = 50 + r * Math.cos(rad);
+            const cy = 50 + r * Math.sin(rad);
+            div.style.left = `calc(${cx}% - 10px)`;
+            div.style.top = `calc(${cy}% - 10px)`;
+            div.style.transform = 'translate(-50%, -50%)';
+            windRose.appendChild(div);
+        });
+    }
+    buildWindRose();
+
+    // ---------- BUILD HORIZONTAL 8 MATA ANGIN ----------
+    function buildHorizontal() {
+        windroseHorizontal.innerHTML = '';
+        WINDS.forEach(w => {
+            const div = document.createElement('div');
+            div.className = 'wd';
+            div.dataset.angle = w.angle;
+            div.dataset.name = w.name;
+            div.innerHTML = `<i class="fas ${w.icon}"></i>${w.name}`;
+            windroseHorizontal.appendChild(div);
+        });
+    }
+    buildHorizontal();
+
+    // ---------- UPDATE MATA ANGIN ----------
+    function updateWindRose(deg) {
+        // Cari arah terdekat
+        let minDiff = 999;
+        let closest = WINDS[0];
+        WINDS.forEach(w => {
+            let diff = Math.abs(deg - w.angle);
+            if (diff > 180) diff = 360 - diff;
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = w;
             }
-        })();
+        });
 
-        // ---------- Helper: update jarum ----------
-        function updateNeedle(deg) {
-            // deg = 0 = utara (atas)
-            const rotateDeg = deg;
-            needleNorth.style.transform = `translate(-50%, -100%) rotate(${rotateDeg}deg)`;
-            needleSouth.style.transform = `translate(-50%, 0%) rotate(${rotateDeg}deg)`;
-            // update teks
-            const dir = getDirection(deg);
-            directionText.innerHTML = `${Math.round(deg)}° <small>${dir}</small>`;
+        // Update ring labels
+        const labels = windRose.querySelectorAll('.dir-label');
+        labels.forEach(el => {
+            const a = parseFloat(el.dataset.angle);
+            let diff = Math.abs(deg - a);
+            if (diff > 180) diff = 360 - diff;
+            el.classList.toggle('active', diff < 25);
+        });
+
+        // Update horizontal
+        const items = windroseHorizontal.querySelectorAll('.wd');
+        items.forEach(el => {
+            const a = parseFloat(el.dataset.angle);
+            let diff = Math.abs(deg - a);
+            if (diff > 180) diff = 360 - diff;
+            el.classList.toggle('active', diff < 25);
+            el.classList.toggle('primary-active', diff < 12);
+        });
+
+        // Update teks utama
+        mainAngle.textContent = `${Math.round(deg)}°`;
+        mainDirName.textContent = closest.full;
+    }
+
+    // ---------- UPDATE NEEDLE ----------
+    function updateNeedle(deg) {
+        const rotateDeg = deg;
+        needleNorth.style.transform = `translate(-50%, -100%) rotate(${rotateDeg}deg)`;
+        needleSouth.style.transform = `translate(-50%, 0%) rotate(${rotateDeg}deg)`;
+        updateWindRose(deg);
+    }
+
+    // ---------- SET HEADING ----------
+    function setHeading(deg) {
+        targetHeading = ((deg % 360) + 360) % 360;
+        if (!isManual && !isLocked) {
+            currentHeading = targetHeading;
+            updateNeedle(currentHeading);
+        } else if (isLocked) {
+            updateNeedle(lockedBearing);
         }
+    }
 
-        function getDirection(deg) {
-            const dirs = ['UTARA', 'TIMUR LAUT', 'TIMUR', 'TENGGARA', 'SELATAN', 'BARAT DAYA', 'BARAT', 'BARAT LAUT'];
-            const idx = Math.round(((deg % 360) / 45)) % 8;
-            return dirs[idx];
+    // ---------- ANIMASI LOOP (smooth) ----------
+    function animateLoop() {
+        if (!isManual && !isLocked) {
+            let diff = targetHeading - currentHeading;
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
+            currentHeading += diff * 0.2;
+            if (Math.abs(diff) < 0.1) currentHeading = targetHeading;
+            currentHeading = ((currentHeading % 360) + 360) % 360;
+            updateNeedle(currentHeading);
+        } else if (isLocked) {
+            updateNeedle(lockedBearing);
+        } else if (isManual) {
+            updateNeedle(manualValue);
         }
+        requestAnimationFrame(animateLoop);
+    }
+    animateLoop();
 
-        // ---------- Set heading (dengan smoothing) ----------
-        function setHeading(deg) {
-            targetHeading = deg % 360;
-            if (targetHeading < 0) targetHeading += 360;
-            if (!isManual && !isLocked) {
-                currentHeading = targetHeading;
-                updateNeedle(currentHeading);
-            } else if (isLocked) {
-                // locked: tetap di lockedBearing
-                updateNeedle(lockedBearing);
-            }
+    // ---------- SENSOR ORIENTASI ----------
+    function handleOrientation(event) {
+        if (isCalibrating || isManual || isLocked) return;
+        let alpha = event.alpha || 0;
+        if (event.webkitCompassHeading !== undefined) {
+            alpha = event.webkitCompassHeading;
         }
-
-        // ---------- Loop animasi (smooth) ----------
-        function animateLoop() {
-            if (!isManual && !isLocked) {
-                // smooth follow
-                let diff = targetHeading - currentHeading;
-                if (diff > 180) diff -= 360;
-                if (diff < -180) diff += 360;
-                currentHeading += diff * 0.25; // smoothing
-                if (Math.abs(diff) < 0.1) currentHeading = targetHeading;
-                currentHeading = ((currentHeading % 360) + 360) % 360;
-                updateNeedle(currentHeading);
-            } else if (isLocked) {
-                updateNeedle(lockedBearing);
-            } else if (isManual) {
-                updateNeedle(manualValue);
-            }
-            requestAnimationFrame(animateLoop);
+        if (alpha === null || isNaN(alpha)) {
+            if (lastCoords.course) alpha = lastCoords.course;
+            else alpha = 0;
         }
-        animateLoop();
+        setHeading(alpha);
+    }
 
-        // ---------- Sensor: Device Orientation ----------
-        function handleOrientation(event) {
-            if (isCalibrating) return;
-            if (isManual) return;
-            if (isLocked) return;
+    if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+    } else {
+        calibStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> Sensor tidak tersedia';
+    }
 
-            let alpha = event.alpha || 0; // 0-360, arah kompas
-            // pada OPPO A9 (Android) biasanya alpha sudah kompas
-            // webkitCompassHeading untuk iOS, tapi kita pakai alpha
-            if (event.webkitCompassHeading !== undefined) {
-                alpha = event.webkitCompassHeading;
-            }
-            // Jika alpha null, gunakan GPS heading (jika ada)
-            if (alpha === null || isNaN(alpha)) {
-                // fallback ke GPS course
-                if (lastCoords.course !== undefined && lastCoords.course !== null) {
-                    alpha = lastCoords.course;
+    // ---------- GPS ----------
+    function updatePosition(pos) {
+        const coords = pos.coords;
+        lastCoords = {
+            lat: coords.latitude,
+            lng: coords.longitude,
+            course: coords.heading || null
+        };
+        coordDisplay.textContent = `${lastCoords.lat.toFixed(5)}, ${lastCoords.lng.toFixed(5)}`;
+
+        // Reverse geocoding
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lastCoords.lat}&lon=${lastCoords.lng}&zoom=18&addressdetails=1`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.address) {
+                    const a = data.address;
+                    const road = a.road || a.pedestrian || '';
+                    const suburb = a.suburb || a.neighbourhood || '';
+                    const rt = a.rt || '';
+                    const rw = a.rw || '';
+                    const city = a.city || a.town || a.village || a.municipality || '';
+                    let parts = [];
+                    if (road) parts.push(road);
+                    if (suburb) parts.push(suburb);
+                    if (rt || rw) parts.push(`RT ${rt || '--'}/RW ${rw || '--'}`);
+                    if (city) parts.push(city);
+                    addressDisplay.textContent = parts.join(', ') || data.display_name || 'Alamat tidak ditemukan';
                 } else {
-                    alpha = 0;
+                    addressDisplay.textContent = 'Alamat tidak ditemukan';
                 }
-            }
-            setHeading(alpha);
-        }
+            })
+            .catch(() => { addressDisplay.textContent = 'Gagal reverse geocode'; });
 
-        // Cek dukungan sensor
-        if (window.DeviceOrientationEvent) {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-        } else {
-            calibStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> Sensor tidak tersedia, gunakan GPS course';
-        }
+        // Suhu (mock karena tanpa API key)
+        const mockTemp = (27 + Math.random() * 6).toFixed(1);
+        tempDisplay.textContent = `${mockTemp} °C`;
+    }
 
-        // ---------- GPS Position ----------
-        function updatePosition(pos) {
-            const coords = pos.coords;
-            lastCoords = {
-                lat: coords.latitude,
-                lng: coords.longitude,
-                course: coords.heading || null
-            };
-            coordDisplay.textContent = `${lastCoords.lat.toFixed(5)}, ${lastCoords.lng.toFixed(5)}`;
+    if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(updatePosition, (e) => {
+            calibStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> GPS error: ${e.message}`;
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
+    }
 
-            // Reverse geocoding (Nominatim)
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lastCoords.lat}&lon=${lastCoords.lng}&zoom=18&addressdetails=1`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.display_name) {
-                        let addr = data.display_name;
-                        // coba ekstrak RT/RW
-                        const road = data.address?.road || '';
-                        const suburb = data.address?.suburb || '';
-                        const city = data.address?.city || data.address?.town || data.address?.village || '';
-                        const rt = data.address?.rt || '';
-                        const rw = data.address?.rw || '';
-                        let detail = `${road}, ${suburb}`;
-                        if (rt || rw) detail += `, RT ${rt || '--'}/RW ${rw || '--'}`;
-                        if (city) detail += `, ${city}`;
-                        addressDisplay.textContent = detail || addr;
-                    } else {
-                        addressDisplay.textContent = 'Alamat tidak ditemukan';
-                    }
-                })
-                .catch(() => {
-                    addressDisplay.textContent = 'Gagal reverse geocode';
-                });
-
-            // Suhu dari OpenWeatherMap
-            if (WEATHER_API_KEY && WEATHER_API_KEY !== 'YOUR_OPENWEATHER_API_KEY') {
-                fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lastCoords.lat}&lon=${lastCoords.lng}&appid=${WEATHER_API_KEY}&units=metric`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.main && data.main.temp !== undefined) {
-                            tempDisplay.textContent = `${data.main.temp.toFixed(1)} °C`;
-                        }
-                    })
-                    .catch(() => {});
-            } else {
-                // Mock suhu (karena tidak ada API key)
-                const mockTemp = (28 + Math.random() * 5).toFixed(1);
-                tempDisplay.textContent = `${mockTemp} °C`;
-            }
-        }
-
-        function gpsError(err) {
-            calibStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> GPS error: ${err.message}`;
-        }
-
-        if (navigator.geolocation) {
-            watchId = navigator.geolocation.watchPosition(updatePosition, gpsError, {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 5000
-            });
-        } else {
-            calibStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> GPS tidak didukung';
-        }
-
-        // ---------- Kalibrasi ----------
-        btnCalibrate.addEventListener('click', function() {
-            if (isCalibrating) return;
-            isCalibrating = true;
-            calibStatus.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#facc15;"></i> Kalibrasi: gerakkan HP membentuk angka 8...';
-            let count = 0;
-            // Simulasi kalibrasi: setelah 5 detik selesai
-            const interval = setInterval(() => {
-                count++;
-                if (count >= 5) {
-                    clearInterval(interval);
-                    isCalibrating = false;
-                    calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Kalibrasi selesai';
-                    // Reset lock/manual
-                    isLocked = false;
-                    isManual = false;
-                    manualSlider.style.display = 'none';
-                    btnLock.classList.remove('active');
-                    // forced refresh heading
-                    if (window.DeviceOrientationEvent) {
-                        // trigger ulang
-                    }
-                    setTimeout(() => {
-                        calibStatus.innerHTML = '<i class="fas fa-circle-check"></i> Siap · GPS aktif';
-                    }, 2000);
-                }
-            }, 1000);
-        });
-
-        // ---------- Lock ----------
-        btnLock.addEventListener('click', function() {
-            if (isCalibrating) return;
-            isLocked = !isLocked;
-            if (isLocked) {
-                lockedBearing = currentHeading;
-                btnLock.classList.add('active');
-                btnLock.innerHTML = '<i class="fas fa-lock-open"></i> Unlock';
-                calibStatus.innerHTML = `<i class="fas fa-lock" style="color:#facc15;"></i> Locked: ${Math.round(lockedBearing)}°`;
-                if (isManual) {
-                    isManual = false;
-                    manualSlider.style.display = 'none';
-                    btnManualToggle.classList.remove('active');
-                }
-            } else {
+    // ---------- KALIBRASI ----------
+    btnCalibrate.addEventListener('click', function() {
+        if (isCalibrating) return;
+        isCalibrating = true;
+        calibStatus.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#facc15;"></i> Kalibrasi: gerakkan HP angka 8...';
+        let count = 0;
+        const interval = setInterval(() => {
+            count++;
+            if (count >= 5) {
+                clearInterval(interval);
+                isCalibrating = false;
+                calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Kalibrasi selesai';
+                isLocked = false;
+                isManual = false;
+                manualSlider.style.display = 'none';
                 btnLock.classList.remove('active');
+                btnManualToggle.classList.remove('active');
                 btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
-                calibStatus.innerHTML = '<i class="fas fa-circle-check"></i> Siap · GPS aktif';
+                btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
+                setTimeout(() => {
+                    calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
+                }, 1500);
             }
-        });
+        }, 1000);
+    });
 
-        // ---------- Manual Toggle ----------
-        btnManualToggle.addEventListener('click', function() {
-            if (isCalibrating) return;
-            isManual = !isManual;
+    // ---------- LOCK ----------
+    btnLock.addEventListener('click', function() {
+        if (isCalibrating) return;
+        isLocked = !isLocked;
+        if (isLocked) {
+            lockedBearing = currentHeading;
+            btnLock.classList.add('active');
+            btnLock.innerHTML = '<i class="fas fa-lock-open"></i> Unlock';
+            calibStatus.innerHTML = `<i class="fas fa-lock" style="color:#facc15;"></i> Locked: ${Math.round(lockedBearing)}°`;
             if (isManual) {
-                manualSlider.style.display = 'flex';
-                btnManualToggle.classList.add('active');
-                btnManualToggle.innerHTML = '<i class="fas fa-check"></i> Manual ON';
-                // jika lock aktif, nonaktifkan lock
-                if (isLocked) {
-                    isLocked = false;
-                    btnLock.classList.remove('active');
-                    btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
-                }
-                // set slider ke heading saat ini
-                manualValue = currentHeading;
-                manualAngle.value = manualValue;
-                manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
-                updateNeedle(manualValue);
-                calibStatus.innerHTML = '<i class="fas fa-sliders-h" style="color:#a855f7;"></i> Mode Manual';
-            } else {
+                isManual = false;
                 manualSlider.style.display = 'none';
                 btnManualToggle.classList.remove('active');
                 btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
-                calibStatus.innerHTML = '<i class="fas fa-circle-check"></i> Siap · GPS aktif';
-                // kembali ke sensor
-                if (window.DeviceOrientationEvent) {
-                    // force refresh
-                }
             }
-        });
+        } else {
+            btnLock.classList.remove('active');
+            btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
+            calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
+        }
+    });
 
-        // Slider manual
-        manualAngle.addEventListener('input', function() {
-            if (!isManual) return;
-            manualValue = parseFloat(this.value);
+    // ---------- MANUAL ----------
+    btnManualToggle.addEventListener('click', function() {
+        if (isCalibrating) return;
+        isManual = !isManual;
+        if (isManual) {
+            manualSlider.style.display = 'flex';
+            btnManualToggle.classList.add('active');
+            btnManualToggle.innerHTML = '<i class="fas fa-check"></i> ON';
+            if (isLocked) {
+                isLocked = false;
+                btnLock.classList.remove('active');
+                btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
+            }
+            manualValue = currentHeading;
+            manualAngle.value = manualValue;
             manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
             updateNeedle(manualValue);
-        });
-
-        // ---------- Simulasi / fallback jika tidak ada sensor (untuk demo di desktop) ----------
-        // Jika tidak ada sensor, kita gunakan mock random (hanya untuk demo)
-        let mockInterval = null;
-        if (!window.DeviceOrientationEvent) {
-            // tidak ada sensor sama sekali
-            mockInterval = setInterval(() => {
-                if (isManual || isLocked || isCalibrating) return;
-                const mock = (Date.now() / 30) % 360;
-                setHeading(mock);
-            }, 200);
+            calibStatus.innerHTML = '<i class="fas fa-sliders-h" style="color:#a855f7;"></i> Mode Manual';
+        } else {
+            manualSlider.style.display = 'none';
+            btnManualToggle.classList.remove('active');
+            btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
+            calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
         }
+    });
 
-        // cleanup
-        window.addEventListener('beforeunload', function() {
-            if (watchId) navigator.geolocation.clearWatch(watchId);
-            if (mockInterval) clearInterval(mockInterval);
-        });
+    manualAngle.addEventListener('input', function() {
+        if (!isManual) return;
+        manualValue = parseFloat(this.value);
+        manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
+        updateNeedle(manualValue);
+    });
 
-    })();
+    // ---------- RESET ----------
+    btnReset.addEventListener('click', function() {
+        if (isCalibrating) return;
+        isLocked = false;
+        isManual = false;
+        manualSlider.style.display = 'none';
+        btnLock.classList.remove('active');
+        btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
+        btnManualToggle.classList.remove('active');
+        btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
+        calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Reset · Sensor aktif';
+        // Kembali ke sensor
+        if (window.DeviceOrientationEvent) {
+            // force
+        }
+        setTimeout(() => {
+            calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
+        }, 1200);
+    });
+
+    // ---------- FALLBACK DEMO (jika tidak ada sensor) ----------
+    let mockInterval = null;
+    if (!window.DeviceOrientationEvent) {
+        mockInterval = setInterval(() => {
+            if (isManual || isLocked || isCalibrating) return;
+            const mock = (Date.now() / 25) % 360;
+            setHeading(mock);
+        }, 150);
+    }
+
+    window.addEventListener('beforeunload', function() {
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        if (mockInterval) clearInterval(mockInterval);
+    });
+
+})();
 </script>
 </body>
 </html>
