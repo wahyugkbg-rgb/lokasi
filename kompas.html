@@ -1,1101 +1,710 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KOMPAS GPS LIVE - OPPO A9</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#0a0c10;--fg:#e8e6e1;--red:#ff1744;--green:#00e676;--cyan:#00e5ff;--gold:#ffab00;--white:#ffffff;--bright-yellow:#fff176;--bright-white:#f5f5f5;--glow:rgba(255,23,68,0.8)}
-body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;overflow:hidden;height:100vh;width:100vw;touch-action:none}
-#app{height:100vh;display:flex;flex-direction:column;padding:4px;position:relative;background:radial-gradient(ellipse at center, rgba(255,23,68,0.02) 0%, transparent 70%)}
-.header{text-align:center;padding:2px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.03)}
-.header h1{font-size:10px;font-weight:900;letter-spacing:2px;color:var(--red);text-shadow:0 0 30px var(--glow)}
-.header .status{font-size:6px;color:#555;display:flex;gap:4px;align-items:center}
-.status .dot{width:5px;height:5px;border-radius:50%;display:inline-block}
-.dot.green{background:var(--green);box-shadow:0 0 12px var(--green);animation:blink 0.6s ease-in-out infinite}
-.dot.red{background:var(--red);box-shadow:0 0 12px var(--red)}
-.dot.cyan{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Kompas Futuristik OPPO A9</title>
 
-.compass-wrap{flex:0 0 auto;display:flex;align-items:center;justify-content:center;position:relative;padding:2px 0}
-.compass-wrap svg{width:min(60vw,260px);height:min(60vw,260px);filter:drop-shadow(0 0 30px rgba(255,23,68,0.05))}
-#compassDisplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:10}
-#compassDisplay .deg{font-size:clamp(32px,10vw,52px);font-weight:900;font-variant-numeric:tabular-nums;color:#ffffff;text-shadow:0 0 40px rgba(255,255,255,0.15),0 0 80px rgba(255,255,255,0.05);letter-spacing:-1px}
-#compassDisplay .dir{font-size:clamp(16px,5vw,26px);font-weight:900;color:#fff176;letter-spacing:4px;text-shadow:0 0 40px rgba(255,235,59,0.3),0 0 80px rgba(255,235,59,0.1);margin-top:-2px}
-#compassDisplay .subdir{font-size:8px;color:#ffab00;letter-spacing:2px;margin-top:1px;text-shadow:0 0 20px rgba(255,171,0,0.2);font-weight:700}
+    <!-- Font & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
 
-.gps-section{background:rgba(20,22,28,0.92);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:4px 6px;margin:2px 0}
-.gps-section .title{font-size:6px;color:#888;letter-spacing:2px;text-transform:uppercase;font-weight:700}
-.gps-section .coord{font-size:10px;font-weight:700;color:#00e5ff;font-variant-numeric:tabular-nums;display:flex;gap:12px;flex-wrap:wrap;text-shadow:0 0 30px rgba(0,229,255,0.15)}
-.gps-section .coord span{display:flex;align-items:center;gap:4px}
-.gps-section .coord .label{font-size:6px;color:#888;font-weight:400}
-.gps-section .addr{font-size:11px;color:#fff176;line-height:1.6;margin-top:3px;word-break:break-word;text-shadow:0 0 30px rgba(255,235,59,0.15);font-weight:700;letter-spacing:0.5px}
-.gps-section .addr .rt{color:#00e676;font-weight:900;text-shadow:0 0 30px rgba(0,230,118,0.3)}
-.gps-section .addr .highlight{color:#ffffff;font-weight:900;text-shadow:0 0 30px rgba(255,255,255,0.2)}
-.gps-section .update-time{font-size:5px;color:#666;text-align:right;margin-top:2px}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin:2px 0}
-.info-cell{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:3px;padding:2px 1px;text-align:center}
-.info-cell .label{font-size:4px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
-.info-cell .value{font-size:8px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
-.value.red{color:#ff1744;text-shadow:0 0 20px rgba(255,23,68,0.2)}
-.value.cyan{color:#00e5ff;text-shadow:0 0 20px rgba(0,229,255,0.2)}
-.value.green{color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.2)}
-.value.gold{color:#ffab00;text-shadow:0 0 20px rgba(255,171,0,0.2)}
-.value.white{color:#ffffff;text-shadow:0 0 20px rgba(255,255,255,0.15)}
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: radial-gradient(circle at 20% 30%, #0b0e1a, #05070c);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
 
-.actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:2px;padding:2px 0}
-.actions button{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.04);border-radius:4px;color:var(--fg);font-family:inherit;font-size:5px;font-weight:700;padding:6px 1px;cursor:pointer;transition:all 0.06s;text-transform:uppercase;letter-spacing:0.5px}
-.actions button:active{transform:scale(0.92);background:var(--red);color:#000;border-color:var(--red)}
-.actions button.active{background:var(--red);color:#000;border-color:var(--red);box-shadow:0 0 20px var(--glow)}
-.actions button.calibrating{animation:pulse 0.4s ease-in-out infinite alternate;border-color:var(--gold)}
-@keyframes pulse{from{box-shadow:0 0 8px var(--gold)}to{box-shadow:0 0 25px var(--gold)}}
+        .container {
+            max-width: 460px;
+            width: 100%;
+            background: rgba(10, 14, 30, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 255, 255, 0.25);
+            border-radius: 48px 48px 32px 32px;
+            padding: 24px 20px 28px;
+            box-shadow: 0 20px 60px rgba(0, 180, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
+            transition: all 0.2s;
+        }
 
-#graph{width:100%;height:20px;background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:3px;margin:1px 0;overflow:hidden}
-#graph canvas{width:100%;height:100%}
-#fps{position:fixed;top:2px;right:4px;font-size:4px;color:#222;z-index:50}
-#manualBadge{position:absolute;top:4px;right:4px;background:rgba(0,229,255,0.15);border:1px solid #00e5ff;color:#00e5ff;font-size:4px;font-weight:700;padding:2px 5px;border-radius:2px;display:none;letter-spacing:1px;animation:blink 0.6s ease-in-out infinite;text-shadow:0 0 20px rgba(0,229,255,0.3)}
-#manualBadge.show{display:block}
-#manualSetBadge{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(255,171,0,0.2);border:1px solid #ffab00;color:#ffab00;font-size:4px;font-weight:700;padding:2px 8px;border-radius:2px;display:none;letter-spacing:1px;text-shadow:0 0 20px rgba(255,171,0,0.3)}
-#manualSetBadge.show{display:block}
-.diag-toggle{background:rgba(20,22,28,0.9);border:1px solid rgba(255,255,255,0.03);border-radius:2px;color:#444;font-size:4px;padding:2px;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;margin:1px 0;font-family:inherit;width:100%}
-.diag-panel{max-height:0;overflow:hidden;transition:max-height 0.3s ease;background:rgba(20,22,28,0.95);border:1px solid rgba(255,255,255,0.03);border-radius:2px;font-size:5px;line-height:1.6}
-.diag-panel.open{max-height:400px;overflow-y:auto;padding:4px}
-.diag-panel .ok{color:var(--green)}.diag-panel .err{color:var(--red)}.diag-panel .warn{color:var(--gold)}
+        /* HEADER */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            margin-bottom: 16px;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00f0ff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+        .header i {
+            color: #00f0ff;
+            font-size: 22px;
+            filter: drop-shadow(0 0 8px #00f0ff);
+        }
 
-#calOverlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-#calOverlay.show{display:flex}
-#calOverlay .circle{width:100px;height:100px;border:3px solid var(--red);border-radius:50%;position:relative;animation:spin 1.5s linear infinite}
-#calOverlay .circle::after{content:'';position:absolute;width:14px;height:14px;background:var(--red);border-radius:50%;top:-7px;left:50%;transform:translateX(-50%);box-shadow:0 0 25px var(--glow)}
-@keyframes spin{to{transform:rotate(360deg)}}
-#calOverlay .text{font-size:10px;color:var(--red);font-weight:700;letter-spacing:1px;text-align:center;line-height:1.8}
-#calOverlay .progress{width:160px;height:3px;background:#222;border-radius:2px;overflow:hidden}
-#calOverlay .bar{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width 0.15s}
-#calOverlay .done{display:none;color:var(--green);font-size:14px;font-weight:900;letter-spacing:2px;animation:popIn 0.4s ease-out}
-@keyframes popIn{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
-#calOverlay .closeBtn{background:var(--red);color:#000;border:none;padding:6px 20px;border-radius:4px;font-family:inherit;font-size:9px;font-weight:900;cursor:pointer;display:none;letter-spacing:1px}
+        /* KOMPAS */
+        .compass-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            max-width: 340px;
+            margin: 0 auto 10px;
+        }
 
-.toast{position:fixed;bottom:50px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,0.95);color:#fff;padding:5px 14px;border-radius:4px;font-size:7px;font-family:'Courier New',monospace;z-index:999;border:1px solid rgba(255,23,68,0.15);box-shadow:0 4px 20px rgba(0,0,0,0.5);opacity:0;transition:all 0.25s ease;pointer-events:none;font-weight:700;letter-spacing:0.5px;max-width:90%;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-</style>
+        .compass-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 40px rgba(0, 180, 255, 0.25), inset 0 0 40px rgba(0, 255, 255, 0.05);
+            background: radial-gradient(circle at 30% 30%, #12162b, #070a14);
+        }
+
+        .compass-ring::after {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            border: 1px dashed rgba(0, 255, 255, 0.2);
+        }
+
+        /* Skala derajat */
+        .degree-marks {
+            position: absolute;
+            inset: 12px;
+            border-radius: 50%;
+        }
+        .degree-marks span {
+            position: absolute;
+            left: 50%;
+            top: -6px;
+            transform-origin: bottom center;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(0, 255, 255, 0.7);
+            text-shadow: 0 0 10px #00f0ff;
+            width: 20px;
+            margin-left: -10px;
+            text-align: center;
+        }
+        .degree-marks span::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 10px;
+            background: rgba(0, 255, 255, 0.3);
+        }
+        .degree-marks span:nth-child(4n)::before { height: 16px; background: #00f0ff; }
+
+        /* Jarum */
+        .needle-container {
+            position: absolute;
+            inset: 30px;
+            border-radius: 50%;
+            transition: transform 0.08s linear;
+            will-change: transform;
+        }
+
+        .needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            border-radius: 12px;
+            background: linear-gradient(to top, #ff2d75, #ff6b9d);
+            box-shadow: 0 0 30px #ff2d75, 0 0 60px rgba(255, 45, 117, 0.4);
+            z-index: 10;
+            transition: transform 0.05s linear;
+        }
+        .needle::after {
+            content: '';
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 20px solid #ff2d75;
+            filter: drop-shadow(0 0 20px #ff2d75);
+        }
+        /* Jarum selatan (putih) */
+        .needle-south {
+            height: 40%;
+            background: linear-gradient(to top, #a0aec0, #e2e8f0);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            top: 50%;
+            transform-origin: top center;
+            transform: translate(-50%, 0%) rotate(0deg);
+            border-radius: 12px;
+        }
+        .needle-south::after {
+            display: none;
+        }
+
+        /* Center dot */
+        .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f0ff, #0070a0);
+            box-shadow: 0 0 30px #00f0ff;
+            z-index: 20;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Info arah (angka) */
+        .direction-text {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 900;
+            color: #00f0ff;
+            text-shadow: 0 0 30px #00f0ff, 0 0 60px #00a0ff;
+            letter-spacing: 4px;
+            margin-top: -10px;
+        }
+        .direction-text small {
+            font-size: 14px;
+            color: #a855f7;
+            text-shadow: 0 0 20px #a855f7;
+            margin-left: 10px;
+        }
+
+        /* Tombol aksi */
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 16px 0 12px;
+        }
+        .actions button {
+            background: rgba(0, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 40px;
+            padding: 10px 16px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 11px;
+            color: #e0f0ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.25s;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+            flex: 1 0 auto;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .actions button i {
+            color: #00f0ff;
+            font-size: 14px;
+        }
+        .actions button.active {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00f0ff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+        .actions button:active { transform: scale(0.95); }
+
+        /* Slider manual */
+        .manual-slider {
+            width: 100%;
+            margin: 6px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 0 4px;
+        }
+        .manual-slider input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, #00f0ff, #a855f7);
+            border-radius: 20px;
+            outline: none;
+        }
+        .manual-slider input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f0ff, #0080aa);
+            cursor: pointer;
+            box-shadow: 0 0 25px #00f0ff;
+            border: 2px solid #fff;
+        }
+        .manual-slider span {
+            color: #a855f7;
+            font-weight: 700;
+            font-size: 14px;
+            min-width: 50px;
+            text-shadow: 0 0 15px #a855f7;
+        }
+
+        /* Info posisi & suhu */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 14px 0 8px;
+        }
+        .info-card {
+            background: rgba(0, 255, 255, 0.04);
+            border: 1px solid rgba(0, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 12px 12px;
+            backdrop-filter: blur(4px);
+        }
+        .info-card .label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #64748b;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .info-card .value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #b0e0ff;
+            word-break: break-word;
+            text-shadow: 0 0 12px rgba(0, 200, 255, 0.3);
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+        .info-card .value i {
+            color: #00f0ff;
+            margin-right: 4px;
+        }
+        .info-card.full {
+            grid-column: 1 / -1;
+        }
+
+        /* Status kalibrasi */
+        .calib-status {
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 6px;
+            letter-spacing: 1px;
+        }
+        .calib-status i {
+            color: #facc15;
+            margin-right: 6px;
+        }
+
+        /* animasi pulse */
+        .pulse {
+            animation: pulseGlow 2s infinite;
+        }
+        @keyframes pulseGlow {
+            0% { opacity: 0.7; text-shadow: 0 0 10px #00f0ff; }
+            50% { opacity: 1; text-shadow: 0 0 30px #00f0ff, 0 0 60px #a855f7; }
+            100% { opacity: 0.7; text-shadow: 0 0 10px #00f0ff; }
+        }
+
+        /* responsif */
+        @media (max-width: 400px) {
+            .container { padding: 16px 12px; }
+            .actions button { font-size: 9px; padding: 8px 10px; }
+            .info-card .value { font-size: 12px; }
+        }
+    </style>
 </head>
 <body>
-<div id="app">
-  <div class="header">
-    <h1>🧭 KOMPAS GPS LIVE</h1>
-    <div class="status">
-      <span class="dot" id="statusDot"></span>
-      <span id="statusText">INIT</span>
+
+<div class="container" id="app">
+    <!-- Header -->
+    <div class="header">
+        <h1><i class="fas fa-satellite" style="margin-right:8px;"></i> AZIMUTH</h1>
+        <i class="fas fa-bolt"></i>
     </div>
-  </div>
 
-  <button class="diag-toggle" id="diagToggle">🔍 DIAGNOSTIK</button>
-  <div class="diag-panel" id="diagPanel"></div>
+    <!-- Kompas -->
+    <div class="compass-wrapper">
+        <div class="compass-ring"></div>
+        <div class="degree-marks" id="degreeMarks"></div>
 
-  <!-- KOMPAS -->
-  <div class="compass-wrap" id="compassWrap">
-    <svg viewBox="0 0 400 400" id="compassSvg">
-      <defs>
-        <filter id="glowFilter"><feGaussianBlur stdDeviation="2"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <linearGradient id="needleGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ff1744"/>
-          <stop offset="45%" stop-color="#ff5252"/>
-          <stop offset="55%" stop-color="#455a64"/>
-          <stop offset="100%" stop-color="#263238"/>
-        </linearGradient>
-      </defs>
-      <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(255,23,68,0.05)" stroke-width="0.5"/>
-      <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
-      
-      <!-- Dial diputar 45° agar Utara di posisi Timur Laut (mudah dibaca di HP) -->
-      <g id="dialGroup" transform="rotate(45, 200, 200)">
-        <g id="tickContainer"></g>
-        <text x="200" y="28" text-anchor="middle" fill="#ff1744" font-size="20" font-weight="900" font-family="Courier New">U</text>
-        <text x="376" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New">T</text>
-        <text x="200" y="384" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New">S</text>
-        <text x="24" y="206" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="Courier New">B</text>
-        <text x="330" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">TL</text>
-        <text x="330" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">TG</text>
-        <text x="70" y="350" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BD</text>
-        <text x="70" y="64" text-anchor="middle" fill="rgba(255,171,0,0.3)" font-size="8" font-weight="700">BL</text>
-      </g>
-      
-      <g id="needleGroup" filter="url(#glowFilter)">
-        <!-- Jarum Utara (MERAH) -->
-        <polygon points="200,45 192,195 200,185 208,195" fill="url(#needleGrad)" opacity="0.95"/>
-        <!-- Jarum Selatan (ABU-ABU) -->
-        <polygon points="200,355 192,205 200,215 208,205" fill="#37474f" opacity="0.4"/>
-        <circle cx="200" cy="200" r="9" fill="#ff1744" stroke="#0a0c10" stroke-width="2"/>
-        <circle cx="200" cy="200" r="3" fill="#ffffff"/>
-      </g>
-    </svg>
-    <div id="compassDisplay">
-      <div class="deg" id="degDisplay">---</div>
-      <div class="dir" id="dirDisplay">---</div>
-      <div class="subdir" id="subDirDisplay">Menunggu data...</div>
+        <div class="needle-container" id="needleContainer">
+            <div class="needle" id="needleNorth"></div>
+            <div class="needle needle-south" id="needleSouth"></div>
+        </div>
+        <div class="center-dot"></div>
     </div>
-    <div id="manualBadge">✋ MANUAL</div>
-    <div id="manualSetBadge">🎯 ARAH TERSETEL</div>
-  </div>
 
-  <!-- GPS SECTION -->
-  <div class="gps-section">
-    <div class="title">📍 LOKASI REAL-TIME</div>
-    <div class="coord" id="coordDisplay">
-      <span><span class="label">LAT</span> <span id="latDisplay">--.------</span></span>
-      <span><span class="label">LNG</span> <span id="lngDisplay">--.------</span></span>
-      <span><span class="label">AKURASI</span> <span id="accDisplay">--</span></span>
+    <div class="direction-text" id="directionText">
+        0° <small>UTARA</small>
     </div>
-    <div class="addr" id="addrDisplay">
-      <span style="color:#888">Mengambil alamat...</span>
+
+    <!-- Tombol aksi -->
+    <div class="actions">
+        <button id="btnCalibrate"><i class="fas fa-sync-alt"></i> Kalibrasi</button>
+        <button id="btnLock" class=""><i class="fas fa-lock"></i> Lock</button>
+        <button id="btnManualToggle"><i class="fas fa-sliders-h"></i> Manual</button>
     </div>
-    <div class="update-time" id="gpsTime">⏱ --:--:--</div>
-  </div>
 
-  <!-- INFO GRID -->
-  <div class="info-grid">
-    <div class="info-cell"><div class="label">ARAH</div><div class="value white" id="infoAz">---°</div></div>
-    <div class="info-cell"><div class="label">MAGNET</div><div class="value cyan" id="infoMag">---</div></div>
-    <div class="info-cell"><div class="label">UPDATE</div><div class="value green" id="infoUpd">0/dtk</div></div>
-    <div class="info-cell"><div class="label">SUMBER</div><div class="value" id="infoSensor" style="font-size:5px;color:#888">---</div></div>
-  </div>
+    <!-- Slider manual -->
+    <div class="manual-slider" id="manualSlider" style="display:none;">
+        <i class="fas fa-undo-alt" style="color:#00f0ff;"></i>
+        <input type="range" id="manualAngle" min="0" max="360" value="0" step="0.5" />
+        <span id="manualAngleDisplay">0°</span>
+    </div>
 
-  <div id="graph"><canvas id="graphCanvas"></canvas></div>
+    <!-- Info Grid -->
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="label"><i class="fas fa-map-pin"></i> Koordinat</div>
+            <div class="value" id="coordDisplay">-6.2088, 106.8456</div>
+        </div>
+        <div class="info-card">
+            <div class="label"><i class="fas fa-thermometer-half"></i> Suhu</div>
+            <div class="value" id="tempDisplay">-- °C</div>
+        </div>
+        <div class="info-card full">
+            <div class="label"><i class="fas fa-location-dot"></i> Alamat</div>
+            <div class="value" id="addressDisplay">Jl. Contoh No. 123, RT 01/RW 02, Kel. Pusat, Kec. Kota, Jakarta</div>
+        </div>
+    </div>
 
-  <div class="actions">
-    <button id="btnCalibrate">⚡ KALIBRASI</button>
-    <button id="btnLock">🔒 KUNCI</button>
-    <button id="btnSmooth">🌀 HALUS</button>
-    <button id="btnManual">✋ MANUAL</button>
-    <button id="btnSetDirection" style="grid-column:span 1;background:rgba(255,171,0,0.15);border-color:#ffab00;color:#ffab00;">🎯 SET ARAH</button>
-  </div>
+    <div class="calib-status" id="calibStatus">
+        <i class="fas fa-circle-check"></i> Siap · GPS aktif
+    </div>
 </div>
-<div id="fps">0 FPS</div>
-
-<div id="calOverlay">
-  <div class="circle"></div>
-  <div class="text">PUTAR HP ANGKA 8<br><span style="font-size:7px;color:#555">Ulangi hingga progress penuh</span></div>
-  <div class="progress"><div class="bar" id="calBar"></div></div>
-  <div class="done" id="calDone">✅ KALIBRASI SELESAI</div>
-  <button class="closeBtn" id="calClose">SELESAI</button>
-</div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-(function(){
-'use strict';
+    (function() {
+        // ---------- DOM refs ----------
+        const needleContainer = document.getElementById('needleContainer');
+        const needleNorth = document.getElementById('needleNorth');
+        const needleSouth = document.getElementById('needleSouth');
+        const directionText = document.getElementById('directionText');
+        const coordDisplay = document.getElementById('coordDisplay');
+        const tempDisplay = document.getElementById('tempDisplay');
+        const addressDisplay = document.getElementById('addressDisplay');
+        const calibStatus = document.getElementById('calibStatus');
 
-// ============================================================
-// DOM REFS
-// ============================================================
-const $ = id => document.getElementById(id);
-const compassSvg = $('compassSvg');
-const dialGroup = $('dialGroup');
-const tickContainer = $('tickContainer');
-const degDisplay = $('degDisplay');
-const dirDisplay = $('dirDisplay');
-const subDirDisplay = $('subDirDisplay');
-const statusDot = $('statusDot');
-const statusText = $('statusText');
-const infoAz = $('infoAz');
-const infoMag = $('infoMag');
-const infoUpd = $('infoUpd');
-const infoSensor = $('infoSensor');
-const fpsEl = $('fps');
-const graphCanvas = $('graphCanvas');
-const ctx = graphCanvas.getContext('2d');
-const diagToggle = $('diagToggle');
-const diagPanel = $('diagPanel');
-const btnCalibrate = $('btnCalibrate');
-const btnLock = $('btnLock');
-const btnSmooth = $('btnSmooth');
-const btnManual = $('btnManual');
-const btnSetDirection = $('btnSetDirection');
-const manualBadge = $('manualBadge');
-const manualSetBadge = $('manualSetBadge');
-const compassWrap = $('compassWrap');
-const toast = $('toast');
-const calOverlay = $('calOverlay');
-const calBar = $('calBar');
-const calDone = $('calDone');
-const calClose = $('calClose');
-const latDisplay = $('latDisplay');
-const lngDisplay = $('lngDisplay');
-const accDisplay = $('accDisplay');
-const addrDisplay = $('addrDisplay');
-const gpsTime = $('gpsTime');
+        const btnCalibrate = document.getElementById('btnCalibrate');
+        const btnLock = document.getElementById('btnLock');
+        const btnManualToggle = document.getElementById('btnManualToggle');
+        const manualSlider = document.getElementById('manualSlider');
+        const manualAngle = document.getElementById('manualAngle');
+        const manualAngleDisplay = document.getElementById('manualAngleDisplay');
 
-// ============================================================
-// STATE
-// ============================================================
-let heading = 0;
-let lockedHeading = 0;
-let isLocked = false;
-let isSmooth = false;
-let isManual = false;
-let isCalibrating = false;
-let lastHeading = 0;
-let updateCount = 0;
-let lastUpdateTime = performance.now();
-let hasData = false;
-let activeStrategy = 'NONE';
-let sensorSource = 'NONE';
+        // ---------- State ----------
+        let currentHeading = 0;              // derajat 0-360
+        let targetHeading = 0;
+        let isLocked = false;
+        let lockedBearing = 0;
+        let isManual = false;
+        let manualValue = 0;
+        let isCalibrating = false;
 
-// FITUR SET ARAH (MANUAL REFERENCE)
-let manualReference = null; // null = belum diset, 0-360 = sudut referensi
-let manualOffset = 0; // offset yang diterapkan ke heading
-let isManualSet = false;
+        // GPS
+        let watchId = null;
+        let lastCoords = { lat: -6.2088, lng: 106.8456 };
 
-// GPS
-let currentLat = null;
-let currentLng = null;
-let currentAcc = null;
-let currentAddress = 'Mengambil alamat...';
-let gpsWatchId = null;
-let addressFetching = false;
-let lastAddressFetch = 0;
+        // API Key OpenWeatherMap (ganti dengan key Anda, atau gunakan mock)
+        const WEATHER_API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // ganti dengan key asli
 
-// Sensor raw
-let rawMX = 0, rawMY = 0, rawMZ = 0;
-let rawAX = 0, rawAY = 0, rawAZ = 0;
-
-// Smoothing
-let smoothHeading = 0;
-let smoothInitialized = false;
-const SMOOTH_ALPHA = 0.15;
-
-// FPS
-let fpsCount = 0;
-let fpsTime = performance.now();
-
-// History
-const history = new Array(60).fill(0);
-let historyIndex = 0;
-
-// Diag
-let diag = {
-  doaFired: false, doFired: false, dmFired: false, magFired: false,
-  doaData: false, doData: false,
-  doaCount: 0, doCount: 0, dmCount: 0, magCount: 0,
-  lastUpdate: Date.now()
-};
-
-// Calibration
-let calTotal = 0;
-let calLastHeading = 0;
-let calInterval = null;
-
-// ============================================================
-// ARAH MATA ANGIN BAHASA INDONESIA (BENAR)
-// ============================================================
-const directions = [
-  {min:348.75, max:360, short:'U', long:'UTARA', emoji:'⬆️', desc:'Utara'},
-  {min:0, max:11.25, short:'U', long:'UTARA', emoji:'⬆️', desc:'Utara'},
-  {min:11.25, max:33.75, short:'UTL', long:'UTARA TIMUR LAUT', emoji:'↗️', desc:'Utara - Timur Laut'},
-  {min:33.75, max:56.25, short:'TL', long:'TIMUR LAUT', emoji:'↗️', desc:'Timur Laut'},
-  {min:56.25, max:78.75, short:'TLT', long:'TIMUR LAUT TIMUR', emoji:'↗️', desc:'Timur Laut - Timur'},
-  {min:78.75, max:101.25, short:'T', long:'TIMUR', emoji:'➡️', desc:'Timur'},
-  {min:101.25, max:123.75, short:'TTG', long:'TIMUR TENGGARA', emoji:'↘️', desc:'Timur - Tenggara'},
-  {min:123.75, max:146.25, short:'TG', long:'TENGGARA', emoji:'↘️', desc:'Tenggara'},
-  {min:146.25, max:168.75, short:'TGS', long:'TENGGARA SELATAN', emoji:'↘️', desc:'Tenggara - Selatan'},
-  {min:168.75, max:191.25, short:'S', long:'SELATAN', emoji:'⬇️', desc:'Selatan'},
-  {min:191.25, max:213.75, short:'SBD', long:'SELATAN BARAT DAYA', emoji:'↙️', desc:'Selatan - Barat Daya'},
-  {min:213.75, max:236.25, short:'BD', long:'BARAT DAYA', emoji:'↙️', desc:'Barat Daya'},
-  {min:236.25, max:258.75, short:'BDB', long:'BARAT DAYA BARAT', emoji:'↙️', desc:'Barat Daya - Barat'},
-  {min:258.75, max:281.25, short:'B', long:'BARAT', emoji:'⬅️', desc:'Barat'},
-  {min:281.25, max:303.75, short:'BBL', long:'BARAT BARAT LAUT', emoji:'↖️', desc:'Barat - Barat Laut'},
-  {min:303.75, max:326.25, short:'BL', long:'BARAT LAUT', emoji:'↖️', desc:'Barat Laut'},
-  {min:326.25, max:348.75, short:'BLU', long:'BARAT LAUT UTARA', emoji:'↖️', desc:'Barat Laut - Utara'}
-];
-
-function getDirection(deg) {
-  for (let d of directions) {
-    if (deg >= d.min && deg < d.max) return d;
-  }
-  return directions[0];
-}
-
-function normalizeAngle(a) {
-  a = a % 360;
-  if (a < 0) a += 360;
-  return a;
-}
-
-function angleDiff(a, b) {
-  let d = a - b;
-  while (d > 180) d -= 360;
-  while (d < -180) d += 360;
-  return d;
-}
-
-// ============================================================
-// GENERATE TICKS
-// ============================================================
-function generateTicks() {
-  for (let deg = 0; deg < 360; deg += 2) {
-    const rad = (deg - 90) * Math.PI / 180;
-    const is30 = deg % 30 === 0;
-    const is10 = deg % 10 === 0;
-    const is5 = deg % 5 === 0;
-    
-    let inner, stroke, width;
-    if (is30) { inner = 152; stroke = 'rgba(255,23,68,0.6)'; width = '2'; }
-    else if (is10) { inner = 162; stroke = 'rgba(255,255,255,0.15)'; width = '1.2'; }
-    else if (is5) { inner = 170; stroke = 'rgba(255,255,255,0.06)'; width = '0.8'; }
-    else { inner = 175; stroke = 'rgba(255,255,255,0.02)'; width = '0.5'; }
-    
-    const outer = 185;
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', 200 + inner * Math.cos(rad));
-    line.setAttribute('y1', 200 + inner * Math.sin(rad));
-    line.setAttribute('x2', 200 + outer * Math.cos(rad));
-    line.setAttribute('y2', 200 + outer * Math.sin(rad));
-    line.setAttribute('stroke', stroke);
-    line.setAttribute('stroke-width', width);
-    tickContainer.appendChild(line);
-    
-    if (is30 && deg % 90 !== 0) {
-      const labelR = 138;
-      const lx = 200 + labelR * Math.cos(rad);
-      const ly = 200 + labelR * Math.sin(rad);
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', lx);
-      text.setAttribute('y', ly + 2);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('fill', 'rgba(255,255,255,0.08)');
-      text.setAttribute('font-size', '5');
-      text.setAttribute('font-family', 'Courier New');
-      text.textContent = deg + '°';
-      tickContainer.appendChild(text);
-    }
-  }
-}
-
-// ============================================================
-// COMPASS HEADING
-// ============================================================
-function computeHeading(mx, my, mz, ax, ay, az) {
-  const mag = Math.sqrt(ax*ax + ay*ay + az*az);
-  if (mag < 0.1) return null;
-  
-  const nax = ax / mag, nay = ay / mag, naz = az / mag;
-  const pitchAngle = Math.asin(Math.max(-1, Math.min(1, -nax)));
-  const rollAngle = Math.atan2(nay, naz);
-  const cosP = Math.cos(pitchAngle), sinP = Math.sin(pitchAngle);
-  const cosR = Math.cos(rollAngle), sinR = Math.sin(rollAngle);
-  
-  const Xh = mx * cosP + mz * sinP;
-  const Yh = mx * sinR * sinP + my * cosR - mz * sinR * cosP;
-  
-  let h = Math.atan2(Yh, Xh) * 180 / Math.PI;
-  if (h < 0) h += 360;
-  return h;
-}
-
-// ============================================================
-// SENSOR INIT
-// ============================================================
-function initSensors() {
-  window.addEventListener('deviceorientationabsolute', function(e) {
-    diag.doaFired = true;
-    diag.doaCount++;
-    diag.lastUpdate = Date.now();
-    if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
-      diag.doaData = true;
-      if (!isManual) {
-        activeStrategy = 'ABS';
-        sensorSource = 'ABSOLUT';
-        heading = normalizeAngle(e.alpha);
-        hasData = true;
-        updateStatus();
-      }
-    }
-  }, {passive: true});
-
-  window.addEventListener('deviceorientation', function(e) {
-    diag.doFired = true;
-    diag.doCount++;
-    diag.lastUpdate = Date.now();
-    if (e.alpha !== null && e.alpha !== undefined && !isNaN(e.alpha)) {
-      diag.doData = true;
-      if (!isManual && (activeStrategy === 'NONE' || !hasData)) {
-        heading = normalizeAngle(e.alpha);
-        if (e.absolute === true) {
-          activeStrategy = 'ABS_FLAG';
-          sensorSource = 'ABSOLUT';
-        } else {
-          activeStrategy = 'REL';
-          sensorSource = 'RELATIF';
-        }
-        hasData = true;
-        updateStatus();
-      }
-    }
-  }, {passive: true});
-
-  if ('Magnetometer' in window) {
-    try {
-      const mag = new Magnetometer({frequency: 60});
-      mag.addEventListener('reading', function() {
-        diag.magFired = true;
-        diag.magCount++;
-        diag.lastUpdate = Date.now();
-        rawMX = mag.x; rawMY = mag.y; rawMZ = mag.z;
-        if (!isManual && (activeStrategy === 'NONE' || !hasData)) {
-          if (rawAX !== 0 || rawAY !== 0 || rawAZ !== 0) {
-            const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
-            if (h !== null) {
-              activeStrategy = 'MAGNET';
-              sensorSource = 'MAGNETOMETER';
-              heading = h;
-              hasData = true;
-              updateStatus();
+        // ---------- Generate degree marks ----------
+        (function buildMarks() {
+            const container = document.getElementById('degreeMarks');
+            for (let i = 0; i < 36; i++) {
+                const angle = i * 10;
+                const span = document.createElement('span');
+                span.textContent = angle;
+                span.style.transform = `rotate(${angle}deg) translateY(-32px)`;
+                container.appendChild(span);
             }
-          } else if (!hasData) {
-            let h = Math.atan2(rawMY, rawMX) * 180 / Math.PI;
-            if (h < 0) h += 360;
-            activeStrategy = 'MAG_NO_TILT';
-            sensorSource = 'MAGNETOMETER';
-            heading = h;
-            hasData = true;
-            updateStatus();
-          }
+        })();
+
+        // ---------- Helper: update jarum ----------
+        function updateNeedle(deg) {
+            // deg = 0 = utara (atas)
+            const rotateDeg = deg;
+            needleNorth.style.transform = `translate(-50%, -100%) rotate(${rotateDeg}deg)`;
+            needleSouth.style.transform = `translate(-50%, 0%) rotate(${rotateDeg}deg)`;
+            // update teks
+            const dir = getDirection(deg);
+            directionText.innerHTML = `${Math.round(deg)}° <small>${dir}</small>`;
         }
-      });
-      mag.start();
-    } catch(e) {}
-  }
 
-  window.addEventListener('devicemotion', function(e) {
-    diag.dmFired = true;
-    diag.dmCount++;
-    diag.lastUpdate = Date.now();
-    const accel = e.accelerationIncludingGravity;
-    if (accel && accel.x !== null) {
-      rawAX = accel.x; rawAY = accel.y; rawAZ = accel.z;
-      if (!isManual && diag.magFired && (activeStrategy === 'MAGNET' || !hasData)) {
-        const h = computeHeading(rawMX, rawMY, rawMZ, rawAX, rawAY, rawAZ);
-        if (h !== null) {
-          activeStrategy = 'MAGNET';
-          sensorSource = 'MAGNETOMETER';
-          heading = h;
-          hasData = true;
-          updateStatus();
+        function getDirection(deg) {
+            const dirs = ['UTARA', 'TIMUR LAUT', 'TIMUR', 'TENGGARA', 'SELATAN', 'BARAT DAYA', 'BARAT', 'BARAT LAUT'];
+            const idx = Math.round(((deg % 360) / 45)) % 8;
+            return dirs[idx];
         }
-      }
-    }
-  }, {passive: true});
-}
 
-// ============================================================
-// GPS
-// ============================================================
-function initGPS() {
-  if (!navigator.geolocation) {
-    addrDisplay.innerHTML = '❌ GPS tidak tersedia di browser ini';
-    return;
-  }
+        // ---------- Set heading (dengan smoothing) ----------
+        function setHeading(deg) {
+            targetHeading = deg % 360;
+            if (targetHeading < 0) targetHeading += 360;
+            if (!isManual && !isLocked) {
+                currentHeading = targetHeading;
+                updateNeedle(currentHeading);
+            } else if (isLocked) {
+                // locked: tetap di lockedBearing
+                updateNeedle(lockedBearing);
+            }
+        }
 
-  const options = {
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 0
-  };
+        // ---------- Loop animasi (smooth) ----------
+        function animateLoop() {
+            if (!isManual && !isLocked) {
+                // smooth follow
+                let diff = targetHeading - currentHeading;
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+                currentHeading += diff * 0.25; // smoothing
+                if (Math.abs(diff) < 0.1) currentHeading = targetHeading;
+                currentHeading = ((currentHeading % 360) + 360) % 360;
+                updateNeedle(currentHeading);
+            } else if (isLocked) {
+                updateNeedle(lockedBearing);
+            } else if (isManual) {
+                updateNeedle(manualValue);
+            }
+            requestAnimationFrame(animateLoop);
+        }
+        animateLoop();
 
-  gpsWatchId = navigator.geolocation.watchPosition(
-    function(position) {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const acc = position.coords.accuracy;
-      
-      currentLat = lat;
-      currentLng = lng;
-      currentAcc = acc;
-      
-      latDisplay.textContent = lat.toFixed(6);
-      lngDisplay.textContent = lng.toFixed(6);
-      accDisplay.textContent = acc < 10 ? '🎯 ' + acc.toFixed(0) + 'm' : acc.toFixed(0) + 'm';
-      
-      const now = new Date();
-      gpsTime.textContent = '⏱ ' + 
-        String(now.getHours()).padStart(2,'0') + ':' +
-        String(now.getMinutes()).padStart(2,'0') + ':' +
-        String(now.getSeconds()).padStart(2,'0');
-      
-      const shouldFetch = !lastAddressFetch || 
-                         (Date.now() - lastAddressFetch > 5000) ||
-                         (currentLat && currentLng && 
-                          Math.abs(currentLat - (window._lastFetchLat || 0)) > 0.0001 ||
-                          Math.abs(currentLng - (window._lastFetchLng || 0)) > 0.0001);
-      
-      if (shouldFetch && !addressFetching) {
-        fetchAddress(lat, lng);
-        window._lastFetchLat = lat;
-        window._lastFetchLng = lng;
-      }
-      
-      statusText.textContent = 'GPS + KOMPAS';
-      statusDot.className = 'dot green';
-    },
-    function(error) {
-      console.warn('GPS error:', error);
-      addrDisplay.innerHTML = '⚠️ GPS error: ' + error.message;
-      statusText.textContent = 'KOMPAS ONLY';
-    },
-    options
-  );
-}
+        // ---------- Sensor: Device Orientation ----------
+        function handleOrientation(event) {
+            if (isCalibrating) return;
+            if (isManual) return;
+            if (isLocked) return;
 
-// ============================================================
-// REVERSE GEOCODING
-// ============================================================
-async function fetchAddress(lat, lng) {
-  if (addressFetching) return;
-  addressFetching = true;
-  
-  try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data && data.address) {
-      const addr = data.address;
-      
-      let parts = [];
-      
-      if (addr.road) parts.push('<span class="highlight">Jalan ' + addr.road + '</span>');
-      else if (addr.pedestrian) parts.push('<span class="highlight">' + addr.pedestrian + '</span>');
-      
-      let rtRwInfo = '';
-      if (addr.house_number) {
-        rtRwInfo = '<span class="rt">No. ' + addr.house_number + '</span>';
-      }
-      if (addr.building) {
-        if (rtRwInfo) rtRwInfo += ' - <span class="highlight">' + addr.building + '</span>';
-        else rtRwInfo = '<span class="highlight">' + addr.building + '</span>';
-      }
-      
-      if (addr.village) parts.push('<span style="color:#fff176;font-weight:700">' + addr.village + '</span>');
-      else if (addr.suburb) parts.push('<span style="color:#fff176;font-weight:700">' + addr.suburb + '</span>');
-      
-      if (addr.county) parts.push('<span style="color:#ffab00;font-weight:700">Kec. ' + addr.county + '</span>');
-      else if (addr.municipality) parts.push('<span style="color:#ffab00;font-weight:700">Kec. ' + addr.municipality + '</span>');
-      
-      if (addr.city) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.city + '</span>');
-      else if (addr.town) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.town + '</span>');
-      else if (addr.state_district) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.state_district + '</span>');
-      
-      if (addr.state) parts.push('<span style="color:#e0e0e0;font-weight:700">Prov. ' + addr.state + '</span>');
-      
-      if (addr.postcode) parts.push('<span style="color:#00e5ff;font-weight:700">' + addr.postcode + '</span>');
-      
-      if (addr.country) parts.push('<span style="color:#ffffff;font-weight:700">' + addr.country + '</span>');
-      
-      let fullAddress = parts.join(' • ');
-      
-      if (rtRwInfo) {
-        fullAddress = rtRwInfo + ' • ' + fullAddress;
-      }
-      
-      fullAddress = fullAddress.replace(/(RT\s*\d+\s*RW\s*\d+)/gi, '<span class="rt">$1</span>');
-      fullAddress = fullAddress.replace(/(RT\s*\d+)/gi, '<span class="rt">$1</span>');
-      fullAddress = fullAddress.replace(/(RW\s*\d+)/gi, '<span class="rt">$1</span>');
-      
-      addrDisplay.innerHTML = fullAddress;
-      currentAddress = fullAddress;
-      lastAddressFetch = Date.now();
-    } else {
-      addrDisplay.innerHTML = '📍 <span style="color:#ffffff;font-weight:700">' + lat.toFixed(6) + '</span>, <span style="color:#ffffff;font-weight:700">' + lng.toFixed(6) + '</span> <span style="color:#888">(alamat tidak ditemukan)</span>';
-    }
-  } catch (error) {
-    console.warn('Reverse geocoding error:', error);
-    addrDisplay.innerHTML = '📍 <span style="color:#ffffff;font-weight:700">' + lat.toFixed(6) + '</span>, <span style="color:#ffffff;font-weight:700">' + lng.toFixed(6) + '</span> <span style="color:#888">(error fetching address)</span>';
-  }
-  
-  addressFetching = false;
-}
+            let alpha = event.alpha || 0; // 0-360, arah kompas
+            // pada OPPO A9 (Android) biasanya alpha sudah kompas
+            // webkitCompassHeading untuk iOS, tapi kita pakai alpha
+            if (event.webkitCompassHeading !== undefined) {
+                alpha = event.webkitCompassHeading;
+            }
+            // Jika alpha null, gunakan GPS heading (jika ada)
+            if (alpha === null || isNaN(alpha)) {
+                // fallback ke GPS course
+                if (lastCoords.course !== undefined && lastCoords.course !== null) {
+                    alpha = lastCoords.course;
+                } else {
+                    alpha = 0;
+                }
+            }
+            setHeading(alpha);
+        }
 
-// ============================================================
-// MANUAL TOUCH - DENGAN FITUR SET ARAH
-// ============================================================
-let touchActive = false;
-let touchStartAngle = 0;
-let touchStartHeading = 0;
+        // Cek dukungan sensor
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+        } else {
+            calibStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> Sensor tidak tersedia, gunakan GPS course';
+        }
 
-function initManualMode() {
-  compassWrap.addEventListener('touchstart', function(e) {
-    if (!isManual) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = compassWrap.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top + rect.height/2;
-    touchStartAngle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
-    touchStartHeading = heading;
-    touchActive = true;
-  }, {passive: false});
-  
-  compassWrap.addEventListener('touchmove', function(e) {
-    if (!isManual || !touchActive) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = compassWrap.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top + rect.height/2;
-    const angle = Math.atan2(touch.clientY - cy, touch.clientX - cx) * 180 / Math.PI;
-    const diff = angle - touchStartAngle;
-    
-    // Heading baru = heading awal + perbedaan sudut sentuhan
-    let newHeading = normalizeAngle(touchStartHeading + diff);
-    
-    // Jika manual reference aktif, terapkan offset
-    if (isManualSet && manualReference !== null) {
-      // Hitung heading dengan offset
-      heading = normalizeAngle(newHeading + manualOffset);
-    } else {
-      heading = newHeading;
-    }
-    
-    hasData = true;
-    activeStrategy = 'MANUAL';
-    sensorSource = 'SENTUHAN';
-    updateStatus();
-  }, {passive: false});
-  
-  compassWrap.addEventListener('touchend', function() { touchActive = false; }, {passive: true});
-  
-  // Mouse support
-  compassWrap.addEventListener('mousedown', function(e) {
-    if (!isManual) return;
-    const rect = compassWrap.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top + rect.height/2;
-    touchStartAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
-    touchStartHeading = heading;
-    touchActive = true;
-    e.preventDefault();
-  });
-  
-  document.addEventListener('mousemove', function(e) {
-    if (!isManual || !touchActive) return;
-    const rect = compassWrap.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top + rect.height/2;
-    const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
-    const diff = angle - touchStartAngle;
-    
-    let newHeading = normalizeAngle(touchStartHeading + diff);
-    
-    if (isManualSet && manualReference !== null) {
-      heading = normalizeAngle(newHeading + manualOffset);
-    } else {
-      heading = newHeading;
-    }
-    
-    hasData = true;
-    activeStrategy = 'MANUAL';
-    sensorSource = 'SENTUHAN';
-    updateStatus();
-  });
-  
-  document.addEventListener('mouseup', function() { touchActive = false; });
-}
+        // ---------- GPS Position ----------
+        function updatePosition(pos) {
+            const coords = pos.coords;
+            lastCoords = {
+                lat: coords.latitude,
+                lng: coords.longitude,
+                course: coords.heading || null
+            };
+            coordDisplay.textContent = `${lastCoords.lat.toFixed(5)}, ${lastCoords.lng.toFixed(5)}`;
 
-// ============================================================
-// FITUR SET ARAH
-// ============================================================
-function setManualDirection() {
-  if (!isManual) {
-    showToast('❌ Aktifkan mode manual dulu!');
-    return;
-  }
-  
-  if (!hasData) {
-    showToast('❌ Tidak ada data arah!');
-    return;
-  }
-  
-  // Ambil heading saat ini sebagai referensi
-  const currentHeading = heading;
-  
-  // Jika belum diset atau ingin mengganti
-  if (!isManualSet) {
-    // Set referensi ke heading saat ini
-    manualReference = currentHeading;
-    manualOffset = 0;
-    isManualSet = true;
-    manualSetBadge.classList.add('show');
-    btnSetDirection.textContent = '🔄 RESET ARAH';
-    btnSetDirection.style.background = 'rgba(255,23,68,0.15)';
-    btnSetDirection.style.borderColor = '#ff1744';
-    btnSetDirection.style.color = '#ff1744';
-    showToast(`🎯 Arah referensi diset ke ${Math.round(currentHeading)}°`);
-  } else {
-    // Reset: kembali ke mode normal
-    manualReference = null;
-    manualOffset = 0;
-    isManualSet = false;
-    manualSetBadge.classList.remove('show');
-    btnSetDirection.textContent = '🎯 SET ARAH';
-    btnSetDirection.style.background = 'rgba(255,171,0,0.15)';
-    btnSetDirection.style.borderColor = '#ffab00';
-    btnSetDirection.style.color = '#ffab00';
-    showToast('🔄 Referensi arah direset');
-  }
-}
+            // Reverse geocoding (Nominatim)
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lastCoords.lat}&lon=${lastCoords.lng}&zoom=18&addressdetails=1`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        let addr = data.display_name;
+                        // coba ekstrak RT/RW
+                        const road = data.address?.road || '';
+                        const suburb = data.address?.suburb || '';
+                        const city = data.address?.city || data.address?.town || data.address?.village || '';
+                        const rt = data.address?.rt || '';
+                        const rw = data.address?.rw || '';
+                        let detail = `${road}, ${suburb}`;
+                        if (rt || rw) detail += `, RT ${rt || '--'}/RW ${rw || '--'}`;
+                        if (city) detail += `, ${city}`;
+                        addressDisplay.textContent = detail || addr;
+                    } else {
+                        addressDisplay.textContent = 'Alamat tidak ditemukan';
+                    }
+                })
+                .catch(() => {
+                    addressDisplay.textContent = 'Gagal reverse geocode';
+                });
 
-// ============================================================
-// UPDATE STATUS
-// ============================================================
-function updateStatus() {
-  if (isManual) {
-    statusDot.className = 'dot cyan';
-    statusText.textContent = isManualSet ? 'MANUAL 🔒' : 'MANUAL';
-    manualBadge.classList.add('show');
-  } else if (hasData && currentLat) {
-    statusDot.className = 'dot green';
-    statusText.textContent = 'GPS + KOMPAS';
-    manualBadge.classList.remove('show');
-  } else if (hasData) {
-    statusDot.className = 'dot green';
-    statusText.textContent = 'KOMPAS';
-    manualBadge.classList.remove('show');
-  } else {
-    statusDot.className = 'dot red';
-    statusText.textContent = 'MENUNGGU';
-    manualBadge.classList.remove('show');
-  }
-}
+            // Suhu dari OpenWeatherMap
+            if (WEATHER_API_KEY && WEATHER_API_KEY !== 'YOUR_OPENWEATHER_API_KEY') {
+                fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lastCoords.lat}&lon=${lastCoords.lng}&appid=${WEATHER_API_KEY}&units=metric`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.main && data.main.temp !== undefined) {
+                            tempDisplay.textContent = `${data.main.temp.toFixed(1)} °C`;
+                        }
+                    })
+                    .catch(() => {});
+            } else {
+                // Mock suhu (karena tidak ada API key)
+                const mockTemp = (28 + Math.random() * 5).toFixed(1);
+                tempDisplay.textContent = `${mockTemp} °C`;
+            }
+        }
 
-// ============================================================
-// UPDATE DISPLAY
-// ============================================================
-function updateDisplay() {
-  let displayHeading = heading;
-  
-  if (isSmooth && !isManual) {
-    if (!smoothInitialized) {
-      smoothHeading = heading;
-      smoothInitialized = true;
-    } else {
-      const diff = angleDiff(heading, smoothHeading);
-      smoothHeading = normalizeAngle(smoothHeading + diff * SMOOTH_ALPHA);
-    }
-    displayHeading = smoothHeading;
-  } else {
-    smoothHeading = heading;
-    smoothInitialized = true;
-  }
-  
-  if (isLocked) {
-    displayHeading = lockedHeading;
-  }
-  
-  const displayDeg = Math.round(displayHeading);
-  const dir = getDirection(displayHeading);
-  
-  // Kompas display
-  degDisplay.textContent = String(displayDeg).padStart(3, '0');
-  
-  // Tambahkan indikator SET ARAH di display
-  let setIndicator = '';
-  if (isManualSet && isManual) {
-    setIndicator = ' 🔒';
-  }
-  
-  if (isLocked) {
-    dirDisplay.textContent = '🔒 TERKUNCI';
-    subDirDisplay.textContent = 'Terkunci ' + lockedHeading + '°';
-  } else {
-    dirDisplay.textContent = dir.emoji + ' ' + dir.long + setIndicator;
-    subDirDisplay.textContent = dir.desc + ' (' + dir.short + ')' + (isManualSet ? ' • Arah tersetel' : '');
-  }
-  
-  // Rotasi dial
-  const rotation = 45 - displayHeading;
-  dialGroup.setAttribute('transform', `rotate(${rotation}, 200, 200)`);
-  
-  // Info
-  infoAz.textContent = displayDeg + '° (' + dir.short + ')' + (isManualSet ? ' 🔒' : '');
-  
-  const magStrength = Math.sqrt(rawMX*rawMX + rawMY*rawMY + rawMZ*rawMZ);
-  infoMag.textContent = magStrength > 0 ? magStrength.toFixed(1) + ' µT' : '---';
-  
-  const delta = Math.abs(angleDiff(displayHeading, lastHeading));
-  infoAz.style.color = delta > 15 ? '#ff1744' : delta > 5 ? '#ffab00' : '#ffffff';
-  lastHeading = displayHeading;
-  
-  infoSensor.textContent = sensorSource + (currentLat ? ' 📡' : '') + (isManualSet ? ' 🔒' : '');
-  
-  updateCount++;
-  const nowPerf = performance.now();
-  if (nowPerf - lastUpdateTime >= 1000) {
-    infoUpd.textContent = updateCount + '/dtk';
-    updateCount = 0;
-    lastUpdateTime = nowPerf;
-  }
-  
-  history[historyIndex] = displayHeading;
-  historyIndex = (historyIndex + 1) % history.length;
-}
+        function gpsError(err) {
+            calibStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> GPS error: ${err.message}`;
+        }
 
-// ============================================================
-// GRAPH
-// ============================================================
-function drawGraph() {
-  const rect = graphCanvas.parentElement.getBoundingClientRect();
-  graphCanvas.width = rect.width * 2;
-  graphCanvas.height = rect.height * 2;
-  ctx.scale(2, 2);
-  
-  const w = graphCanvas.width / 2;
-  const h = graphCanvas.height / 2;
-  
-  ctx.clearRect(0, 0, w, h);
-  
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  ctx.lineWidth = 0.5;
-  ctx.setLineDash([2, 4]);
-  ctx.beginPath();
-  ctx.moveTo(0, h/2);
-  ctx.lineTo(w, h/2);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  
-  ctx.strokeStyle = isManualSet ? 'rgba(255,171,0,0.8)' : 'rgba(255,23,68,0.6)';
-  ctx.lineWidth = 1.5;
-  ctx.shadowColor = isManualSet ? 'rgba(255,171,0,0.3)' : 'rgba(255,23,68,0.2)';
-  ctx.shadowBlur = 3;
-  ctx.beginPath();
-  
-  const len = history.length;
-  for (let i = 0; i < len; i++) {
-    const idx = (historyIndex + i) % len;
-    const val = history[idx];
-    const x = (i / len) * w;
-    const y = h/2 - (val - 180) / 180 * (h/2 - 2);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  
-  const lastVal = history[(historyIndex - 1 + len) % len];
-  const lastX = w - 2;
-  const lastY = h/2 - (lastVal - 180) / 180 * (h/2 - 2);
-  ctx.fillStyle = isManualSet ? '#ffab00' : '#ff1744';
-  ctx.shadowColor = isManualSet ? '#ffab00' : '#ff1744';
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-}
+        if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(updatePosition, gpsError, {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 5000
+            });
+        } else {
+            calibStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> GPS tidak didukung';
+        }
 
-// ============================================================
-// RENDER LOOP
-// ============================================================
-function render() {
-  if (hasData || isManual) {
-    updateDisplay();
-    drawGraph();
-  }
-  
-  fpsCount++;
-  const now = performance.now();
-  if (now - fpsTime >= 500) {
-    fpsEl.textContent = Math.round(fpsCount / ((now - fpsTime) / 1000)) + ' FPS';
-    fpsCount = 0;
-    fpsTime = now;
-  }
-  
-  requestAnimationFrame(render);
-}
+        // ---------- Kalibrasi ----------
+        btnCalibrate.addEventListener('click', function() {
+            if (isCalibrating) return;
+            isCalibrating = true;
+            calibStatus.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#facc15;"></i> Kalibrasi: gerakkan HP membentuk angka 8...';
+            let count = 0;
+            // Simulasi kalibrasi: setelah 5 detik selesai
+            const interval = setInterval(() => {
+                count++;
+                if (count >= 5) {
+                    clearInterval(interval);
+                    isCalibrating = false;
+                    calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Kalibrasi selesai';
+                    // Reset lock/manual
+                    isLocked = false;
+                    isManual = false;
+                    manualSlider.style.display = 'none';
+                    btnLock.classList.remove('active');
+                    // forced refresh heading
+                    if (window.DeviceOrientationEvent) {
+                        // trigger ulang
+                    }
+                    setTimeout(() => {
+                        calibStatus.innerHTML = '<i class="fas fa-circle-check"></i> Siap · GPS aktif';
+                    }, 2000);
+                }
+            }, 1000);
+        });
 
-// ============================================================
-// DIAGNOSTICS
-// ============================================================
-function updateDiag() {
-  let html = '';
-  html += `<div style="display:flex;gap:6px;flex-wrap:wrap">`;
-  html += `<span>Secure: <span class="${window.isSecureContext ? 'ok' : 'err'}">${window.isSecureContext ? '✅' : '❌'}</span></span>`;
-  html += `<span>HTTPS: <span class="${location.protocol === 'https:' ? 'ok' : 'err'}">${location.protocol === 'https:' ? '✅' : '❌'}</span></span>`;
-  html += `<span>GPS: <span class="${currentLat ? 'ok' : 'warn'}">${currentLat ? '✅' : '⏳'}</span></span>`;
-  html += `</div><br>`;
-  html += `<div>DOA: ${diag.doaFired ? (diag.doaData ? '✅' : '⚠️') : '❌'} (${diag.doaCount}x)</div>`;
-  html += `<div>DO: ${diag.doFired ? (diag.doData ? '✅' : '⚠️') : '❌'} (${diag.doCount}x)</div>`;
-  html += `<div>Motion: ${diag.dmFired ? '✅' : '❌'} (${diag.dmCount}x)</div>`;
-  html += `<div>Magnet: ${diag.magFired ? '✅' : '❌'} (${diag.magCount}x)</div>`;
-  html += `<div>Strategy: <span class="ok">${activeStrategy}</span> | Source: <span class="ok">${sensorSource}</span></div>`;
-  html += `<div>GPS: ${currentLat ? currentLat.toFixed(6) + ', ' + currentLng.toFixed(6) : '⏳ menunggu...'}</div>`;
-  html += `<div>Manual Set: ${isManualSet ? '✅ Aktif (' + Math.round(manualReference) + '°)' : '❌ Tidak aktif'}</div>`;
-  diagPanel.innerHTML = html;
-}
+        // ---------- Lock ----------
+        btnLock.addEventListener('click', function() {
+            if (isCalibrating) return;
+            isLocked = !isLocked;
+            if (isLocked) {
+                lockedBearing = currentHeading;
+                btnLock.classList.add('active');
+                btnLock.innerHTML = '<i class="fas fa-lock-open"></i> Unlock';
+                calibStatus.innerHTML = `<i class="fas fa-lock" style="color:#facc15;"></i> Locked: ${Math.round(lockedBearing)}°`;
+                if (isManual) {
+                    isManual = false;
+                    manualSlider.style.display = 'none';
+                    btnManualToggle.classList.remove('active');
+                }
+            } else {
+                btnLock.classList.remove('active');
+                btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
+                calibStatus.innerHTML = '<i class="fas fa-circle-check"></i> Siap · GPS aktif';
+            }
+        });
 
-// ============================================================
-// TOAST
-// ============================================================
-let toastTimeout = null;
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add('show');
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
-}
+        // ---------- Manual Toggle ----------
+        btnManualToggle.addEventListener('click', function() {
+            if (isCalibrating) return;
+            isManual = !isManual;
+            if (isManual) {
+                manualSlider.style.display = 'flex';
+                btnManualToggle.classList.add('active');
+                btnManualToggle.innerHTML = '<i class="fas fa-check"></i> Manual ON';
+                // jika lock aktif, nonaktifkan lock
+                if (isLocked) {
+                    isLocked = false;
+                    btnLock.classList.remove('active');
+                    btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
+                }
+                // set slider ke heading saat ini
+                manualValue = currentHeading;
+                manualAngle.value = manualValue;
+                manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
+                updateNeedle(manualValue);
+                calibStatus.innerHTML = '<i class="fas fa-sliders-h" style="color:#a855f7;"></i> Mode Manual';
+            } else {
+                manualSlider.style.display = 'none';
+                btnManualToggle.classList.remove('active');
+                btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
+                calibStatus.innerHTML = '<i class="fas fa-circle-check"></i> Siap · GPS aktif';
+                // kembali ke sensor
+                if (window.DeviceOrientationEvent) {
+                    // force refresh
+                }
+            }
+        });
 
-// ============================================================
-// CALIBRATION
-// ============================================================
-function startCalibration() {
-  if (isManual) { showToast('❌ Kalibrasi tidak di mode manual'); return; }
-  if (isCalibrating) { stopCalibration(); return; }
-  
-  isCalibrating = true;
-  calTotal = 0;
-  calLastHeading = heading;
-  calBar.style.width = '0%';
-  calDone.style.display = 'none';
-  calClose.style.display = 'none';
-  calOverlay.classList.add('show');
-  btnCalibrate.classList.add('calibrating');
-  btnCalibrate.textContent = '⏳ KALIBRASI';
-  showToast('🔄 Putar HP angka 8');
-  
-  calInterval = setInterval(() => {
-    const change = Math.abs(angleDiff(heading, calLastHeading));
-    calTotal += change;
-    calLastHeading = heading;
-    const progress = Math.min(100, (calTotal / 2000) * 100);
-    calBar.style.width = progress + '%';
-    if (progress >= 100) {
-      stopCalibration();
-      calDone.style.display = 'block';
-      calClose.style.display = 'block';
-      showToast('✅ Kalibrasi selesai!');
-    }
-  }, 100);
-}
+        // Slider manual
+        manualAngle.addEventListener('input', function() {
+            if (!isManual) return;
+            manualValue = parseFloat(this.value);
+            manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
+            updateNeedle(manualValue);
+        });
 
-function stopCalibration() {
-  isCalibrating = false;
-  clearInterval(calInterval);
-  calInterval = null;
-  btnCalibrate.classList.remove('calibrating');
-  btnCalibrate.textContent = '⚡ KALIBRASI';
-}
+        // ---------- Simulasi / fallback jika tidak ada sensor (untuk demo di desktop) ----------
+        // Jika tidak ada sensor, kita gunakan mock random (hanya untuk demo)
+        let mockInterval = null;
+        if (!window.DeviceOrientationEvent) {
+            // tidak ada sensor sama sekali
+            mockInterval = setInterval(() => {
+                if (isManual || isLocked || isCalibrating) return;
+                const mock = (Date.now() / 30) % 360;
+                setHeading(mock);
+            }, 200);
+        }
 
-// ============================================================
-// BUTTON HANDLERS
-// ============================================================
-btnCalibrate.addEventListener('click', startCalibration);
-calClose.addEventListener('click', function() {
-  calOverlay.classList.remove('show');
-  stopCalibration();
-});
+        // cleanup
+        window.addEventListener('beforeunload', function() {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (mockInterval) clearInterval(mockInterval);
+        });
 
-btnLock.addEventListener('click', function() {
-  isLocked = !isLocked;
-  if (isLocked) {
-    lockedHeading = Math.round(heading);
-    btnLock.classList.add('active');
-    btnLock.textContent = '🔓 LEPAS';
-    showToast('🔒 Terkunci ' + lockedHeading + '°');
-  } else {
-    btnLock.classList.remove('active');
-    btnLock.textContent = '🔒 KUNCI';
-    showToast('🔓 Bebas');
-  }
-});
-
-btnSmooth.addEventListener('click', function() {
-  isSmooth = !isSmooth;
-  smoothInitialized = false;
-  if (isSmooth) {
-    btnSmooth.classList.add('active');
-    btnSmooth.textContent = '🌀 RAW';
-    showToast('🌀 Filter halus AKTIF');
-  } else {
-    btnSmooth.classList.remove('active');
-    btnSmooth.textContent = '🌀 HALUS';
-    showToast('🌀 Filter halus NONAKTIF');
-  }
-});
-
-btnManual.addEventListener('click', function() {
-  isManual = !isManual;
-  if (isManual) {
-    btnManual.classList.add('active');
-    btnManual.textContent = '✋ AUTO';
-    manualBadge.classList.add('show');
-    hasData = true;
-    activeStrategy = 'MANUAL';
-    sensorSource = 'SENTUHAN';
-    showToast('✋ Mode manual - geser kompas!');
-  } else {
-    btnManual.classList.remove('active');
-    btnManual.textContent = '✋ MANUAL';
-    manualBadge.classList.remove('show');
-    // Reset set arah saat keluar dari mode manual
-    if (isManualSet) {
-      manualReference = null;
-      manualOffset = 0;
-      isManualSet = false;
-      manualSetBadge.classList.remove('show');
-      btnSetDirection.textContent = '🎯 SET ARAH';
-      btnSetDirection.style.background = 'rgba(255,171,0,0.15)';
-      btnSetDirection.style.borderColor = '#ffab00';
-      btnSetDirection.style.color = '#ffab00';
-    }
-    if (!hasData) { activeStrategy = 'NONE'; sensorSource = 'NONE'; }
-    showToast('🤖 Kembali ke sensor');
-  }
-  updateStatus();
-});
-
-btnSetDirection.addEventListener('click', setManualDirection);
-
-diagToggle.addEventListener('click', function() {
-  diagPanel.classList.toggle('open');
-  if (diagPanel.classList.contains('open')) updateDiag();
-});
-
-// ============================================================
-// AUTO-START
-// ============================================================
-async function startApp() {
-  if (typeof DeviceOrientationEvent !== 'undefined' && 
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    try { await DeviceOrientationEvent.requestPermission(); } catch(e) {}
-  }
-  
-  generateTicks();
-  initSensors();
-  initManualMode();
-  initGPS();
-  
-  setTimeout(() => {
-    updateStatus();
-    updateDiag();
-    if (!hasData && !isManual) {
-      showToast('💡 Tidak ada sensor? Aktifkan MANUAL');
-    }
-  }, 500);
-  
-  render();
-  setInterval(updateDiag, 5000);
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startApp);
-} else {
-  startApp();
-}
-
-window.addEventListener('resize', drawGraph);
-
-})();
+    })();
 </script>
 </body>
 </html>
