@@ -120,25 +120,36 @@
   @keyframes spin{ to{ transform:rotate(360deg);} }
 
   svg.dial{ position:relative; width:100%; height:100%; display:block; }
-  .tick-major{ stroke:var(--cyan); stroke-width:2; opacity:0.85; }
-  .tick-minor{ stroke:var(--text-dim); stroke-width:1; opacity:0.5; }
-  .dial-ring{ fill:none; stroke:rgba(0,240,255,0.28); stroke-width:1.5; }
-  .dial-ring-outer{ fill:none; stroke:rgba(0,240,255,0.12); stroke-width:10; }
-  .cardinal{ font-family:var(--mono); font-weight:800; fill:var(--text); text-anchor:middle; dominant-baseline:middle; }
-  .cardinal.N{ fill:var(--magenta); filter:drop-shadow(0 0 6px rgba(255,46,196,0.8)); }
-  .interc{ font-family:var(--mono); font-size:9px; fill:var(--text-dim); text-anchor:middle; dominant-baseline:middle; letter-spacing:1px;}
-  .deg-label{ font-family:var(--mono); font-size:7.5px; fill:var(--text-dim); text-anchor:middle; dominant-baseline:middle; }
+  #rotor{ transform-origin: 150px 150px; will-change: transform; }
+  .tick-major{ stroke:#eafcff; stroke-width:2.4; opacity:0.95; filter:drop-shadow(0 0 3px rgba(0,240,255,0.7)); }
+  .tick-minor{ stroke:var(--cyan); stroke-width:1; opacity:0.55; }
+  .dial-ring{ fill:none; stroke:rgba(0,240,255,0.45); stroke-width:1.5; }
+  .dial-ring-outer{ fill:none; stroke:rgba(0,240,255,0.16); stroke-width:10; }
+  .cardinal{ font-family:var(--mono); font-weight:800; fill:#ffffff; text-anchor:middle; dominant-baseline:middle; filter:drop-shadow(0 0 5px rgba(0,240,255,0.6)); }
+  .cardinal.N{ fill:#ff2e4d; filter:drop-shadow(0 0 8px rgba(255,46,77,0.95)); }
+  .interc{ font-family:var(--mono); font-size:9.5px; font-weight:700; fill:var(--cyan); text-anchor:middle; dominant-baseline:middle; letter-spacing:1px; opacity:0.9;}
+  .deg-label{ font-family:var(--mono); font-size:8px; fill:#bfe9ff; text-anchor:middle; dominant-baseline:middle; opacity:0.85; }
 
   .needle-wrap{
     position:absolute; inset:0;
     display:flex; align-items:center; justify-content:center;
-    transform: rotate(0deg);
-    will-change: transform;
+    pointer-events:none;
   }
   .needle{ width:34%; height:34%; }
-  .needle-n{ fill:var(--cyan); filter:drop-shadow(0 0 8px rgba(0,240,255,0.9)); }
-  .needle-s{ fill:var(--magenta); filter:drop-shadow(0 0 8px rgba(255,46,196,0.75)); }
-  .needle-hub{ fill:var(--text); }
+  .needle-n{ fill:#00f0ff; filter:drop-shadow(0 0 10px rgba(0,240,255,1)); }
+  .needle-s{ fill:#ff2e9a; filter:drop-shadow(0 0 10px rgba(255,46,154,0.9)); }
+  .needle-hub{ fill:#ffffff; filter:drop-shadow(0 0 4px rgba(255,255,255,0.9)); }
+
+  /* fixed lubber-line: marks the phone's head/facing direction, always straight up */
+  .lubber{
+    position:absolute; top:-3%; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:9px solid transparent;
+    border-right:9px solid transparent;
+    border-top:16px solid #ffe600;
+    filter:drop-shadow(0 0 8px rgba(255,230,0,0.9));
+    z-index:5;
+  }
 
   .readout{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
@@ -242,6 +253,7 @@
   <section class="panel compass-panel" id="compassPanel" style="display:none;">
     <div class="dial-shell">
       <div class="sweep"></div>
+      <div class="lubber"></div>
       <svg class="dial" viewBox="0 0 300 300" id="dialSvg"></svg>
       <div class="needle-wrap" id="needleWrap">
         <svg class="needle" viewBox="0 0 100 100">
@@ -335,8 +347,15 @@
   }
   const cx=150, cy=150, rOuter=140, rTickOuterMajor=140, rTickInnerMajor=120, rTickInnerMinor=130;
 
+  // static bezel (does not rotate)
   svg.appendChild(el('circle',{cx,cy,r:145,class:'dial-ring-outer'}));
   svg.appendChild(el('circle',{cx,cy,r:118,class:'dial-ring'}));
+
+  // rotor: everything inside this group spins so that "U" (north) always
+  // keeps pointing to true north, while the fixed lubber-line + needle
+  // at the top mark the phone's own head/facing direction.
+  const rotor = el('g',{id:'rotor'});
+  svg.appendChild(rotor);
 
   for(let deg=0; deg<360; deg+=5){
     const rad = (deg-90) * Math.PI/180;
@@ -344,12 +363,12 @@
     const rInner = isMajor ? rTickInnerMajor : rTickInnerMinor;
     const x1 = cx + rInner*Math.cos(rad), y1 = cy + rInner*Math.sin(rad);
     const x2 = cx + rTickOuterMajor*Math.cos(rad), y2 = cy + rTickOuterMajor*Math.sin(rad);
-    svg.appendChild(el('line',{x1,y1,x2,y2,class: isMajor ? 'tick-major':'tick-minor'}));
+    rotor.appendChild(el('line',{x1,y1,x2,y2,class: isMajor ? 'tick-major':'tick-minor'}));
     if(isMajor && deg % 30 === 0 && deg % 90 !== 0){
       const rl = 104;
       const lx = cx + rl*Math.cos(rad), ly = cy + rl*Math.sin(rad);
       const t = el('text',{x:lx,y:ly,class:'deg-label'}); t.textContent = deg;
-      svg.appendChild(t);
+      rotor.appendChild(t);
     }
   }
 
@@ -364,13 +383,13 @@
     const rad=(c.deg-90)*Math.PI/180, r=97;
     const x=cx+r*Math.cos(rad), y=cy+r*Math.sin(rad);
     const t = el('text',{x,y,class:c.cls,'font-size':22}); t.textContent=c.t;
-    svg.appendChild(t);
+    rotor.appendChild(t);
   });
   inter.forEach(c=>{
     const rad=(c.deg-90)*Math.PI/180, r=100;
     const x=cx+r*Math.cos(rad), y=cy+r*Math.sin(rad);
     const t = el('text',{x,y,class:'interc'}); t.textContent=c.t;
-    svg.appendChild(t);
+    rotor.appendChild(t);
   });
 
   // ---------- Direction label ----------
@@ -388,7 +407,7 @@
   let haveFirstReading = false;
   let lastVibDir = null;
 
-  const needleWrap = $('needleWrap');
+  const rotorEl = $('dialSvg').querySelector('#rotor');
   const degReadout = $('degReadout');
   const dirReadout = $('dirReadout');
   const facingWord = $('facingWord');
@@ -397,9 +416,13 @@
   function applyHeading(newRaw){
     rawHeading = newRaw;
     const target = ((rawHeading + offset) % 360 + 360) % 360;
+    // shortest-path smoothing so the dial never snaps across the 0/360 seam
     let delta = ((target - (((displayed%360)+360)%360)) + 540) % 360 - 180;
     displayed += delta;
-    needleWrap.style.transform = `rotate(${displayed}deg)`;
+    // Dial rotates the OPPOSITE way of the heading: as the phone turns,
+    // "U" (north) keeps pointing to true north in space. The needle and
+    // lubber-line at the top stay fixed — they always mark the phone's head.
+    rotorEl.setAttribute('transform', `rotate(${-displayed} 150 150)`);
     degReadout.textContent = Math.round(target) + '°';
     const lbl = dirLabel(target);
     dirReadout.textContent = lbl;
