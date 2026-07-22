@@ -1,797 +1,589 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Kompas 8 Mata Angin - OPPO A9</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NAVIS — Kompas Digital</title>
+<style>
+  :root{
+    --void:#03060d;
+    --void-2:#070c18;
+    --panel:rgba(12,20,36,0.6);
+    --panel-border:rgba(0,229,255,0.22);
+    --cyan:#00f0ff;
+    --cyan-dim:#0891a8;
+    --magenta:#ff2ec4;
+    --amber:#ffb020;
+    --green:#39ff9e;
+    --text:#eaf6ff;
+    --text-dim:#6f93b3;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, 'Roboto Mono', monospace;
+    --sans: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--void);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(0,229,255,0.10), transparent 55%),
+      radial-gradient(ellipse at 50% 110%, rgba(255,46,196,0.08), transparent 55%),
+      linear-gradient(var(--void-2), var(--void));
+    padding: 18px 14px 40px;
+  }
+  /* scanline / grid texture */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.035) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(ellipse at 50% 30%, black 10%, transparent 75%);
+    z-index:0;
+  }
+  .wrap{ position:relative; z-index:1; max-width:460px; margin:0 auto; }
 
-    <!-- Font & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .brand{ display:flex; flex-direction:column; }
+  .brand .logo{
+    font-family:var(--mono); font-weight:700; letter-spacing:3px;
+    font-size:20px; color:var(--cyan); text-shadow:0 0 14px rgba(0,240,255,0.65);
+  }
+  .brand .sub{ font-size:10px; letter-spacing:3px; color:var(--text-dim); margin-top:2px; }
+  .status-dot{
+    width:9px; height:9px; border-radius:50%;
+    background: var(--text-dim);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.03);
+    transition: background .3s, box-shadow .3s;
+  }
+  .status-dot.live{ background:var(--green); box-shadow:0 0 10px 2px rgba(57,255,158,0.7); }
+  .status-dot.warn{ background:var(--amber); box-shadow:0 0 10px 2px rgba(255,176,32,0.7); }
+  .status-row{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:1px;}
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:18px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px rgba(0,229,255,0.04) inset, 0 10px 40px rgba(0,0,0,0.45);
+    padding:16px;
+    margin-bottom:14px;
+  }
 
-        body {
-            font-family: 'Orbitron', sans-serif;
-            background: radial-gradient(circle at 20% 30%, #0b0e1a, #05070c);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-        }
+  /* --- ACTIVATE GATE --- */
+  #gate{ text-align:center; padding:26px 20px; }
+  #gate p{ color:var(--text-dim); font-size:13px; line-height:1.6; margin:10px 0 18px; }
+  .btn{
+    font-family:var(--mono); letter-spacing:1.5px; font-size:12px; font-weight:700;
+    text-transform:uppercase;
+    color:var(--void);
+    background:linear-gradient(135deg,var(--cyan),#00b4d8);
+    border:none; border-radius:10px;
+    padding:13px 20px;
+    cursor:pointer;
+    box-shadow:0 0 22px rgba(0,240,255,0.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+    width:100%;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn.ghost{
+    background:transparent; color:var(--cyan);
+    border:1px solid rgba(0,240,255,0.4);
+    box-shadow:none;
+  }
+  .btn.magenta{ background:linear-gradient(135deg,var(--magenta),#a3157e); box-shadow:0 0 22px rgba(255,46,196,0.35); }
+  .btn.small{ padding:9px 12px; font-size:10.5px; }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:none; }
 
-        .container {
-            max-width: 480px;
-            width: 100%;
-            background: rgba(10, 14, 30, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            border-radius: 48px 48px 32px 32px;
-            padding: 20px 16px 24px;
-            box-shadow: 0 20px 60px rgba(0, 180, 255, 0.15), inset 0 0 30px rgba(0, 255, 255, 0.05);
-        }
+  /* --- COMPASS --- */
+  .compass-panel{ display:flex; flex-direction:column; align-items:center; padding:22px 16px 18px; }
+  .dial-shell{
+    position:relative; width:min(78vw, 320px); aspect-ratio:1/1; margin:0 auto;
+  }
+  .sweep{
+    position:absolute; inset:-6%; border-radius:50%;
+    background: conic-gradient(from 0deg, rgba(0,240,255,0.28), transparent 22%, transparent 100%);
+    animation: spin 6s linear infinite;
+    filter: blur(1px);
+    opacity:0.6;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
 
-        /* HEADER */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.15);
-            margin-bottom: 12px;
-        }
-        .header h1 {
-            font-size: 16px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #00f0ff, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 2px;
-        }
-        .header h1 i {
-            -webkit-text-fill-color: initial;
-            color: #00f0ff;
-            margin-right: 6px;
-        }
-        .header .status-dot {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 10px;
-            color: #4ade80;
-        }
-        .header .status-dot i {
-            font-size: 12px;
-        }
+  svg.dial{ position:relative; width:100%; height:100%; display:block; }
+  .tick-major{ stroke:var(--cyan); stroke-width:2; opacity:0.85; }
+  .tick-minor{ stroke:var(--text-dim); stroke-width:1; opacity:0.5; }
+  .dial-ring{ fill:none; stroke:rgba(0,240,255,0.28); stroke-width:1.5; }
+  .dial-ring-outer{ fill:none; stroke:rgba(0,240,255,0.12); stroke-width:10; }
+  .cardinal{ font-family:var(--mono); font-weight:800; fill:var(--text); text-anchor:middle; dominant-baseline:middle; }
+  .cardinal.N{ fill:var(--magenta); filter:drop-shadow(0 0 6px rgba(255,46,196,0.8)); }
+  .interc{ font-family:var(--mono); font-size:9px; fill:var(--text-dim); text-anchor:middle; dominant-baseline:middle; letter-spacing:1px;}
+  .deg-label{ font-family:var(--mono); font-size:7.5px; fill:var(--text-dim); text-anchor:middle; dominant-baseline:middle; }
 
-        /* KOMPAS UTAMA */
-        .compass-wrapper {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1/1;
-            max-width: 350px;
-            margin: 0 auto 8px;
-        }
+  .needle-wrap{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    transform: rotate(0deg);
+    will-change: transform;
+  }
+  .needle{ width:34%; height:34%; }
+  .needle-n{ fill:var(--cyan); filter:drop-shadow(0 0 8px rgba(0,240,255,0.9)); }
+  .needle-s{ fill:var(--magenta); filter:drop-shadow(0 0 8px rgba(255,46,196,0.75)); }
+  .needle-hub{ fill:var(--text); }
 
-        .compass-ring {
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            box-shadow: 0 0 50px rgba(0, 180, 255, 0.15), inset 0 0 40px rgba(0, 255, 255, 0.05);
-            background: radial-gradient(circle at 30% 30%, #12162b, #070a14);
-        }
+  .readout{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    text-align:center; pointer-events:none;
+  }
+  .readout .deg{ font-family:var(--mono); font-size:15px; font-weight:800; color:var(--cyan); text-shadow:0 0 12px rgba(0,240,255,0.8); letter-spacing:1px;}
+  .readout .lbl{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:2px; letter-spacing:2px;}
 
-        /* 8 MATA ANGIN pada ring */
-        .wind-rose {
-            position: absolute;
-            inset: 8px;
-            border-radius: 50%;
-        }
-        .wind-rose .dir-label {
-            position: absolute;
-            font-size: 12px;
-            font-weight: 900;
-            color: rgba(255, 255, 255, 0.3);
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
-            transform-origin: center;
-            transition: all 0.3s;
-        }
-        .wind-rose .dir-label.active {
-            color: #00f0ff;
-            text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff;
-            transform: scale(1.2);
-        }
-        .wind-rose .dir-label.primary {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 14px;
-        }
+  .facing-strip{
+    margin-top:16px; width:100%;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:1px;
+  }
+  .facing-strip b{ color:var(--green); font-size:13px; }
 
-        /* Jarum */
-        .needle-container {
-            position: absolute;
-            inset: 28px;
-            border-radius: 50%;
-            transition: transform 0.05s linear;
-            will-change: transform;
-        }
+  /* --- CONTROLS --- */
+  .ctrl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .ctrl-grid .full{ grid-column:1/-1; }
+  .offset-tag{
+    font-family:var(--mono); font-size:10px; color:var(--amber);
+    text-align:center; margin-top:10px; letter-spacing:1px;
+  }
+  .manual-row{ display:flex; gap:8px; margin-top:10px; }
+  .manual-row input{
+    flex:1; background:rgba(0,0,0,0.35); border:1px solid var(--panel-border);
+    border-radius:8px; color:var(--cyan); font-family:var(--mono); font-size:14px;
+    padding:10px; text-align:center;
+  }
+  .manual-row input:focus{ outline:none; border-color:var(--cyan); }
 
-        .needle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 48%;
-            transform-origin: bottom center;
-            transform: translate(-50%, -100%) rotate(0deg);
-            border-radius: 10px;
-            background: linear-gradient(to top, #ff2d75, #ff6b9d);
-            box-shadow: 0 0 30px #ff2d75, 0 0 60px rgba(255, 45, 117, 0.3);
-            z-index: 10;
-            transition: transform 0.05s linear;
-        }
-        .needle::after {
-            content: '';
-            position: absolute;
-            top: -14px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 18px solid #ff2d75;
-            filter: drop-shadow(0 0 20px #ff2d75);
-        }
-        .needle-south {
-            height: 38%;
-            background: linear-gradient(to top, #a0aec0, #e2e8f0);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
-            top: 50%;
-            transform-origin: top center;
-            transform: translate(-50%, 0%) rotate(0deg);
-            border-radius: 10px;
-        }
-        .needle-south::after { display: none; }
+  .calib-overlay{
+    display:none; text-align:center; padding:6px 4px 4px;
+  }
+  .calib-overlay.show{ display:block; }
+  .infinity{ width:70px; margin:8px auto; opacity:0.9; }
+  .calib-overlay p{ font-size:11.5px; color:var(--text-dim); line-height:1.6; }
 
-        .center-dot {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #00f0ff, #0070a0);
-            box-shadow: 0 0 30px #00f0ff, 0 0 60px rgba(0, 240, 255, 0.3);
-            z-index: 20;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
+  /* --- SECTION LABEL --- */
+  .sec-label{
+    display:flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:3px; color:var(--text-dim);
+    text-transform:uppercase; margin-bottom:12px;
+  }
+  .sec-label::before{ content:""; width:6px; height:6px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); border-radius:1px; }
 
-        /* ARAH UTAMA (besar) */
-        .direction-main {
-            text-align: center;
-            margin: -4px 0 2px;
-        }
-        .direction-main .angle {
-            font-size: 32px;
-            font-weight: 900;
-            color: #00f0ff;
-            text-shadow: 0 0 30px #00f0ff, 0 0 60px #00a0ff;
-            letter-spacing: 2px;
-        }
-        .direction-main .dir-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #a855f7;
-            text-shadow: 0 0 20px #a855f7;
-            margin-left: 12px;
-        }
+  /* --- POSITION PANEL --- */
+  .coord-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .coord-box{
+    background:rgba(0,0,0,0.28); border:1px solid rgba(0,240,255,0.12);
+    border-radius:12px; padding:10px 12px;
+  }
+  .coord-box .k{ font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1.5px; }
+  .coord-box .v{ font-family:var(--mono); font-size:15px; color:var(--green); margin-top:4px; text-shadow:0 0 8px rgba(57,255,158,0.5); word-break:break-all; }
 
-        /* 8 MATA ANGIN (horizontal) */
-        .windrose-horizontal {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 4px;
-            margin: 4px 0 10px;
-            background: rgba(0, 255, 255, 0.04);
-            border-radius: 30px;
-            border: 1px solid rgba(0, 255, 255, 0.08);
-        }
-        .windrose-horizontal .wd {
-            text-align: center;
-            font-size: 9px;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.25);
-            padding: 4px 2px;
-            flex: 1;
-            transition: all 0.3s;
-            border-radius: 20px;
-            letter-spacing: 0.5px;
-        }
-        .windrose-horizontal .wd i {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 2px;
-            color: rgba(255, 255, 255, 0.15);
-        }
-        .windrose-horizontal .wd.active {
-            color: #00f0ff;
-            background: rgba(0, 255, 255, 0.1);
-            text-shadow: 0 0 20px #00f0ff;
-        }
-        .windrose-horizontal .wd.active i {
-            color: #00f0ff;
-        }
-        .windrose-horizontal .wd.primary-active {
-            color: #facc15;
-            background: rgba(250, 204, 21, 0.12);
-            text-shadow: 0 0 20px #facc15;
-        }
-        .windrose-horizontal .wd.primary-active i {
-            color: #facc15;
-        }
+  .addr-box{
+    background:rgba(0,0,0,0.28); border:1px solid rgba(255,46,196,0.18);
+    border-radius:12px; padding:12px 14px; margin-bottom:12px;
+  }
+  .addr-box .k{ font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1.5px; margin-bottom:6px; }
+  .addr-box .full{ font-size:13.5px; color:var(--text); line-height:1.55; margin-bottom:10px;}
+  .addr-line{ display:flex; justify-content:space-between; font-size:11.5px; padding:4px 0; border-top:1px dashed rgba(255,255,255,0.08); color:var(--text-dim); }
+  .addr-line span:last-child{ color:var(--text); text-align:right; max-width:60%; }
+  .rtrw-note{ font-size:10px; color:var(--amber); margin-top:8px; line-height:1.5; }
 
-        /* TOMBOL */
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin: 10px 0 8px;
-        }
-        .actions button {
-            background: rgba(0, 255, 255, 0.06);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            border-radius: 30px;
-            padding: 8px 14px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            font-size: 10px;
-            color: #c0d0e0;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.25s;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.05);
-            flex: 1 0 auto;
-            justify-content: center;
-            cursor: pointer;
-            min-height: 40px;
-        }
-        .actions button i {
-            color: #00f0ff;
-            font-size: 13px;
-        }
-        .actions button.active {
-            background: rgba(0, 255, 255, 0.15);
-            border-color: #00f0ff;
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
-        }
-        .actions button:active { transform: scale(0.95); }
-        .actions button.btn-danger.active {
-            border-color: #ff2d75;
-            background: rgba(255, 45, 117, 0.15);
-            box-shadow: 0 0 25px rgba(255, 45, 117, 0.2);
-        }
+  .weather-row{ display:flex; align-items:center; gap:14px; }
+  .weather-temp{ font-family:var(--mono); font-size:34px; font-weight:800; color:var(--amber); text-shadow:0 0 14px rgba(255,176,32,0.6); }
+  .weather-meta{ flex:1; }
+  .weather-meta .desc{ font-size:13px; color:var(--text); }
+  .weather-meta .sub{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:4px; letter-spacing:0.5px; }
 
-        /* SLIDER MANUAL */
-        .manual-slider {
-            width: 100%;
-            margin: 4px 0 8px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            padding: 0 2px;
-        }
-        .manual-slider input[type="range"] {
-            flex: 1;
-            height: 5px;
-            -webkit-appearance: none;
-            background: linear-gradient(90deg, #00f0ff, #a855f7);
-            border-radius: 20px;
-            outline: none;
-        }
-        .manual-slider input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #00f0ff, #0080aa);
-            cursor: pointer;
-            box-shadow: 0 0 25px #00f0ff;
-            border: 2px solid #fff;
-        }
-        .manual-slider span {
-            color: #a855f7;
-            font-weight: 700;
-            font-size: 13px;
-            min-width: 44px;
-            text-shadow: 0 0 15px #a855f7;
-        }
+  footer{ text-align:center; margin-top:6px; }
+  footer p{ font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1px; opacity:0.6; }
 
-        /* INFO */
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 10px 0 6px;
-        }
-        .info-card {
-            background: rgba(0, 255, 255, 0.03);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 10px 10px;
-            backdrop-filter: blur(4px);
-        }
-        .info-card .label {
-            font-size: 8px;
-            font-weight: 700;
-            color: #64748b;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-        .info-card .value {
-            font-size: 12px;
-            font-weight: 700;
-            color: #b0e0ff;
-            word-break: break-word;
-            text-shadow: 0 0 12px rgba(0, 200, 255, 0.2);
-            margin-top: 2px;
-            line-height: 1.3;
-        }
-        .info-card .value i {
-            color: #00f0ff;
-            margin-right: 4px;
-        }
-        .info-card.full {
-            grid-column: 1 / -1;
-        }
-
-        .calib-status {
-            text-align: center;
-            font-size: 10px;
-            color: #94a3b8;
-            margin-top: 4px;
-            letter-spacing: 0.5px;
-        }
-        .calib-status i {
-            margin-right: 5px;
-        }
-        .calib-status .highlight {
-            color: #facc15;
-        }
-
-        @media (max-width: 400px) {
-            .container { padding: 12px 10px; }
-            .actions button { font-size: 9px; padding: 6px 10px; min-height: 34px; }
-            .info-card .value { font-size: 11px; }
-            .direction-main .angle { font-size: 26px; }
-            .windrose-horizontal .wd { font-size: 8px; }
-        }
-    </style>
+  @media (prefers-reduced-motion: reduce){
+    .sweep{ animation:none; }
+  }
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="container" id="app">
-    <!-- HEADER -->
-    <div class="header">
-        <h1><i class="fas fa-compass"></i> AZIMUTH</h1>
-        <div class="status-dot">
-            <i class="fas fa-circle" style="color:#4ade80;"></i>
-            <span>LIVE</span>
-        </div>
+  <header>
+    <div class="brand">
+      <div class="logo">NAVIS</div>
+      <div class="sub">DIGITAL COMPASS SYSTEM</div>
+    </div>
+    <div class="status-row">
+      <span id="statusText">STANDBY</span>
+      <span class="status-dot" id="statusDot"></span>
+    </div>
+  </header>
+
+  <!-- GATE -->
+  <section class="panel" id="gate">
+    <div style="font-family:var(--mono); font-size:12px; letter-spacing:2px; color:var(--cyan);">⌖ AKTIVASI SENSOR</div>
+    <p>Izinkan akses sensor arah &amp; lokasi untuk memulai kompas real-time. Pegang HP secara horizontal, bagian atas layar mengarah ke arah hadapmu.</p>
+    <button class="btn" id="activateBtn">Aktifkan Kompas</button>
+  </section>
+
+  <!-- COMPASS -->
+  <section class="panel compass-panel" id="compassPanel" style="display:none;">
+    <div class="dial-shell">
+      <div class="sweep"></div>
+      <svg class="dial" viewBox="0 0 300 300" id="dialSvg"></svg>
+      <div class="needle-wrap" id="needleWrap">
+        <svg class="needle" viewBox="0 0 100 100">
+          <polygon class="needle-n" points="50,6 40,52 50,44 60,52"></polygon>
+          <polygon class="needle-s" points="50,94 40,48 50,56 60,48"></polygon>
+          <circle class="needle-hub" cx="50" cy="50" r="4.2"></circle>
+        </svg>
+      </div>
+      <div class="readout">
+        <div class="deg" id="degReadout">--°</div>
+        <div class="lbl" id="dirReadout">-</div>
+      </div>
+    </div>
+    <div class="facing-strip">Arah hadap HP&nbsp;→&nbsp;<b id="facingWord">-</b></div>
+  </section>
+
+  <!-- ADJUSTMENT -->
+  <section class="panel" id="adjustPanel" style="display:none;">
+    <div class="sec-label">Penyesuaian Jarum</div>
+    <div class="ctrl-grid">
+      <button class="btn ghost small" id="calibBtn">↻ Kalibrasi</button>
+      <button class="btn ghost small" id="manualToggleBtn">✎ Set Manual</button>
+      <button class="btn ghost small" id="lockBtn">🔓 Kunci Offset</button>
+      <button class="btn ghost small" id="resetBtn">⟲ Reset Offset</button>
     </div>
 
-    <!-- KOMPAS -->
-    <div class="compass-wrapper">
-        <div class="compass-ring"></div>
-
-        <!-- 8 Mata Angin di Ring -->
-        <div class="wind-rose" id="windRose">
-            <!-- diisi JS -->
-        </div>
-
-        <div class="needle-container" id="needleContainer">
-            <div class="needle" id="needleNorth"></div>
-            <div class="needle needle-south" id="needleSouth"></div>
-        </div>
-        <div class="center-dot"></div>
+    <div class="calib-overlay" id="calibOverlay">
+      <svg class="infinity" viewBox="0 0 100 40"><path d="M20 20 C20 5,45 5,50 20 C55 35,80 35,80 20 C80 5,55 5,50 20 C45 35,20 35,20 20 Z" fill="none" stroke="#00f0ff" stroke-width="3" stroke-linecap="round"/></svg>
+      <p id="calibText">Gerakkan HP membentuk angka 8 selama beberapa detik agar sensor magnetometer OS bisa menyesuaikan diri.</p>
     </div>
 
-    <!-- ARAH UTAMA -->
-    <div class="direction-main">
-        <span class="angle" id="mainAngle">0°</span>
-        <span class="dir-name" id="mainDirName">UTARA</span>
+    <div class="manual-row" id="manualRow" style="display:none;">
+      <input type="number" id="manualInput" placeholder="0-359°" min="0" max="359">
+      <button class="btn small" id="manualApplyBtn" style="width:auto;">Terapkan</button>
     </div>
 
-    <!-- 8 MATA ANGIN HORIZONTAL -->
-    <div class="windrose-horizontal" id="windroseHorizontal">
-        <!-- diisi JS -->
+    <div class="offset-tag" id="offsetTag">Offset aktif: 0° · tidak dikunci</div>
+  </section>
+
+  <!-- POSITION -->
+  <section class="panel" id="posPanel" style="display:none;">
+    <div class="sec-label">Posisi Real-Time</div>
+    <div class="coord-grid">
+      <div class="coord-box"><div class="k">LATITUDE</div><div class="v" id="latVal">--</div></div>
+      <div class="coord-box"><div class="k">LONGITUDE</div><div class="v" id="lonVal">--</div></div>
+    </div>
+    <div class="coord-grid" style="margin-bottom:14px;">
+      <div class="coord-box"><div class="k">AKURASI GPS</div><div class="v" id="accVal" style="font-size:13px;">--</div></div>
+      <div class="coord-box"><div class="k">KETINGGIAN</div><div class="v" id="altVal" style="font-size:13px;">--</div></div>
     </div>
 
-    <!-- TOMBOL -->
-    <div class="actions">
-        <button id="btnCalibrate"><i class="fas fa-sync-alt"></i> Kalibrasi</button>
-        <button id="btnLock" class=""><i class="fas fa-lock"></i> Lock</button>
-        <button id="btnManualToggle"><i class="fas fa-sliders-h"></i> Manual</button>
-        <button id="btnReset" class=""><i class="fas fa-undo"></i> Reset</button>
+    <div class="addr-box">
+      <div class="k">ALAMAT LENGKAP</div>
+      <div class="full" id="addrFull">Mencari lokasi…</div>
+      <div class="addr-line"><span>Jalan / Dusun</span><span id="addrRoad">-</span></div>
+      <div class="addr-line"><span>RT / RW</span><span id="addrRtRw">-</span></div>
+      <div class="addr-line"><span>Kelurahan / Desa</span><span id="addrVillage">-</span></div>
+      <div class="addr-line"><span>Kecamatan</span><span id="addrSuburb">-</span></div>
+      <div class="addr-line"><span>Kota / Kabupaten</span><span id="addrCity">-</span></div>
+      <div class="addr-line"><span>Provinsi</span><span id="addrState">-</span></div>
+      <div class="addr-line"><span>Kode Pos</span><span id="addrPostcode">-</span></div>
+      <div class="rtrw-note">⚠ Data RT/RW tidak selalu tersedia di basis data peta publik (OpenStreetMap). Jika kosong, itu berarti data tersebut belum terdaftar untuk lokasi ini.</div>
     </div>
 
-    <!-- SLIDER MANUAL -->
-    <div class="manual-slider" id="manualSlider">
-        <i class="fas fa-arrow-left" style="color:#00f0ff; font-size:12px;"></i>
-        <input type="range" id="manualAngle" min="0" max="360" value="0" step="0.5" />
-        <span id="manualAngleDisplay">0°</span>
+    <div class="weather-row">
+      <div class="weather-temp" id="tempVal">--°</div>
+      <div class="weather-meta">
+        <div class="desc" id="weatherDesc">Mengambil data cuaca…</div>
+        <div class="sub" id="weatherSub">-</div>
+      </div>
     </div>
+  </section>
 
-    <!-- INFO -->
-    <div class="info-grid">
-        <div class="info-card">
-            <div class="label"><i class="fas fa-map-pin"></i> Koordinat</div>
-            <div class="value" id="coordDisplay">-6.2088, 106.8456</div>
-        </div>
-        <div class="info-card">
-            <div class="label"><i class="fas fa-thermometer-half"></i> Suhu</div>
-            <div class="value" id="tempDisplay">-- °C</div>
-        </div>
-        <div class="info-card full">
-            <div class="label"><i class="fas fa-location-dot"></i> Alamat</div>
-            <div class="value" id="addressDisplay">Jl. Contoh No. 123, RT 01/RW 02</div>
-        </div>
-    </div>
-
-    <div class="calib-status" id="calibStatus">
-        <i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif
-    </div>
+  <footer>
+    <p>NAVIS · SENSOR HEADING + GPS · UPDATE KONTINU SELAMA APLIKASI AKTIF</p>
+  </footer>
 </div>
 
 <script>
-(function() {
-    // ---------- DOM ----------
-    const needleContainer = document.getElementById('needleContainer');
-    const needleNorth = document.getElementById('needleNorth');
-    const needleSouth = document.getElementById('needleSouth');
-    const mainAngle = document.getElementById('mainAngle');
-    const mainDirName = document.getElementById('mainDirName');
-    const coordDisplay = document.getElementById('coordDisplay');
-    const tempDisplay = document.getElementById('tempDisplay');
-    const addressDisplay = document.getElementById('addressDisplay');
-    const calibStatus = document.getElementById('calibStatus');
-    const windRose = document.getElementById('windRose');
-    const windroseHorizontal = document.getElementById('windroseHorizontal');
+(function(){
+  const $ = id => document.getElementById(id);
+  const statusDot = $('statusDot'), statusText = $('statusText');
 
-    const btnCalibrate = document.getElementById('btnCalibrate');
-    const btnLock = document.getElementById('btnLock');
-    const btnManualToggle = document.getElementById('btnManualToggle');
-    const btnReset = document.getElementById('btnReset');
-    const manualSlider = document.getElementById('manualSlider');
-    const manualAngle = document.getElementById('manualAngle');
-    const manualAngleDisplay = document.getElementById('manualAngleDisplay');
+  // ---------- Build compass dial (SVG) ----------
+  const svg = $('dialSvg');
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  const cx=150, cy=150, rOuter=140, rTickOuterMajor=140, rTickInnerMajor=120, rTickInnerMinor=130;
 
-    // ---------- DATA MATA ANGIN ----------
-    const WINDS = [
-        { name: 'U', full: 'UTARA', angle: 0, icon: 'fa-arrow-up' },
-        { name: 'TL', full: 'TIMUR LAUT', angle: 45, icon: 'fa-arrow-up-right' },
-        { name: 'T', full: 'TIMUR', angle: 90, icon: 'fa-arrow-right' },
-        { name: 'TG', full: 'TENGGARA', angle: 135, icon: 'fa-arrow-down-right' },
-        { name: 'S', full: 'SELATAN', angle: 180, icon: 'fa-arrow-down' },
-        { name: 'BD', full: 'BARAT DAYA', angle: 225, icon: 'fa-arrow-down-left' },
-        { name: 'B', full: 'BARAT', angle: 270, icon: 'fa-arrow-left' },
-        { name: 'BL', full: 'BARAT LAUT', angle: 315, icon: 'fa-arrow-up-left' }
-    ];
+  svg.appendChild(el('circle',{cx,cy,r:145,class:'dial-ring-outer'}));
+  svg.appendChild(el('circle',{cx,cy,r:118,class:'dial-ring'}));
 
-    // ---------- STATE ----------
-    let currentHeading = 0;
-    let targetHeading = 0;
-    let isLocked = false;
-    let lockedBearing = 0;
-    let isManual = false;
-    let manualValue = 0;
-    let isCalibrating = false;
-
-    let lastCoords = { lat: -6.2088, lng: 106.8456 };
-    let watchId = null;
-
-    // ---------- BUILD WIND ROSE (di ring) ----------
-    function buildWindRose() {
-        windRose.innerHTML = '';
-        WINDS.forEach(w => {
-            const div = document.createElement('div');
-            div.className = 'dir-label primary';
-            div.dataset.angle = w.angle;
-            div.dataset.name = w.name;
-            div.textContent = w.name;
-            // posisi di lingkaran
-            const rad = (w.angle - 90) * Math.PI / 180;
-            const r = 42; // persen
-            const cx = 50 + r * Math.cos(rad);
-            const cy = 50 + r * Math.sin(rad);
-            div.style.left = `calc(${cx}% - 10px)`;
-            div.style.top = `calc(${cy}% - 10px)`;
-            div.style.transform = 'translate(-50%, -50%)';
-            windRose.appendChild(div);
-        });
+  for(let deg=0; deg<360; deg+=5){
+    const rad = (deg-90) * Math.PI/180;
+    const isMajor = deg % 30 === 0;
+    const rInner = isMajor ? rTickInnerMajor : rTickInnerMinor;
+    const x1 = cx + rInner*Math.cos(rad), y1 = cy + rInner*Math.sin(rad);
+    const x2 = cx + rTickOuterMajor*Math.cos(rad), y2 = cy + rTickOuterMajor*Math.sin(rad);
+    svg.appendChild(el('line',{x1,y1,x2,y2,class: isMajor ? 'tick-major':'tick-minor'}));
+    if(isMajor && deg % 30 === 0 && deg % 90 !== 0){
+      const rl = 104;
+      const lx = cx + rl*Math.cos(rad), ly = cy + rl*Math.sin(rad);
+      const t = el('text',{x:lx,y:ly,class:'deg-label'}); t.textContent = deg;
+      svg.appendChild(t);
     }
-    buildWindRose();
+  }
 
-    // ---------- BUILD HORIZONTAL 8 MATA ANGIN ----------
-    function buildHorizontal() {
-        windroseHorizontal.innerHTML = '';
-        WINDS.forEach(w => {
-            const div = document.createElement('div');
-            div.className = 'wd';
-            div.dataset.angle = w.angle;
-            div.dataset.name = w.name;
-            div.innerHTML = `<i class="fas ${w.icon}"></i>${w.name}`;
-            windroseHorizontal.appendChild(div);
-        });
+  const cardinals = [
+    {deg:0, t:'U', cls:'cardinal N'}, {deg:90, t:'T', cls:'cardinal'},
+    {deg:180, t:'S', cls:'cardinal'}, {deg:270, t:'B', cls:'cardinal'}
+  ];
+  const inter = [
+    {deg:45, t:'TL'}, {deg:135, t:'TG'}, {deg:225, t:'BD'}, {deg:315, t:'BL'}
+  ];
+  cardinals.forEach(c=>{
+    const rad=(c.deg-90)*Math.PI/180, r=97;
+    const x=cx+r*Math.cos(rad), y=cy+r*Math.sin(rad);
+    const t = el('text',{x,y,class:c.cls,'font-size':22}); t.textContent=c.t;
+    svg.appendChild(t);
+  });
+  inter.forEach(c=>{
+    const rad=(c.deg-90)*Math.PI/180, r=100;
+    const x=cx+r*Math.cos(rad), y=cy+r*Math.sin(rad);
+    const t = el('text',{x,y,class:'interc'}); t.textContent=c.t;
+    svg.appendChild(t);
+  });
+
+  // ---------- Direction label ----------
+  const dirNames = ['Utara','Timur Laut','Timur','Tenggara','Selatan','Barat Daya','Barat','Barat Laut'];
+  function dirLabel(deg){
+    const idx = Math.round(deg/45) % 8;
+    return dirNames[idx];
+  }
+
+  // ---------- State ----------
+  let rawHeading = 0;
+  let offset = 0;
+  let locked = false;
+  let displayed = 0; // accumulated unbounded angle for smooth rotation
+  let haveFirstReading = false;
+  let lastVibDir = null;
+
+  const needleWrap = $('needleWrap');
+  const degReadout = $('degReadout');
+  const dirReadout = $('dirReadout');
+  const facingWord = $('facingWord');
+  const offsetTag = $('offsetTag');
+
+  function applyHeading(newRaw){
+    rawHeading = newRaw;
+    const target = ((rawHeading + offset) % 360 + 360) % 360;
+    let delta = ((target - (((displayed%360)+360)%360)) + 540) % 360 - 180;
+    displayed += delta;
+    needleWrap.style.transform = `rotate(${displayed}deg)`;
+    degReadout.textContent = Math.round(target) + '°';
+    const lbl = dirLabel(target);
+    dirReadout.textContent = lbl;
+    facingWord.textContent = lbl.toUpperCase() + ' · ' + Math.round(target) + '°';
+    haveFirstReading = true;
+
+    if(navigator.vibrate && lastVibDir !== lbl){
+      lastVibDir = lbl;
+      navigator.vibrate(12);
     }
-    buildHorizontal();
+  }
 
-    // ---------- UPDATE MATA ANGIN ----------
-    function updateWindRose(deg) {
-        // Cari arah terdekat
-        let minDiff = 999;
-        let closest = WINDS[0];
-        WINDS.forEach(w => {
-            let diff = Math.abs(deg - w.angle);
-            if (diff > 180) diff = 360 - diff;
-            if (diff < minDiff) {
-                minDiff = diff;
-                closest = w;
-            }
-        });
+  function screenAngle(){
+    if(screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+    if(typeof window.orientation === 'number') return window.orientation;
+    return 0;
+  }
 
-        // Update ring labels
-        const labels = windRose.querySelectorAll('.dir-label');
-        labels.forEach(el => {
-            const a = parseFloat(el.dataset.angle);
-            let diff = Math.abs(deg - a);
-            if (diff > 180) diff = 360 - diff;
-            el.classList.toggle('active', diff < 25);
-        });
-
-        // Update horizontal
-        const items = windroseHorizontal.querySelectorAll('.wd');
-        items.forEach(el => {
-            const a = parseFloat(el.dataset.angle);
-            let diff = Math.abs(deg - a);
-            if (diff > 180) diff = 360 - diff;
-            el.classList.toggle('active', diff < 25);
-            el.classList.toggle('primary-active', diff < 12);
-        });
-
-        // Update teks utama
-        mainAngle.textContent = `${Math.round(deg)}°`;
-        mainDirName.textContent = closest.full;
-    }
-
-    // ---------- UPDATE NEEDLE ----------
-    function updateNeedle(deg) {
-        const rotateDeg = deg;
-        needleNorth.style.transform = `translate(-50%, -100%) rotate(${rotateDeg}deg)`;
-        needleSouth.style.transform = `translate(-50%, 0%) rotate(${rotateDeg}deg)`;
-        updateWindRose(deg);
-    }
-
-    // ---------- SET HEADING ----------
-    function setHeading(deg) {
-        targetHeading = ((deg % 360) + 360) % 360;
-        if (!isManual && !isLocked) {
-            currentHeading = targetHeading;
-            updateNeedle(currentHeading);
-        } else if (isLocked) {
-            updateNeedle(lockedBearing);
-        }
-    }
-
-    // ---------- ANIMASI LOOP (smooth) ----------
-    function animateLoop() {
-        if (!isManual && !isLocked) {
-            let diff = targetHeading - currentHeading;
-            if (diff > 180) diff -= 360;
-            if (diff < -180) diff += 360;
-            currentHeading += diff * 0.2;
-            if (Math.abs(diff) < 0.1) currentHeading = targetHeading;
-            currentHeading = ((currentHeading % 360) + 360) % 360;
-            updateNeedle(currentHeading);
-        } else if (isLocked) {
-            updateNeedle(lockedBearing);
-        } else if (isManual) {
-            updateNeedle(manualValue);
-        }
-        requestAnimationFrame(animateLoop);
-    }
-    animateLoop();
-
-    // ---------- SENSOR ORIENTASI ----------
-    function handleOrientation(event) {
-        if (isCalibrating || isManual || isLocked) return;
-        let alpha = event.alpha || 0;
-        if (event.webkitCompassHeading !== undefined) {
-            alpha = event.webkitCompassHeading;
-        }
-        if (alpha === null || isNaN(alpha)) {
-            if (lastCoords.course) alpha = lastCoords.course;
-            else alpha = 0;
-        }
-        setHeading(alpha);
-    }
-
-    if (window.DeviceOrientationEvent) {
-        window.addEventListener('deviceorientation', handleOrientation, true);
+  function onOrientation(e){
+    let heading;
+    if(typeof e.webkitCompassHeading === 'number'){
+      heading = e.webkitCompassHeading; // iOS: already true compass heading
+    } else if(e.alpha !== null && (e.absolute === true || e.type === 'deviceorientationabsolute')){
+      heading = (360 - e.alpha + screenAngle()) % 360;
+    } else if(e.alpha !== null){
+      heading = (360 - e.alpha + screenAngle()) % 360;
     } else {
-        calibStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> Sensor tidak tersedia';
+      return;
+    }
+    if(heading < 0) heading += 360;
+    applyHeading(heading);
+  }
+
+  // ---------- Offset controls ----------
+  function refreshOffsetTag(){
+    offsetTag.textContent = `Offset aktif: ${Math.round(offset)}° · ${locked ? 'dikunci' : 'tidak dikunci'}`;
+  }
+
+  $('calibBtn').addEventListener('click', ()=>{
+    if(locked) return;
+    const overlay = $('calibOverlay');
+    overlay.classList.add('show');
+    $('calibText').textContent = 'Gerakkan HP membentuk angka 8 selama beberapa detik…';
+    let t = 4;
+    const iv = setInterval(()=>{
+      t--;
+      if(t<=0){
+        clearInterval(iv);
+        $('calibText').textContent = 'Kalibrasi selesai. Sensor arah OS telah diberi kesempatan menyesuaikan diri.';
+        setTimeout(()=> overlay.classList.remove('show'), 1600);
+      }
+    },1000);
+  });
+
+  let manualOpen = false;
+  $('manualToggleBtn').addEventListener('click', ()=>{
+    if(locked) return;
+    manualOpen = !manualOpen;
+    $('manualRow').style.display = manualOpen ? 'flex' : 'none';
+    if(manualOpen) $('manualInput').value = Math.round(((rawHeading+offset)%360+360)%360);
+  });
+  $('manualApplyBtn').addEventListener('click', ()=>{
+    const v = parseFloat($('manualInput').value);
+    if(isNaN(v)) return;
+    offset = ((v - rawHeading) % 360 + 360) % 360;
+    refreshOffsetTag();
+    manualOpen = false;
+    $('manualRow').style.display='none';
+  });
+
+  $('lockBtn').addEventListener('click', ()=>{
+    locked = !locked;
+    $('lockBtn').textContent = locked ? '🔒 Offset Terkunci' : '🔓 Kunci Offset';
+    $('calibBtn').disabled = locked;
+    $('manualToggleBtn').disabled = locked;
+    $('resetBtn').disabled = locked;
+    refreshOffsetTag();
+  });
+
+  $('resetBtn').addEventListener('click', ()=>{
+    if(locked) return;
+    offset = 0;
+    refreshOffsetTag();
+  });
+
+  // ---------- Geolocation + reverse geocode + weather ----------
+  let lastGeoFetch = 0;
+  const GEO_THROTTLE_MS = 20000;
+
+  function fmtCoord(v){ return v.toFixed(6); }
+
+  const weatherCodeMap = {
+    0:'Cerah', 1:'Cerah berawan', 2:'Berawan sebagian', 3:'Mendung',
+    45:'Berkabut', 48:'Kabut es', 51:'Gerimis ringan', 53:'Gerimis sedang', 55:'Gerimis lebat',
+    61:'Hujan ringan', 63:'Hujan sedang', 65:'Hujan lebat', 71:'Salju ringan', 73:'Salju sedang',
+    75:'Salju lebat', 80:'Hujan lokal ringan', 81:'Hujan lokal sedang', 82:'Hujan lokal lebat',
+    95:'Badai petir', 96:'Badai petir + hujan es', 99:'Badai petir hebat'
+  };
+
+  async function fetchWeather(lat, lon){
+    try{
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const c = data.current;
+      $('tempVal').textContent = Math.round(c.temperature_2m) + '°C';
+      $('weatherDesc').textContent = weatherCodeMap[c.weather_code] || 'Kondisi tidak diketahui';
+      $('weatherSub').textContent = `Angin ${c.wind_speed_10m} km/j · Kelembapan ${c.relative_humidity_2m}%`;
+    }catch(err){
+      $('weatherDesc').textContent = 'Gagal memuat cuaca';
+    }
+  }
+
+  async function fetchAddress(lat, lon){
+    try{
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+      const res = await fetch(url, {headers:{'Accept':'application/json'}});
+      const data = await res.json();
+      const a = data.address || {};
+      $('addrFull').textContent = data.display_name || 'Alamat tidak ditemukan';
+      $('addrRoad').textContent = a.road || a.pedestrian || a.hamlet || '-';
+      const rt = a.neighbourhood || a.residential || '';
+      $('addrRtRw').textContent = rt || '-';
+      $('addrVillage').textContent = a.village || a.suburb || a.quarter || '-';
+      $('addrSuburb').textContent = a.suburb || a.city_district || a.county || '-';
+      $('addrCity').textContent = a.city || a.town || a.county || a.regency || '-';
+      $('addrState').textContent = a.state || '-';
+      $('addrPostcode').textContent = a.postcode || '-';
+    }catch(err){
+      $('addrFull').textContent = 'Gagal memuat alamat';
+    }
+  }
+
+  function onPosition(pos){
+    const {latitude, longitude, accuracy, altitude} = pos.coords;
+    $('latVal').textContent = fmtCoord(latitude);
+    $('lonVal').textContent = fmtCoord(longitude);
+    $('accVal').textContent = `± ${Math.round(accuracy)} m`;
+    $('altVal').textContent = altitude !== null ? `${Math.round(altitude)} m` : '-';
+    statusDot.classList.add('live'); statusDot.classList.remove('warn');
+    statusText.textContent = 'LIVE';
+
+    const now = Date.now();
+    if(now - lastGeoFetch > GEO_THROTTLE_MS){
+      lastGeoFetch = now;
+      fetchAddress(latitude, longitude);
+      fetchWeather(latitude, longitude);
+    }
+  }
+
+  function onPositionError(err){
+    statusDot.classList.add('warn'); statusDot.classList.remove('live');
+    statusText.textContent = 'GPS ERROR';
+  }
+
+  // ---------- Activation ----------
+  $('activateBtn').addEventListener('click', async ()=>{
+    // Orientation permission (iOS 13+)
+    try{
+      if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+        const res = await DeviceOrientationEvent.requestPermission();
+        if(res !== 'granted'){ alert('Izin sensor arah ditolak.'); return; }
+      }
+    }catch(e){}
+
+    if('ondeviceorientationabsolute' in window){
+      window.addEventListener('deviceorientationabsolute', onOrientation, true);
+    } else {
+      window.addEventListener('deviceorientation', onOrientation, true);
     }
 
-    // ---------- GPS ----------
-    function updatePosition(pos) {
-        const coords = pos.coords;
-        lastCoords = {
-            lat: coords.latitude,
-            lng: coords.longitude,
-            course: coords.heading || null
-        };
-        coordDisplay.textContent = `${lastCoords.lat.toFixed(5)}, ${lastCoords.lng.toFixed(5)}`;
-
-        // Reverse geocoding
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lastCoords.lat}&lon=${lastCoords.lng}&zoom=18&addressdetails=1`)
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.address) {
-                    const a = data.address;
-                    const road = a.road || a.pedestrian || '';
-                    const suburb = a.suburb || a.neighbourhood || '';
-                    const rt = a.rt || '';
-                    const rw = a.rw || '';
-                    const city = a.city || a.town || a.village || a.municipality || '';
-                    let parts = [];
-                    if (road) parts.push(road);
-                    if (suburb) parts.push(suburb);
-                    if (rt || rw) parts.push(`RT ${rt || '--'}/RW ${rw || '--'}`);
-                    if (city) parts.push(city);
-                    addressDisplay.textContent = parts.join(', ') || data.display_name || 'Alamat tidak ditemukan';
-                } else {
-                    addressDisplay.textContent = 'Alamat tidak ditemukan';
-                }
-            })
-            .catch(() => { addressDisplay.textContent = 'Gagal reverse geocode'; });
-
-        // Suhu (mock karena tanpa API key)
-        const mockTemp = (27 + Math.random() * 6).toFixed(1);
-        tempDisplay.textContent = `${mockTemp} °C`;
+    if(navigator.geolocation){
+      navigator.geolocation.watchPosition(onPosition, onPositionError, {
+        enableHighAccuracy:true, maximumAge:1000, timeout:15000
+      });
     }
 
-    if (navigator.geolocation) {
-        watchId = navigator.geolocation.watchPosition(updatePosition, (e) => {
-            calibStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> GPS error: ${e.message}`;
-        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
-    }
-
-    // ---------- KALIBRASI ----------
-    btnCalibrate.addEventListener('click', function() {
-        if (isCalibrating) return;
-        isCalibrating = true;
-        calibStatus.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#facc15;"></i> Kalibrasi: gerakkan HP angka 8...';
-        let count = 0;
-        const interval = setInterval(() => {
-            count++;
-            if (count >= 5) {
-                clearInterval(interval);
-                isCalibrating = false;
-                calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Kalibrasi selesai';
-                isLocked = false;
-                isManual = false;
-                manualSlider.style.display = 'none';
-                btnLock.classList.remove('active');
-                btnManualToggle.classList.remove('active');
-                btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
-                btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
-                setTimeout(() => {
-                    calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
-                }, 1500);
-            }
-        }, 1000);
-    });
-
-    // ---------- LOCK ----------
-    btnLock.addEventListener('click', function() {
-        if (isCalibrating) return;
-        isLocked = !isLocked;
-        if (isLocked) {
-            lockedBearing = currentHeading;
-            btnLock.classList.add('active');
-            btnLock.innerHTML = '<i class="fas fa-lock-open"></i> Unlock';
-            calibStatus.innerHTML = `<i class="fas fa-lock" style="color:#facc15;"></i> Locked: ${Math.round(lockedBearing)}°`;
-            if (isManual) {
-                isManual = false;
-                manualSlider.style.display = 'none';
-                btnManualToggle.classList.remove('active');
-                btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
-            }
-        } else {
-            btnLock.classList.remove('active');
-            btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
-            calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
-        }
-    });
-
-    // ---------- MANUAL ----------
-    btnManualToggle.addEventListener('click', function() {
-        if (isCalibrating) return;
-        isManual = !isManual;
-        if (isManual) {
-            manualSlider.style.display = 'flex';
-            btnManualToggle.classList.add('active');
-            btnManualToggle.innerHTML = '<i class="fas fa-check"></i> ON';
-            if (isLocked) {
-                isLocked = false;
-                btnLock.classList.remove('active');
-                btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
-            }
-            manualValue = currentHeading;
-            manualAngle.value = manualValue;
-            manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
-            updateNeedle(manualValue);
-            calibStatus.innerHTML = '<i class="fas fa-sliders-h" style="color:#a855f7;"></i> Mode Manual';
-        } else {
-            manualSlider.style.display = 'none';
-            btnManualToggle.classList.remove('active');
-            btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
-            calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
-        }
-    });
-
-    manualAngle.addEventListener('input', function() {
-        if (!isManual) return;
-        manualValue = parseFloat(this.value);
-        manualAngleDisplay.textContent = `${Math.round(manualValue)}°`;
-        updateNeedle(manualValue);
-    });
-
-    // ---------- RESET ----------
-    btnReset.addEventListener('click', function() {
-        if (isCalibrating) return;
-        isLocked = false;
-        isManual = false;
-        manualSlider.style.display = 'none';
-        btnLock.classList.remove('active');
-        btnLock.innerHTML = '<i class="fas fa-lock"></i> Lock';
-        btnManualToggle.classList.remove('active');
-        btnManualToggle.innerHTML = '<i class="fas fa-sliders-h"></i> Manual';
-        calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Reset · Sensor aktif';
-        // Kembali ke sensor
-        if (window.DeviceOrientationEvent) {
-            // force
-        }
-        setTimeout(() => {
-            calibStatus.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80;"></i> Siap · Sensor aktif';
-        }, 1200);
-    });
-
-    // ---------- FALLBACK DEMO (jika tidak ada sensor) ----------
-    let mockInterval = null;
-    if (!window.DeviceOrientationEvent) {
-        mockInterval = setInterval(() => {
-            if (isManual || isLocked || isCalibrating) return;
-            const mock = (Date.now() / 25) % 360;
-            setHeading(mock);
-        }, 150);
-    }
-
-    window.addEventListener('beforeunload', function() {
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-        if (mockInterval) clearInterval(mockInterval);
-    });
+    $('gate').style.display='none';
+    $('compassPanel').style.display='flex';
+    $('adjustPanel').style.display='block';
+    $('posPanel').style.display='block';
+    refreshOffsetTag();
+    statusText.textContent='MENCARI SINYAL…';
+  });
 
 })();
 </script>
