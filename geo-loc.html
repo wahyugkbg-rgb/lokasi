@@ -244,6 +244,29 @@
             font-weight: 500;
         }
 
+        /* ================= Rotasi peta (mode navigasi) ================= */
+        /* Leaflet-rotate menaruh tile & overlay di pane ".leaflet-rotate-pane".
+           Transisi halus di sini membuat peta berputar mulus mengikuti arah
+           kepala HP, mirip animasi rotasi Google Maps saat berkendara. */
+        .leaflet-rotate-pane {
+            transition: transform 0.22s linear;
+        }
+        .action-btn#btnNavMode.on {
+            border-color: var(--info);
+            color: var(--info);
+        }
+        .action-btn#btnNavMode.on i {
+            animation: navmode-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes navmode-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+        .compass-widget.nav-active .compass-ring {
+            border-color: var(--info);
+            box-shadow: 0 0 10px rgba(74, 194, 255, 0.45);
+        }
+
         /* ================= Kontrol kanan ================= */
         .right-controls {
             position: fixed;
@@ -590,7 +613,7 @@
     </div>
 
     <!-- Kompas -->
-    <div class="compass-widget">
+    <div class="compass-widget" id="compassWidget" title="Ketuk untuk reset peta ke Utara di atas" role="button" tabindex="0" aria-label="Reset peta ke utara">
         <div class="compass-ring">
             <div class="compass-tick n">U</div>
             <div class="compass-tick e">T</div>
@@ -610,6 +633,9 @@
 
     <!-- Right Controls -->
     <div class="right-controls">
+        <div class="action-btn" id="btnNavMode" title="Mode navigasi: peta berputar ikut arah" aria-label="Mode navigasi">
+            <i class="fas fa-location-arrow"></i>
+        </div>
         <div class="action-btn" id="btnCenter" title="Kembali ke lokasi" aria-label="Kembali ke lokasi">
             <i class="fas fa-crosshairs"></i>
         </div>
@@ -704,7 +730,8 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9/dist/leaflet-src.js"></script>
+    <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
     <script>
     (function() {
         'use strict';
@@ -723,6 +750,13 @@
         let lastPosition = null;   // { lat, lng, speed, heading, timestamp, accuracy }
         let tileLayers = {};
         let dashboardHidden = false;
+
+        // Mode navigasi: saat aktif, peta berputar real-time mengikuti arah
+        // kepala HP (atau arah gerak GPS jika sensor kompas tak tersedia),
+        // mirip Google Maps saat mode berkendara.
+        let navModeEnabled = false;
+        let mapRotateSupported = false;   // true jika browser & plugin siap merotasi peta
+        let lastAppliedBearing = null;    // hindari setBearing() berulang untuk sudut yang nyaris sama
 
         // Arah / kompas
         let deviceHeading = null;      // arah hadap HP (dari sensor kompas, sudah dihaluskan)
@@ -824,8 +858,21 @@
                 zoomControl: false,
                 attributionControl: true,
                 fadeAnimation: true,
-                zoomAnimation: true
+                zoomAnimation: true,
+                // ---- Dukungan rotasi peta (leaflet-rotate) ----
+                // Semua jenis peta (jalan, satelit, gelap, terrain) otomatis
+                // ikut berputar karena plugin ini menambal L.GridLayer secara
+                // global, bukan hanya satu jenis tile tertentu.
+                rotate: true,
+                bearing: 0,
+                rotateControl: false,   // kita pakai tombol kompas kustom sendiri
+                touchRotate: false,     // rotasi hanya dikendalikan oleh sensor arah, bukan gestur jari
+                shiftKeyRotate: false
             });
+
+            // Jika plugin leaflet-rotate berhasil dimuat & browser mendukung
+            // transform 3D, map._rotate akan bernilai true setelah init.
+            mapRotateSupported = !!(map._rotate && L.Browser && L.Browser.any3d);
 
             tileLayers.street.addTo(map);
 
@@ -991,6 +1038,50 @@
         const needleState = { deg: 0, init: false };
         const arrowState = { deg: 0, init: false };
 
+        // ============================================================
+        // Rotasi peta (mode navigasi)
+        // ============================================================
+        // "bearing" pada leaflet-rotate = arah kompas yang ditaruh menghadap
+        // ke ATAS layar (sama seperti konvensi Mapbox/MapLibre/Google Maps).
+        // Jadi cukup set bearing = arah kepala HP, dan peta otomatis berputar
+        // sehingga arah user menghadap selalu di atas layar.
+        function applyMapBearing(deg) {
+            if (!mapRotateSupported || deg === null || isNaN(deg)) return;
+            const normalized = ((deg % 360) + 360) % 360;
+            if (lastAppliedBearing !== null) {
+                // Lewati update kalau perubahan sangat kecil, supaya tidak
+                // membebani repaint saat sensor mengirim noise kecil.
+                const diff = Math.abs(shortestAngleDiff(lastAppliedBearing, normalized));
+                if (diff < 0.4) return;
+            }
+            map.setBearing(normalized);
+            lastAppliedBearing = normalized;
+        }
+
+        function getMapBearing() {
+            return mapRotateSupported ? map.getBearing() : 0;
+        }
+
+        // Nyala/matikan mode navigasi (peta berputar ikut arah, seperti Google Maps saat berkendara)
+        function setNavMode(enabled) {
+            navModeEnabled = enabled && mapRotateSupported;
+            $('btnNavMode').classList.toggle('on', navModeEnabled);
+            $('compassWidget').classList.toggle('nav-active', navModeEnabled);
+
+            if (navModeEnabled) {
+                showToast('Mode navigasi aktif — peta ikut arah HP');
+                if (lastPosition) {
+                    map.setView([lastPosition.lat, lastPosition.lng], Math.max(map.getZoom(), 17), { animate: true, duration: 0.5 });
+                }
+                updateHeadingDisplay();
+            } else {
+                showToast('Mode navigasi nonaktif — Utara di atas');
+                lastAppliedBearing = 0;
+                if (mapRotateSupported) map.setBearing(0);
+                updateHeadingDisplay();
+            }
+        }
+
         // Update tampilan kompas + panah arah hadap/gerak pada marker.
         // Dipanggil setiap ada event sensor orientasi (bisa puluhan kali/detik)
         // maupun dari heartbeat, sehingga selalu responsif walau user diam.
@@ -1006,12 +1097,23 @@
                 compassReadout.textContent = '-- °';
             }
 
-            // Panah pada marker: arah gerak jika bergerak, kalau tidak pakai arah hadap HP
+            // Mode navigasi: putar peta itu sendiri mengikuti arah kepala HP
+            // (fallback ke arah gerak GPS bila kompas HP tidak tersedia).
+            if (navModeEnabled) {
+                const bearingSource = (deviceHeading !== null) ? deviceHeading : (moving ? gpsHeading : null);
+                if (bearingSource !== null) applyMapBearing(bearingSource);
+            }
+
+            // Panah pada marker: arah gerak jika bergerak, kalau tidak pakai arah hadap HP.
+            // Marker TIDAK ikut berputar bersama peta (supaya pin tetap tegak), jadi
+            // panah harus dikoreksi relatif terhadap rotasi peta saat ini agar tetap
+            // menunjuk ke arah yang benar di layar.
             const dirArrow = document.getElementById('dirArrow');
             if (dirArrow) {
                 const arrowHeading = moving && gpsHeading !== null ? gpsHeading : deviceHeading;
                 if (arrowHeading !== null) {
-                    applyContinuousRotation(dirArrow, arrowHeading, arrowState, false);
+                    const screenRelativeDeg = arrowHeading - getMapBearing();
+                    applyContinuousRotation(dirArrow, screenRelativeDeg, arrowState, false);
                     dirArrow.style.opacity = moving ? '1' : '0.55';
                 } else {
                     dirArrow.style.opacity = '0.25';
@@ -1185,6 +1287,9 @@
             if (!onPositionSuccess._firstFix) {
                 onPositionSuccess._firstFix = true;
                 map.setView(latlng, 17);
+            } else if (navModeEnabled) {
+                // Mode navigasi: peta terus mengikuti posisi user (seperti Google Maps saat berkendara)
+                map.setView(latlng, map.getZoom(), { animate: true, duration: 0.4 });
             }
 
             // Ambil data cuaca & nama lokasi (dengan throttle agar hemat request)
@@ -1385,6 +1490,24 @@
                     layerPickerVisible = false;
                     layerPicker.classList.remove('visible');
                 });
+            });
+
+            $('btnNavMode').addEventListener('click', () => {
+                if (!mapRotateSupported) {
+                    showToast('Rotasi peta tidak didukung di browser ini');
+                    return;
+                }
+                setNavMode(!navModeEnabled);
+            });
+
+            $('compassWidget').addEventListener('click', () => {
+                if (navModeEnabled) setNavMode(false);
+            });
+            $('compassWidget').addEventListener('keydown', (e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && navModeEnabled) {
+                    e.preventDefault();
+                    setNavMode(false);
+                }
             });
 
             $('btnTrail').addEventListener('click', () => {
