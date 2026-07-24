@@ -10,31 +10,32 @@
     <style>
         :root {
             --bg: #050a12;
-            --card: rgba(8, 18, 38, 0.85);
-            --accent: #00e5ff;
-            --green: #00ff88;
-            --amber: #ffab00;
-            --red: #ff1744;
-            --text: #dce6f0;
-            --muted: #4a6080;
-            --border: rgba(0, 229, 255, 0.12);
+            --card: rgba(10, 20, 42, 0.88);
+            --accent: #00f0ff;
+            --accent2: #ff00e5;
+            --green: #39ff14;
+            --amber: #ffea00;
+            --red: #ff0844;
+            --text: #ffffff;
+            --muted: #4fc3f7;
+            --border: rgba(0, 240, 255, 0.28);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
-            width: 100%; height: 100%; overflow: hidden;
+            width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden;
             background: var(--bg); color: var(--text);
             font-family: 'Share Tech Mono', monospace;
             -webkit-tap-highlight-color: transparent; user-select: none;
         }
         #app {
-            width: 100%; height: 100%; display: flex; flex-direction: column;
-            position: relative; overflow: hidden;
+            width: 100%; min-height: 100%; display: flex; flex-direction: column;
+            position: relative; overflow: visible;
         }
         #app::before {
             content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
             background-image:
-                linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+                linear-gradient(rgba(0,240,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,240,255,0.025) 1px, transparent 1px);
             background-size: 36px 36px;
         }
         .scanlines {
@@ -60,7 +61,7 @@
         .gps-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
         #clock { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 2px; }
 
-        #gaugeArea { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; min-height: 0; padding: 4px; }
+        #gaugeArea { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; min-height: 230px; padding: 4px; }
         #gaugeCanvas { display: block; }
 
         #dataPanels { position: relative; z-index: 10; padding: 0 10px; flex-shrink: 0; }
@@ -88,7 +89,7 @@
         .compass-needle::after {
             content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
             border-left: 3px solid transparent; border-right: 3px solid transparent;
-            border-top: 8px solid rgba(255,255,255,0.25);
+            border-top: 8px solid rgba(0, 240, 255, 0.55);
         }
         .compass-dir {
             position: absolute; bottom: -1px; font-size: 7px;
@@ -96,12 +97,44 @@
         }
         .address-box {
             flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-            padding: 7px 10px; font-size: 11px; color: #FFEA00; font-weight: bold;
+            padding: 7px 10px; font-size: 11px; color: var(--amber); font-weight: bold;
             display: flex; align-items: center; gap: 7px; overflow: hidden;
             white-space: nowrap; text-overflow: ellipsis; backdrop-filter: blur(6px);
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
         }
         .address-box i { color: var(--accent); flex-shrink: 0; font-size: 11px; }
         .address-box span { overflow: hidden; text-overflow: ellipsis; }
+        .address-box .chev { margin-left: auto; color: var(--accent); flex-shrink: 0; font-size: 9px; transition: transform 0.25s; }
+        .address-box.open .chev { transform: rotate(180deg); }
+
+        #addressDetail {
+            position: relative; z-index: 10; margin: 0 12px 6px; overflow: hidden;
+            max-height: 0; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s ease;
+        }
+        #addressDetail.open { max-height: 260px; opacity: 1; }
+        #addressDetail .detail-inner {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 12px; backdrop-filter: blur(6px);
+        }
+        .detail-row {
+            display: flex; justify-content: space-between; gap: 10px; padding: 3px 0;
+            border-bottom: 1px dashed rgba(0,240,255,0.12); font-size: 10px;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .dk { color: var(--muted); letter-spacing: 1px; flex-shrink: 0; }
+        .detail-row .dv { color: var(--text); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+        .detail-note { font-size: 8px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+        #weatherPanels { position: relative; z-index: 10; padding: 0 10px 6px; flex-shrink: 0; }
+        .weather-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .weather-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 6px 6px; text-align: center; backdrop-filter: blur(6px);
+        }
+        .weather-card i { font-size: 12px; margin-bottom: 2px; display: block; }
+        .weather-label { font-size: 8px; letter-spacing: 2px; color: var(--muted); margin-bottom: 2px; }
+        .weather-value { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; }
+        .weather-unit { font-size: 8px; color: var(--muted); }
 
         #extraInfo {
             position: relative; z-index: 10; display: flex; justify-content: center;
@@ -116,7 +149,7 @@
             padding: 7px 12px; cursor: pointer; display: flex; align-items: center;
             gap: 5px; transition: all 0.15s; backdrop-filter: blur(6px);
         }
-        #controls button:active { background: rgba(0,229,255,0.1); border-color: var(--accent); transform: scale(0.95); }
+        #controls button:active { background: rgba(0,240,255,0.1); border-color: var(--accent); transform: scale(0.95); }
         #controls button i { color: var(--accent); font-size: 11px; }
 
         #gpsOverlay {
@@ -129,10 +162,10 @@
         .overlay-title { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 8px; letter-spacing: 3px; }
         .overlay-sub { color: var(--muted); font-size: 12px; line-height: 1.7; max-width: 300px; }
         .btn-activate {
-            margin-top: 32px; background: linear-gradient(135deg, var(--accent), #00b8d4); border: none;
+            margin-top: 32px; background: linear-gradient(135deg, var(--accent), #00c8ff); border: none;
             border-radius: 12px; color: #050a12; font-family: 'Orbitron', sans-serif;
             font-size: 13px; font-weight: 700; padding: 14px 44px; cursor: pointer;
-            letter-spacing: 2px; transition: all 0.2s; box-shadow: 0 0 30px rgba(0,229,255,0.25);
+            letter-spacing: 2px; transition: all 0.2s; box-shadow: 0 0 30px rgba(0,240,255,0.25);
         }
         .btn-activate:active { transform: scale(0.96); }
 
@@ -141,7 +174,7 @@
             background: var(--card); border: 1px solid var(--accent); border-radius: 8px;
             padding: 8px 18px; font-size: 11px; color: var(--accent); z-index: 300;
             opacity: 0; transition: all 0.3s; pointer-events: none; backdrop-filter: blur(10px);
-            box-shadow: 0 0 20px rgba(0,229,255,0.15);
+            box-shadow: 0 0 20px rgba(0,240,255,0.15);
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -209,9 +242,46 @@
             <div class="compass-needle" id="compassNeedle"></div>
             <span class="compass-dir" id="compassDir">--</span>
         </div>
-        <div class="address-box">
+        <div class="address-box" id="addressBox">
             <i class="fas fa-map-marker-alt"></i>
             <span id="addressText">Menunggu GPS...</span>
+            <i class="fas fa-chevron-down chev"></i>
+        </div>
+    </section>
+
+    <section id="addressDetail">
+        <div class="detail-inner">
+            <div class="detail-row"><span class="dk">JALAN</span><span class="dv" id="dJalan">--</span></div>
+            <div class="detail-row"><span class="dk">DUSUN/LINGKUNGAN (RT-RW)</span><span class="dv" id="dLingkungan">--</span></div>
+            <div class="detail-row"><span class="dk">KELURAHAN/DESA</span><span class="dv" id="dKelurahan">--</span></div>
+            <div class="detail-row"><span class="dk">KECAMATAN</span><span class="dv" id="dKecamatan">--</span></div>
+            <div class="detail-row"><span class="dk">KOTA/KABUPATEN</span><span class="dv" id="dKota">--</span></div>
+            <div class="detail-row"><span class="dk">PROVINSI</span><span class="dv" id="dProvinsi">--</span></div>
+            <div class="detail-row"><span class="dk">KODE POS</span><span class="dv" id="dPostcode">--</span></div>
+            <div class="detail-note">Data RT/RW presisi tidak selalu tersedia di peta digital (OpenStreetMap). Yang ditampilkan adalah unit administratif paling rinci yang berhasil ditemukan (biasanya setingkat dusun/lingkungan).</div>
+        </div>
+    </section>
+
+    <section id="weatherPanels">
+        <div class="weather-row">
+            <div class="weather-card">
+                <i class="fas fa-temperature-half" style="color:var(--amber)"></i>
+                <div class="weather-label">SUHU</div>
+                <div class="weather-value" id="wxTemp" style="color:var(--amber)">--</div>
+                <div class="weather-unit">°C</div>
+            </div>
+            <div class="weather-card">
+                <i class="fas fa-droplet" style="color:var(--accent)"></i>
+                <div class="weather-label">KELEMBAPAN</div>
+                <div class="weather-value" id="wxHumidity" style="color:var(--accent)">--</div>
+                <div class="weather-unit">%RH</div>
+            </div>
+            <div class="weather-card">
+                <i class="fas fa-wind" style="color:var(--green)"></i>
+                <div class="weather-label">ANGIN</div>
+                <div class="weather-value" id="wxWind" style="color:var(--green)">--</div>
+                <div class="weather-unit" id="wxWindDir">km/h --</div>
+            </div>
         </div>
     </section>
 
@@ -272,7 +342,13 @@ const S = {
     batteryCharging: false,
     lastSaveTime: 0,
     refreshInterval: null,
-    gpsStarted: false
+    gpsStarted: false,
+    addr: { jalan: '--', lingkungan: '--', kelurahan: '--', kecamatan: '--', kota: '--', provinsi: '--', postcode: '--' },
+    weather: { temp: null, humidity: null, windSpeed: null, windDir: null },
+    lastWeatherLat: null,
+    lastWeatherLon: null,
+    lastWeatherTs: 0,
+    weatherTimer: null
 };
 
 const MAX_GAUGE_KMH = 240;
@@ -360,9 +436,8 @@ function startGPS() {
     S.gpsState = 'acquiring';
     updateGPSStatus();
 
-    // FIX #1: maximumAge: 2000 (bukan 0) — izinkan posisi cached 2 detik
-    // Ini mencegah watchPosition diam total saat posisi dianggap "sama"
-    const watchOpts = { enableHighAccuracy: true, timeout: 30000, maximumAge: 2000 };
+    // Realtime: maximumAge diperkecil ke 1000ms agar posisi selalu sangat segar
+    const watchOpts = { enableHighAccuracy: true, timeout: 30000, maximumAge: 1000 };
 
     // Hapus watch lama jika ada
     if (S.watchId !== null) {
@@ -387,10 +462,10 @@ function startPeriodicRefresh() {
             navigator.geolocation.getCurrentPosition(
                 onPosition,
                 () => {}, // Error diam-diam, watchPosition yang menangani error utama
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 1500 }
             );
         }
-    }, 4000);
+    }, 3000);
 }
 
 function stopPeriodicRefresh() {
@@ -497,6 +572,9 @@ function onPosition(pos) {
         // Reverse geocode
         debouncedReverseGeocode(latitude, longitude);
 
+        // Cuaca real-time (throttled by distance/waktu di dalam fungsinya)
+        debouncedWeatherFetch(latitude, longitude);
+
         // Simpan data (throttled)
         throttledSave();
         updateGPSStatus();
@@ -545,20 +623,22 @@ function updateGPSStatus() {
 /* ============================================
    REVERSE GEOCODE (Nominatim - Debounced)
    ============================================ */
-// FIX #5: Threshold diturunkan dari 30m ke 15m, delay dari 3s ke 2s
+// Realtime: threshold 10m, delay 1.2s — alamat menyusul cepat setelah posisi berubah
 function debouncedReverseGeocode(lat, lon) {
     if (S.lastAddrLat !== null) {
         const d = haversine(S.lastAddrLat, S.lastAddrLon, lat, lon);
-        if (d < 15) return;
+        if (d < 10) return;
     }
     clearTimeout(S.addressTimer);
-    S.addressTimer = setTimeout(() => reverseGeocode(lat, lon), 2000);
+    S.addressTimer = setTimeout(() => reverseGeocode(lat, lon), 1200);
 }
 
 async function reverseGeocode(lat, lon) {
     try {
+        // zoom=18 + addressdetails=1 -> unit administratif paling rinci yang tersedia
+        // (jalan, dusun/lingkungan, kelurahan/desa, kecamatan, kab/kota, provinsi)
         const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=17&addressdetails=1&accept-language=id`,
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`,
             { headers: { 'User-Agent': 'NexusSpeedometer/1.0' } }
         );
         const data = await res.json();
@@ -568,9 +648,61 @@ async function reverseGeocode(lat, lon) {
             S.address = short;
             S.lastAddrLat = lat;
             S.lastAddrLon = lon;
+
+            const a = data.address || {};
+            // Jalan + nomor rumah
+            const jalanParts = [a.road || a.pedestrian || a.footway || a.residential, a.house_number].filter(Boolean);
+            S.addr.jalan = jalanParts.length ? jalanParts.join(' No. ') : '--';
+            // Dusun/Lingkungan — level administratif terkecil yang mendekati RT/RW
+            S.addr.lingkungan = a.neighbourhood || a.hamlet || a.quarter || a.residential || '--';
+            // Kelurahan/Desa
+            S.addr.kelurahan = a.village || a.suburb || a.city_district || '--';
+            // Kecamatan
+            S.addr.kecamatan = a.city_district || a.subdistrict || a.county || '--';
+            // Kota/Kabupaten
+            S.addr.kota = a.city || a.town || a.regency || a.county || '--';
+            // Provinsi
+            S.addr.provinsi = a.state || '--';
+            // Kode pos
+            S.addr.postcode = a.postcode || '--';
         }
     } catch (e) {
         // Gagal silently — jangan update lastAddrLat/Lon agar bisa retry
+    }
+}
+
+/* ============================================
+   CUACA REAL-TIME (Open-Meteo — tanpa API key)
+   ============================================ */
+function debouncedWeatherFetch(lat, lon) {
+    const now = Date.now();
+    let moved = true;
+    if (S.lastWeatherLat !== null) {
+        const d = haversine(S.lastWeatherLat, S.lastWeatherLon, lat, lon);
+        moved = d > 500; // refetch jika bergerak >500m
+    }
+    const stale = (now - S.lastWeatherTs) > 5 * 60 * 1000; // atau tiap 5 menit
+    if (!moved && !stale) return;
+    fetchWeather(lat, lon);
+}
+
+async function fetchWeather(lat, lon) {
+    try {
+        const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto`
+        );
+        const data = await res.json();
+        if (data && data.current) {
+            S.weather.temp = data.current.temperature_2m;
+            S.weather.humidity = data.current.relative_humidity_2m;
+            S.weather.windSpeed = data.current.wind_speed_10m;
+            S.weather.windDir = data.current.wind_direction_10m;
+            S.lastWeatherLat = lat;
+            S.lastWeatherLon = lon;
+            S.lastWeatherTs = Date.now();
+        }
+    } catch (e) {
+        // Gagal silently — akan dicoba lagi pada update posisi berikutnya
     }
 }
 
@@ -734,16 +866,16 @@ function drawGauge() {
     // Cincin luar
     ctx.beginPath();
     ctx.arc(cx, cy, R * 0.95, startA, endA);
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.06)';
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.06)';
     ctx.lineWidth = size * 0.02;
     ctx.lineCap = 'butt';
     ctx.stroke();
 
     // Zona warna
     const zones = [
-        { end: 80, color: '#00ff88' },
-        { end: 120, color: '#ffab00' },
-        { end: 999, color: '#ff1744' }
+        { end: 80, color: '#39ff14' },
+        { end: 120, color: '#ffea00' },
+        { end: 999, color: '#ff0844' }
     ];
     let zStart = 0;
     for (const z of zones) {
@@ -763,9 +895,9 @@ function drawGauge() {
     // Arc kecepatan aktif
     if (spd > 0.5) {
         const spdAngle = startA + (spd / mg) * totalA;
-        let arcColor = '#00ff88';
-        if (spdKmh > 120) arcColor = '#ff1744';
-        else if (spdKmh > 80) arcColor = '#ffab00';
+        let arcColor = '#39ff14';
+        if (spdKmh > 120) arcColor = '#ff0844';
+        else if (spdKmh > 80) arcColor = '#ffea00';
 
         ctx.save();
         ctx.shadowColor = arcColor;
@@ -801,7 +933,7 @@ function drawGauge() {
         ctx.beginPath();
         ctx.moveTo(cx + innerR * Math.cos(angle), cy + innerR * Math.sin(angle));
         ctx.lineTo(cx + outerR * Math.cos(angle), cy + outerR * Math.sin(angle));
-        ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.85)' : isMid ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)';
+        ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.98)' : isMid ? 'rgba(0,240,255,0.5)' : 'rgba(0,240,255,0.22)';
         ctx.lineWidth = isMajor ? 2.5 : isMid ? 1.5 : 0.8;
         ctx.lineCap = 'round';
         ctx.stroke();
@@ -809,7 +941,7 @@ function drawGauge() {
         if (isMajor) {
             const numR = R * 0.58;
             const displayNum = S.unit === 'mph' ? Math.round(i * 0.621371) : i;
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fillStyle = '#eafcff';
             ctx.font = `600 ${Math.max(9, size * 0.032)}px Orbitron`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -822,9 +954,9 @@ function drawGauge() {
     const needleLen = R * 0.72;
     const tailLen = R * 0.15;
 
-    let needleColor = '#00ff88';
-    if (spdKmh > 120) needleColor = '#ff1744';
-    else if (spdKmh > 80) needleColor = '#ffab00';
+    let needleColor = '#39ff14';
+    if (spdKmh > 120) needleColor = '#ff0844';
+    else if (spdKmh > 80) needleColor = '#ffea00';
 
     ctx.save();
     ctx.translate(cx, cy);
@@ -871,7 +1003,7 @@ function drawGauge() {
     ctx.textBaseline = 'middle';
     ctx.fillText(spdText, cx, cy + size * 0.13);
 
-    ctx.fillStyle = 'rgba(0, 229, 255, 0.7)';
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.7)';
     ctx.font = `500 ${Math.max(9, size * 0.04)}px Orbitron`;
     ctx.fillText(unitSpeed(), cx, cy + size * 0.22);
 
@@ -879,14 +1011,14 @@ function drawGauge() {
     ctx.font = `${Math.max(7, size * 0.025)}px 'Share Tech Mono'`;
     ctx.fillText(S.speedSource, cx, cy + size * 0.28);
 
-    ctx.fillStyle = 'rgba(0, 229, 255, 0.15)';
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
     ctx.font = `700 ${Math.max(8, size * 0.03)}px Orbitron`;
     ctx.fillText('NEXUS', cx, cy + R * 0.55);
 
     // Indikator akurasi
     const accX = cx + R * 0.6;
     const accY = cy - R * 0.55;
-    ctx.fillStyle = S.accuracy <= 10 ? '#00ff88' : S.accuracy <= 30 ? '#ffab00' : '#ff1744';
+    ctx.fillStyle = S.accuracy <= 10 ? '#39ff14' : S.accuracy <= 30 ? '#ffea00' : '#ff0844';
     ctx.beginPath();
     ctx.arc(accX, accY, 3, 0, Math.PI * 2);
     ctx.fill();
@@ -923,10 +1055,28 @@ function updateUI() {
     document.getElementById('maxUnit').textContent = unitSpeed();
     document.getElementById('unitLabel').textContent = unitSpeed();
 
-    document.getElementById('compassNeedle').style.transform = `rotate(${S.heading}deg)`;
-    document.getElementById('compassDir').textContent = compassDir(S.heading);
+    // Kompas real-time: prioritaskan sensor orientasi perangkat (update instan setiap frame),
+    // fallback ke arah gerak GPS bila sensor tidak tersedia
+    const dispHeading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
+        ? S.orientationHeading : S.heading;
+    document.getElementById('compassNeedle').style.transform = `rotate(${dispHeading}deg)`;
+    document.getElementById('compassDir').textContent = compassDir(dispHeading);
 
     document.getElementById('addressText').textContent = S.address;
+
+    document.getElementById('dJalan').textContent = S.addr.jalan;
+    document.getElementById('dLingkungan').textContent = S.addr.lingkungan;
+    document.getElementById('dKelurahan').textContent = S.addr.kelurahan;
+    document.getElementById('dKecamatan').textContent = S.addr.kecamatan;
+    document.getElementById('dKota').textContent = S.addr.kota;
+    document.getElementById('dProvinsi').textContent = S.addr.provinsi;
+    document.getElementById('dPostcode').textContent = S.addr.postcode;
+
+    document.getElementById('wxTemp').textContent = S.weather.temp !== null ? Math.round(S.weather.temp) : '--';
+    document.getElementById('wxHumidity').textContent = S.weather.humidity !== null ? Math.round(S.weather.humidity) : '--';
+    document.getElementById('wxWind').textContent = S.weather.windSpeed !== null ? Math.round(S.weather.windSpeed) : '--';
+    document.getElementById('wxWindDir').textContent = S.weather.windDir !== null
+        ? `km/h ${compassDir(S.weather.windDir)}` : 'km/h --';
 
     document.getElementById('altText').textContent = S.altitude > 0 ? `${Math.round(S.altitude)} m` : '-- m';
     document.getElementById('coordText').textContent =
@@ -1012,6 +1162,12 @@ document.getElementById('btnActivate').addEventListener('click', async () => {
 
     // Animasi sweep setelah 300ms
     setTimeout(startSweep, 300);
+});
+
+document.getElementById('addressBox').addEventListener('click', () => {
+    document.getElementById('addressBox').classList.toggle('open');
+    document.getElementById('addressDetail').classList.toggle('open');
+    if (navigator.vibrate) navigator.vibrate(15);
 });
 
 document.getElementById('btnReset').addEventListener('click', () => {
