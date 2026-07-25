@@ -75,25 +75,29 @@
         .data-unit { font-size: 8px; color: var(--muted); margin-top: 1px; }
 
         #locationInfo { position: relative; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 6px 12px; flex-shrink: 0; }
-        .compass-mini {
-            width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--border);
-            background: var(--card); display: flex; align-items: center; justify-content: center;
-            position: relative; flex-shrink: 0; backdrop-filter: blur(6px);
+
+        #compassArea {
+            position: relative; z-index: 5; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 2px 10px 8px; flex-shrink: 0;
         }
-        .compass-needle { width: 2px; height: 18px; position: relative; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); }
-        .compass-needle::before {
-            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-            border-left: 4px solid transparent; border-right: 4px solid transparent;
-            border-bottom: 10px solid var(--red);
+        #compassCanvas {
+            display: block;
+            filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.25));
         }
-        .compass-needle::after {
-            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-            border-left: 3px solid transparent; border-right: 3px solid transparent;
-            border-top: 8px solid rgba(0, 240, 255, 0.55);
+        #compassInfo {
+            display: flex; flex-direction: column; align-items: center; margin-top: -6px;
         }
-        .compass-dir {
-            position: absolute; bottom: -1px; font-size: 7px;
-            font-family: 'Orbitron', sans-serif; color: var(--accent); letter-spacing: 1px;
+        #compassDegree {
+            font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
+            color: var(--accent); letter-spacing: 2px; text-shadow: 0 0 12px rgba(0,240,255,0.5);
+        }
+        #compassArahLabel {
+            font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-top: 2px;
+        }
+        #compassArahText {
+            font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700;
+            color: var(--green); letter-spacing: 2px; margin-top: 1px;
+            text-shadow: 0 0 10px rgba(57,255,20,0.4); transition: color 0.3s;
         }
         .address-box {
             flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
@@ -137,10 +141,11 @@
         .weather-unit { font-size: 8px; color: var(--muted); }
 
         #extraInfo {
-            position: relative; z-index: 10; display: flex; justify-content: center;
-            gap: 20px; padding: 3px 14px; font-size: 9px; color: var(--muted); flex-shrink: 0;
+            position: relative; z-index: 10; display: flex; justify-content: center; flex-wrap: wrap;
+            gap: 10px 16px; padding: 3px 14px; font-size: 9px; color: var(--muted); flex-shrink: 0;
         }
         #extraInfo i { color: var(--accent); margin-right: 3px; font-size: 8px; }
+        #extraInfo #condIcon { color: var(--amber); }
 
         #controls { position: relative; z-index: 10; display: flex; justify-content: center; gap: 8px; padding: 8px 14px 14px; flex-shrink: 0; }
         #controls button {
@@ -191,6 +196,9 @@
             .data-value { font-size: 13px; }
             #locationInfo { padding: 4px 10px; }
             #controls { padding: 6px 10px 10px; }
+            #compassArea { padding: 0 10px 4px; }
+            #compassDegree { font-size: 16px; }
+            #compassArahText { font-size: 12px; }
         }
     </style>
 </head>
@@ -217,6 +225,15 @@
         <canvas id="gaugeCanvas"></canvas>
     </div>
 
+    <section id="compassArea">
+        <canvas id="compassCanvas"></canvas>
+        <div id="compassInfo">
+            <span id="compassDegree">--°</span>
+            <span id="compassArahLabel">SEDANG MENGHADAP</span>
+            <span id="compassArahText">MENUNGGU SENSOR</span>
+        </div>
+    </section>
+
     <section id="dataPanels">
         <div class="data-row">
             <div class="data-card">
@@ -238,10 +255,6 @@
     </section>
 
     <section id="locationInfo">
-        <div class="compass-mini">
-            <div class="compass-needle" id="compassNeedle"></div>
-            <span class="compass-dir" id="compassDir">--</span>
-        </div>
         <div class="address-box" id="addressBox">
             <i class="fas fa-map-marker-alt"></i>
             <span id="addressText">Menunggu GPS...</span>
@@ -289,6 +302,7 @@
         <span><i class="fas fa-mountain"></i> <span id="altText">-- m</span></span>
         <span><i class="fas fa-crosshairs"></i> <span id="coordText">-, -</span></span>
         <span><i class="fas fa-satellite"></i> <span id="satText">--</span></span>
+        <span><i class="fas fa-cloud" id="condIcon"></i> <span id="condText">--</span></span>
     </section>
 
     <footer id="controls">
@@ -344,7 +358,7 @@ const S = {
     refreshInterval: null,
     gpsStarted: false,
     addr: { jalan: '--', lingkungan: '--', kelurahan: '--', kecamatan: '--', kota: '--', provinsi: '--', postcode: '--' },
-    weather: { temp: null, humidity: null, windSpeed: null, windDir: null },
+    weather: { temp: null, humidity: null, windSpeed: null, windDir: null, code: null, isDay: 1 },
     lastWeatherLat: null,
     lastWeatherLon: null,
     lastWeatherTs: 0,
@@ -386,9 +400,19 @@ function unitSpeed() { return S.unit === 'mph' ? 'mph' : 'km/h'; }
 function unitDist() { return S.unit === 'mph' ? 'mi' : 'km'; }
 function maxGauge() { return S.unit === 'mph' ? MAX_GAUGE_MPH : MAX_GAUGE_KMH; }
 
+// Mata angin 16-arah dalam Bahasa Indonesia
+const COMPASS_ABBR_ID = ['U','UTL','TL','TTL','T','TTG','TG','STG','S','SBD','BD','BBD','B','BBL','BL','UBL'];
+const COMPASS_FULL_ID = [
+    'Utara', 'Utara Timur Laut', 'Timur Laut', 'Timur Timur Laut',
+    'Timur', 'Timur Tenggara', 'Tenggara', 'Selatan Tenggara',
+    'Selatan', 'Selatan Barat Daya', 'Barat Daya', 'Barat Barat Daya',
+    'Barat', 'Barat Barat Laut', 'Barat Laut', 'Utara Barat Laut'
+];
 function compassDir(deg) {
-    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    return dirs[Math.round(deg / 22.5) % 16];
+    return COMPASS_ABBR_ID[Math.round(deg / 22.5) % 16];
+}
+function compassDirFull(deg) {
+    return COMPASS_FULL_ID[Math.round(deg / 22.5) % 16];
 }
 
 function showToast(msg) {
@@ -689,7 +713,7 @@ function debouncedWeatherFetch(lat, lon) {
 async function fetchWeather(lat, lon) {
     try {
         const res = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto`
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,is_day&timezone=auto`
         );
         const data = await res.json();
         if (data && data.current) {
@@ -697,6 +721,8 @@ async function fetchWeather(lat, lon) {
             S.weather.humidity = data.current.relative_humidity_2m;
             S.weather.windSpeed = data.current.wind_speed_10m;
             S.weather.windDir = data.current.wind_direction_10m;
+            S.weather.code = data.current.weather_code;
+            S.weather.isDay = data.current.is_day;
             S.lastWeatherLat = lat;
             S.lastWeatherLon = lon;
             S.lastWeatherTs = Date.now();
@@ -704,6 +730,44 @@ async function fetchWeather(lat, lon) {
     } catch (e) {
         // Gagal silently — akan dicoba lagi pada update posisi berikutnya
     }
+}
+
+/* ============================================
+   KODE CUACA (WMO) -> BAHASA INDONESIA
+   ============================================ */
+function weatherInfo(code, isDay) {
+    const day = isDay !== 0;
+    const map = {
+        0:  { text: day ? 'Cerah' : 'Cerah Malam', icon: day ? 'fa-sun' : 'fa-moon', color: 'var(--amber)' },
+        1:  { text: 'Cerah Berawan', icon: day ? 'fa-cloud-sun' : 'fa-cloud-moon', color: 'var(--amber)' },
+        2:  { text: 'Berawan Sebagian', icon: 'fa-cloud-sun', color: 'var(--muted)' },
+        3:  { text: 'Mendung', icon: 'fa-cloud', color: 'var(--muted)' },
+        45: { text: 'Berkabut', icon: 'fa-smog', color: 'var(--muted)' },
+        48: { text: 'Kabut Beku', icon: 'fa-smog', color: 'var(--muted)' },
+        51: { text: 'Gerimis Ringan', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        53: { text: 'Gerimis', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        55: { text: 'Gerimis Lebat', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        56: { text: 'Gerimis Beku', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        57: { text: 'Gerimis Beku Lebat', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        61: { text: 'Hujan Ringan', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        63: { text: 'Hujan Sedang', icon: 'fa-cloud-showers-heavy', color: 'var(--accent)' },
+        65: { text: 'Hujan Lebat', icon: 'fa-cloud-showers-heavy', color: 'var(--red)' },
+        66: { text: 'Hujan Beku Ringan', icon: 'fa-cloud-showers-heavy', color: 'var(--accent)' },
+        67: { text: 'Hujan Beku Lebat', icon: 'fa-cloud-showers-heavy', color: 'var(--red)' },
+        71: { text: 'Salju Ringan', icon: 'fa-snowflake', color: 'var(--accent)' },
+        73: { text: 'Salju Sedang', icon: 'fa-snowflake', color: 'var(--accent)' },
+        75: { text: 'Salju Lebat', icon: 'fa-snowflake', color: 'var(--accent)' },
+        77: { text: 'Butiran Salju', icon: 'fa-snowflake', color: 'var(--accent)' },
+        80: { text: 'Hujan Lokal Ringan', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        81: { text: 'Hujan Lokal Sedang', icon: 'fa-cloud-showers-heavy', color: 'var(--accent)' },
+        82: { text: 'Hujan Lokal Deras', icon: 'fa-cloud-showers-heavy', color: 'var(--red)' },
+        85: { text: 'Hujan Salju Ringan', icon: 'fa-snowflake', color: 'var(--accent)' },
+        86: { text: 'Hujan Salju Lebat', icon: 'fa-snowflake', color: 'var(--accent)' },
+        95: { text: 'Badai Petir', icon: 'fa-bolt', color: 'var(--red)' },
+        96: { text: 'Badai Petir + Hujan Es', icon: 'fa-cloud-bolt', color: 'var(--red)' },
+        99: { text: 'Badai Petir + Hujan Es Lebat', icon: 'fa-cloud-bolt', color: 'var(--red)' }
+    };
+    return map[code] || { text: '--', icon: 'fa-question', color: 'var(--muted)' };
 }
 
 /* ============================================
@@ -820,6 +884,7 @@ function checkSpeedVibrate() {
    CANVAS - RENDERING SPEEDOMETER
    ============================================ */
 let canvas, ctx, canvasSize, dpr;
+let compassCanvas, ctx2, compassSize;
 
 function setupCanvas() {
     canvas = document.getElementById('gaugeCanvas');
@@ -836,6 +901,22 @@ function setupCanvas() {
 
     ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
+
+    setupCompassCanvas();
+}
+
+function setupCompassCanvas() {
+    compassCanvas = document.getElementById('compassCanvas');
+    // Kompas dibuat cukup besar & jelas terlihat, proporsional terhadap ukuran gauge
+    compassSize = Math.max(150, Math.min(canvasSize * 0.42, 220));
+
+    compassCanvas.width = compassSize * dpr;
+    compassCanvas.height = compassSize * dpr;
+    compassCanvas.style.width = compassSize + 'px';
+    compassCanvas.style.height = compassSize + 'px';
+
+    ctx2 = compassCanvas.getContext('2d');
+    ctx2.scale(dpr, dpr);
 }
 
 function drawGauge() {
@@ -850,7 +931,11 @@ function drawGauge() {
     const endA = Math.PI * 2.25;
     const totalA = endA - startA;
     const mg = maxGauge();
-    const spd = Math.max(0, Math.min(S.displaySpeed, mg));
+    // FIX: jarum HARUS memakai nilai kecepatan dalam satuan tampilan (sama seperti angka digital),
+    // bukan nilai mentah km/h. Sebelumnya saat satuan diganti ke mph, jarum & arc tetap memakai
+    // nilai km/h sementara angka digital sudah dikonversi ke mph -> jarum & angka jadi tidak sesuai.
+    const spdInUnit = toDisplay(S.displaySpeed);
+    const spd = Math.max(0, Math.min(spdInUnit, mg));
     const spdKmh = S.displaySpeed;
 
     // Latar belakang gauge
@@ -871,11 +956,11 @@ function drawGauge() {
     ctx.lineCap = 'butt';
     ctx.stroke();
 
-    // Zona warna
+    // Zona warna — batas fisik selalu dalam km/h, dikonversi ke satuan tampilan saat ini
     const zones = [
-        { end: 80, color: '#39ff14' },
-        { end: 120, color: '#ffea00' },
-        { end: 999, color: '#ff0844' }
+        { end: toDisplay(80), color: '#39ff14' },
+        { end: toDisplay(120), color: '#ffea00' },
+        { end: mg, color: '#ff0844' }
     ];
     let zStart = 0;
     for (const z of zones) {
@@ -940,7 +1025,9 @@ function drawGauge() {
 
         if (isMajor) {
             const numR = R * 0.58;
-            const displayNum = S.unit === 'mph' ? Math.round(i * 0.621371) : i;
+            // FIX: 'i' sudah berada dalam skala satuan tampilan (0..mg), jadi TIDAK perlu dikonversi lagi.
+            // Konversi ganda sebelumnya membuat angka pada skala mph salah (mis. label "150" jadi tampil "93").
+            const displayNum = i;
             ctx.fillStyle = '#eafcff';
             ctx.font = `600 ${Math.max(9, size * 0.032)}px Orbitron`;
             ctx.textAlign = 'center';
@@ -1029,6 +1116,117 @@ function drawGauge() {
 }
 
 /* ============================================
+   CANVAS - RENDERING KOMPAS DIGITAL
+   ============================================ */
+function drawCompass() {
+    if (!ctx2) return;
+    const size = compassSize;
+    const cx = size / 2;
+    const cy = size / 2;
+    const R = size * 0.46;
+
+    // Arah hadap HP: prioritaskan sensor orientasi perangkat, fallback ke arah gerak GPS
+    const heading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
+        ? S.orientationHeading : S.heading;
+    const headingRad = heading * Math.PI / 180;
+
+    ctx2.clearRect(0, 0, size, size);
+
+    // --- Latar bulat kompas ---
+    const bgGrad = ctx2.createRadialGradient(cx, cy, 0, cx, cy, R * 1.08);
+    bgGrad.addColorStop(0, 'rgba(10, 22, 45, 0.95)');
+    bgGrad.addColorStop(0.85, 'rgba(6, 14, 28, 0.97)');
+    bgGrad.addColorStop(1, 'rgba(3, 8, 16, 1)');
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, R * 1.0, 0, Math.PI * 2);
+    ctx2.fillStyle = bgGrad;
+    ctx2.fill();
+    ctx2.lineWidth = 2;
+    ctx2.strokeStyle = 'rgba(0,240,255,0.35)';
+    ctx2.stroke();
+
+    // --- Rose kompas (dial) berputar berlawanan arah heading, seperti kompas digital profesional ---
+    ctx2.save();
+    ctx2.translate(cx, cy);
+    ctx2.rotate(-headingRad);
+
+    // Cincin derajat minor (tiap 10°) & major (tiap 30°)
+    for (let d = 0; d < 360; d += 10) {
+        const a = (d - 90) * Math.PI / 180; // 0 derajat = atas
+        const isMajor = d % 30 === 0;
+        const isCardinal = d % 90 === 0;
+        const outerR = R * 0.92;
+        const innerR = isMajor ? R * 0.78 : R * 0.86;
+        ctx2.beginPath();
+        ctx2.moveTo(innerR * Math.cos(a), innerR * Math.sin(a));
+        ctx2.lineTo(outerR * Math.cos(a), outerR * Math.sin(a));
+        ctx2.strokeStyle = isCardinal ? '#ff2d6a' : isMajor ? 'rgba(0,240,255,0.85)' : 'rgba(0,240,255,0.32)';
+        ctx2.lineWidth = isCardinal ? 2.5 : isMajor ? 1.8 : 0.9;
+        ctx2.stroke();
+    }
+
+    // Label mata angin cerah & besar (U/TL/T/TG/S/BD/B/BL)
+    const labels = [
+        { d: 0,   t: 'U',  c: '#ff2d6a' },
+        { d: 45,  t: 'TL', c: '#00f0ff' },
+        { d: 90,  t: 'T',  c: '#39ff14' },
+        { d: 135, t: 'TG', c: '#00f0ff' },
+        { d: 180, t: 'S',  c: '#ffea00' },
+        { d: 225, t: 'BD', c: '#00f0ff' },
+        { d: 270, t: 'B',  c: '#ff9100' },
+        { d: 315, t: 'BL', c: '#00f0ff' }
+    ];
+    const labelR = R * 0.66;
+    for (const lb of labels) {
+        const a = (lb.d - 90) * Math.PI / 180;
+        const lx = labelR * Math.cos(a);
+        const ly = labelR * Math.sin(a);
+        ctx2.save();
+        ctx2.translate(lx, ly);
+        ctx2.rotate(headingRad); // teks tetap tegak, tidak ikut terbalik
+        ctx2.fillStyle = lb.c;
+        ctx2.shadowColor = lb.c;
+        ctx2.shadowBlur = 8;
+        ctx2.font = `900 ${Math.max(11, size * 0.09)}px Orbitron`;
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'middle';
+        ctx2.fillText(lb.t, 0, 0);
+        ctx2.restore();
+    }
+
+    ctx2.restore();
+
+    // --- Penunjuk arah hadap HP: segitiga tetap di posisi jam 12, terang & mudah dilihat ---
+    const ptrLen = R * 0.22;
+    const ptrY = -R * 0.98;
+    ctx2.save();
+    ctx2.translate(cx, cy);
+    ctx2.shadowColor = '#00f0ff';
+    ctx2.shadowBlur = 14;
+    ctx2.beginPath();
+    ctx2.moveTo(0, ptrY - ptrLen * 0.5);
+    ctx2.lineTo(-ptrLen * 0.42, ptrY + ptrLen * 0.55);
+    ctx2.lineTo(ptrLen * 0.42, ptrY + ptrLen * 0.55);
+    ctx2.closePath();
+    ctx2.fillStyle = '#00f0ff';
+    ctx2.fill();
+    ctx2.restore();
+
+    // --- Hub tengah ---
+    const hubGrad = ctx2.createRadialGradient(cx, cy, 0, cx, cy, size * 0.05);
+    hubGrad.addColorStop(0, '#1a2540');
+    hubGrad.addColorStop(0.7, '#0d1525');
+    hubGrad.addColorStop(1, '#080e1a');
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, size * 0.05, 0, Math.PI * 2);
+    ctx2.fillStyle = hubGrad;
+    ctx2.fill();
+    ctx2.strokeStyle = 'rgba(0,240,255,0.6)';
+    ctx2.lineWidth = 1.5;
+    ctx2.stroke();
+}
+
+/* ============================================
    UPDATE UI ELEMEN
    ============================================ */
 function updateUI() {
@@ -1059,8 +1257,16 @@ function updateUI() {
     // fallback ke arah gerak GPS bila sensor tidak tersedia
     const dispHeading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
         ? S.orientationHeading : S.heading;
-    document.getElementById('compassNeedle').style.transform = `rotate(${dispHeading}deg)`;
-    document.getElementById('compassDir').textContent = compassDir(dispHeading);
+    const hasHeading = S.orientationHeading !== null || S.heading !== 0 || S.gpsState === 'active';
+    document.getElementById('compassDegree').textContent = hasHeading ? `${Math.round(dispHeading)}°` : '--°';
+    document.getElementById('compassArahText').textContent = hasHeading ? compassDirFull(dispHeading).toUpperCase() : 'MENUNGGU SENSOR';
+
+    // Kondisi cuaca (cerah / mendung / hujan / petir, dll)
+    const wInfo = weatherInfo(S.weather.code, S.weather.isDay);
+    document.getElementById('condText').textContent = wInfo.text;
+    const condIconEl = document.getElementById('condIcon');
+    condIconEl.className = `fas ${wInfo.icon}`;
+    condIconEl.style.color = wInfo.color;
 
     document.getElementById('addressText').textContent = S.address;
 
@@ -1123,8 +1329,9 @@ function mainLoop(timestamp) {
     if (S.sweepPhase === 'ready') {
         const diff = S.speed - S.displaySpeed;
         if (Math.abs(diff) > 0.3) {
-            // Akselerasi lebih responsif (alpha 0.15), decelerasi lebih halus (alpha 0.07)
-            const alpha = diff > 0 ? 0.15 : 0.07;
+            // Akselerasi responsif (alpha 0.22), decelerasi tetap halus tapi lebih cepat mengejar (alpha 0.12)
+            // supaya jarum & angka digital terasa real-time mengikuti kecepatan GPS pengguna
+            const alpha = diff > 0 ? 0.22 : 0.12;
             S.displaySpeed += diff * alpha;
         } else {
             S.displaySpeed = S.speed;
@@ -1136,6 +1343,7 @@ function mainLoop(timestamp) {
     }
 
     drawGauge();
+    drawCompass();
     updateUI();
     requestAnimationFrame(mainLoop);
 }
