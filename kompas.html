@@ -921,6 +921,15 @@ function onOrientation(e) {
         let heading = Math.atan2(rA, rB) * 180 / Math.PI;
         heading = (heading + 360) % 360;
 
+        // KOREKSI ARAH PUTAR (dikonfirmasi lewat pengujian langsung di HP):
+        // rumus tilt-compensated standar di atas ternyata berputar CERMIN
+        // (arah terbalik) dibanding kompas fisik pada Android/Chrome yang diuji —
+        // saat HP diputar searah jarum jam dari Utara ke Timur, angka mentah
+        // malah bergerak berlawanan arah jarum jam (hasil: 267° "Barat", padahal
+        // menghadap Timur). Dicerminkan di sini supaya angka SEARAH dengan rotasi
+        // fisik HP: Utara(0°)→Timur(90°)→Selatan(180°)→Barat(270°) searah jarum jam.
+        heading = (360 - heading) % 360;
+
         // Kompensasi rotasi layar (potret/lanskap) supaya "atas" selalu = kepala HP
         // sesuai orientasi layar yang sedang dipakai user saat ini.
         heading = (heading - getScreenAngle() + 360) % 360;
