@@ -10,15 +10,15 @@
     <style>
         :root {
             --bg: #050a12;
-            --card: rgba(10, 20, 42, 0.88);
+            --card: rgba(8, 16, 34, 0.96);
             --accent: #00f0ff;
             --accent2: #ff00e5;
             --green: #39ff14;
             --amber: #ffea00;
             --red: #ff0844;
             --text: #ffffff;
-            --muted: #4fc3f7;
-            --border: rgba(0, 240, 255, 0.28);
+            --muted: #cdeeff;
+            --border: rgba(0, 240, 255, 0.55);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -61,7 +61,7 @@
         .gps-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
         #clock { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 2px; }
 
-        #gaugeArea { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; min-height: 230px; padding: 4px; }
+        #gaugeArea { flex: 1.35; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; min-height: 300px; padding: 2px; }
         #gaugeCanvas { display: block; }
 
         #dataPanels { position: relative; z-index: 10; padding: 0 10px; flex-shrink: 0; }
@@ -70,9 +70,9 @@
             background: var(--card); border: 1px solid var(--border); border-radius: 8px;
             padding: 6px 8px; text-align: center; backdrop-filter: blur(6px);
         }
-        .data-label { font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-bottom: 2px; }
+        .data-label { font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-bottom: 2px; font-weight: 700; }
         .data-value { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); transition: color 0.3s; }
-        .data-unit { font-size: 8px; color: var(--muted); margin-top: 1px; }
+        .data-unit { font-size: 8px; color: var(--muted); margin-top: 1px; font-weight: 700; }
 
         #locationInfo { position: relative; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 6px 12px; flex-shrink: 0; }
 
@@ -92,7 +92,7 @@
             color: var(--accent); letter-spacing: 2px; text-shadow: 0 0 12px rgba(0,240,255,0.5);
         }
         #compassArahLabel {
-            font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-top: 2px;
+            font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-top: 2px; font-weight: 700;
         }
         #compassArahText {
             font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700;
@@ -125,7 +125,7 @@
             border-bottom: 1px dashed rgba(0,240,255,0.12); font-size: 10px;
         }
         .detail-row:last-child { border-bottom: none; }
-        .detail-row .dk { color: var(--muted); letter-spacing: 1px; flex-shrink: 0; }
+        .detail-row .dk { color: var(--muted); letter-spacing: 1px; flex-shrink: 0; font-weight: 700; }
         .detail-row .dv { color: var(--text); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
         .detail-note { font-size: 8px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 
@@ -136,13 +136,14 @@
             padding: 6px 6px; text-align: center; backdrop-filter: blur(6px);
         }
         .weather-card i { font-size: 12px; margin-bottom: 2px; display: block; }
-        .weather-label { font-size: 8px; letter-spacing: 2px; color: var(--muted); margin-bottom: 2px; }
+        .weather-label { font-size: 8px; letter-spacing: 2px; color: var(--muted); margin-bottom: 2px; font-weight: 700; }
         .weather-value { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; }
-        .weather-unit { font-size: 8px; color: var(--muted); }
+        .weather-unit { font-size: 8px; color: var(--muted); font-weight: 700; }
 
         #extraInfo {
             position: relative; z-index: 10; display: flex; justify-content: center; flex-wrap: wrap;
             gap: 10px 16px; padding: 3px 14px; font-size: 9px; color: var(--muted); flex-shrink: 0;
+            font-weight: 700;
         }
         #extraInfo i { color: var(--accent); margin-right: 3px; font-size: 8px; }
         #extraInfo #condIcon { color: var(--amber); }
@@ -399,6 +400,18 @@ function toDisplayDist(km) {
 function unitSpeed() { return S.unit === 'mph' ? 'mph' : 'km/h'; }
 function unitDist() { return S.unit === 'mph' ? 'mi' : 'km'; }
 function maxGauge() { return S.unit === 'mph' ? MAX_GAUGE_MPH : MAX_GAUGE_KMH; }
+
+// Warna jarum & arc bertingkat (gradasi) sesuai kecepatan: hijau (lambat) -> kuning -> merah menyala (cepat)
+// pct: proporsi kecepatan terhadap skala maksimum gauge (0..1)
+function speedHue(pct) {
+    const p = Math.max(0, Math.min(1, pct));
+    return 128 - p * 128; // 128=hijau, ~50=kuning/amber, 0=merah
+}
+function speedColor(pct, alpha) {
+    const hue = speedHue(pct);
+    const a = alpha === undefined ? 1 : alpha;
+    return a >= 1 ? `hsl(${hue}, 100%, 50%)` : `hsla(${hue}, 100%, 50%, ${a})`;
+}
 
 // Mata angin 16-arah dalam Bahasa Indonesia
 const COMPASS_ABBR_ID = ['U','UTL','TL','TTL','T','TTG','TG','STG','S','SBD','BD','BBD','B','BBL','BL','UBL'];
@@ -829,6 +842,11 @@ function getBatteryHTML() {
    DEVICE ORIENTATION API
    ============================================ */
 function initDeviceOrientation() {
+    // Pakai 'deviceorientationabsolute' bila tersedia (umumnya Android/Chrome) —
+    // event ini menjamin nilai alpha selalu relatif terhadap arah Utara dunia nyata,
+    // bukan relatif terhadap posisi awal HP saat halaman dibuka.
+    const evtName = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
+
     if (typeof DeviceOrientationEvent !== 'undefined' &&
         typeof DeviceOrientationEvent.requestPermission === 'function') {
         // iOS — perlu trigger dari user gesture
@@ -836,16 +854,27 @@ function initDeviceOrientation() {
             if (resp === 'granted') window.addEventListener('deviceorientation', onOrientation);
         }).catch(() => {});
     } else {
-        window.addEventListener('deviceorientation', onOrientation);
+        window.addEventListener(evtName, onOrientation);
     }
 }
 
 function onOrientation(e) {
+    // Pedoman arah = kepala/atas HP (bukan belakang/bawah HP).
+    // iOS Safari: webkitCompassHeading SUDAH berupa arah kompas asli
+    // (0° = Utara, bertambah searah jarum jam ke arah Timur, mengikuti kepala HP) — pakai langsung.
     if (e.webkitCompassHeading !== undefined) {
         S.orientationHeading = e.webkitCompassHeading;
-    } else if (e.alpha !== null) {
-        S.orientationHeading = (360 - e.alpha) % 360;
+        return;
     }
+    if (e.alpha === null || e.alpha === undefined) return;
+    // FIX ARAH TERBALIK: pada mayoritas browser Android (Chrome/Firefox/Samsung
+    // Internet), nilai event.alpha yang dikirim browser SUDAH berupa arah kompas
+    // dunia nyata (0° = Utara, bertambah searah jarum jam mengikuti kepala HP),
+    // BUKAN sudut mentah relatif-perangkat seperti definisi literal spesifikasi W3C.
+    // Rumus lama (360 - alpha) membalik nilai yang sebenarnya sudah benar, sehingga
+    // arah kompas tampil terbalik/tidak sesuai kenyataan. Sekarang alpha dipakai
+    // langsung agar sesuai arah kepala HP yang sebenarnya.
+    S.orientationHeading = e.alpha % 360;
 }
 
 /* ============================================
@@ -889,9 +918,9 @@ let compassCanvas, ctx2, compassSize;
 function setupCanvas() {
     canvas = document.getElementById('gaugeCanvas');
     const area = document.getElementById('gaugeArea');
-    const w = area.clientWidth - 8;
-    const h = area.clientHeight - 8;
-    canvasSize = Math.min(w, h, 560);
+    const w = area.clientWidth - 4;
+    const h = area.clientHeight - 4;
+    canvasSize = Math.min(w, h, 680);
     dpr = window.devicePixelRatio || 1;
 
     canvas.width = canvasSize * dpr;
@@ -923,7 +952,7 @@ function drawGauge() {
     const size = canvasSize;
     const cx = size / 2;
     const cy = size / 2;
-    const R = size * 0.42;
+    const R = size * 0.465;
 
     ctx.clearRect(0, 0, size, size);
 
@@ -936,7 +965,6 @@ function drawGauge() {
     // nilai km/h sementara angka digital sudah dikonversi ke mph -> jarum & angka jadi tidak sesuai.
     const spdInUnit = toDisplay(S.displaySpeed);
     const spd = Math.max(0, Math.min(spdInUnit, mg));
-    const spdKmh = S.displaySpeed;
 
     // Latar belakang gauge
     const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.05);
@@ -951,7 +979,7 @@ function drawGauge() {
     // Cincin luar
     ctx.beginPath();
     ctx.arc(cx, cy, R * 0.95, startA, endA);
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.06)';
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.16)';
     ctx.lineWidth = size * 0.02;
     ctx.lineCap = 'butt';
     ctx.stroke();
@@ -969,7 +997,7 @@ function drawGauge() {
         const a2 = startA + (zEnd / mg) * totalA;
         ctx.beginPath();
         ctx.arc(cx, cy, R * 0.88, a1, a2);
-        ctx.strokeStyle = z.color + '18';
+        ctx.strokeStyle = z.color + '35';
         ctx.lineWidth = size * 0.055;
         ctx.lineCap = 'butt';
         ctx.stroke();
@@ -977,19 +1005,18 @@ function drawGauge() {
         if (zEnd >= mg) break;
     }
 
-    // Arc kecepatan aktif
+    // Arc kecepatan aktif — warna bertingkat (gradasi) sesuai kecepatan: hijau ke merah menyala
+    const spdPct = spd / mg;
     if (spd > 0.5) {
-        const spdAngle = startA + (spd / mg) * totalA;
-        let arcColor = '#39ff14';
-        if (spdKmh > 120) arcColor = '#ff0844';
-        else if (spdKmh > 80) arcColor = '#ffea00';
+        const spdAngle = startA + spdPct * totalA;
+        const arcColor = speedColor(spdPct);
 
         ctx.save();
         ctx.shadowColor = arcColor;
-        ctx.shadowBlur = 25;
+        ctx.shadowBlur = 20 + spdPct * 20; // makin cepat, makin "menyala"
         ctx.beginPath();
         ctx.arc(cx, cy, R * 0.88, startA, spdAngle);
-        ctx.strokeStyle = arcColor + '60';
+        ctx.strokeStyle = speedColor(spdPct, 0.45);
         ctx.lineWidth = size * 0.04;
         ctx.lineCap = 'round';
         ctx.stroke();
@@ -1041,15 +1068,13 @@ function drawGauge() {
     const needleLen = R * 0.72;
     const tailLen = R * 0.15;
 
-    let needleColor = '#39ff14';
-    if (spdKmh > 120) needleColor = '#ff0844';
-    else if (spdKmh > 80) needleColor = '#ffea00';
+    const needleColor = speedColor(spdPct);
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(needleAngle);
     ctx.shadowColor = needleColor;
-    ctx.shadowBlur = 18;
+    ctx.shadowBlur = 14 + spdPct * 22; // makin cepat, glow makin "menyala"
     ctx.beginPath();
     ctx.moveTo(-tailLen, -2.5);
     ctx.lineTo(needleLen - 8, -0.8);
@@ -1071,7 +1096,7 @@ function drawGauge() {
     ctx.arc(cx, cy, size * 0.04, 0, Math.PI * 2);
     ctx.fillStyle = hubGrad;
     ctx.fill();
-    ctx.strokeStyle = needleColor + '80';
+    ctx.strokeStyle = speedColor(spdPct, 0.55);
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -1090,15 +1115,15 @@ function drawGauge() {
     ctx.textBaseline = 'middle';
     ctx.fillText(spdText, cx, cy + size * 0.13);
 
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.7)';
-    ctx.font = `500 ${Math.max(9, size * 0.04)}px Orbitron`;
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.9)';
+    ctx.font = `700 ${Math.max(9, size * 0.04)}px Orbitron`;
     ctx.fillText(unitSpeed(), cx, cy + size * 0.22);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.font = `${Math.max(7, size * 0.025)}px 'Share Tech Mono'`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = `700 ${Math.max(7, size * 0.025)}px 'Share Tech Mono'`;
     ctx.fillText(S.speedSource, cx, cy + size * 0.28);
 
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
     ctx.font = `700 ${Math.max(8, size * 0.03)}px Orbitron`;
     ctx.fillText('NEXUS', cx, cy + R * 0.55);
 
@@ -1107,10 +1132,10 @@ function drawGauge() {
     const accY = cy - R * 0.55;
     ctx.fillStyle = S.accuracy <= 10 ? '#39ff14' : S.accuracy <= 30 ? '#ffea00' : '#ff0844';
     ctx.beginPath();
-    ctx.arc(accX, accY, 3, 0, Math.PI * 2);
+    ctx.arc(accX, accY, 3.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = `${Math.max(7, size * 0.023)}px 'Share Tech Mono'`;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = `700 ${Math.max(7, size * 0.023)}px 'Share Tech Mono'`;
     ctx.textAlign = 'left';
     ctx.fillText(S.accuracy > 0 ? `±${Math.round(S.accuracy)}m` : '--', accX + 7, accY + 3);
 }
