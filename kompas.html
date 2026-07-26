@@ -1,613 +1,1524 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NAVIS — Kompas Digital</title>
-<style>
-  :root{
-    --void:#03060d;
-    --void-2:#070c18;
-    --panel:rgba(12,20,36,0.6);
-    --panel-border:rgba(0,229,255,0.22);
-    --cyan:#00f0ff;
-    --cyan-dim:#0891a8;
-    --magenta:#ff2ec4;
-    --amber:#ffb020;
-    --green:#39ff9e;
-    --text:#eaf6ff;
-    --text-dim:#6f93b3;
-    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, 'Roboto Mono', monospace;
-    --sans: -apple-system, 'Segoe UI', system-ui, sans-serif;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{
-    background:var(--void);
-    color:var(--text);
-    font-family:var(--sans);
-    min-height:100vh;
-    overflow-x:hidden;
-  }
-  body{
-    background:
-      radial-gradient(ellipse at 50% -10%, rgba(0,229,255,0.10), transparent 55%),
-      radial-gradient(ellipse at 50% 110%, rgba(255,46,196,0.08), transparent 55%),
-      linear-gradient(var(--void-2), var(--void));
-    padding: 18px 14px 40px;
-  }
-  /* scanline / grid texture */
-  body::before{
-    content:"";
-    position:fixed; inset:0;
-    pointer-events:none;
-    background-image:
-      linear-gradient(rgba(0,229,255,0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.035) 1px, transparent 1px);
-    background-size: 34px 34px;
-    mask-image: radial-gradient(ellipse at 50% 30%, black 10%, transparent 75%);
-    z-index:0;
-  }
-  .wrap{ position:relative; z-index:1; max-width:460px; margin:0 auto; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS Speedometer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #050a12;
+            --card: rgba(8, 16, 34, 0.96);
+            --accent: #00f0ff;
+            --accent2: #ff00e5;
+            --green: #39ff14;
+            --amber: #ffea00;
+            --red: #ff0844;
+            --text: #ffffff;
+            --muted: #cdeeff;
+            --border: rgba(0, 240, 255, 0.55);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden;
+            background: var(--bg); color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        #app {
+            width: 100%; min-height: 100%; display: flex; flex-direction: column;
+            position: relative; overflow: visible;
+        }
+        #app::before {
+            content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+            background-image:
+                linear-gradient(rgba(0,240,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,240,255,0.025) 1px, transparent 1px);
+            background-size: 36px 36px;
+        }
+        .scanlines {
+            position: absolute; inset: 0; pointer-events: none; z-index: 100;
+            background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+        }
+        .glow-orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.12; pointer-events: none; z-index: 0; }
+        .orb-1 { width: 320px; height: 320px; background: var(--accent); top: -120px; left: -100px; animation: floatOrb 9s ease-in-out infinite; }
+        .orb-2 { width: 260px; height: 260px; background: var(--green); bottom: -90px; right: -80px; animation: floatOrb 11s ease-in-out infinite reverse; }
+        .orb-3 { width: 180px; height: 180px; background: #7c4dff; top: 40%; left: 60%; animation: floatOrb 13s ease-in-out infinite 2s; opacity: 0.06; }
+        @keyframes floatOrb { 0%,100%{transform:translate(0,0)} 50%{transform:translate(25px,18px)} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-  header{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:16px;
-  }
-  .brand{ display:flex; flex-direction:column; }
-  .brand .logo{
-    font-family:var(--mono); font-weight:700; letter-spacing:3px;
-    font-size:20px; color:var(--cyan); text-shadow:0 0 14px rgba(0,240,255,0.65);
-  }
-  .brand .sub{ font-size:10px; letter-spacing:3px; color:var(--text-dim); margin-top:2px; }
-  .status-dot{
-    width:9px; height:9px; border-radius:50%;
-    background: var(--text-dim);
-    box-shadow:0 0 0 3px rgba(255,255,255,0.03);
-    transition: background .3s, box-shadow .3s;
-  }
-  .status-dot.live{ background:var(--green); box-shadow:0 0 10px 2px rgba(57,255,158,0.7); }
-  .status-dot.warn{ background:var(--amber); box-shadow:0 0 10px 2px rgba(255,176,32,0.7); }
-  .status-row{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:1px;}
+        #statusBar {
+            position: relative; z-index: 10; display: flex; align-items: center;
+            justify-content: space-between; padding: 6px 14px; font-size: 10px;
+            color: var(--muted); border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .st-group { display: flex; align-items: center; gap: 6px; }
+        .gps-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); transition: all 0.5s; flex-shrink: 0; }
+        .gps-dot.acquiring { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
+        .gps-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        #clock { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 2px; }
 
-  .panel{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:18px;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 0 0 1px rgba(0,229,255,0.04) inset, 0 10px 40px rgba(0,0,0,0.45);
-    padding:16px;
-    margin-bottom:14px;
-  }
+        #gaugeArea { flex: 1.35; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; min-height: 300px; padding: 2px; }
+        #gaugeCanvas { display: block; }
 
-  /* --- ACTIVATE GATE --- */
-  #gate{ text-align:center; padding:26px 20px; }
-  #gate p{ color:var(--text-dim); font-size:13px; line-height:1.6; margin:10px 0 18px; }
-  .btn{
-    font-family:var(--mono); letter-spacing:1.5px; font-size:12px; font-weight:700;
-    text-transform:uppercase;
-    color:var(--void);
-    background:linear-gradient(135deg,var(--cyan),#00b4d8);
-    border:none; border-radius:10px;
-    padding:13px 20px;
-    cursor:pointer;
-    box-shadow:0 0 22px rgba(0,240,255,0.35);
-    transition:transform .15s ease, box-shadow .15s ease;
-    width:100%;
-  }
-  .btn:active{ transform:scale(0.97); }
-  .btn.ghost{
-    background:transparent; color:var(--cyan);
-    border:1px solid rgba(0,240,255,0.4);
-    box-shadow:none;
-  }
-  .btn.magenta{ background:linear-gradient(135deg,var(--magenta),#a3157e); box-shadow:0 0 22px rgba(255,46,196,0.35); }
-  .btn.small{ padding:9px 12px; font-size:10.5px; }
-  .btn:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:none; }
+        #dataPanels { position: relative; z-index: 10; padding: 0 10px; flex-shrink: 0; }
+        .data-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .data-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 6px 8px; text-align: center; backdrop-filter: blur(6px);
+        }
+        .data-label { font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-bottom: 2px; font-weight: 700; }
+        .data-value { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); transition: color 0.3s; }
+        .data-unit { font-size: 8px; color: var(--muted); margin-top: 1px; font-weight: 700; }
 
-  /* --- COMPASS --- */
-  .compass-panel{ display:flex; flex-direction:column; align-items:center; padding:22px 16px 18px; }
-  .dial-shell{
-    position:relative; width:min(78vw, 320px); aspect-ratio:1/1; margin:0 auto;
-  }
-  .sweep{
-    position:absolute; inset:-6%; border-radius:50%;
-    background: conic-gradient(from 0deg, rgba(0,240,255,0.28), transparent 22%, transparent 100%);
-    animation: spin 6s linear infinite;
-    filter: blur(1px);
-    opacity:0.6;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg);} }
+        #locationInfo { position: relative; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 6px 12px; flex-shrink: 0; }
 
-  svg.dial{ position:relative; width:100%; height:100%; display:block; overflow:visible; }
-  .tick-major{ stroke:#eafcff; stroke-width:2.4; opacity:0.95; filter:drop-shadow(0 0 3px rgba(0,240,255,0.7)); }
-  .tick-minor{ stroke:var(--cyan); stroke-width:1; opacity:0.55; }
-  .dial-ring{ fill:none; stroke:rgba(0,240,255,0.45); stroke-width:1.5; }
-  .dial-ring-outer{ fill:none; stroke:rgba(0,240,255,0.16); stroke-width:10; }
-  .cardinal{ font-family:var(--mono); font-weight:800; fill:#ffffff; text-anchor:middle; dominant-baseline:middle; filter:drop-shadow(0 0 5px rgba(0,240,255,0.6)); }
-  .cardinal.N{ fill:#ff2e4d; filter:drop-shadow(0 0 8px rgba(255,46,77,0.95)); }
-  .interc{ font-family:var(--mono); font-size:9.5px; font-weight:700; fill:var(--cyan); text-anchor:middle; dominant-baseline:middle; letter-spacing:1px; opacity:0.9;}
-  .deg-label{ font-family:var(--mono); font-size:8px; fill:#bfe9ff; text-anchor:middle; dominant-baseline:middle; opacity:0.85; }
+        #compassArea {
+            position: relative; z-index: 5; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 2px 10px 8px; flex-shrink: 0;
+        }
+        #compassCanvas {
+            display: block;
+            filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.25));
+        }
+        #compassInfo {
+            display: flex; flex-direction: column; align-items: center; margin-top: -6px;
+        }
+        #compassDegree {
+            font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
+            color: var(--accent); letter-spacing: 2px; text-shadow: 0 0 12px rgba(0,240,255,0.5);
+        }
+        #compassArahLabel {
+            font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-top: 2px; font-weight: 700;
+        }
+        #compassArahText {
+            font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700;
+            color: var(--green); letter-spacing: 2px; margin-top: 1px;
+            text-shadow: 0 0 10px rgba(57,255,20,0.4); transition: color 0.3s;
+        }
+        #compassCalib {
+            display: none; font-size: 8px; letter-spacing: 1px; font-weight: 700;
+            color: var(--amber); margin-top: 4px; text-align: center; max-width: 220px;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+        .address-box {
+            flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 7px 10px; font-size: 11px; color: var(--amber); font-weight: bold;
+            display: flex; align-items: center; gap: 7px; overflow: hidden;
+            white-space: nowrap; text-overflow: ellipsis; backdrop-filter: blur(6px);
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
+        .address-box i { color: var(--accent); flex-shrink: 0; font-size: 11px; }
+        .address-box span { overflow: hidden; text-overflow: ellipsis; }
+        .address-box .chev { margin-left: auto; color: var(--accent); flex-shrink: 0; font-size: 9px; transition: transform 0.25s; }
+        .address-box.open .chev { transform: rotate(180deg); }
 
-  .needle-wrap{
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    pointer-events:none;
-  }
-  .needle{ width:34%; height:34%; }
-  .needle-n{ fill:#00f0ff; filter:drop-shadow(0 0 10px rgba(0,240,255,1)); }
-  .needle-s{ fill:#ff2e9a; filter:drop-shadow(0 0 10px rgba(255,46,154,0.9)); }
-  .needle-hub{ fill:#ffffff; filter:drop-shadow(0 0 4px rgba(255,255,255,0.9)); }
+        #addressDetail {
+            position: relative; z-index: 10; margin: 0 12px 6px; overflow: hidden;
+            max-height: 0; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s ease;
+        }
+        #addressDetail.open { max-height: 260px; opacity: 1; }
+        #addressDetail .detail-inner {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 12px; backdrop-filter: blur(6px);
+        }
+        .detail-row {
+            display: flex; justify-content: space-between; gap: 10px; padding: 3px 0;
+            border-bottom: 1px dashed rgba(0,240,255,0.12); font-size: 10px;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .dk { color: var(--muted); letter-spacing: 1px; flex-shrink: 0; font-weight: 700; }
+        .detail-row .dv { color: var(--text); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+        .detail-note { font-size: 8px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 
-  /* fixed lubber-line: marks the phone's head/facing direction, always straight up */
-  .lubber{
-    position:absolute; top:-3%; left:50%; transform:translateX(-50%);
-    width:0; height:0;
-    border-left:9px solid transparent;
-    border-right:9px solid transparent;
-    border-top:16px solid #ffe600;
-    filter:drop-shadow(0 0 8px rgba(255,230,0,0.9));
-    z-index:5;
-  }
+        #weatherPanels { position: relative; z-index: 10; padding: 0 10px 6px; flex-shrink: 0; }
+        .weather-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .weather-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 6px 6px; text-align: center; backdrop-filter: blur(6px);
+        }
+        .weather-card i { font-size: 12px; margin-bottom: 2px; display: block; }
+        .weather-label { font-size: 8px; letter-spacing: 2px; color: var(--muted); margin-bottom: 2px; font-weight: 700; }
+        .weather-value { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; }
+        .weather-unit { font-size: 8px; color: var(--muted); font-weight: 700; }
 
-  .readout{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    text-align:center; pointer-events:none;
-  }
-  .readout .deg{ font-family:var(--mono); font-size:15px; font-weight:800; color:var(--cyan); text-shadow:0 0 12px rgba(0,240,255,0.8); letter-spacing:1px;}
-  .readout .lbl{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:2px; letter-spacing:2px;}
+        #extraInfo {
+            position: relative; z-index: 10; display: flex; justify-content: center; flex-wrap: wrap;
+            gap: 10px 16px; padding: 3px 14px; font-size: 9px; color: var(--muted); flex-shrink: 0;
+            font-weight: 700;
+        }
+        #extraInfo i { color: var(--accent); margin-right: 3px; font-size: 8px; }
+        #extraInfo #condIcon { color: var(--amber); }
 
-  .facing-strip{
-    margin-top:16px; width:100%;
-    display:flex; align-items:center; justify-content:center; gap:10px;
-    font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:1px;
-  }
-  .facing-strip b{ color:var(--green); font-size:13px; }
+        #controls { position: relative; z-index: 10; display: flex; justify-content: center; gap: 8px; padding: 8px 14px 14px; flex-shrink: 0; }
+        #controls button {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 10px;
+            padding: 7px 12px; cursor: pointer; display: flex; align-items: center;
+            gap: 5px; transition: all 0.15s; backdrop-filter: blur(6px);
+        }
+        #controls button:active { background: rgba(0,240,255,0.1); border-color: var(--accent); transform: scale(0.95); }
+        #controls button i { color: var(--accent); font-size: 11px; }
 
-  /* --- CONTROLS --- */
-  .ctrl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .ctrl-grid .full{ grid-column:1/-1; }
-  .offset-tag{
-    font-family:var(--mono); font-size:10px; color:var(--amber);
-    text-align:center; margin-top:10px; letter-spacing:1px;
-  }
-  .manual-row{ display:flex; gap:8px; margin-top:10px; }
-  .manual-row input{
-    flex:1; background:rgba(0,0,0,0.35); border:1px solid var(--panel-border);
-    border-radius:8px; color:var(--cyan); font-family:var(--mono); font-size:14px;
-    padding:10px; text-align:center;
-  }
-  .manual-row input:focus{ outline:none; border-color:var(--cyan); }
+        #gpsOverlay {
+            position: absolute; inset: 0; background: rgba(5,10,18,0.97);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 200; text-align: center; padding: 40px; transition: opacity 0.6s, visibility 0.6s;
+        }
+        #gpsOverlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .overlay-icon { font-size: 52px; color: var(--accent); margin-bottom: 24px; animation: pulse 2s ease-in-out infinite; }
+        .overlay-title { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 8px; letter-spacing: 3px; }
+        .overlay-sub { color: var(--muted); font-size: 12px; line-height: 1.7; max-width: 300px; }
+        .btn-activate {
+            margin-top: 32px; background: linear-gradient(135deg, var(--accent), #00c8ff); border: none;
+            border-radius: 12px; color: #050a12; font-family: 'Orbitron', sans-serif;
+            font-size: 13px; font-weight: 700; padding: 14px 44px; cursor: pointer;
+            letter-spacing: 2px; transition: all 0.2s; box-shadow: 0 0 30px rgba(0,240,255,0.25);
+        }
+        .btn-activate:active { transform: scale(0.96); }
 
-  .calib-overlay{
-    display:none; text-align:center; padding:6px 4px 4px;
-  }
-  .calib-overlay.show{ display:block; }
-  .infinity{ width:70px; margin:8px auto; opacity:0.9; }
-  .calib-overlay p{ font-size:11.5px; color:var(--text-dim); line-height:1.6; }
+        .toast {
+            position: fixed; top: 50px; left: 50%; transform: translateX(-50%) translateY(-16px);
+            background: var(--card); border: 1px solid var(--accent); border-radius: 8px;
+            padding: 8px 18px; font-size: 11px; color: var(--accent); z-index: 300;
+            opacity: 0; transition: all 0.3s; pointer-events: none; backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0,240,255,0.15);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* --- SECTION LABEL --- */
-  .sec-label{
-    display:flex; align-items:center; gap:8px;
-    font-family:var(--mono); font-size:10.5px; letter-spacing:3px; color:var(--text-dim);
-    text-transform:uppercase; margin-bottom:12px;
-  }
-  .sec-label::before{ content:""; width:6px; height:6px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); border-radius:1px; }
+        .speed-source {
+            font-size: 7px; letter-spacing: 2px; color: var(--muted);
+            font-family: 'Share Tech Mono', monospace;
+        }
 
-  /* --- POSITION PANEL --- */
-  .coord-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-  .coord-box{
-    background:rgba(0,0,0,0.28); border:1px solid rgba(0,240,255,0.12);
-    border-radius:12px; padding:10px 12px;
-  }
-  .coord-box .k{ font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1.5px; }
-  .coord-box .v{ font-family:var(--mono); font-size:15px; color:var(--green); margin-top:4px; text-shadow:0 0 8px rgba(57,255,158,0.5); word-break:break-all; }
-
-  .addr-box{
-    background:rgba(0,0,0,0.28); border:1px solid rgba(255,46,196,0.18);
-    border-radius:12px; padding:12px 14px; margin-bottom:12px;
-  }
-  .addr-box .k{ font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1.5px; margin-bottom:6px; }
-  .addr-box .full{ font-size:13.5px; color:var(--text); line-height:1.55; margin-bottom:10px;}
-  .addr-line{ display:flex; justify-content:space-between; font-size:11.5px; padding:4px 0; border-top:1px dashed rgba(255,255,255,0.08); color:var(--text-dim); }
-  .addr-line span:last-child{ color:var(--text); text-align:right; max-width:60%; }
-  .rtrw-note{ font-size:10px; color:var(--amber); margin-top:8px; line-height:1.5; }
-
-  .weather-row{ display:flex; align-items:center; gap:14px; }
-  .weather-temp{ font-family:var(--mono); font-size:34px; font-weight:800; color:var(--amber); text-shadow:0 0 14px rgba(255,176,32,0.6); }
-  .weather-meta{ flex:1; }
-  .weather-meta .desc{ font-size:13px; color:var(--text); }
-  .weather-meta .sub{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:4px; letter-spacing:0.5px; }
-
-  footer{ text-align:center; margin-top:6px; }
-  footer p{ font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1px; opacity:0.6; }
-
-  @media (prefers-reduced-motion: reduce){
-    .sweep{ animation:none; }
-  }
-</style>
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+        @media (max-height: 600px) {
+            .data-card { padding: 4px 6px; }
+            .data-value { font-size: 13px; }
+            #locationInfo { padding: 4px 10px; }
+            #controls { padding: 6px 10px 10px; }
+            #compassArea { padding: 0 10px 4px; }
+            #compassDegree { font-size: 16px; }
+            #compassArahText { font-size: 12px; }
+        }
+    </style>
 </head>
 <body>
-<div class="wrap">
+<div id="app">
+    <div class="scanlines"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
 
-  <header>
-    <div class="brand">
-      <div class="logo">NAVIS</div>
-      <div class="sub">DIGITAL COMPASS SYSTEM</div>
-    </div>
-    <div class="status-row">
-      <span id="statusText">STANDBY</span>
-      <span class="status-dot" id="statusDot"></span>
-    </div>
-  </header>
+    <header id="statusBar">
+        <div class="st-group">
+            <div class="gps-dot" id="gpsDot"></div>
+            <span id="gpsStatusText">Nonaktif</span>
+        </div>
+        <span id="clock">00:00:00</span>
+        <div class="st-group">
+            <span id="batteryIcon"><i class="fas fa-battery-full"></i></span>
+            <span id="accText">--</span>
+        </div>
+    </header>
 
-  <!-- GATE -->
-  <section class="panel" id="gate">
-    <div style="font-family:var(--mono); font-size:12px; letter-spacing:2px; color:var(--cyan);">⌖ AKTIVASI SENSOR</div>
-    <p>Izinkan akses sensor arah &amp; lokasi untuk memulai kompas real-time. Pegang HP secara horizontal, bagian atas layar mengarah ke arah hadapmu.</p>
-    <button class="btn" id="activateBtn">Aktifkan Kompas</button>
-  </section>
-
-  <!-- COMPASS -->
-  <section class="panel compass-panel" id="compassPanel" style="display:none;">
-    <div class="dial-shell">
-      <div class="sweep"></div>
-      <div class="lubber"></div>
-      <svg class="dial" viewBox="0 0 300 300" id="dialSvg"></svg>
-      <div class="needle-wrap" id="needleWrap">
-        <svg class="needle" viewBox="0 0 100 100">
-          <polygon class="needle-n" points="50,6 40,52 50,44 60,52"></polygon>
-          <polygon class="needle-s" points="50,94 40,48 50,56 60,48"></polygon>
-          <circle class="needle-hub" cx="50" cy="50" r="4.2"></circle>
-        </svg>
-      </div>
-      <div class="readout">
-        <div class="deg" id="degReadout">--°</div>
-        <div class="lbl" id="dirReadout">-</div>
-      </div>
-    </div>
-    <div class="facing-strip">Arah hadap HP&nbsp;→&nbsp;<b id="facingWord">-</b></div>
-  </section>
-
-  <!-- ADJUSTMENT -->
-  <section class="panel" id="adjustPanel" style="display:none;">
-    <div class="sec-label">Penyesuaian Jarum</div>
-    <div class="ctrl-grid">
-      <button class="btn ghost small" id="calibBtn">↻ Kalibrasi</button>
-      <button class="btn ghost small" id="manualToggleBtn">✎ Set Manual</button>
-      <button class="btn ghost small" id="lockBtn">🔓 Kunci Offset</button>
-      <button class="btn ghost small" id="resetBtn">⟲ Reset Offset</button>
+    <div id="gaugeArea">
+        <canvas id="gaugeCanvas"></canvas>
     </div>
 
-    <div class="calib-overlay" id="calibOverlay">
-      <svg class="infinity" viewBox="0 0 100 40"><path d="M20 20 C20 5,45 5,50 20 C55 35,80 35,80 20 C80 5,55 5,50 20 C45 35,20 35,20 20 Z" fill="none" stroke="#00f0ff" stroke-width="3" stroke-linecap="round"/></svg>
-      <p id="calibText">Gerakkan HP membentuk angka 8 selama beberapa detik agar sensor magnetometer OS bisa menyesuaikan diri.</p>
+    <section id="compassArea">
+        <canvas id="compassCanvas"></canvas>
+        <div id="compassInfo">
+            <span id="compassDegree">--°</span>
+            <span id="compassArahLabel">SEDANG MENGHADAP</span>
+            <span id="compassArahText">MENUNGGU SENSOR</span>
+            <span id="compassCalib">GOYANGKAN HP MEMBENTUK ANGKA 8 UNTUK KALIBRASI</span>
+        </div>
+    </section>
+
+    <section id="dataPanels">
+        <div class="data-row">
+            <div class="data-card">
+                <div class="data-label">TRIP</div>
+                <div class="data-value" id="tripVal">0.000</div>
+                <div class="data-unit" id="tripUnit">km</div>
+            </div>
+            <div class="data-card">
+                <div class="data-label">ODOMETER</div>
+                <div class="data-value" id="odoVal">0.0</div>
+                <div class="data-unit" id="odoUnit">km</div>
+            </div>
+            <div class="data-card">
+                <div class="data-label">MAX</div>
+                <div class="data-value" id="maxVal">0</div>
+                <div class="data-unit" id="maxUnit">km/h</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="locationInfo">
+        <div class="address-box" id="addressBox">
+            <i class="fas fa-map-marker-alt"></i>
+            <span id="addressText">Menunggu GPS...</span>
+            <i class="fas fa-chevron-down chev"></i>
+        </div>
+    </section>
+
+    <section id="addressDetail">
+        <div class="detail-inner">
+            <div class="detail-row"><span class="dk">JALAN</span><span class="dv" id="dJalan">--</span></div>
+            <div class="detail-row"><span class="dk">DUSUN/LINGKUNGAN (RT-RW)</span><span class="dv" id="dLingkungan">--</span></div>
+            <div class="detail-row"><span class="dk">KELURAHAN/DESA</span><span class="dv" id="dKelurahan">--</span></div>
+            <div class="detail-row"><span class="dk">KECAMATAN</span><span class="dv" id="dKecamatan">--</span></div>
+            <div class="detail-row"><span class="dk">KOTA/KABUPATEN</span><span class="dv" id="dKota">--</span></div>
+            <div class="detail-row"><span class="dk">PROVINSI</span><span class="dv" id="dProvinsi">--</span></div>
+            <div class="detail-row"><span class="dk">KODE POS</span><span class="dv" id="dPostcode">--</span></div>
+            <div class="detail-note">Data RT/RW presisi tidak selalu tersedia di peta digital (OpenStreetMap). Yang ditampilkan adalah unit administratif paling rinci yang berhasil ditemukan (biasanya setingkat dusun/lingkungan).</div>
+        </div>
+    </section>
+
+    <section id="weatherPanels">
+        <div class="weather-row">
+            <div class="weather-card">
+                <i class="fas fa-temperature-half" style="color:var(--amber)"></i>
+                <div class="weather-label">SUHU</div>
+                <div class="weather-value" id="wxTemp" style="color:var(--amber)">--</div>
+                <div class="weather-unit">°C</div>
+            </div>
+            <div class="weather-card">
+                <i class="fas fa-droplet" style="color:var(--accent)"></i>
+                <div class="weather-label">KELEMBAPAN</div>
+                <div class="weather-value" id="wxHumidity" style="color:var(--accent)">--</div>
+                <div class="weather-unit">%RH</div>
+            </div>
+            <div class="weather-card">
+                <i class="fas fa-wind" style="color:var(--green)"></i>
+                <div class="weather-label">ANGIN</div>
+                <div class="weather-value" id="wxWind" style="color:var(--green)">--</div>
+                <div class="weather-unit" id="wxWindDir">km/h --</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="extraInfo">
+        <span><i class="fas fa-mountain"></i> <span id="altText">-- m</span></span>
+        <span><i class="fas fa-crosshairs"></i> <span id="coordText">-, -</span></span>
+        <span><i class="fas fa-satellite"></i> <span id="satText">--</span></span>
+        <span><i class="fas fa-cloud" id="condIcon"></i> <span id="condText">--</span></span>
+    </section>
+
+    <footer id="controls">
+        <button id="btnReset" aria-label="Reset trip meter"><i class="fas fa-undo"></i> Reset Trip</button>
+        <button id="btnUnit" aria-label="Ganti satuan kecepatan"><i class="fas fa-exchange-alt"></i> <span id="unitLabel">km/h</span></button>
+        <button id="btnFS" aria-label="Layar penuh"><i class="fas fa-expand" id="fsIcon"></i></button>
+    </footer>
+
+    <div id="gpsOverlay">
+        <div class="overlay-icon"><i class="fas fa-satellite-dish"></i></div>
+        <div class="overlay-title">NEXUS</div>
+        <div class="overlay-sub">
+            Speedometer digital real-time berbasis GPS.<br>
+            Izinkan akses lokasi presisi tinggi untuk akurasi maksimal.
+        </div>
+        <button class="btn-activate" id="btnActivate">AKTIFKAN GPS</button>
     </div>
 
-    <div class="manual-row" id="manualRow" style="display:none;">
-      <input type="number" id="manualInput" placeholder="0-359°" min="0" max="359">
-      <button class="btn small" id="manualApplyBtn" style="width:auto;">Terapkan</button>
-    </div>
-
-    <div class="offset-tag" id="offsetTag">Offset aktif: 0° · tidak dikunci</div>
-  </section>
-
-  <!-- POSITION -->
-  <section class="panel" id="posPanel" style="display:none;">
-    <div class="sec-label">Posisi Real-Time</div>
-    <div class="coord-grid">
-      <div class="coord-box"><div class="k">LATITUDE</div><div class="v" id="latVal">--</div></div>
-      <div class="coord-box"><div class="k">LONGITUDE</div><div class="v" id="lonVal">--</div></div>
-    </div>
-    <div class="coord-grid" style="margin-bottom:14px;">
-      <div class="coord-box"><div class="k">AKURASI GPS</div><div class="v" id="accVal" style="font-size:13px;">--</div></div>
-      <div class="coord-box"><div class="k">KETINGGIAN</div><div class="v" id="altVal" style="font-size:13px;">--</div></div>
-    </div>
-
-    <div class="addr-box">
-      <div class="k">ALAMAT LENGKAP</div>
-      <div class="full" id="addrFull">Mencari lokasi…</div>
-      <div class="addr-line"><span>Jalan / Dusun</span><span id="addrRoad">-</span></div>
-      <div class="addr-line"><span>RT / RW</span><span id="addrRtRw">-</span></div>
-      <div class="addr-line"><span>Kelurahan / Desa</span><span id="addrVillage">-</span></div>
-      <div class="addr-line"><span>Kecamatan</span><span id="addrSuburb">-</span></div>
-      <div class="addr-line"><span>Kota / Kabupaten</span><span id="addrCity">-</span></div>
-      <div class="addr-line"><span>Provinsi</span><span id="addrState">-</span></div>
-      <div class="addr-line"><span>Kode Pos</span><span id="addrPostcode">-</span></div>
-      <div class="rtrw-note">⚠ Data RT/RW tidak selalu tersedia di basis data peta publik (OpenStreetMap). Jika kosong, itu berarti data tersebut belum terdaftar untuk lokasi ini.</div>
-    </div>
-
-    <div class="weather-row">
-      <div class="weather-temp" id="tempVal">--°</div>
-      <div class="weather-meta">
-        <div class="desc" id="weatherDesc">Mengambil data cuaca…</div>
-        <div class="sub" id="weatherSub">-</div>
-      </div>
-    </div>
-  </section>
-
-  <footer>
-    <p>NAVIS · SENSOR HEADING + GPS · UPDATE KONTINU SELAMA APLIKASI AKTIF</p>
-  </footer>
+    <div class="toast" id="toast"></div>
 </div>
 
 <script>
-(function(){
-  const $ = id => document.getElementById(id);
-  const statusDot = $('statusDot'), statusText = $('statusText');
+/* ============================================
+   STATE & KONFIGURASI
+   ============================================ */
+const S = {
+    speed: 0,           // Kecepatan target dari GPS (km/h) — HANYA diupdate di onPosition
+    displaySpeed: 0,    // Kecepatan tampilan (smoothed) — HANYA diupdate di mainLoop
+    maxSpeed: 0,
+    tripDist: 0,
+    odometer: 0,
+    heading: 0,
+    gpsHeadingSet: false,
+    compassAccuracy: null,
+    altitude: 0,
+    lat: 0, lon: 0,
+    accuracy: 0,
+    gpsState: 'off',
+    unit: 'kmh',
+    address: 'Menunggu GPS...',
+    speedSource: '--',
+    lastPos: null,
+    lastTs: null,
+    watchId: null,
+    wakeLock: null,
+    sweepPhase: 'idle',
+    sweepStart: 0,
+    addressTimer: null,
+    lastAddrLat: null,
+    lastAddrLon: null,
+    orientationHeading: null,
+    batteryLevel: null,
+    batteryCharging: false,
+    lastSaveTime: 0,
+    refreshInterval: null,
+    gpsStarted: false,
+    addr: { jalan: '--', lingkungan: '--', kelurahan: '--', kecamatan: '--', kota: '--', provinsi: '--', postcode: '--' },
+    weather: { temp: null, humidity: null, windSpeed: null, windDir: null, code: null, isDay: 1 },
+    lastWeatherLat: null,
+    lastWeatherLon: null,
+    lastWeatherTs: 0,
+    weatherTimer: null
+};
 
-  // ---------- Build compass dial (SVG) ----------
-  const svg = $('dialSvg');
-  const NS = "http://www.w3.org/2000/svg";
-  function el(tag, attrs){
-    const e = document.createElementNS(NS, tag);
-    for(const k in attrs) e.setAttribute(k, attrs[k]);
-    return e;
-  }
-  const cx=150, cy=150, rOuter=140, rTickOuterMajor=140, rTickInnerMajor=120, rTickInnerMinor=130;
+const MAX_GAUGE_KMH = 240;
+const MAX_GAUGE_MPH = 150;
+const MAX_ACCEL = 120; // km/h per detik
 
-  // static bezel (does not rotate)
-  svg.appendChild(el('circle',{cx,cy,r:145,class:'dial-ring-outer'}));
-  svg.appendChild(el('circle',{cx,cy,r:118,class:'dial-ring'}));
+/* ============================================
+   UTILITAS
+   ============================================ */
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-  // rotor: everything inside this group spins so that "U" (north) always
-  // keeps pointing to true north, while the fixed lubber-line + needle
-  // at the top mark the phone's own head/facing direction.
-  const rotor = el('g',{id:'rotor'});
-  svg.appendChild(rotor);
+function calcBearing(lat1, lon1, lat2, lon2) {
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+    const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+              Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+    return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
 
-  for(let deg=0; deg<360; deg+=5){
-    const rad = (deg-90) * Math.PI/180;
-    const isMajor = deg % 30 === 0;
-    const rInner = isMajor ? rTickInnerMajor : rTickInnerMinor;
-    const x1 = cx + rInner*Math.cos(rad), y1 = cy + rInner*Math.sin(rad);
-    const x2 = cx + rTickOuterMajor*Math.cos(rad), y2 = cy + rTickOuterMajor*Math.sin(rad);
-    rotor.appendChild(el('line',{x1,y1,x2,y2,class: isMajor ? 'tick-major':'tick-minor'}));
-    if(isMajor && deg % 30 === 0 && deg % 90 !== 0){
-      const rl = 104;
-      const lx = cx + rl*Math.cos(rad), ly = cy + rl*Math.sin(rad);
-      const t = el('text',{x:lx,y:ly,class:'deg-label'}); t.textContent = deg;
-      rotor.appendChild(t);
-    }
-  }
+function toDisplay(kmh) {
+    return S.unit === 'mph' ? kmh * 0.621371 : kmh;
+}
+function toDisplayDist(km) {
+    return S.unit === 'mph' ? km * 0.621371 : km;
+}
+function unitSpeed() { return S.unit === 'mph' ? 'mph' : 'km/h'; }
+function unitDist() { return S.unit === 'mph' ? 'mi' : 'km'; }
+function maxGauge() { return S.unit === 'mph' ? MAX_GAUGE_MPH : MAX_GAUGE_KMH; }
 
-  const cardinals = [
-    {deg:0, t:'U', cls:'cardinal N'}, {deg:90, t:'T', cls:'cardinal'},
-    {deg:180, t:'S', cls:'cardinal'}, {deg:270, t:'B', cls:'cardinal'}
-  ];
-  const inter = [
-    {deg:45, t:'TL'}, {deg:135, t:'TG'}, {deg:225, t:'BD'}, {deg:315, t:'BL'}
-  ];
-  cardinals.forEach(c=>{
-    const rad=(c.deg-90)*Math.PI/180, r=97;
-    const x=cx+r*Math.cos(rad), y=cy+r*Math.sin(rad);
-    const t = el('text',{x,y,class:c.cls,'font-size':22}); t.textContent=c.t;
-    rotor.appendChild(t);
-  });
-  inter.forEach(c=>{
-    const rad=(c.deg-90)*Math.PI/180, r=100;
-    const x=cx+r*Math.cos(rad), y=cy+r*Math.sin(rad);
-    const t = el('text',{x,y,class:'interc'}); t.textContent=c.t;
-    rotor.appendChild(t);
-  });
+// Warna jarum & arc bertingkat (gradasi) sesuai kecepatan: hijau (lambat) -> kuning -> merah menyala (cepat)
+// pct: proporsi kecepatan terhadap skala maksimum gauge (0..1)
+function speedHue(pct) {
+    const p = Math.max(0, Math.min(1, pct));
+    return 128 - p * 128; // 128=hijau, ~50=kuning/amber, 0=merah
+}
+function speedColor(pct, alpha) {
+    const hue = speedHue(pct);
+    const a = alpha === undefined ? 1 : alpha;
+    return a >= 1 ? `hsl(${hue}, 100%, 50%)` : `hsla(${hue}, 100%, 50%, ${a})`;
+}
 
-  // ---------- Direction label ----------
-  const dirNames = ['Utara','Timur Laut','Timur','Tenggara','Selatan','Barat Daya','Barat','Barat Laut'];
-  function dirLabel(deg){
-    const idx = Math.round(deg/45) % 8;
-    return dirNames[idx];
-  }
+// Mata angin 16-arah dalam Bahasa Indonesia
+const COMPASS_ABBR_ID = ['U','UTL','TL','TTL','T','TTG','TG','STG','S','SBD','BD','BBD','B','BBL','BL','UBL'];
+const COMPASS_FULL_ID = [
+    'Utara', 'Utara Timur Laut', 'Timur Laut', 'Timur Timur Laut',
+    'Timur', 'Timur Tenggara', 'Tenggara', 'Selatan Tenggara',
+    'Selatan', 'Selatan Barat Daya', 'Barat Daya', 'Barat Barat Daya',
+    'Barat', 'Barat Barat Laut', 'Barat Laut', 'Utara Barat Laut'
+];
+function compassDir(deg) {
+    return COMPASS_ABBR_ID[Math.round(deg / 22.5) % 16];
+}
+function compassDirFull(deg) {
+    return COMPASS_FULL_ID[Math.round(deg / 22.5) % 16];
+}
 
-  // ---------- State ----------
-  let rawHeading = 0;
-  let offset = 0;
-  let locked = false;
-  let displayed = 0; // accumulated unbounded angle for smooth rotation
-  let haveFirstReading = false;
-  let lastVibDir = null;
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+}
 
-  const rotorEl = $('dialSvg').querySelector('#rotor');
-  const degReadout = $('degReadout');
-  const dirReadout = $('dirReadout');
-  const facingWord = $('facingWord');
-  const offsetTag = $('offsetTag');
-
-  function applyHeading(newRaw){
-    rawHeading = newRaw;
-    const target = ((rawHeading + offset) % 360 + 360) % 360;
-    // shortest-path smoothing so the dial never snaps across the 0/360 seam
-    let delta = ((target - (((displayed%360)+360)%360)) + 540) % 360 - 180;
-    displayed += delta;
-    // Dial rotates the OPPOSITE way of the heading: as the phone turns,
-    // "U" (north) keeps pointing to true north in space. The needle and
-    // lubber-line at the top stay fixed — they always mark the phone's head.
-    rotorEl.setAttribute('transform', `rotate(${-displayed} 150 150)`);
-    degReadout.textContent = Math.round(target) + '°';
-    const lbl = dirLabel(target);
-    dirReadout.textContent = lbl;
-    facingWord.textContent = lbl.toUpperCase() + ' · ' + Math.round(target) + '°';
-    haveFirstReading = true;
-
-    if(navigator.vibrate && lastVibDir !== lbl){
-      lastVibDir = lbl;
-      navigator.vibrate(12);
-    }
-  }
-
-  function screenAngle(){
-    if(screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
-    if(typeof window.orientation === 'number') return window.orientation;
-    return 0;
-  }
-
-  function onOrientation(e){
-    let heading;
-    if(typeof e.webkitCompassHeading === 'number'){
-      heading = e.webkitCompassHeading; // iOS: already true compass heading
-    } else if(e.alpha !== null && (e.absolute === true || e.type === 'deviceorientationabsolute')){
-      heading = (360 - e.alpha + screenAngle()) % 360;
-    } else if(e.alpha !== null){
-      heading = (360 - e.alpha + screenAngle()) % 360;
-    } else {
-      return;
-    }
-    if(heading < 0) heading += 360;
-    applyHeading(heading);
-  }
-
-  // ---------- Offset controls ----------
-  function refreshOffsetTag(){
-    offsetTag.textContent = `Offset aktif: ${Math.round(offset)}° · ${locked ? 'dikunci' : 'tidak dikunci'}`;
-  }
-
-  $('calibBtn').addEventListener('click', ()=>{
-    if(locked) return;
-    const overlay = $('calibOverlay');
-    overlay.classList.add('show');
-    $('calibText').textContent = 'Gerakkan HP membentuk angka 8 selama beberapa detik…';
-    let t = 4;
-    const iv = setInterval(()=>{
-      t--;
-      if(t<=0){
-        clearInterval(iv);
-        $('calibText').textContent = 'Kalibrasi selesai. Sensor arah OS telah diberi kesempatan menyesuaikan diri.';
-        setTimeout(()=> overlay.classList.remove('show'), 1600);
-      }
-    },1000);
-  });
-
-  let manualOpen = false;
-  $('manualToggleBtn').addEventListener('click', ()=>{
-    if(locked) return;
-    manualOpen = !manualOpen;
-    $('manualRow').style.display = manualOpen ? 'flex' : 'none';
-    if(manualOpen) $('manualInput').value = Math.round(((rawHeading+offset)%360+360)%360);
-  });
-  $('manualApplyBtn').addEventListener('click', ()=>{
-    const v = parseFloat($('manualInput').value);
-    if(isNaN(v)) return;
-    offset = ((v - rawHeading) % 360 + 360) % 360;
-    refreshOffsetTag();
-    manualOpen = false;
-    $('manualRow').style.display='none';
-  });
-
-  $('lockBtn').addEventListener('click', ()=>{
-    locked = !locked;
-    $('lockBtn').textContent = locked ? '🔒 Offset Terkunci' : '🔓 Kunci Offset';
-    $('calibBtn').disabled = locked;
-    $('manualToggleBtn').disabled = locked;
-    $('resetBtn').disabled = locked;
-    refreshOffsetTag();
-  });
-
-  $('resetBtn').addEventListener('click', ()=>{
-    if(locked) return;
-    offset = 0;
-    refreshOffsetTag();
-  });
-
-  // ---------- Geolocation + reverse geocode + weather ----------
-  let lastGeoFetch = 0;
-  const GEO_THROTTLE_MS = 20000;
-
-  function fmtCoord(v){ return v.toFixed(6); }
-
-  const weatherCodeMap = {
-    0:'Cerah', 1:'Cerah berawan', 2:'Berawan sebagian', 3:'Mendung',
-    45:'Berkabut', 48:'Kabut es', 51:'Gerimis ringan', 53:'Gerimis sedang', 55:'Gerimis lebat',
-    61:'Hujan ringan', 63:'Hujan sedang', 65:'Hujan lebat', 71:'Salju ringan', 73:'Salju sedang',
-    75:'Salju lebat', 80:'Hujan lokal ringan', 81:'Hujan lokal sedang', 82:'Hujan lokal lebat',
-    95:'Badai petir', 96:'Badai petir + hujan es', 99:'Badai petir hebat'
-  };
-
-  async function fetchWeather(lat, lon){
-    try{
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&timezone=auto`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const c = data.current;
-      $('tempVal').textContent = Math.round(c.temperature_2m) + '°C';
-      $('weatherDesc').textContent = weatherCodeMap[c.weather_code] || 'Kondisi tidak diketahui';
-      $('weatherSub').textContent = `Angin ${c.wind_speed_10m} km/j · Kelembapan ${c.relative_humidity_2m}%`;
-    }catch(err){
-      $('weatherDesc').textContent = 'Gagal memuat cuaca';
-    }
-  }
-
-  async function fetchAddress(lat, lon){
-    try{
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
-      const res = await fetch(url, {headers:{'Accept':'application/json'}});
-      const data = await res.json();
-      const a = data.address || {};
-      $('addrFull').textContent = data.display_name || 'Alamat tidak ditemukan';
-      $('addrRoad').textContent = a.road || a.pedestrian || a.hamlet || '-';
-      const rt = a.neighbourhood || a.residential || '';
-      $('addrRtRw').textContent = rt || '-';
-      $('addrVillage').textContent = a.village || a.suburb || a.quarter || '-';
-      $('addrSuburb').textContent = a.suburb || a.city_district || a.county || '-';
-      $('addrCity').textContent = a.city || a.town || a.county || a.regency || '-';
-      $('addrState').textContent = a.state || '-';
-      $('addrPostcode').textContent = a.postcode || '-';
-    }catch(err){
-      $('addrFull').textContent = 'Gagal memuat alamat';
-    }
-  }
-
-  function onPosition(pos){
-    const {latitude, longitude, accuracy, altitude} = pos.coords;
-    $('latVal').textContent = fmtCoord(latitude);
-    $('lonVal').textContent = fmtCoord(longitude);
-    $('accVal').textContent = `± ${Math.round(accuracy)} m`;
-    $('altVal').textContent = altitude !== null ? `${Math.round(altitude)} m` : '-';
-    statusDot.classList.add('live'); statusDot.classList.remove('warn');
-    statusText.textContent = 'LIVE';
-
+/* ============================================
+   PERSISTENSI (localStorage)
+   ============================================ */
+function loadData() {
+    S.odometer = parseFloat(localStorage.getItem('nx_odo')) || 0;
+    S.unit = localStorage.getItem('nx_unit') || 'kmh';
+    S.maxSpeed = parseFloat(localStorage.getItem('nx_max')) || 0;
+}
+function saveData() {
+    localStorage.setItem('nx_odo', S.odometer.toFixed(3));
+    localStorage.setItem('nx_unit', S.unit);
+    localStorage.setItem('nx_max', S.maxSpeed.toFixed(1));
+}
+// Simpan throttled — maksimal setiap 3 detik
+function throttledSave() {
     const now = Date.now();
-    if(now - lastGeoFetch > GEO_THROTTLE_MS){
-      lastGeoFetch = now;
-      fetchAddress(latitude, longitude);
-      fetchWeather(latitude, longitude);
+    if (now - S.lastSaveTime > 3000) {
+        S.lastSaveTime = now;
+        saveData();
     }
-  }
+}
 
-  function onPositionError(err){
-    statusDot.classList.add('warn'); statusDot.classList.remove('live');
-    statusText.textContent = 'GPS ERROR';
-  }
+/* ============================================
+   GPS - GEOLOCATION API
+   ============================================ */
+function startGPS() {
+    if (!navigator.geolocation) {
+        S.gpsState = 'error';
+        updateGPSStatus();
+        showToast('Geolocation tidak didukung perangkat ini');
+        return;
+    }
 
-  // ---------- Activation ----------
-  $('activateBtn').addEventListener('click', async ()=>{
-    // Orientation permission (iOS 13+)
-    try{
-      if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
-        const res = await DeviceOrientationEvent.requestPermission();
-        if(res !== 'granted'){ alert('Izin sensor arah ditolak.'); return; }
-      }
-    }catch(e){}
+    S.gpsStarted = true;
+    S.gpsState = 'acquiring';
+    updateGPSStatus();
 
-    if('ondeviceorientationabsolute' in window){
-      window.addEventListener('deviceorientationabsolute', onOrientation, true);
+    // Realtime: maximumAge diperkecil ke 1000ms agar posisi selalu sangat segar
+    const watchOpts = { enableHighAccuracy: true, timeout: 30000, maximumAge: 1000 };
+
+    // Hapus watch lama jika ada
+    if (S.watchId !== null) {
+        navigator.geolocation.clearWatch(S.watchId);
+        S.watchId = null;
+    }
+
+    // Langsung mulai watch — tidak perlu getCurrentPosition terpisah
+    S.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, watchOpts);
+
+    // FIX #2: Fallback periodic refresh — jika watchPosition berhenti mengirim update,
+    // ini memastikan kita tetap dapat posisi setiap 4 detik
+    startPeriodicRefresh();
+}
+
+function startPeriodicRefresh() {
+    stopPeriodicRefresh();
+    S.refreshInterval = setInterval(() => {
+        if (!S.gpsStarted) return;
+        // Hanya fallback jika GPS dalam keadaan acquiring/active
+        if (S.gpsState === 'active' || S.gpsState === 'acquiring') {
+            navigator.geolocation.getCurrentPosition(
+                onPosition,
+                () => {}, // Error diam-diam, watchPosition yang menangani error utama
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 1500 }
+            );
+        }
+    }, 3000);
+}
+
+function stopPeriodicRefresh() {
+    if (S.refreshInterval) {
+        clearInterval(S.refreshInterval);
+        S.refreshInterval = null;
+    }
+}
+
+// FIX #3: Seluruh body onPosition dibungkus try/catch
+// Supaya error apapun tidak menghentikan callback chain watchPosition
+function onPosition(pos) {
+    try {
+        const { latitude, longitude, accuracy, altitude, speed, heading } = pos.coords;
+        const timestamp = pos.timestamp || Date.now();
+
+        // Update status GPS berdasarkan akurasi
+        if (accuracy <= 30) S.gpsState = 'active';
+        else if (accuracy <= 100) S.gpsState = 'acquiring';
+        else S.gpsState = 'acquiring';
+
+        // UPDATE LOKASI — selalu diupdate, tanpa syarat
+        S.lat = latitude;
+        S.lon = longitude;
+        S.accuracy = accuracy;
+        S.altitude = (altitude !== null && altitude !== undefined) ? altitude : 0;
+
+        // Hitung kecepatan mentah
+        let rawSpeedKmh = 0;
+        let source = 'CALC';
+
+        // Prioritas 1: speed dari GPS hardware
+        if (speed !== null && speed >= 0 && isFinite(speed)) {
+            rawSpeedKmh = speed * 3.6;
+            source = 'GPS';
+        }
+
+        // Prioritas 2: hitung dari delta posisi
+        if (S.lastPos && S.lastTs) {
+            const dt = (timestamp - S.lastTs) / 1000;
+            if (dt > 0.1 && dt < 10) {
+                const dist = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+                const calcSpeed = (dist / dt) * 3.6;
+                if (speed === null || speed < 0 || !isFinite(speed)) {
+                    rawSpeedKmh = calcSpeed;
+                    source = 'CALC';
+                } else {
+                    const diff = Math.abs(rawSpeedKmh - calcSpeed);
+                    if (diff < 20) {
+                        rawSpeedKmh = (rawSpeedKmh + calcSpeed) / 2;
+                        source = 'GPS+CALC';
+                    }
+                }
+            }
+        }
+
+        S.speedSource = source;
+
+        // Filter akselerasi tidak wajar
+        if (S.lastTs) {
+            const dt = (timestamp - S.lastTs) / 1000;
+            if (dt > 0) {
+                const accel = Math.abs(rawSpeedKmh - S.speed) / dt;
+                if (accel > MAX_ACCEL) rawSpeedKmh = S.speed;
+            }
+        }
+
+        // Clamp
+        if (rawSpeedKmh < 0) rawSpeedKmh = 0;
+        if (rawSpeedKmh > 400) rawSpeedKmh = 0;
+
+        // FIX #4: HANYA update S.speed (target) — JANGAN sentuh S.displaySpeed di sini
+        // Smoothing sepenuhnya ditangani di mainLoop
+        S.speed = rawSpeedKmh;
+
+        // Update max speed (berdasarkan target, bukan display)
+        if (S.speed > S.maxSpeed) {
+            S.maxSpeed = S.speed;
+        }
+
+        // Hitung jarak
+        if (S.lastPos && S.lastTs) {
+            const distKm = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude) / 1000;
+            if (distKm < 0.5 && distKm > 0.00001) {
+                S.tripDist += distKm;
+                S.odometer += distKm;
+            }
+        }
+
+        // Update heading
+        if (heading !== null && heading >= 0 && isFinite(heading)) {
+            S.heading = heading;
+            S.gpsHeadingSet = true;
+        } else if (S.lastPos) {
+            const dist = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+            if (dist > 3) {
+                S.heading = calcBearing(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+                S.gpsHeadingSet = true;
+            }
+        }
+
+        // Simpan posisi terakhir
+        S.lastPos = { lat: latitude, lon: longitude };
+        S.lastTs = timestamp;
+
+        // Reverse geocode
+        debouncedReverseGeocode(latitude, longitude);
+
+        // Cuaca real-time (throttled by distance/waktu di dalam fungsinya)
+        debouncedWeatherFetch(latitude, longitude);
+
+        // Simpan data (throttled)
+        throttledSave();
+        updateGPSStatus();
+
+    } catch (err) {
+        console.error('onPosition error:', err);
+    }
+}
+
+function onPositionError(err) {
+    console.warn('GPS Error:', err.message, err.code);
+    if (err.code === 1) {
+        S.gpsState = 'error';
+        updateGPSStatus();
+        showToast('Izin lokasi ditolak. Aktifkan di pengaturan browser.');
+    } else if (err.code === 2) {
+        S.gpsState = 'acquiring';
+        updateGPSStatus();
+    } else if (err.code === 3) {
+        S.gpsState = 'acquiring';
+        updateGPSStatus();
+    }
+}
+
+function updateGPSStatus() {
+    const dot = document.getElementById('gpsDot');
+    const txt = document.getElementById('gpsStatusText');
+    dot.className = 'gps-dot';
+    if (S.gpsState === 'active') {
+        dot.classList.add('active');
+        txt.textContent = 'GPS Aktif';
+        txt.style.color = 'var(--green)';
+    } else if (S.gpsState === 'acquiring') {
+        dot.classList.add('acquiring');
+        txt.textContent = 'Mencari GPS...';
+        txt.style.color = 'var(--amber)';
+    } else if (S.gpsState === 'error') {
+        txt.textContent = 'GPS Error';
+        txt.style.color = 'var(--red)';
     } else {
-      window.addEventListener('deviceorientation', onOrientation, true);
+        txt.textContent = 'Nonaktif';
+        txt.style.color = 'var(--muted)';
+    }
+}
+
+/* ============================================
+   REVERSE GEOCODE (Nominatim - Debounced)
+   ============================================ */
+// Realtime: threshold 10m, delay 1.2s — alamat menyusul cepat setelah posisi berubah
+function debouncedReverseGeocode(lat, lon) {
+    if (S.lastAddrLat !== null) {
+        const d = haversine(S.lastAddrLat, S.lastAddrLon, lat, lon);
+        if (d < 10) return;
+    }
+    clearTimeout(S.addressTimer);
+    S.addressTimer = setTimeout(() => reverseGeocode(lat, lon), 1200);
+}
+
+async function reverseGeocode(lat, lon) {
+    try {
+        // zoom=18 + addressdetails=1 -> unit administratif paling rinci yang tersedia
+        // (jalan, dusun/lingkungan, kelurahan/desa, kecamatan, kab/kota, provinsi)
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`,
+            { headers: { 'User-Agent': 'NexusSpeedometer/1.0' } }
+        );
+        const data = await res.json();
+        if (data && data.display_name) {
+            const parts = data.display_name.split(',');
+            const short = parts.slice(0, Math.min(3, parts.length)).join(',').trim();
+            S.address = short;
+            S.lastAddrLat = lat;
+            S.lastAddrLon = lon;
+
+            const a = data.address || {};
+            // Jalan + nomor rumah
+            const jalanParts = [a.road || a.pedestrian || a.footway || a.residential, a.house_number].filter(Boolean);
+            S.addr.jalan = jalanParts.length ? jalanParts.join(' No. ') : '--';
+            // Dusun/Lingkungan — level administratif terkecil yang mendekati RT/RW
+            S.addr.lingkungan = a.neighbourhood || a.hamlet || a.quarter || a.residential || '--';
+            // Kelurahan/Desa
+            S.addr.kelurahan = a.village || a.suburb || a.city_district || '--';
+            // Kecamatan
+            S.addr.kecamatan = a.city_district || a.subdistrict || a.county || '--';
+            // Kota/Kabupaten
+            S.addr.kota = a.city || a.town || a.regency || a.county || '--';
+            // Provinsi
+            S.addr.provinsi = a.state || '--';
+            // Kode pos
+            S.addr.postcode = a.postcode || '--';
+        }
+    } catch (e) {
+        // Gagal silently — jangan update lastAddrLat/Lon agar bisa retry
+    }
+}
+
+/* ============================================
+   CUACA REAL-TIME (Open-Meteo — tanpa API key)
+   ============================================ */
+function debouncedWeatherFetch(lat, lon) {
+    const now = Date.now();
+    let moved = true;
+    if (S.lastWeatherLat !== null) {
+        const d = haversine(S.lastWeatherLat, S.lastWeatherLon, lat, lon);
+        moved = d > 500; // refetch jika bergerak >500m
+    }
+    const stale = (now - S.lastWeatherTs) > 5 * 60 * 1000; // atau tiap 5 menit
+    if (!moved && !stale) return;
+    fetchWeather(lat, lon);
+}
+
+async function fetchWeather(lat, lon) {
+    try {
+        const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,is_day&timezone=auto`
+        );
+        const data = await res.json();
+        if (data && data.current) {
+            S.weather.temp = data.current.temperature_2m;
+            S.weather.humidity = data.current.relative_humidity_2m;
+            S.weather.windSpeed = data.current.wind_speed_10m;
+            S.weather.windDir = data.current.wind_direction_10m;
+            S.weather.code = data.current.weather_code;
+            S.weather.isDay = data.current.is_day;
+            S.lastWeatherLat = lat;
+            S.lastWeatherLon = lon;
+            S.lastWeatherTs = Date.now();
+        }
+    } catch (e) {
+        // Gagal silently — akan dicoba lagi pada update posisi berikutnya
+    }
+}
+
+/* ============================================
+   KODE CUACA (WMO) -> BAHASA INDONESIA
+   ============================================ */
+function weatherInfo(code, isDay) {
+    const day = isDay !== 0;
+    const map = {
+        0:  { text: day ? 'Cerah' : 'Cerah Malam', icon: day ? 'fa-sun' : 'fa-moon', color: 'var(--amber)' },
+        1:  { text: 'Cerah Berawan', icon: day ? 'fa-cloud-sun' : 'fa-cloud-moon', color: 'var(--amber)' },
+        2:  { text: 'Berawan Sebagian', icon: 'fa-cloud-sun', color: 'var(--muted)' },
+        3:  { text: 'Mendung', icon: 'fa-cloud', color: 'var(--muted)' },
+        45: { text: 'Berkabut', icon: 'fa-smog', color: 'var(--muted)' },
+        48: { text: 'Kabut Beku', icon: 'fa-smog', color: 'var(--muted)' },
+        51: { text: 'Gerimis Ringan', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        53: { text: 'Gerimis', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        55: { text: 'Gerimis Lebat', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        56: { text: 'Gerimis Beku', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        57: { text: 'Gerimis Beku Lebat', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        61: { text: 'Hujan Ringan', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        63: { text: 'Hujan Sedang', icon: 'fa-cloud-showers-heavy', color: 'var(--accent)' },
+        65: { text: 'Hujan Lebat', icon: 'fa-cloud-showers-heavy', color: 'var(--red)' },
+        66: { text: 'Hujan Beku Ringan', icon: 'fa-cloud-showers-heavy', color: 'var(--accent)' },
+        67: { text: 'Hujan Beku Lebat', icon: 'fa-cloud-showers-heavy', color: 'var(--red)' },
+        71: { text: 'Salju Ringan', icon: 'fa-snowflake', color: 'var(--accent)' },
+        73: { text: 'Salju Sedang', icon: 'fa-snowflake', color: 'var(--accent)' },
+        75: { text: 'Salju Lebat', icon: 'fa-snowflake', color: 'var(--accent)' },
+        77: { text: 'Butiran Salju', icon: 'fa-snowflake', color: 'var(--accent)' },
+        80: { text: 'Hujan Lokal Ringan', icon: 'fa-cloud-rain', color: 'var(--accent)' },
+        81: { text: 'Hujan Lokal Sedang', icon: 'fa-cloud-showers-heavy', color: 'var(--accent)' },
+        82: { text: 'Hujan Lokal Deras', icon: 'fa-cloud-showers-heavy', color: 'var(--red)' },
+        85: { text: 'Hujan Salju Ringan', icon: 'fa-snowflake', color: 'var(--accent)' },
+        86: { text: 'Hujan Salju Lebat', icon: 'fa-snowflake', color: 'var(--accent)' },
+        95: { text: 'Badai Petir', icon: 'fa-bolt', color: 'var(--red)' },
+        96: { text: 'Badai Petir + Hujan Es', icon: 'fa-cloud-bolt', color: 'var(--red)' },
+        99: { text: 'Badai Petir + Hujan Es Lebat', icon: 'fa-cloud-bolt', color: 'var(--red)' }
+    };
+    return map[code] || { text: '--', icon: 'fa-question', color: 'var(--muted)' };
+}
+
+/* ============================================
+   WAKE LOCK API
+   ============================================ */
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            S.wakeLock = await navigator.wakeLock.request('screen');
+            S.wakeLock.addEventListener('release', () => { S.wakeLock = null; });
+        }
+    } catch (e) {
+        console.warn('Wake Lock gagal:', e);
+    }
+}
+
+// FIX #6: Saat halaman kembali visible, re-request wake lock DAN pastikan GPS masih berjalan
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        // Re-request wake lock
+        if (!S.wakeLock) requestWakeLock();
+
+        // Pastikan GPS watch masih aktif — beberapa browser menghentikan watch saat background
+        if (S.gpsStarted && S.watchId === null) {
+            const watchOpts = { enableHighAccuracy: true, timeout: 30000, maximumAge: 2000 };
+            S.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, watchOpts);
+        }
+    }
+});
+
+/* ============================================
+   BATTERY API
+   ============================================ */
+async function initBattery() {
+    try {
+        if ('getBattery' in navigator) {
+            const bat = await navigator.getBattery();
+            S.batteryLevel = bat.level;
+            S.batteryCharging = bat.charging;
+            bat.addEventListener('levelchange', () => { S.batteryLevel = bat.level; });
+            bat.addEventListener('chargingchange', () => { S.batteryCharging = bat.charging; });
+        }
+    } catch (e) {}
+}
+
+function getBatteryHTML() {
+    if (S.batteryLevel === null) return '<i class="fas fa-battery-full"></i>';
+    const pct = Math.round(S.batteryLevel * 100);
+    let icon = 'fa-battery-full';
+    if (pct <= 10) icon = 'fa-battery-empty';
+    else if (pct <= 25) icon = 'fa-battery-quarter';
+    else if (pct <= 50) icon = 'fa-battery-half';
+    else if (pct <= 75) icon = 'fa-battery-three-quarters';
+    if (S.batteryCharging) icon = 'fa-bolt';
+    return `<i class="fas ${icon}"></i> ${pct}%`;
+}
+
+/* ============================================
+   DEVICE ORIENTATION API
+   ============================================ */
+function initDeviceOrientation() {
+    // Pakai 'deviceorientationabsolute' bila tersedia (umumnya Android/Chrome) —
+    // event ini menjamin nilai alpha selalu relatif terhadap arah Utara dunia nyata,
+    // bukan relatif terhadap posisi awal HP saat halaman dibuka.
+    const evtName = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
+
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS — perlu trigger dari user gesture
+        DeviceOrientationEvent.requestPermission().then(resp => {
+            if (resp === 'granted') window.addEventListener('deviceorientation', onOrientation);
+        }).catch(() => {});
+    } else {
+        window.addEventListener(evtName, onOrientation);
+    }
+}
+
+// Sudut rotasi layar saat ini (0/90/180/270), untuk kompensasi saat HP diputar
+// ke lanskap — supaya penunjuk arah tetap merepresentasikan kepala/atas HP,
+// bukan sisi layar yang kebetulan menghadap atas.
+function getScreenAngle() {
+    if (screen.orientation && typeof screen.orientation.angle === 'number') {
+        return screen.orientation.angle;
+    }
+    if (typeof window.orientation === 'number') {
+        return window.orientation;
+    }
+    return 0;
+}
+
+// Pelembut sudut secara sirkular (menangani lompatan 0°/360°) supaya jarum
+// kompas tidak "gemetar" akibat noise sensor, tapi tetap terasa real-time.
+function smoothHeading(prev, next, alpha) {
+    if (prev === null || prev === undefined || !isFinite(prev)) return next;
+    let diff = ((next - prev + 540) % 360) - 180; // selisih terpendek (-180, 180]
+    let result = prev + diff * alpha;
+    return (result + 360) % 360;
+}
+
+function onOrientation(e) {
+    // Pedoman arah = kepala/atas HP (bukan belakang/bawah HP), dikoreksi real-time.
+    let rawHeading = null;
+
+    // iOS Safari: webkitCompassHeading SUDAH berupa arah kompas asli terhadap Utara,
+    // relatif terhadap kepala/atas HP pada orientasi layar saat ini — pakai langsung.
+    if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null && isFinite(e.webkitCompassHeading)) {
+        rawHeading = e.webkitCompassHeading;
+        // iOS juga melaporkan akurasi kompas: nilai negatif = kompas belum terkalibrasi,
+        // nilai besar = akurasi rendah (perlu goyang HP membentuk angka 8).
+        S.compassAccuracy = (typeof e.webkitCompassAccuracy === 'number') ? e.webkitCompassAccuracy : null;
+    } else if (e.alpha !== null && e.alpha !== undefined) {
+        // Android/browser lain: hitung heading dari alpha/beta/gamma memakai rumus
+        // rotasi standar W3C DeviceOrientation (tilt-compensated), BUKAN alpha mentah.
+        // Rumus mentah (mis. cuma "360 - alpha") hanya benar saat HP rata sempurna;
+        // begitu HP dimiringkan (posisi normal digenggam), arah bisa meleset/terbalik.
+        // Rumus tilt-compensated ini benar untuk kemiringan HP berapa pun.
+        const aRad = e.alpha * Math.PI / 180;
+        const bRad = (e.beta || 0) * Math.PI / 180;
+        const gRad = (e.gamma || 0) * Math.PI / 180;
+
+        const cA = Math.cos(aRad), sA = Math.sin(aRad);
+        const cB = Math.cos(bRad), sB = Math.sin(bRad);
+        const cG = Math.cos(gRad), sG = Math.sin(gRad);
+
+        const rA = -cA * cG - sA * sB * sG;
+        const rB = -sA * cG + cA * sB * sG;
+
+        let heading = Math.atan2(rA, rB) * 180 / Math.PI;
+        heading = (heading + 360) % 360;
+
+        // Kompensasi rotasi layar (potret/lanskap) supaya "atas" selalu = kepala HP
+        // sesuai orientasi layar yang sedang dipakai user saat ini.
+        heading = (heading - getScreenAngle() + 360) % 360;
+
+        rawHeading = heading;
+        S.compassAccuracy = null;
+    } else {
+        return;
     }
 
-    if(navigator.geolocation){
-      navigator.geolocation.watchPosition(onPosition, onPositionError, {
-        enableHighAccuracy:true, maximumAge:1000, timeout:15000
-      });
+    // Pelembut real-time: cukup ringan (alpha tinggi) supaya jarum tetap terasa
+    // instan mengikuti gerakan HP, tapi getaran kecil akibat noise sensor teredam.
+    S.orientationHeading = smoothHeading(S.orientationHeading, rawHeading, 0.45);
+}
+
+/* ============================================
+   FULLSCREEN API
+   ============================================ */
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        try { screen.orientation.lock('any').catch(() => {}); } catch(e) {}
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+}
+
+document.addEventListener('fullscreenchange', () => {
+    const icon = document.getElementById('fsIcon');
+    icon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
+});
+
+/* ============================================
+   VIBRATION API
+   ============================================ */
+let lastVibrateSpeed = 0;
+function checkSpeedVibrate() {
+    const thresholds = [60, 80, 100, 120, 140, 160, 180, 200];
+    for (const t of thresholds) {
+        if (S.displaySpeed >= t && lastVibrateSpeed < t) {
+            if (navigator.vibrate) navigator.vibrate(50);
+            break;
+        }
+    }
+    lastVibrateSpeed = Math.floor(S.displaySpeed);
+}
+
+/* ============================================
+   CANVAS - RENDERING SPEEDOMETER
+   ============================================ */
+let canvas, ctx, canvasSize, dpr;
+let compassCanvas, ctx2, compassSize;
+
+function setupCanvas() {
+    canvas = document.getElementById('gaugeCanvas');
+    const area = document.getElementById('gaugeArea');
+    const w = area.clientWidth - 4;
+    const h = area.clientHeight - 4;
+    canvasSize = Math.min(w, h, 680);
+    dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvasSize * dpr;
+    canvas.height = canvasSize * dpr;
+    canvas.style.width = canvasSize + 'px';
+    canvas.style.height = canvasSize + 'px';
+
+    ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    setupCompassCanvas();
+}
+
+function setupCompassCanvas() {
+    compassCanvas = document.getElementById('compassCanvas');
+    // Kompas dibuat cukup besar & jelas terlihat, proporsional terhadap ukuran gauge
+    compassSize = Math.max(150, Math.min(canvasSize * 0.42, 220));
+
+    compassCanvas.width = compassSize * dpr;
+    compassCanvas.height = compassSize * dpr;
+    compassCanvas.style.width = compassSize + 'px';
+    compassCanvas.style.height = compassSize + 'px';
+
+    ctx2 = compassCanvas.getContext('2d');
+    ctx2.scale(dpr, dpr);
+}
+
+function drawGauge() {
+    const size = canvasSize;
+    const cx = size / 2;
+    const cy = size / 2;
+    const R = size * 0.465;
+
+    ctx.clearRect(0, 0, size, size);
+
+    const startA = Math.PI * 0.75;
+    const endA = Math.PI * 2.25;
+    const totalA = endA - startA;
+    const mg = maxGauge();
+    // FIX: jarum HARUS memakai nilai kecepatan dalam satuan tampilan (sama seperti angka digital),
+    // bukan nilai mentah km/h. Sebelumnya saat satuan diganti ke mph, jarum & arc tetap memakai
+    // nilai km/h sementara angka digital sudah dikonversi ke mph -> jarum & angka jadi tidak sesuai.
+    const spdInUnit = toDisplay(S.displaySpeed);
+    const spd = Math.max(0, Math.min(spdInUnit, mg));
+
+    // Latar belakang gauge
+    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.05);
+    bgGrad.addColorStop(0, 'rgba(10, 18, 35, 0.9)');
+    bgGrad.addColorStop(0.85, 'rgba(6, 12, 24, 0.95)');
+    bgGrad.addColorStop(1, 'rgba(4, 8, 16, 1)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.92, 0, Math.PI * 2);
+    ctx.fillStyle = bgGrad;
+    ctx.fill();
+
+    // Cincin luar
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.95, startA, endA);
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.16)';
+    ctx.lineWidth = size * 0.02;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
+
+    // Zona warna — batas fisik selalu dalam km/h, dikonversi ke satuan tampilan saat ini
+    const zones = [
+        { end: toDisplay(80), color: '#39ff14' },
+        { end: toDisplay(120), color: '#ffea00' },
+        { end: mg, color: '#ff0844' }
+    ];
+    let zStart = 0;
+    for (const z of zones) {
+        const zEnd = Math.min(z.end, mg);
+        const a1 = startA + (zStart / mg) * totalA;
+        const a2 = startA + (zEnd / mg) * totalA;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.88, a1, a2);
+        ctx.strokeStyle = z.color + '35';
+        ctx.lineWidth = size * 0.055;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+        zStart = zEnd;
+        if (zEnd >= mg) break;
     }
 
-    $('gate').style.display='none';
-    $('compassPanel').style.display='flex';
-    $('adjustPanel').style.display='block';
-    $('posPanel').style.display='block';
-    refreshOffsetTag();
-    statusText.textContent='MENCARI SINYAL…';
-  });
+    // Arc kecepatan aktif — warna bertingkat (gradasi) sesuai kecepatan: hijau ke merah menyala
+    const spdPct = spd / mg;
+    if (spd > 0.5) {
+        const spdAngle = startA + spdPct * totalA;
+        const arcColor = speedColor(spdPct);
 
-})();
+        ctx.save();
+        ctx.shadowColor = arcColor;
+        ctx.shadowBlur = 20 + spdPct * 20; // makin cepat, makin "menyala"
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.88, startA, spdAngle);
+        ctx.strokeStyle = speedColor(spdPct, 0.45);
+        ctx.lineWidth = size * 0.04;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.88, startA, spdAngle);
+        ctx.strokeStyle = arcColor;
+        ctx.lineWidth = size * 0.018;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
+
+    // Tick marks
+    const majorStep = 20;
+    const midStep = 10;
+    const minorStep = 5;
+
+    for (let i = 0; i <= mg; i += minorStep) {
+        const angle = startA + (i / mg) * totalA;
+        const isMajor = i % majorStep === 0;
+        const isMid = i % midStep === 0 && !isMajor;
+        const outerR = R * 0.82;
+        const innerR = isMajor ? R * 0.68 : isMid ? R * 0.73 : R * 0.77;
+
+        ctx.beginPath();
+        ctx.moveTo(cx + innerR * Math.cos(angle), cy + innerR * Math.sin(angle));
+        ctx.lineTo(cx + outerR * Math.cos(angle), cy + outerR * Math.sin(angle));
+        ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.98)' : isMid ? 'rgba(0,240,255,0.5)' : 'rgba(0,240,255,0.22)';
+        ctx.lineWidth = isMajor ? 2.5 : isMid ? 1.5 : 0.8;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        if (isMajor) {
+            const numR = R * 0.58;
+            // FIX: 'i' sudah berada dalam skala satuan tampilan (0..mg), jadi TIDAK perlu dikonversi lagi.
+            // Konversi ganda sebelumnya membuat angka pada skala mph salah (mis. label "150" jadi tampil "93").
+            const displayNum = i;
+            ctx.fillStyle = '#eafcff';
+            ctx.font = `600 ${Math.max(9, size * 0.032)}px Orbitron`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(displayNum.toString(), cx + numR * Math.cos(angle), cy + numR * Math.sin(angle));
+        }
+    }
+
+    // Jarum
+    const needleAngle = startA + (spd / mg) * totalA;
+    const needleLen = R * 0.72;
+    const tailLen = R * 0.15;
+
+    const needleColor = speedColor(spdPct);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(needleAngle);
+    ctx.shadowColor = needleColor;
+    ctx.shadowBlur = 14 + spdPct * 22; // makin cepat, glow makin "menyala"
+    ctx.beginPath();
+    ctx.moveTo(-tailLen, -2.5);
+    ctx.lineTo(needleLen - 8, -0.8);
+    ctx.lineTo(needleLen, 0);
+    ctx.lineTo(needleLen - 8, 0.8);
+    ctx.lineTo(-tailLen, 2.5);
+    ctx.closePath();
+    ctx.fillStyle = needleColor;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Hub tengah
+    const hubGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.04);
+    hubGrad.addColorStop(0, '#1a2540');
+    hubGrad.addColorStop(0.7, '#0d1525');
+    hubGrad.addColorStop(1, '#080e1a');
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.04, 0, Math.PI * 2);
+    ctx.fillStyle = hubGrad;
+    ctx.fill();
+    ctx.strokeStyle = speedColor(spdPct, 0.55);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.012, 0, Math.PI * 2);
+    ctx.fillStyle = needleColor;
+    ctx.fill();
+
+    // Digital speed
+    const dispSpd = toDisplay(S.displaySpeed);
+    const spdText = dispSpd < 10 ? dispSpd.toFixed(1) : Math.round(dispSpd).toString();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${Math.max(28, size * 0.16)}px Orbitron`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(spdText, cx, cy + size * 0.13);
+
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.9)';
+    ctx.font = `700 ${Math.max(9, size * 0.04)}px Orbitron`;
+    ctx.fillText(unitSpeed(), cx, cy + size * 0.22);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = `700 ${Math.max(7, size * 0.025)}px 'Share Tech Mono'`;
+    ctx.fillText(S.speedSource, cx, cy + size * 0.28);
+
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.font = `700 ${Math.max(8, size * 0.03)}px Orbitron`;
+    ctx.fillText('NEXUS', cx, cy + R * 0.55);
+
+    // Indikator akurasi
+    const accX = cx + R * 0.6;
+    const accY = cy - R * 0.55;
+    ctx.fillStyle = S.accuracy <= 10 ? '#39ff14' : S.accuracy <= 30 ? '#ffea00' : '#ff0844';
+    ctx.beginPath();
+    ctx.arc(accX, accY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = `700 ${Math.max(7, size * 0.023)}px 'Share Tech Mono'`;
+    ctx.textAlign = 'left';
+    ctx.fillText(S.accuracy > 0 ? `±${Math.round(S.accuracy)}m` : '--', accX + 7, accY + 3);
+}
+
+/* ============================================
+   CANVAS - RENDERING KOMPAS DIGITAL
+   ============================================ */
+function drawCompass() {
+    if (!ctx2) return;
+    const size = compassSize;
+    const cx = size / 2;
+    const cy = size / 2;
+    const R = size * 0.46;
+
+    // Arah hadap HP: prioritaskan sensor orientasi perangkat, fallback ke arah gerak GPS
+    const heading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
+        ? S.orientationHeading : S.heading;
+    const headingRad = heading * Math.PI / 180;
+
+    ctx2.clearRect(0, 0, size, size);
+
+    // --- Latar bulat kompas ---
+    const bgGrad = ctx2.createRadialGradient(cx, cy, 0, cx, cy, R * 1.08);
+    bgGrad.addColorStop(0, 'rgba(10, 22, 45, 0.95)');
+    bgGrad.addColorStop(0.85, 'rgba(6, 14, 28, 0.97)');
+    bgGrad.addColorStop(1, 'rgba(3, 8, 16, 1)');
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, R * 1.0, 0, Math.PI * 2);
+    ctx2.fillStyle = bgGrad;
+    ctx2.fill();
+    ctx2.lineWidth = 2;
+    ctx2.strokeStyle = 'rgba(0,240,255,0.35)';
+    ctx2.stroke();
+
+    // --- Rose kompas (dial) berputar berlawanan arah heading, seperti kompas digital profesional ---
+    ctx2.save();
+    ctx2.translate(cx, cy);
+    ctx2.rotate(-headingRad);
+
+    // Cincin derajat minor (tiap 10°) & major (tiap 30°)
+    for (let d = 0; d < 360; d += 10) {
+        const a = (d - 90) * Math.PI / 180; // 0 derajat = atas
+        const isMajor = d % 30 === 0;
+        const isCardinal = d % 90 === 0;
+        const outerR = R * 0.92;
+        const innerR = isMajor ? R * 0.78 : R * 0.86;
+        ctx2.beginPath();
+        ctx2.moveTo(innerR * Math.cos(a), innerR * Math.sin(a));
+        ctx2.lineTo(outerR * Math.cos(a), outerR * Math.sin(a));
+        ctx2.strokeStyle = isCardinal ? '#ff2d6a' : isMajor ? 'rgba(0,240,255,0.85)' : 'rgba(0,240,255,0.32)';
+        ctx2.lineWidth = isCardinal ? 2.5 : isMajor ? 1.8 : 0.9;
+        ctx2.stroke();
+    }
+
+    // Label mata angin cerah & besar (U/TL/T/TG/S/BD/B/BL)
+    const labels = [
+        { d: 0,   t: 'U',  c: '#ff2d6a' },
+        { d: 45,  t: 'TL', c: '#00f0ff' },
+        { d: 90,  t: 'T',  c: '#39ff14' },
+        { d: 135, t: 'TG', c: '#00f0ff' },
+        { d: 180, t: 'S',  c: '#ffea00' },
+        { d: 225, t: 'BD', c: '#00f0ff' },
+        { d: 270, t: 'B',  c: '#ff9100' },
+        { d: 315, t: 'BL', c: '#00f0ff' }
+    ];
+    const labelR = R * 0.66;
+    for (const lb of labels) {
+        const a = (lb.d - 90) * Math.PI / 180;
+        const lx = labelR * Math.cos(a);
+        const ly = labelR * Math.sin(a);
+        ctx2.save();
+        ctx2.translate(lx, ly);
+        ctx2.rotate(headingRad); // teks tetap tegak, tidak ikut terbalik
+        ctx2.fillStyle = lb.c;
+        ctx2.shadowColor = lb.c;
+        ctx2.shadowBlur = 8;
+        ctx2.font = `900 ${Math.max(11, size * 0.09)}px Orbitron`;
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'middle';
+        ctx2.fillText(lb.t, 0, 0);
+        ctx2.restore();
+    }
+
+    ctx2.restore();
+
+    // --- Penunjuk arah hadap HP: segitiga tetap di posisi jam 12, terang & mudah dilihat ---
+    const ptrLen = R * 0.22;
+    const ptrY = -R * 0.98;
+    ctx2.save();
+    ctx2.translate(cx, cy);
+    ctx2.shadowColor = '#00f0ff';
+    ctx2.shadowBlur = 14;
+    ctx2.beginPath();
+    ctx2.moveTo(0, ptrY - ptrLen * 0.5);
+    ctx2.lineTo(-ptrLen * 0.42, ptrY + ptrLen * 0.55);
+    ctx2.lineTo(ptrLen * 0.42, ptrY + ptrLen * 0.55);
+    ctx2.closePath();
+    ctx2.fillStyle = '#00f0ff';
+    ctx2.fill();
+    ctx2.restore();
+
+    // --- Hub tengah ---
+    const hubGrad = ctx2.createRadialGradient(cx, cy, 0, cx, cy, size * 0.05);
+    hubGrad.addColorStop(0, '#1a2540');
+    hubGrad.addColorStop(0.7, '#0d1525');
+    hubGrad.addColorStop(1, '#080e1a');
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, size * 0.05, 0, Math.PI * 2);
+    ctx2.fillStyle = hubGrad;
+    ctx2.fill();
+    ctx2.strokeStyle = 'rgba(0,240,255,0.6)';
+    ctx2.lineWidth = 1.5;
+    ctx2.stroke();
+}
+
+/* ============================================
+   UPDATE UI ELEMEN
+   ============================================ */
+function updateUI() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+        now.getHours().toString().padStart(2,'0') + ':' +
+        now.getMinutes().toString().padStart(2,'0') + ':' +
+        now.getSeconds().toString().padStart(2,'0');
+
+    const tripD = toDisplayDist(S.tripDist);
+    const odoD = toDisplayDist(S.odometer);
+    const maxS = toDisplay(S.maxSpeed);
+
+    document.getElementById('tripVal').textContent = tripD < 100 ? tripD.toFixed(3) : tripD.toFixed(1);
+    document.getElementById('odoVal').textContent = odoD < 1000 ? odoD.toFixed(1) : odoD.toFixed(0);
+    document.getElementById('maxVal').textContent = Math.round(maxS).toString();
+
+    const maxEl = document.getElementById('maxVal');
+    const maxKmh = S.maxSpeed;
+    maxEl.style.color = maxKmh > 120 ? 'var(--red)' : maxKmh > 80 ? 'var(--amber)' : 'var(--text)';
+
+    document.getElementById('tripUnit').textContent = unitDist();
+    document.getElementById('odoUnit').textContent = unitDist();
+    document.getElementById('maxUnit').textContent = unitSpeed();
+    document.getElementById('unitLabel').textContent = unitSpeed();
+
+    // Kompas real-time: prioritaskan sensor orientasi perangkat (update instan setiap frame),
+    // fallback ke arah gerak GPS bila sensor tidak tersedia
+    const dispHeading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
+        ? S.orientationHeading : S.heading;
+    const hasHeading = S.orientationHeading !== null || S.gpsHeadingSet;
+    document.getElementById('compassDegree').textContent = hasHeading ? `${Math.round(dispHeading)}°` : '--°';
+    document.getElementById('compassArahText').textContent = hasHeading ? compassDirFull(dispHeading).toUpperCase() : 'MENUNGGU SENSOR';
+
+    // Hint kalibrasi kompas: hanya relevan saat pakai sensor orientasi HP (iOS
+    // melaporkan akurasi asli; Android tidak, jadi hint disembunyikan).
+    const calibEl = document.getElementById('compassCalib');
+    if (calibEl) {
+        const needsCalib = S.orientationHeading !== null && S.compassAccuracy !== null &&
+            (S.compassAccuracy < 0 || S.compassAccuracy > 30);
+        calibEl.style.display = needsCalib ? 'block' : 'none';
+    }
+
+    // Kondisi cuaca (cerah / mendung / hujan / petir, dll)
+    const wInfo = weatherInfo(S.weather.code, S.weather.isDay);
+    document.getElementById('condText').textContent = wInfo.text;
+    const condIconEl = document.getElementById('condIcon');
+    condIconEl.className = `fas ${wInfo.icon}`;
+    condIconEl.style.color = wInfo.color;
+
+    document.getElementById('addressText').textContent = S.address;
+
+    document.getElementById('dJalan').textContent = S.addr.jalan;
+    document.getElementById('dLingkungan').textContent = S.addr.lingkungan;
+    document.getElementById('dKelurahan').textContent = S.addr.kelurahan;
+    document.getElementById('dKecamatan').textContent = S.addr.kecamatan;
+    document.getElementById('dKota').textContent = S.addr.kota;
+    document.getElementById('dProvinsi').textContent = S.addr.provinsi;
+    document.getElementById('dPostcode').textContent = S.addr.postcode;
+
+    document.getElementById('wxTemp').textContent = S.weather.temp !== null ? Math.round(S.weather.temp) : '--';
+    document.getElementById('wxHumidity').textContent = S.weather.humidity !== null ? Math.round(S.weather.humidity) : '--';
+    document.getElementById('wxWind').textContent = S.weather.windSpeed !== null ? Math.round(S.weather.windSpeed) : '--';
+    document.getElementById('wxWindDir').textContent = S.weather.windDir !== null
+        ? `km/h ${compassDir(S.weather.windDir)}` : 'km/h --';
+
+    document.getElementById('altText').textContent = S.altitude > 0 ? `${Math.round(S.altitude)} m` : '-- m';
+    document.getElementById('coordText').textContent =
+        S.lat !== 0 ? `${S.lat.toFixed(5)}, ${S.lon.toFixed(5)}` : '-, -';
+
+    document.getElementById('accText').textContent =
+        S.accuracy > 0 ? `±${Math.round(S.accuracy)}m` : '--';
+
+    document.getElementById('batteryIcon').innerHTML = getBatteryHTML();
+}
+
+/* ============================================
+   ANIMASI SWEEP STARTUP
+   ============================================ */
+function startSweep() {
+    S.sweepPhase = 'sweeping';
+    S.sweepStart = performance.now();
+}
+
+/* ============================================
+   LOOP UTAMA (requestAnimationFrame)
+   ============================================ */
+function mainLoop(timestamp) {
+    // --- Sweep animation ---
+    if (S.sweepPhase === 'sweeping') {
+        const elapsed = timestamp - S.sweepStart;
+        const duration = 1800;
+        if (elapsed >= duration) {
+            S.sweepPhase = 'ready';
+            // Set displaySpeed ke 0 agar smooth transition ke kecepatan GPS
+            S.displaySpeed = 0;
+        } else {
+            const t = elapsed / duration;
+            const wave = t < 0.5 ? t * 2 : 2 - t * 2;
+            const eased = wave < 0.5 ? 2 * wave * wave : 1 - (-2 * wave + 2) ** 2 / 2;
+            // Langsung set displaySpeed untuk sweep — tidak konflik karena
+            // onPosition TIDAK lagi menyentuh displaySpeed
+            S.displaySpeed = eased * maxGauge();
+        }
+    }
+
+    // --- FIX #7: Speed smoothing di main loop (bukan di onPosition) ---
+    // Menangani baik akselerasi MAUPUN decelerasi secara konsisten di 60fps
+    if (S.sweepPhase === 'ready') {
+        const diff = S.speed - S.displaySpeed;
+        if (Math.abs(diff) > 0.3) {
+            // Akselerasi responsif (alpha 0.22), decelerasi tetap halus tapi lebih cepat mengejar (alpha 0.12)
+            // supaya jarum & angka digital terasa real-time mengikuti kecepatan GPS pengguna
+            const alpha = diff > 0 ? 0.22 : 0.12;
+            S.displaySpeed += diff * alpha;
+        } else {
+            S.displaySpeed = S.speed;
+        }
+        // Snap ke 0 jika keduanya mendekati nol
+        if (S.displaySpeed < 0.5 && S.speed < 0.5) S.displaySpeed = 0;
+
+        checkSpeedVibrate();
+    }
+
+    drawGauge();
+    drawCompass();
+    updateUI();
+    requestAnimationFrame(mainLoop);
+}
+
+/* ============================================
+   EVENT HANDLERS
+   ============================================ */
+document.getElementById('btnActivate').addEventListener('click', async () => {
+    document.getElementById('gpsOverlay').classList.add('hidden');
+
+    await requestWakeLock();
+
+    // iOS device orientation permission
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const resp = await DeviceOrientationEvent.requestPermission();
+            if (resp === 'granted') window.addEventListener('deviceorientation', onOrientation);
+        } catch(e) {}
+    }
+
+    // Mulai GPS
+    startGPS();
+
+    // Animasi sweep setelah 300ms
+    setTimeout(startSweep, 300);
+});
+
+document.getElementById('addressBox').addEventListener('click', () => {
+    document.getElementById('addressBox').classList.toggle('open');
+    document.getElementById('addressDetail').classList.toggle('open');
+    if (navigator.vibrate) navigator.vibrate(15);
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+    S.tripDist = 0;
+    S.maxSpeed = 0;
+    lastVibrateSpeed = 0;
+    saveData();
+    showToast('Trip & max speed direset');
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+});
+
+document.getElementById('btnUnit').addEventListener('click', () => {
+    S.unit = S.unit === 'kmh' ? 'mph' : 'kmh';
+    saveData();
+    showToast(`Satuan: ${unitSpeed()}`);
+    if (navigator.vibrate) navigator.vibrate(30);
+});
+
+document.getElementById('btnFS').addEventListener('click', () => {
+    toggleFullscreen();
+    if (navigator.vibrate) navigator.vibrate(20);
+});
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { setupCanvas(); }, 150);
+});
+
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+/* ============================================
+   INISIALISASI
+   ============================================ */
+function init() {
+    loadData();
+    initBattery();
+    initDeviceOrientation();
+    setupCanvas();
+    requestAnimationFrame(mainLoop);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 </script>
 </body>
 </html>
