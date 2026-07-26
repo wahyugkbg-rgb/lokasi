@@ -867,13 +867,14 @@ function onOrientation(e) {
         return;
     }
     if (e.alpha === null || e.alpha === undefined) return;
-    // FIX ARAH TERBALIK 180° (terbukti dari pengujian langsung di HP Android):
-    // pada banyak HP Android, nilai alpha yang dikirim browser justru merepresentasikan
-    // arah BELAKANG HP terhadap Utara, bukan arah kepala/depan HP — sehingga hasilnya
-    // selalu terpaut tepat 180° dari arah kepala HP sebenarnya (hadap Utara -> tampil
-    // Selatan, hadap Timur -> tampil Barat). Dikoreksi dengan menambah 180° agar
-    // kepala HP menghadap Utara -> menunjuk Utara, menghadap Timur -> menunjuk Timur.
-    S.orientationHeading = (e.alpha + 180) % 360;
+    // FIX ARAH (hasil uji langsung di HP): setelah koreksi +180 sebelumnya, Utara & Selatan
+    // sudah benar, tetapi Timur & Barat masih tertukar. Ini menunjukkan alpha dari sensor
+    // HP ini tidak cuma bergeser 180°, tapi arah putarannya juga CERMIN (berlawanan arah
+    // jarum jam) terhadap arah kompas sebenarnya. Gabungan koreksi pergeseran + cermin
+    // menghasilkan rumus: heading = (180 - alpha) mod 360, ditulis (540 - alpha) % 360
+    // agar hasilnya selalu positif. Hasilnya: kepala HP ke Utara -> Utara, ke Timur -> Timur,
+    // ke Selatan -> Selatan, ke Barat -> Barat.
+    S.orientationHeading = (540 - e.alpha) % 360;
 }
 
 /* ============================================
