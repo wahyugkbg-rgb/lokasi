@@ -1244,7 +1244,7 @@ function drawCompass() {
     // line yang tetap diam di posisi jam 12 (kepala HP).
     ctx2.save();
     ctx2.translate(cx, cy);
-    ctx2.rotate(-dialRad); // FIX: piringan berputar SEARAH badan + offset visual tambahan 90° ke kanan
+    ctx2.rotate(dialRad); // FIX: piringan berputar SEARAH badan + offset visual tambahan 90° ke kanan
 
     // Cincin derajat minor (tiap 10°) & major (tiap 30°)
     for (let d = 0; d < 360; d += 10) {
