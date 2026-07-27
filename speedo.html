@@ -99,6 +99,11 @@
             color: var(--green); letter-spacing: 2px; margin-top: 1px;
             text-shadow: 0 0 10px rgba(57,255,20,0.4); transition: color 0.3s;
         }
+        #compassCalib {
+            display: none; font-size: 8px; letter-spacing: 1px; font-weight: 700;
+            color: var(--amber); margin-top: 4px; text-align: center; max-width: 220px;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
         .address-box {
             flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
             padding: 7px 10px; font-size: 11px; color: var(--amber); font-weight: bold;
@@ -232,6 +237,7 @@
             <span id="compassDegree">--°</span>
             <span id="compassArahLabel">SEDANG MENGHADAP</span>
             <span id="compassArahText">MENUNGGU SENSOR</span>
+            <span id="compassCalib">GOYANGKAN HP MEMBENTUK ANGKA 8 UNTUK KALIBRASI</span>
         </div>
     </section>
 
@@ -336,6 +342,8 @@ const S = {
     tripDist: 0,
     odometer: 0,
     heading: 0,
+    gpsHeadingSet: false,
+    compassAccuracy: null,
     altitude: 0,
     lat: 0, lon: 0,
     accuracy: 0,
@@ -595,10 +603,12 @@ function onPosition(pos) {
         // Update heading
         if (heading !== null && heading >= 0 && isFinite(heading)) {
             S.heading = heading;
+            S.gpsHeadingSet = true;
         } else if (S.lastPos) {
             const dist = haversine(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
             if (dist > 3) {
                 S.heading = calcBearing(S.lastPos.lat, S.lastPos.lon, latitude, longitude);
+                S.gpsHeadingSet = true;
             }
         }
 
@@ -858,23 +868,60 @@ function initDeviceOrientation() {
     }
 }
 
+// Sudut rotasi layar saat ini (0/90/180/270), untuk kompensasi saat HP diputar
+// ke lanskap — supaya penunjuk arah tetap merepresentasikan kepala/atas HP,
+// bukan sisi layar yang kebetulan menghadap atas.
+function getScreenAngle() {
+    if (screen.orientation && typeof screen.orientation.angle === 'number') {
+        return screen.orientation.angle;
+    }
+    if (typeof window.orientation === 'number') {
+        return window.orientation;
+    }
+    return 0;
+}
+
+// Pelembut sudut secara sirkular (menangani lompatan 0°/360°) supaya jarum
+// kompas tidak "gemetar" akibat noise sensor, tapi tetap terasa real-time.
+function smoothHeading(prev, next, alpha) {
+    if (prev === null || prev === undefined || !isFinite(prev)) return next;
+    let diff = ((next - prev + 540) % 360) - 180; // selisih terpendek (-180, 180]
+    let result = prev + diff * alpha;
+    return (result + 360) % 360;
+}
+
+// ============================================================
+// LOGIKA KOMPAS — DIPORTING LANGSUNG DARI kompas.html
+// (rumus ini sudah diuji langsung di perangkat, termasuk Oppo A9,
+// dan terbukti memberi arah yang benar sesuai kepala/atas HP.
+// Rumus tilt-compensated lama DIHAPUS karena itulah sumber arah
+// yang meleset/terbalik — rumus di bawah ini menggantikannya
+// sepenuhnya, sama persis dengan kompas.html.)
+// ============================================================
 function onOrientation(e) {
-    // Pedoman arah = kepala/atas HP (bukan belakang/bawah HP).
-    // iOS Safari: webkitCompassHeading SUDAH berupa arah kompas asli
-    // (0° = Utara, bertambah searah jarum jam ke arah Timur, mengikuti kepala HP) — pakai langsung.
-    if (e.webkitCompassHeading !== undefined) {
-        S.orientationHeading = e.webkitCompassHeading;
+    // Pedoman arah = kepala/atas HP, dihitung ulang real-time setiap sensor menembak.
+    let rawHeading = null;
+
+    if (typeof e.webkitCompassHeading === 'number' && isFinite(e.webkitCompassHeading)) {
+        // iOS Safari: webkitCompassHeading SUDAH berupa arah kompas asli terhadap Utara,
+        // relatif terhadap kepala/atas HP pada orientasi layar saat ini — pakai langsung.
+        rawHeading = e.webkitCompassHeading;
+        // iOS juga melaporkan akurasi kompas: nilai negatif = kompas belum terkalibrasi,
+        // nilai besar = akurasi rendah (perlu goyang HP membentuk angka 8).
+        S.compassAccuracy = (typeof e.webkitCompassAccuracy === 'number') ? e.webkitCompassAccuracy : null;
+    } else if (e.alpha !== null && e.alpha !== undefined) {
+        // Android/Chrome (termasuk Oppo A9/ColorOS) — persis rumus kompas.html:
+        // heading = (360 - alpha + sudut rotasi layar) mod 360.
+        rawHeading = (360 - e.alpha + getScreenAngle()) % 360;
+        if (rawHeading < 0) rawHeading += 360;
+        S.compassAccuracy = null;
+    } else {
         return;
     }
-    if (e.alpha === null || e.alpha === undefined) return;
-    // FIX ARAH (hasil uji langsung di HP): setelah koreksi +180 sebelumnya, Utara & Selatan
-    // sudah benar, tetapi Timur & Barat masih tertukar. Ini menunjukkan alpha dari sensor
-    // HP ini tidak cuma bergeser 180°, tapi arah putarannya juga CERMIN (berlawanan arah
-    // jarum jam) terhadap arah kompas sebenarnya. Gabungan koreksi pergeseran + cermin
-    // menghasilkan rumus: heading = (180 - alpha) mod 360, ditulis (540 - alpha) % 360
-    // agar hasilnya selalu positif. Hasilnya: kepala HP ke Utara -> Utara, ke Timur -> Timur,
-    // ke Selatan -> Selatan, ke Barat -> Barat.
-    S.orientationHeading = (540 - e.alpha) % 360;
+
+    // Pelembut real-time: cukup ringan (alpha tinggi) supaya jarum tetap terasa
+    // instan mengikuti gerakan HP, tapi getaran kecil akibat noise sensor teredam.
+    S.orientationHeading = smoothHeading(S.orientationHeading, rawHeading, 0.45);
 }
 
 /* ============================================
@@ -1170,7 +1217,11 @@ function drawCompass() {
     ctx2.strokeStyle = 'rgba(0,240,255,0.35)';
     ctx2.stroke();
 
-    // --- Rose kompas (dial) berputar berlawanan arah heading, seperti kompas digital profesional ---
+    // --- Rose kompas (dial) berputar dengan sudut -heading, PERSIS seperti rotor
+    // di kompas.html (transform="rotate(-displayed ...)"). Seperti kompas fisik:
+    // saat badan/HP diputar searah jarum jam, cincin arah berputar berlawanan arah
+    // jarum jam relatif terhadap layar, supaya huruf yang benar berhenti tepat di
+    // penunjuk/lubber-line tetap di posisi jam 12 (kepala HP).
     ctx2.save();
     ctx2.translate(cx, cy);
     ctx2.rotate(-headingRad);
@@ -1208,7 +1259,7 @@ function drawCompass() {
         const ly = labelR * Math.sin(a);
         ctx2.save();
         ctx2.translate(lx, ly);
-        ctx2.rotate(headingRad); // teks tetap tegak, tidak ikut terbalik
+        ctx2.rotate(headingRad); // lawan rotasi dial supaya teks tetap tegak, tidak ikut terbalik
         ctx2.fillStyle = lb.c;
         ctx2.shadowColor = lb.c;
         ctx2.shadowBlur = 8;
@@ -1282,9 +1333,18 @@ function updateUI() {
     // fallback ke arah gerak GPS bila sensor tidak tersedia
     const dispHeading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
         ? S.orientationHeading : S.heading;
-    const hasHeading = S.orientationHeading !== null || S.heading !== 0 || S.gpsState === 'active';
+    const hasHeading = S.orientationHeading !== null || S.gpsHeadingSet;
     document.getElementById('compassDegree').textContent = hasHeading ? `${Math.round(dispHeading)}°` : '--°';
     document.getElementById('compassArahText').textContent = hasHeading ? compassDirFull(dispHeading).toUpperCase() : 'MENUNGGU SENSOR';
+
+    // Hint kalibrasi kompas: hanya relevan saat pakai sensor orientasi HP (iOS
+    // melaporkan akurasi asli; Android tidak, jadi hint disembunyikan).
+    const calibEl = document.getElementById('compassCalib');
+    if (calibEl) {
+        const needsCalib = S.orientationHeading !== null && S.compassAccuracy !== null &&
+            (S.compassAccuracy < 0 || S.compassAccuracy > 30);
+        calibEl.style.display = needsCalib ? 'block' : 'none';
+    }
 
     // Kondisi cuaca (cerah / mendung / hujan / petir, dll)
     const wInfo = weatherInfo(S.weather.code, S.weather.isDay);
@@ -1315,6 +1375,27 @@ function updateUI() {
 
     document.getElementById('accText').textContent =
         S.accuracy > 0 ? `±${Math.round(S.accuracy)}m` : '--';
+
+    // FIX: elemen satText sebelumnya tidak pernah diisi (selalu "--" statis).
+    // Browser tidak memberi jumlah satelit lewat Geolocation API, jadi di sini
+    // ditampilkan label kualitas sinyal real-time berdasarkan akurasi GPS —
+    // diperbarui terus-menerus setiap posisi baru masuk.
+    const satEl = document.getElementById('satText');
+    if (satEl) {
+        if (S.gpsState === 'off' || S.accuracy <= 0) {
+            satEl.textContent = '--';
+            satEl.style.color = '';
+        } else if (S.accuracy <= 15) {
+            satEl.textContent = 'SINYAL TINGGI';
+            satEl.style.color = 'var(--green)';
+        } else if (S.accuracy <= 50) {
+            satEl.textContent = 'SINYAL SEDANG';
+            satEl.style.color = 'var(--amber)';
+        } else {
+            satEl.textContent = 'SINYAL RENDAH';
+            satEl.style.color = 'var(--red)';
+        }
+    }
 
     document.getElementById('batteryIcon').innerHTML = getBatteryHTML();
 }
