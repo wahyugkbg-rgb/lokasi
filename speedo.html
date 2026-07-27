@@ -292,7 +292,7 @@
             </div>
             <div class="weather-card">
                 <i class="fas fa-droplet" style="color:var(--accent)"></i>
-                <div class="weather-label">KELEMBAPAN</div>
+                <div class="weather-label">KELEMBABAN</div>
                 <div class="weather-value" id="wxHumidity" style="color:var(--accent)">--</div>
                 <div class="weather-unit">%RH</div>
             </div>
@@ -382,6 +382,12 @@ const MAX_ACCEL = 120; // km/h per detik
 // ini ditambahkan ke rumus heading Android agar 0 derajat benar-benar berarti Utara.
 // Jika di perangkat tertentu justru sudah akurat tanpa koreksi ini, ubah nilainya jadi 0.
 const COMPASS_HEADING_OFFSET = 180;
+// FIX: permintaan pengguna — dalam kondisi statis (diam), piringan kompas harus
+// diputar tambahan 90 derajat KE KANAN (searah jarum jam) dari posisi sebelumnya.
+// Offset ini murni visual (memutar tampilan piringan saja) dan tetap berlaku
+// secara real-time mengikuti arah hadap HP — angka derajat & label teks arah
+// (compassDegree/compassArahText) TIDAK diubah, tetap akurat sesuai sensor/GPS.
+const COMPASS_DIAL_VISUAL_OFFSET_DEG = 90;
 
 /* ============================================
    UTILITAS
@@ -1212,6 +1218,9 @@ function drawCompass() {
     const heading = (S.orientationHeading !== null && S.orientationHeading !== undefined)
         ? S.orientationHeading : S.heading;
     const headingRad = heading * Math.PI / 180;
+    // FIX: tambahan offset visual 90° ke kanan untuk piringan (lihat konstanta
+    // COMPASS_DIAL_VISUAL_OFFSET_DEG). Angka/teks arah tetap pakai `heading` asli.
+    const dialRad = headingRad + (COMPASS_DIAL_VISUAL_OFFSET_DEG * Math.PI / 180);
 
     ctx2.clearRect(0, 0, size, size);
 
@@ -1235,7 +1244,7 @@ function drawCompass() {
     // line yang tetap diam di posisi jam 12 (kepala HP).
     ctx2.save();
     ctx2.translate(cx, cy);
-    ctx2.rotate(headingRad); // FIX: piringan kini berputar SEARAH putaran badan (kiri->kiri, kanan->kanan)
+    ctx2.rotate(dialRad); // FIX: piringan berputar SEARAH badan + offset visual tambahan 90° ke kanan
 
     // Cincin derajat minor (tiap 10°) & major (tiap 30°)
     for (let d = 0; d < 360; d += 10) {
@@ -1270,7 +1279,7 @@ function drawCompass() {
         const ly = labelR * Math.sin(a);
         ctx2.save();
         ctx2.translate(lx, ly);
-        ctx2.rotate(-headingRad); // lawan rotasi dial (kini +headingRad) supaya teks tetap tegak, tidak ikut terbalik
+        ctx2.rotate(-dialRad); // lawan rotasi dial (kini +dialRad, termasuk offset 90°) supaya teks tetap tegak
         ctx2.fillStyle = lb.c;
         ctx2.shadowColor = lb.c;
         ctx2.shadowBlur = 8;
