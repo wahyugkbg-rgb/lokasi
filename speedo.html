@@ -377,6 +377,11 @@ const S = {
 const MAX_GAUGE_KMH = 240;
 const MAX_GAUGE_MPH = 150;
 const MAX_ACCEL = 120; // km/h per detik
+// FIX: koreksi fase pembacaan kompas (derajat). Sebelumnya saat HP menghadap Utara
+// sebenarnya, kompas terbaca terbalik 180 derajat (menunjukkan Selatan). Konstanta
+// ini ditambahkan ke rumus heading Android agar 0 derajat benar-benar berarti Utara.
+// Jika di perangkat tertentu justru sudah akurat tanpa koreksi ini, ubah nilainya jadi 0.
+const COMPASS_HEADING_OFFSET = 180;
 
 /* ============================================
    UTILITAS
@@ -891,12 +896,11 @@ function smoothHeading(prev, next, alpha) {
 }
 
 // ============================================================
-// LOGIKA KOMPAS — DIPORTING LANGSUNG DARI kompas.html
-// (rumus ini sudah diuji langsung di perangkat, termasuk Oppo A9,
-// dan terbukti memberi arah yang benar sesuai kepala/atas HP.
-// Rumus tilt-compensated lama DIHAPUS karena itulah sumber arah
-// yang meleset/terbalik — rumus di bawah ini menggantikannya
-// sepenuhnya, sama persis dengan kompas.html.)
+// LOGIKA KOMPAS
+// FIX: rumus sebelumnya (diporting dari kompas.html) terbukti memberi
+// pembacaan yang terbalik 180 derajat pada perangkat pengguna (menghadap
+// Utara asli tapi terbaca Selatan). Ditambahkan COMPASS_HEADING_OFFSET
+// (lihat konstanta di atas) untuk mengoreksi fase pembacaan tersebut.
 // ============================================================
 function onOrientation(e) {
     // Pedoman arah = kepala/atas HP, dihitung ulang real-time setiap sensor menembak.
@@ -910,9 +914,16 @@ function onOrientation(e) {
         // nilai besar = akurasi rendah (perlu goyang HP membentuk angka 8).
         S.compassAccuracy = (typeof e.webkitCompassAccuracy === 'number') ? e.webkitCompassAccuracy : null;
     } else if (e.alpha !== null && e.alpha !== undefined) {
-        // Android/Chrome (termasuk Oppo A9/ColorOS) — persis rumus kompas.html:
-        // heading = (360 - alpha + sudut rotasi layar) mod 360.
-        rawHeading = (360 - e.alpha + getScreenAngle()) % 360;
+        // Android/Chrome (termasuk Oppo A9/ColorOS) — rumus dasar kompas.html:
+        // heading = (360 - alpha + sudut rotasi layar) mod 360, DITAMBAH koreksi
+        // fase COMPASS_HEADING_OFFSET.
+        // FIX: rumus dasar di atas terbukti membuat pembacaan terbalik 180 derajat
+        // di perangkat pengguna (menghadap Utara asli tapi terbaca/tertampil Selatan).
+        // Ditambah offset 180 derajat di sini untuk mengoreksi fase tersebut, supaya
+        // saat HP menghadap Utara sebenarnya, kompas menunjukkan 0 derajat/Utara.
+        // Jika di perangkat lain ternyata sudah benar tanpa koreksi ini, cukup ubah
+        // nilai COMPASS_HEADING_OFFSET di bagian atas skrip menjadi 0.
+        rawHeading = (360 - e.alpha + getScreenAngle() + COMPASS_HEADING_OFFSET) % 360;
         if (rawHeading < 0) rawHeading += 360;
         S.compassAccuracy = null;
     } else {
@@ -1217,14 +1228,14 @@ function drawCompass() {
     ctx2.strokeStyle = 'rgba(0,240,255,0.35)';
     ctx2.stroke();
 
-    // --- Rose kompas (dial) berputar dengan sudut -heading, PERSIS seperti rotor
-    // di kompas.html (transform="rotate(-displayed ...)"). Seperti kompas fisik:
-    // saat badan/HP diputar searah jarum jam, cincin arah berputar berlawanan arah
-    // jarum jam relatif terhadap layar, supaya huruf yang benar berhenti tepat di
-    // penunjuk/lubber-line tetap di posisi jam 12 (kepala HP).
+    // --- Rose kompas (dial) berputar SEARAH dengan putaran badan/HP (sesuai
+    // permintaan perbaikan): badan berputar ke kiri -> piringan berputar ke kiri,
+    // badan berputar ke kanan -> piringan berputar ke kanan. Huruf mata angin yang
+    // sesuai dengan arah hadap HP saat ini akan berhenti tepat di penunjuk/lubber-
+    // line yang tetap diam di posisi jam 12 (kepala HP).
     ctx2.save();
     ctx2.translate(cx, cy);
-    ctx2.rotate(-headingRad);
+    ctx2.rotate(headingRad); // FIX: piringan kini berputar SEARAH putaran badan (kiri->kiri, kanan->kanan)
 
     // Cincin derajat minor (tiap 10°) & major (tiap 30°)
     for (let d = 0; d < 360; d += 10) {
@@ -1259,7 +1270,7 @@ function drawCompass() {
         const ly = labelR * Math.sin(a);
         ctx2.save();
         ctx2.translate(lx, ly);
-        ctx2.rotate(headingRad); // lawan rotasi dial supaya teks tetap tegak, tidak ikut terbalik
+        ctx2.rotate(-headingRad); // lawan rotasi dial (kini +headingRad) supaya teks tetap tegak, tidak ikut terbalik
         ctx2.fillStyle = lb.c;
         ctx2.shadowColor = lb.c;
         ctx2.shadowBlur = 8;
