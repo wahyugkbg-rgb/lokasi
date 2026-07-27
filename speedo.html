@@ -366,6 +366,7 @@ const S = {
     lastSaveTime: 0,
     refreshInterval: null,
     gpsStarted: false,
+    lastFixTime: 0,     // FIX REALTIME: waktu (ms) terakhir onPosition benar-benar menerima data GPS baru
     addr: { jalan: '--', lingkungan: '--', kelurahan: '--', kecamatan: '--', kota: '--', provinsi: '--', postcode: '--' },
     weather: { temp: null, humidity: null, windSpeed: null, windDir: null, code: null, isDay: 1 },
     lastWeatherLat: null,
@@ -513,6 +514,24 @@ function startPeriodicRefresh() {
     stopPeriodicRefresh();
     S.refreshInterval = setInterval(() => {
         if (!S.gpsStarted) return;
+
+        // FIX REALTIME (AKAR MASALAH): pada banyak browser/WebView Android,
+        // watchPosition() bisa diam-diam berhenti mengirim callback setelah
+        // beberapa saat berjalan (walau belum di-clearWatch dan izin lokasi
+        // masih aktif) — inilah yang membuat jarum, kecepatan digital, trip,
+        // odometer, alamat, dan cuaca terlihat "jalan sekali di awal lalu beku",
+        // sementara kompas tetap jalan karena sumbernya beda (sensor orientasi
+        // perangkat, bukan GPS). Watchdog ini memaksa restart watch jika sudah
+        // lebih dari 8 detik tanpa fix baru sejak fix pertama diterima.
+        if (S.lastFixTime > 0 && (Date.now() - S.lastFixTime) > 8000) {
+            if (S.watchId !== null) {
+                navigator.geolocation.clearWatch(S.watchId);
+                S.watchId = null;
+            }
+            const watchOpts = { enableHighAccuracy: true, timeout: 30000, maximumAge: 1000 };
+            S.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, watchOpts);
+        }
+
         // Hanya fallback jika GPS dalam keadaan acquiring/active
         if (S.gpsState === 'active' || S.gpsState === 'acquiring') {
             navigator.geolocation.getCurrentPosition(
@@ -537,6 +556,13 @@ function onPosition(pos) {
     try {
         const { latitude, longitude, accuracy, altitude, speed, heading } = pos.coords;
         const timestamp = pos.timestamp || Date.now();
+
+        // FIX REALTIME: tandai waktu fix GPS terakhir kali masuk. Dipakai watchdog
+        // di startPeriodicRefresh() untuk mendeteksi jika watchPosition "macet"
+        // (berhenti mengirim callback padahal belum dimatikan) — kasus ini yang
+        // menyebabkan jarum/angka/trip/odo/alamat/cuaca hanya terupdate sekali
+        // di awal lalu diam selama aplikasi berjalan.
+        S.lastFixTime = Date.now();
 
         // Update status GPS berdasarkan akurasi
         if (accuracy <= 30) S.gpsState = 'active';
@@ -1432,6 +1458,7 @@ function startSweep() {
    LOOP UTAMA (requestAnimationFrame)
    ============================================ */
 function mainLoop(timestamp) {
+  try {
     // --- Sweep animation ---
     if (S.sweepPhase === 'sweeping') {
         const elapsed = timestamp - S.sweepStart;
@@ -1471,7 +1498,14 @@ function mainLoop(timestamp) {
     drawGauge();
     drawCompass();
     updateUI();
-    requestAnimationFrame(mainLoop);
+  } catch (err) {
+    // FIX REALTIME: pengaman tambahan — error tak terduga di dalam frame
+    // TIDAK BOLEH menghentikan loop. Sebelumnya jika salah satu fungsi di atas
+    // melempar error, requestAnimationFrame(mainLoop) di baris terakhir tidak
+    // pernah tercapai sehingga seluruh animasi (jarum, angka, dsb) beku permanen.
+    console.error('mainLoop error (loop tetap lanjut):', err);
+  }
+  requestAnimationFrame(mainLoop);
 }
 
 /* ============================================
