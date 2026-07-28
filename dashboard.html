@@ -2,2094 +2,657 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEXUS AERO // Flight Deck</title>
-    <style>
-        :root {
-            --bg: #000308;
-            --panel: #020a18;
-            --cyan: #00e5ff;
-            --cyan-bright: #00fbff;
-            --amber: #ffb800;
-            --amber-bright: #ffcc00;
-            --green: #00ff41;
-            --red: #ff2d42;
-            --white: #f0f4ff;
-            --muted: #b0c8e0;
-            --border: rgba(0, 229, 255, 0.5);
-            --border-glow: rgba(0, 229, 255, 0.8);
-            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
-            --font-display: 'Orbitron', 'SF Pro Display', system-ui, sans-serif;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            overflow-y: auto;
-            overflow-x: hidden;
-            background: var(--bg);
-            color: var(--white);
-            font-family: var(--font-mono);
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-        }
-
-        #app {
-            width: 100%;
-            min-height: 100%;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: visible;
-            background:
-                radial-gradient(ellipse at 50% 30%, rgba(0, 180, 220, 0.04) 0%, transparent 70%),
-                radial-gradient(ellipse at 50% 70%, rgba(0, 200, 140, 0.03) 0%, transparent 60%),
-                #000308;
-        }
-
-        /* Grid overlay */
-        #app::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            background-image:
-                linear-gradient(rgba(0, 229, 255, 0.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 229, 255, 0.025) 1px, transparent 1px);
-            background-size: 40px 40px;
-        }
-
-        /* Scanline */
-        .scanlines {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 999;
-            background: repeating-linear-gradient(0deg,
-                    transparent,
-                    transparent 3px,
-                    rgba(0, 0, 0, 0.04) 3px,
-                    rgba(0, 0, 0, 0.04) 6px);
-            opacity: 0.5;
-        }
-
-        /* Sweep line */
-        .sweep {
-            position: fixed;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.25) 30%, rgba(0, 229, 255, 0.45) 50%, rgba(0, 229, 255, 0.25) 70%, transparent 100%);
-            z-index: 998;
-            pointer-events: none;
-            animation: sweepDown 4.5s linear infinite;
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
-        }
-        @keyframes sweepDown {
-            0% {
-                top: -2px;
-                opacity: 0;
-            }
-            4% {
-                opacity: 1;
-            }
-            94% {
-                opacity: 1;
-            }
-            100% {
-                top: 100%;
-                opacity: 0;
-            }
-        }
-
-        /* ========== STATUS BAR ========== */
-        #statusBar {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 14px;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            color: var(--muted);
-            border-bottom: 2px solid var(--border);
-            flex-shrink: 0;
-            background: rgba(2, 10, 24, 0.92);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .st-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        .gps-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--red);
-            transition: all 0.4s;
-            flex-shrink: 0;
-            box-shadow: 0 0 6px var(--red);
-        }
-        .gps-dot.acquiring {
-            background: var(--amber);
-            box-shadow: 0 0 10px var(--amber);
-            animation: pulse 1s ease-in-out infinite;
-        }
-        .gps-dot.active {
-            background: var(--green);
-            box-shadow: 0 0 14px var(--green);
-        }
-        #gpsStatusText {
-            font-weight: 700;
-            font-size: 9px;
-            letter-spacing: 2px;
-            transition: color 0.3s;
-        }
-        #clock {
-            font-family: var(--font-display);
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--cyan-bright);
-            letter-spacing: 3px;
-            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
-        }
-        .brand-tag {
-            font-family: var(--font-display);
-            font-size: 10px;
-            font-weight: 900;
-            letter-spacing: 4px;
-            color: rgba(0, 229, 255, 0.5);
-            text-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
-        }
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.35;
-            }
-        }
-
-        /* ========== GAUGE AREA ========== */
-        #gaugeArea {
-            flex: 1.3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            z-index: 5;
-            min-height: 300px;
-            padding: 4px;
-        }
-        #gaugeCanvas {
-            display: block;
-            filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.25));
-        }
-
-        /* ========== COMPASS AREA ========== */
-        #compassArea {
-            position: relative;
-            z-index: 5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2px 10px 8px;
-            flex-shrink: 0;
-        }
-        #compassCanvas {
-            display: block;
-            filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.3));
-        }
-        #compassInfo {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: -2px;
-        }
-        #compassDegree {
-            font-family: var(--font-display);
-            font-size: 22px;
-            font-weight: 900;
-            color: var(--cyan-bright);
-            letter-spacing: 3px;
-            text-shadow: 0 0 18px rgba(0, 229, 255, 0.7);
-            line-height: 1.1;
-        }
-        #compassArahLabel {
-            font-size: 8px;
-            letter-spacing: 4px;
-            color: var(--muted);
-            font-weight: 700;
-            margin-top: 2px;
-        }
-        #compassArahText {
-            font-family: var(--font-display);
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--green);
-            letter-spacing: 2px;
-            margin-top: 2px;
-            text-shadow: 0 0 12px rgba(0, 255, 65, 0.5);
-            transition: color 0.3s;
-        }
-        #compassCalib {
-            display: none;
-            font-size: 8px;
-            letter-spacing: 1px;
-            font-weight: 700;
-            color: var(--amber-bright);
-            margin-top: 4px;
-            text-align: center;
-            max-width: 240px;
-            animation: pulse 1.3s ease-in-out infinite;
-            text-shadow: 0 0 8px rgba(255, 184, 0, 0.4);
-        }
-
-        /* ========== DATA PANELS ========== */
-        #dataPanels,
-        #sciencePanels {
-            position: relative;
-            z-index: 10;
-            padding: 0 10px 6px;
-            flex-shrink: 0;
-        }
-        .data-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 7px;
-        }
-        .data-card {
-            background: var(--panel);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 6px;
-            text-align: center;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            transition: border-color 0.2s, box-shadow 0.2s;
-            position: relative;
-        }
-        .data-card::before {
-            content: '';
-            position: absolute;
-            top: -1px;
-            left: 8px;
-            right: 8px;
-            height: 1px;
-            background: rgba(0, 229, 255, 0.3);
-            border-radius: 1px;
-        }
-        .data-label {
-            font-size: 8px;
-            letter-spacing: 3px;
-            color: var(--muted);
-            margin-bottom: 2px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        .data-value {
-            font-family: var(--font-display);
-            font-size: 17px;
-            font-weight: 900;
-            color: var(--white);
-            transition: color 0.3s;
-            line-height: 1.2;
-            text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
-        }
-        .data-unit {
-            font-size: 8px;
-            color: var(--muted);
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        /* ========== LOCATION ========== */
-        #locationInfo {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 10px;
-            flex-shrink: 0;
-        }
-        .address-box {
-            flex: 1;
-            background: var(--panel);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--amber-bright);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            backdrop-filter: blur(8px);
-            cursor: pointer;
-            text-shadow: 0 0 6px rgba(255, 184, 0, 0.3);
-        }
-        .address-box i {
-            color: var(--cyan);
-            flex-shrink: 0;
-            font-size: 12px;
-        }
-        .address-box span {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex: 1;
-        }
-        .address-box .chev {
-            margin-left: auto;
-            color: var(--cyan);
-            flex-shrink: 0;
-            font-size: 10px;
-            transition: transform 0.3s;
-        }
-        .address-box.open .chev {
-            transform: rotate(180deg);
-        }
-        #addressDetail {
-            position: relative;
-            z-index: 10;
-            margin: 0 10px 5px;
-            overflow: hidden;
-            max-height: 0;
-            opacity: 0;
-            transition: max-height 0.4s ease, opacity 0.3s ease;
-        }
-        #addressDetail.open {
-            max-height: 300px;
-            opacity: 1;
-        }
-        #addressDetail .detail-inner {
-            background: var(--panel);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 12px;
-            backdrop-filter: blur(8px);
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 3px 0;
-            border-bottom: 1px dashed rgba(0, 229, 255, 0.15);
-            font-size: 10px;
-        }
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        .detail-row .dk {
-            color: var(--muted);
-            letter-spacing: 1.5px;
-            flex-shrink: 0;
-            font-weight: 700;
-            font-size: 9px;
-        }
-        .detail-row .dv {
-            color: var(--white);
-            text-align: right;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 700;
-            font-size: 10px;
-        }
-        .detail-note {
-            font-size: 7px;
-            color: var(--muted);
-            margin-top: 5px;
-            line-height: 1.5;
-            opacity: 0.7;
-        }
-
-        /* ========== WEATHER ========== */
-        #weatherPanels {
-            position: relative;
-            z-index: 10;
-            padding: 0 10px 5px;
-            flex-shrink: 0;
-        }
-        .weather-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 7px;
-        }
-        .weather-card {
-            background: var(--panel);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 7px 4px;
-            text-align: center;
-            backdrop-filter: blur(8px);
-        }
-        .weather-card i {
-            font-size: 14px;
-            margin-bottom: 3px;
-            display: block;
-        }
-        .weather-label {
-            font-size: 7px;
-            letter-spacing: 2px;
-            color: var(--muted);
-            margin-bottom: 2px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        .weather-value {
-            font-family: var(--font-display);
-            font-size: 15px;
-            font-weight: 900;
-            line-height: 1.2;
-            text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
-        }
-        .weather-unit {
-            font-size: 7px;
-            color: var(--muted);
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        /* ========== EXTRA INFO ========== */
-        #extraInfo {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 8px 16px;
-            padding: 4px 14px;
-            font-size: 9px;
-            color: var(--muted);
-            flex-shrink: 0;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-        #extraInfo i {
-            color: var(--cyan);
-            margin-right: 3px;
-            font-size: 9px;
-        }
-
-        /* ========== CONTROLS ========== */
-        #controls {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            padding: 8px 14px 16px;
-            flex-shrink: 0;
-        }
-        #controls button {
-            background: var(--panel);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            color: var(--white);
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 700;
-            padding: 8px 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.15s;
-            backdrop-filter: blur(8px);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            min-height: 40px;
-        }
-        #controls button:active {
-            background: rgba(0, 229, 255, 0.15);
-            border-color: var(--cyan-bright);
-            transform: scale(0.94);
-            box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
-        }
-        #controls button i {
-            color: var(--cyan);
-            font-size: 12px;
-        }
-
-        /* ========== GPS OVERLAY ========== */
-        #gpsOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 3, 10, 0.98);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            text-align: center;
-            padding: 40px;
-            transition: opacity 0.5s, visibility 0.5s;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-        #gpsOverlay.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-        .overlay-icon {
-            font-size: 56px;
-            color: var(--cyan);
-            margin-bottom: 24px;
-            animation: pulse 2s ease-in-out infinite;
-            filter: drop-shadow(0 0 30px rgba(0, 229, 255, 0.5));
-        }
-        .overlay-title {
-            font-family: var(--font-display);
-            font-size: 34px;
-            font-weight: 900;
-            margin-bottom: 8px;
-            letter-spacing: 8px;
-            background: linear-gradient(135deg, #00e5ff, #00ff88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .overlay-sub {
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.9;
-            max-width: 320px;
-            font-weight: 700;
-        }
-        .overlay-ver {
-            font-size: 9px;
-            color: rgba(0, 229, 255, 0.35);
-            margin-top: 18px;
-            letter-spacing: 3px;
-            font-family: var(--font-display);
-        }
-        .btn-activate {
-            margin-top: 32px;
-            background: linear-gradient(135deg, #00e5ff, #0090cc);
-            border: none;
-            border-radius: 12px;
-            color: #000810;
-            font-family: var(--font-display);
-            font-size: 14px;
-            font-weight: 900;
-            padding: 14px 48px;
-            cursor: pointer;
-            letter-spacing: 3px;
-            transition: all 0.2s;
-            box-shadow: 0 0 40px rgba(0, 229, 255, 0.4);
-            text-transform: uppercase;
-        }
-        .btn-activate:active {
-            transform: scale(0.94);
-            box-shadow: 0 0 60px rgba(0, 229, 255, 0.6);
-        }
-
-        /* ========== TOAST ========== */
-        .toast {
-            position: fixed;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: var(--panel);
-            border: 2px solid var(--cyan);
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--cyan-bright);
-            z-index: 3000;
-            opacity: 0;
-            transition: all 0.3s;
-            pointer-events: none;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 0 30px rgba(0, 229, 255, 0.3);
-            letter-spacing: 1.5px;
-            text-align: center;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* Moving indicator */
-        .moving-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--red);
-            transition: all 0.3s;
-            flex-shrink: 0;
-        }
-        .moving-dot.active {
-            background: var(--green);
-            box-shadow: 0 0 10px var(--green);
-            animation: pulse 1s ease-in-out infinite;
-        }
-
-        /* ========== RESPONSIVE ========== */
-        @media(max-height:640px) {
-            .data-card {
-                padding: 5px 3px;
-            }
-            .data-value {
-                font-size: 14px;
-            }
-            .data-label {
-                font-size: 7px;
-                letter-spacing: 2px;
-            }
-            #locationInfo {
-                padding: 3px 8px;
-            }
-            #controls {
-                padding: 5px 8px 10px;
-            }
-            #controls button {
-                padding: 6px 10px;
-                font-size: 9px;
-            }
-            #compassArea {
-                padding: 0 8px 3px;
-            }
-            #compassDegree {
-                font-size: 17px;
-            }
-            #compassArahText {
-                font-size: 12px;
-            }
-            .weather-card {
-                padding: 4px 3px;
-            }
-            .weather-value {
-                font-size: 13px;
-            }
-            #gaugeArea {
-                min-height: 240px;
-            }
-        }
-        @media(min-width:768px) {
-            #gaugeArea {
-                min-height: 380px;
-            }
-            .data-value {
-                font-size: 20px;
-            }
-            #compassDegree {
-                font-size: 26px;
-            }
-        }
-        @media(prefers-reduced-motion:reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS Flight Deck</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root{--bg:#080808;--card:#131313;--green:#00ff41;--amber:#ffb000;--red:#ff2020;--cyan:#00d4ff;--white:#ffffff;--muted:#aaaaaa;--border:#2a2a2a}
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:var(--bg);color:var(--white);font-family:'Share Tech Mono',monospace;-webkit-tap-highlight-color:transparent;user-select:none}
+        #app{width:100%;min-height:100%;display:flex;flex-direction:column;position:relative}
+        #app::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,255,65,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,65,.015) 1px,transparent 1px);background-size:36px 36px}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+        @keyframes pulseG{0%,100%{box-shadow:0 0 4px var(--green)}50%{box-shadow:0 0 12px var(--green)}}
+
+        /* STATUS BAR */
+        #statusBar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:#0e0e0e;border-bottom:2px solid var(--border);flex-shrink:0}
+        .st-g{display:flex;align-items:center;gap:5px}
+        .led{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;transition:.4s}
+        .led.yel{background:var(--amber);animation:blink 1s infinite}
+        .led.grn{background:var(--green);animation:pulseG 2s infinite}
+        .st-t{font-size:10px;color:var(--muted);font-weight:bold;letter-spacing:1px}
+        #clock{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--green);letter-spacing:2px}
+        .brand{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--green);letter-spacing:4px;opacity:.5}
+
+        /* GAUGE */
+        #gaugeArea{flex:1.15;display:flex;align-items:center;justify-content:center;position:relative;z-index:5;min-height:240px;padding:2px}
+        #gaugeCanvas{display:block}
+
+        /* HSI HEADING */
+        #hsiWrap{position:relative;z-index:10;padding:2px 8px 0;flex-shrink:0}
+        #hsiCanvas{display:block;width:100%;height:48px;border:1px solid var(--border);border-radius:3px;background:#0e0e0e}
+        #hdgRow{display:flex;align-items:center;justify-content:center;gap:16px;padding:3px 0 2px}
+        .hdg-box{text-align:center}
+        .hdg-lbl{font-size:8px;color:var(--muted);letter-spacing:3px;font-weight:bold}
+        #hdgDeg{font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;color:var(--white);letter-spacing:2px}
+        #hdgDir{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--green);letter-spacing:2px}
+        #linkStat{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;padding:3px 8px;border-radius:3px;border:1px solid var(--border)}
+        #linkStat.ok{color:var(--green);border-color:var(--green);background:rgba(0,255,65,.08)}
+        #linkStat.no{color:var(--red);border-color:var(--red);background:rgba(255,32,32,.08)}
+
+        /* PANELS */
+        .psec{position:relative;z-index:10;padding:0 8px 3px;flex-shrink:0}
+        .prow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+        .pc{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:5px 4px;text-align:center;position:relative;overflow:hidden}
+        .pc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+        .pc.g::after{background:var(--green)}
+        .pc.a::after{background:var(--amber)}
+        .pc.r::after{background:var(--red)}
+        .pc.c::after{background:var(--cyan)}
+        .pl{font-size:8px;letter-spacing:3px;color:var(--muted);margin-bottom:1px;font-weight:bold}
+        .pv{font-family:'Orbitron',sans-serif;font-size:19px;font-weight:900;color:var(--white)}
+        .pu{font-size:8px;color:var(--muted);font-weight:bold}
+
+        /* LOCATION */
+        #locSec{position:relative;z-index:10;padding:3px 8px;flex-shrink:0}
+        .abx{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:7px 10px;font-size:11px;color:var(--amber);font-weight:bold;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+        .abx i{color:var(--amber);flex-shrink:0}
+        .abx span{overflow:hidden;text-overflow:ellipsis}
+        .abx .ch{margin-left:auto;color:var(--muted);flex-shrink:0;font-size:9px;transition:transform .2s}
+        .abx.open .ch{transform:rotate(180deg)}
+        #addrDet{position:relative;z-index:10;margin:0 8px 3px;overflow:hidden;max-height:0;opacity:0;transition:max-height .3s,opacity .2s}
+        #addrDet.open{max-height:300px;opacity:1}
+        .di{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:6px 10px}
+        .dr{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #1a1a1a;font-size:10px}
+        .dr:last-child{border-bottom:none}
+        .dk{color:var(--muted);letter-spacing:1px;flex-shrink:0;font-weight:bold}
+        .dv{color:var(--white);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:bold}
+        .dn{font-size:7px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+        /* EXTRA */
+        #exInfo{position:relative;z-index:10;display:flex;justify-content:center;flex-wrap:wrap;gap:4px 12px;padding:3px 10px;font-size:9px;color:var(--muted);flex-shrink:0;font-weight:bold}
+        #exInfo i{color:var(--cyan);margin-right:2px;font-size:8px}
+
+        /* CONTROLS */
+        #ctrls{position:relative;z-index:10;display:flex;justify-content:center;gap:6px;padding:6px 10px 12px;flex-shrink:0}
+        #ctrls button{background:var(--card);border:1px solid var(--border);border-radius:3px;color:var(--white);font-family:'Share Tech Mono',monospace;font-size:10px;padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.12s;font-weight:bold}
+        #ctrls button:active{background:var(--green);color:#000;border-color:var(--green);transform:scale(.95)}
+        #ctrls button i{color:var(--green);font-size:11px}
+
+        /* OVERLAY */
+        #gpsOvl{position:fixed;inset:0;background:rgba(0,0,0,.98);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5000;text-align:center;padding:40px;transition:opacity .5s,visibility .5s}
+        #gpsOvl.hidden{opacity:0;visibility:hidden;pointer-events:none}
+        .oi{font-size:52px;color:var(--green);margin-bottom:20px;animation:blink 2s infinite}
+        .ot{font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;letter-spacing:8px;color:var(--white)}
+        .os{color:var(--muted);font-size:11px;line-height:1.8;max-width:300px;margin-top:8px}
+        .ov{font-size:8px;color:#333;margin-top:18px;letter-spacing:3px}
+        .bg{margin-top:28px;background:var(--green);border:none;border-radius:5px;color:#000;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;padding:13px 44px;cursor:pointer;letter-spacing:3px;box-shadow:0 0 25px rgba(0,255,65,.25);transition:.12s}
+        .bg:active{transform:scale(.95);background:#00cc33}
+
+        /* TOAST */
+        .tst{position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-20px);background:#111;border:2px solid var(--green);border-radius:4px;padding:8px 18px;font-size:11px;color:var(--green);font-weight:bold;z-index:6000;opacity:0;transition:.3s;pointer-events:none;letter-spacing:1px}
+        .tst.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+        @media(max-height:600px){.pv{font-size:15px}#hdgDeg{font-size:22px}#hdgDir{font-size:11px}#gaugeArea{min-height:180px}.pc{padding:3px 2px}.pl{font-size:7px}}
+    </style>
 </head>
 <body>
-    <div id="app">
-        <div class="scanlines"></div>
-        <div class="sweep"></div>
+<div id="app">
+    <header id="statusBar">
+        <div class="st-g"><div class="led" id="gpsLed"></div><span class="st-t" id="gpsSt">OFF</span></div>
+        <span class="brand">NEXUS</span>
+        <span id="clock">00:00:00</span>
+        <div class="st-g"><span id="batIc" style="font-size:10px"><i class="fas fa-battery-full"></i></span></div>
+    </header>
 
-        <!-- STATUS BAR -->
-        <header id="statusBar">
-            <div class="st-group">
-                <div class="gps-dot" id="gpsDot"></div>
-                <div class="moving-dot" id="movingDot"></div>
-                <span id="gpsStatusText" style="color:#ff2d42;">NONAKTIF</span>
-            </div>
-            <span class="brand-tag">◆ NEXUS ◆</span>
-            <span id="clock">00:00:00</span>
-            <div class="st-group">
-                <span id="batteryIcon"><i class="fas fa-battery-full"></i></span>
-                <span id="accText" style="font-size:9px;font-weight:700;">--</span>
-            </div>
-        </header>
+    <div id="gaugeArea"><canvas id="gaugeCanvas"></canvas></div>
 
-        <!-- GAUGE -->
-        <div id="gaugeArea"><canvas id="gaugeCanvas"></canvas></div>
-
-        <!-- COMPASS -->
-        <section id="compassArea">
-            <canvas id="compassCanvas"></canvas>
-            <div id="compassInfo">
-                <span id="compassDegree">---°</span>
-                <span id="compassArahLabel">MENGHADAP</span>
-                <span id="compassArahText">MENUNGGU SENSOR</span>
-                <span id="compassCalib">⚠ GOYANGKAN HP MEMBENTUK ANGKA 8 UNTUK KALIBRASI</span>
-            </div>
-        </section>
-
-        <!-- DATA PANELS -->
-        <section id="dataPanels">
-            <div class="data-row">
-                <div class="data-card"><div class="data-label">TRIP</div><div class="data-value" id="tripVal">0.000</div><div class="data-unit" id="tripUnit">km</div></div>
-                <div class="data-card"><div class="data-label">ODOMETER</div><div class="data-value" id="odoVal">0.0</div><div class="data-unit" id="odoUnit">km</div></div>
-                <div class="data-card"><div class="data-label">MAX</div><div class="data-value" id="maxVal">0</div><div class="data-unit" id="maxUnit">km/h</div></div>
-            </div>
-        </section>
-        <section id="sciencePanels">
-            <div class="data-row">
-                <div class="data-card"><div class="data-label">G-FORCE</div><div class="data-value" id="gForceVal" style="color:#00ff41;">0.00</div><div class="data-unit">G</div></div>
-                <div class="data-card"><div class="data-label">RATA²</div><div class="data-value" id="avgVal">0</div><div class="data-unit" id="avgUnit">km/h</div></div>
-                <div class="data-card"><div class="data-label">V/S</div><div class="data-value" id="vsVal" style="color:#00e5ff;">0.0</div><div class="data-unit">m/s</div></div>
-            </div>
-            <div class="data-row" style="margin-top:7px;">
-                <div class="data-card"><div class="data-label">WAKTU</div><div class="data-value" id="timeVal" style="font-size:14px;">00:00:00</div><div class="data-unit">ELAPSED</div></div>
-                <div class="data-card"><div class="data-label">ALTITUDE</div><div class="data-value" id="altPanelVal" style="color:#ffb800;">--</div><div class="data-unit">m</div></div>
-                <div class="data-card"><div class="data-label">AKURASI</div><div class="data-value" id="accPanelVal" style="color:#00e5ff;">--</div><div class="data-unit">m</div></div>
-            </div>
-        </section>
-
-        <!-- LOCATION -->
-        <section id="locationInfo">
-            <div class="address-box" id="addressBox">
-                <i class="fas fa-map-marker-alt"></i>
-                <span id="addressText">Menunggu GPS...</span>
-                <i class="fas fa-chevron-down chev"></i>
-            </div>
-        </section>
-        <section id="addressDetail">
-            <div class="detail-inner">
-                <div class="detail-row"><span class="dk">JALAN</span><span class="dv" id="dJalan">--</span></div>
-                <div class="detail-row"><span class="dk">LINGKUNGAN</span><span class="dv" id="dLingkungan">--</span></div>
-                <div class="detail-row"><span class="dk">KELURAHAN/DESA</span><span class="dv" id="dKelurahan">--</span></div>
-                <div class="detail-row"><span class="dk">KECAMATAN</span><span class="dv" id="dKecamatan">--</span></div>
-                <div class="detail-row"><span class="dk">KOTA/KAB</span><span class="dv" id="dKota">--</span></div>
-                <div class="detail-row"><span class="dk">PROVINSI</span><span class="dv" id="dProvinsi">--</span></div>
-                <div class="detail-row"><span class="dk">KODE POS</span><span class="dv" id="dPostcode">--</span></div>
-                <div class="detail-note">Data dari OpenStreetMap. RT/RW tidak selalu tersedia.</div>
-            </div>
-        </section>
-
-        <!-- WEATHER -->
-        <section id="weatherPanels">
-            <div class="weather-row">
-                <div class="weather-card"><i class="fas fa-temperature-half" style="color:#ffb800;"></i><div class="weather-label">SUHU</div><div class="weather-value" id="wxTemp" style="color:#ffb800;">--</div><div class="weather-unit">°C</div></div>
-                <div class="weather-card"><i class="fas fa-droplet" style="color:#00e5ff;"></i><div class="weather-label">KELEMBABAN</div><div class="weather-value" id="wxHumidity" style="color:#00e5ff;">--</div><div class="weather-unit">%RH</div></div>
-                <div class="weather-card"><i class="fas fa-wind" style="color:#00ff41;"></i><div class="weather-label">ANGIN</div><div class="weather-value" id="wxWind" style="color:#00ff41;">--</div><div class="weather-unit" id="wxWindDir">km/h --</div></div>
-            </div>
-        </section>
-
-        <!-- EXTRA INFO -->
-        <section id="extraInfo">
-            <span><i class="fas fa-crosshairs"></i><span id="coordText">-, -</span></span>
-            <span><i class="fas fa-satellite"></i><span id="satText">--</span></span>
-            <span><i class="fas fa-cloud" id="condIcon"></i><span id="condText">--</span></span>
-            <span><i class="fas fa-bullseye"></i><span id="accText2">-- m</span></span>
-        </section>
-
-        <!-- CONTROLS -->
-        <footer id="controls">
-            <button id="btnReset" aria-label="Reset trip"><i class="fas fa-undo"></i> Reset</button>
-            <button id="btnUnit" aria-label="Ganti satuan"><i class="fas fa-exchange-alt"></i> <span id="unitLabel">km/h</span></button>
-            <button id="btnFS" aria-label="Layar penuh"><i class="fas fa-expand" id="fsIcon"></i></button>
-        </footer>
-
-        <!-- GPS OVERLAY -->
-        <div id="gpsOverlay">
-            <div class="overlay-icon"><i class="fas fa-satellite-dish"></i></div>
-            <div class="overlay-title">NEXUS</div>
-            <div class="overlay-sub">Flight Deck HUD — Speedometer real-time berbasis GPS presisi tinggi.<br>Izinkan akses lokasi untuk memulai.</div>
-            <button class="btn-activate" id="btnActivate">◆ AKTIFKAN GPS ◆</button>
-            <div class="overlay-ver">v3.0 AERO // REAL-TIME TELEMETRY</div>
+    <section id="hsiWrap">
+        <canvas id="hsiCanvas"></canvas>
+        <div id="hdgRow">
+            <div class="hdg-box"><div class="hdg-lbl">HEADING</div><div id="hdgDeg">---</div></div>
+            <div id="linkStat" class="no">NO LINK</div>
+            <div class="hdg-box"><div class="hdg-lbl">DIRECTION</div><div id="hdgDir">---</div></div>
         </div>
+    </section>
 
-        <div class="toast" id="toast"></div>
+    <section class="psec"><div class="prow">
+        <div class="pc g"><div class="pl">TRIP</div><div class="pv" id="tripV">0.000</div><div class="pu" id="tripU">km</div></div>
+        <div class="pc a"><div class="pl">ODOMETER</div><div class="pv" id="odoV">0.0</div><div class="pu" id="odoU">km</div></div>
+        <div class="pc r"><div class="pl">MAX SPD</div><div class="pv" id="maxV">0</div><div class="pu" id="maxU">km/h</div></div>
+    </div></section>
+
+    <section class="psec"><div class="prow">
+        <div class="pc c"><div class="pl">G-FORCE</div><div class="pv" id="gfV" style="color:var(--green)">0.00</div><div class="pu">G</div></div>
+        <div class="pc g"><div class="pl">AVERAGE</div><div class="pv" id="avgV">0</div><div class="pu" id="avgU">km/h</div></div>
+        <div class="pc a"><div class="pl">ELAPSED</div><div class="pv" id="timeV" style="font-size:15px">00:00:00</div><div class="pu">TIME</div></div>
+    </div></section>
+
+    <section id="locSec"><div class="abx" id="addrBox"><i class="fas fa-map-marker-alt"></i><span id="addrTxt">Menunggu GPS...</span><i class="fas fa-chevron-down ch"></i></div></section>
+    <section id="addrDet"><div class="di">
+        <div class="dr"><span class="dk">JALAN</span><span class="dv" id="dJ">--</span></div>
+        <div class="dr"><span class="dk">DUSUN/RT-RW</span><span class="dv" id="dL">--</span></div>
+        <div class="dr"><span class="dk">KELURAHAN/DESA</span><span class="dv" id="dK">--</span></div>
+        <div class="dr"><span class="dk">KECAMATAN</span><span class="dv" id="dKc">--</span></div>
+        <div class="dr"><span class="dk">KOTA/KABUPATEN</span><span class="dv" id="dKo">--</span></div>
+        <div class="dr"><span class="dk">PROVINSI</span><span class="dv" id="dP">--</span></div>
+        <div class="dr"><span class="dk">KODE POS</span><span class="dv" id="dPC">--</span></div>
+        <div class="dn">Data RT/RW tidak selalu tersedia di OpenStreetMap.</div>
+    </div></section>
+
+    <section class="psec"><div class="prow">
+        <div class="pc a"><div class="pl">TEMP</div><div class="pv" id="wT" style="color:var(--amber)">--</div><div class="pu">°C</div></div>
+        <div class="pc c"><div class="pl">HUMIDITY</div><div class="pv" id="wH" style="color:var(--cyan)">--</div><div class="pu">%RH</div></div>
+        <div class="pc g"><div class="pl">WIND</div><div class="pv" id="wW" style="color:var(--green)">--</div><div class="pu" id="wWd">km/h</div></div>
+    </div></section>
+
+    <section id="exInfo">
+        <span><i class="fas fa-mountain"></i><span id="altT">-- m</span></span>
+        <span><i class="fas fa-crosshairs"></i><span id="crdT">-, -</span></span>
+        <span><i class="fas fa-satellite"></i><span id="satT">--</span></span>
+        <span><i class="fas fa-bullseye"></i><span id="accT">-- m</span></span>
+        <span><i class="fas fa-cloud" id="cdIc" style="color:var(--amber)"></i><span id="cdTx">--</span></span>
+    </section>
+
+    <footer id="ctrls">
+        <button type="button" id="btnRst"><i class="fas fa-undo"></i> RESET</button>
+        <button type="button" id="btnUnt"><i class="fas fa-exchange-alt"></i> <span id="untLb">km/h</span></button>
+        <button type="button" id="btnFS"><i class="fas fa-expand" id="fsIc"></i></button>
+    </footer>
+
+    <div id="gpsOvl">
+        <div class="oi"><i class="fas fa-satellite-dish"></i></div>
+        <div class="ot">NEXUS</div>
+        <div class="os">Speedometer digital real-time berbasis GPS.<br>Izinkan akses lokasi presisi tinggi.</div>
+        <button type="button" class="bg" id="btnGo">AKTIFKAN GPS</button>
+        <div class="ov">FLIGHT DECK v2.0</div>
     </div>
-
-    <script>
-        (function() {
-            /* =============================================
-               STATE & KONFIGURASI
-               ============================================= */
-            const S = {
-                speed: 0,
-                displaySpeed: 0,
-                maxSpeed: 0,
-                tripDist: 0,
-                odometer: 0,
-                heading: 0,
-                gpsHeadingSet: false,
-                compassAccuracy: null,
-                altitude: 0,
-                prevAltitude: null,
-                prevAltTime: null,
-                verticalSpeed: 0,
-                lat: 0,
-                lon: 0,
-                accuracy: 0,
-                gpsState: 'off',
-                unit: 'kmh',
-                address: 'Menunggu GPS...',
-                speedSource: '--',
-                lastPos: null,
-                lastTs: null,
-                watchId: null,
-                wakeLock: null,
-                addressTimer: null,
-                lastAddrLat: null,
-                lastAddrLon: null,
-                orientationHeading: null,
-                batteryLevel: null,
-                batteryCharging: false,
-                lastSaveTime: 0,
-                refreshInterval: null,
-                gpsStarted: false,
-                lastFixTime: 0,
-                gpsStartTime: 0,
-                totalMovingTime: 0,
-                lastMovingCheck: 0,
-                currentGForce: 0,
-                prevSpeedForG: 0,
-                prevTimeForG: 0,
-                addr: { jalan: '--', lingkungan: '--', kelurahan: '--', kecamatan: '--', kota: '--', provinsi: '--',
-                    postcode: '--' },
-                weather: { temp: null, humidity: null, windSpeed: null, windDir: null, code: null, isDay: 1 },
-                lastWeatherLat: null,
-                lastWeatherLon: null,
-                lastWeatherTs: 0,
-                gpsActivationAttempted: false,
-                orientationPermissionGranted: false,
-            };
-
-            const MAX_GAUGE_KMH = 240,
-                MAX_GAUGE_MPH = 150,
-                MAX_ACCEL = 120;
-            const speedTrail = [];
-            const TRAIL_MAX = 80,
-                TRAIL_INTERVAL = 400;
-            let lastTrailTime = 0;
-
-            function toDisplay(k) { return S.unit === 'mph' ? k * 0.621371 : k; }
-
-            function toDisplayDist(k) { return S.unit === 'mph' ? k * 0.621371 : k; }
-
-            function unitSpeed() { return S.unit === 'mph' ? 'mph' : 'km/h'; }
-
-            function unitDist() { return S.unit === 'mph' ? 'mi' : 'km'; }
-
-            function maxGauge() { return S.unit === 'mph' ? MAX_GAUGE_MPH : MAX_GAUGE_KMH; }
-
-            function speedColor(p) {
-                const h = 128 - Math.max(0, Math.min(1, p)) * 128;
-                return `hsl(${h},100%,50%)`;
-            }
-
-            function speedColorAlpha(p, a) {
-                const h = 128 - Math.max(0, Math.min(1, p)) * 128;
-                return `hsla(${h},100%,50%,${a})`;
-            }
-
-            const CA = ['U', 'UTL', 'TL', 'TTL', 'T', 'TTG', 'TG', 'STG', 'S', 'SBD', 'BD', 'BBD', 'B', 'BBL', 'BL', 'UBL'];
-            const CF = ['Utara', 'Utara Timur Laut', 'Timur Laut', 'Timur Timur Laut', 'Timur', 'Timur Tenggara',
-                'Tenggara', 'Selatan Tenggara', 'Selatan', 'Selatan Barat Daya', 'Barat Daya', 'Barat Barat Daya',
-                'Barat', 'Barat Barat Laut', 'Barat Laut', 'Utara Barat Laut'
-            ];
-
-            function compassDir(d) { return CA[Math.round(d / 22.5) % 16]; }
-
-            function compassDirFull(d) { return CF[Math.round(d / 22.5) % 16]; }
-
-            /* =============================================
-               UTILITAS
-               ============================================= */
-            function haversine(a, b, c, d) {
-                const R = 6371000,
-                    dLat = (c - a) * Math.PI / 180,
-                    dLon = (d - b) * Math.PI / 180;
-                const x = Math.sin(dLat / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(
-                    dLon / 2) ** 2;
-                return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-            }
-
-            function calcBearing(a, b, c, d) {
-                const dL = (d - b) * Math.PI / 180;
-                const y = Math.sin(dL) * Math.cos(c * Math.PI / 180);
-                const x = Math.cos(a * Math.PI / 180) * Math.sin(c * Math.PI / 180) - Math.sin(a * Math.PI / 180) * Math.cos(
-                    c * Math.PI / 180) * Math.cos(dL);
-                return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
-            }
-
-            function smoothHeading(prev, next, alpha) {
-                if (prev === null || !isFinite(prev)) return next;
-                let diff = ((next - prev + 540) % 360) - 180;
-                return (prev + diff * alpha + 360) % 360;
-            }
-
-            function showToast(m) {
-                const t = document.getElementById('toast');
-                if (!t) return;
-                t.textContent = m;
-                t.classList.add('show');
-                clearTimeout(t._t);
-                t._t = setTimeout(() => t.classList.remove('show'), 2200);
-            }
-
-            function formatTime(s) {
-                const h = Math.floor(s / 3600),
-                    m = Math.floor((s % 3600) / 60),
-                    sec = Math.floor(s % 60);
-                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-            }
-
-            /* =============================================
-               PERSISTENSI
-               ============================================= */
-            function loadData() {
-                try {
-                    S.odometer = parseFloat(localStorage.getItem('nx_odo')) || 0;
-                    S.unit = localStorage.getItem('nx_unit') || 'kmh';
-                    S.maxSpeed = parseFloat(localStorage.getItem('nx_max')) || 0;
-                } catch (e) { /* storage unavailable */ }
-            }
-
-            function saveData() {
-                try {
-                    localStorage.setItem('nx_odo', S.odometer.toFixed(3));
-                    localStorage.setItem('nx_unit', S.unit);
-                    localStorage.setItem('nx_max', S.maxSpeed.toFixed(1));
-                } catch (e) { /* storage unavailable */ }
-            }
-
-            function throttledSave() {
-                const n = Date.now();
-                if (n - S.lastSaveTime > 3000) { S.lastSaveTime = n;
-                    saveData(); }
-            }
-
-            /* =============================================
-               GPS — DIPERBAIKI & LEBIH ROBUST
-               ============================================= */
-            function startGPS() {
-                if (!navigator.geolocation) {
-                    S.gpsState = 'error';
-                    S.gpsActivationAttempted = true;
-                    updateGPSStatus();
-                    showToast('❌ Geolocation tidak didukung browser ini');
-                    return;
-                }
-                S.gpsActivationAttempted = true;
-                S.gpsStarted = true;
-                S.gpsState = 'acquiring';
-                S.gpsStartTime = Date.now();
-                S.lastMovingCheck = Date.now();
-                S.lastFixTime = 0;
-                updateGPSStatus();
-                stopGPSWatch();
-                stopPeriodicRefresh();
-
-                const opts = { enableHighAccuracy: true, timeout: 25000, maximumAge: 800 };
-                try {
-                    S.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, opts);
-                } catch (e) {
-                    S.gpsState = 'error';
-                    updateGPSStatus();
-                    showToast('❌ Gagal memulai GPS: ' + (e.message || 'unknown'));
-                    return;
-                }
-                startPeriodicRefresh();
-                showToast('📡 GPS diaktifkan — mencari sinyal satelit...');
-            }
-
-            function stopGPSWatch() {
-                if (S.watchId !== null && S.watchId !== undefined) {
-                    try { navigator.geolocation.clearWatch(S.watchId); } catch (e) {}
-                    S.watchId = null;
-                }
-            }
-
-            function startPeriodicRefresh() {
-                stopPeriodicRefresh();
-                S.refreshInterval = setInterval(() => {
-                    if (!S.gpsStarted) return;
-                    const now = Date.now();
-                    if (S.lastFixTime > 0 && (now - S.lastFixTime) > 10000 && S.watchId !== null) {
-                        stopGPSWatch();
-                        try {
-                            S.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, {
-                                enableHighAccuracy: true,
-                                timeout: 25000,
-                                maximumAge: 800
-                            });
-                        } catch (e) { /* retry silently */ }
-                    }
-                    if (S.gpsState === 'active' || S.gpsState === 'acquiring') {
-                        try {
-                            navigator.geolocation.getCurrentPosition(onPosition, () => {}, {
-                                enableHighAccuracy: true,
-                                timeout: 10000,
-                                maximumAge: 2000
-                            });
-                        } catch (e) { /* silent */ }
-                    }
-                }, 4000);
-            }
-
-            function stopPeriodicRefresh() {
-                if (S.refreshInterval) { clearInterval(S.refreshInterval);
-                    S.refreshInterval = null; }
-            }
-
-            function onPosition(pos) {
-                try {
-                    const { latitude: lat, longitude: lon, accuracy: acc, altitude: alt, speed, heading } = pos.coords;
-                    const ts = pos.timestamp || Date.now();
-                    S.lastFixTime = Date.now();
-
-                    S.gpsState = acc <= 35 ? 'active' : 'acquiring';
-                    S.lat = lat;
-                    S.lon = lon;
-                    S.accuracy = acc;
-
-                    if (alt !== null && alt !== undefined && isFinite(alt)) {
-                        if (S.prevAltitude !== null && S.prevAltTime !== null && S.prevAltTime > 0) {
-                            const dtAlt = (ts - S.prevAltTime) / 1000;
-                            if (dtAlt > 0.3 && dtAlt < 30) {
-                                const rawVS = (alt - S.prevAltitude) / dtAlt;
-                                S.verticalSpeed = S.verticalSpeed * 0.6 + rawVS * 0.4;
-                            }
-                        }
-                        S.prevAltitude = alt;
-                        S.prevAltTime = ts;
-                        S.altitude = alt;
-                    } else if (alt !== null && alt !== undefined && isFinite(alt)) {
-                        S.altitude = alt;
-                    }
-
-                    let raw = 0,
-                        src = 'CALC';
-                    if (speed !== null && speed >= 0 && isFinite(speed)) { raw = speed * 3.6;
-                        src = 'GPS'; }
-                    if (S.lastPos && S.lastTs) {
-                        const dt = (ts - S.lastTs) / 1000;
-                        if (dt > 0.1 && dt < 10) {
-                            const dist = haversine(S.lastPos.lat, S.lastPos.lon, lat, lon);
-                            const calc = (dist / dt) * 3.6;
-                            if (speed === null || speed < 0 || !isFinite(speed)) { raw = calc;
-                                src = 'CALC'; } else { const d = Math.abs(raw - calc); if (d < 20) { raw = (raw + calc) /
-                                    2;
-                                src = 'GPS+CALC'; } }
-                        }
-                    }
-                    S.speedSource = src;
-
-                    if (S.lastTs) {
-                        const dt = (ts - S.lastTs) / 1000;
-                        if (dt > 0 && Math.abs(raw - S.speed) / dt > MAX_ACCEL) raw = S.speed;
-                    }
-                    if (raw < 0) raw = 0;
-                    if (raw > 400) raw = 0;
-                    S.speed = raw;
-                    if (S.speed > S.maxSpeed) S.maxSpeed = S.speed;
-
-                    if (S.lastPos && S.lastTs) {
-                        const dKm = haversine(S.lastPos.lat, S.lastPos.lon, lat, lon) / 1000;
-                        if (dKm < 0.5 && dKm > 0.00001) { S.tripDist += dKm;
-                            S.odometer += dKm; }
-                    }
-
-                    if (heading !== null && heading >= 0 && isFinite(heading)) { S.heading = heading;
-                        S.gpsHeadingSet = true; } else if (S.lastPos && haversine(S.lastPos.lat, S.lastPos.lon, lat,
-                        lon) > 3) { S.heading = calcBearing(S.lastPos.lat, S.lastPos.lon, lat, lon);
-                        S.gpsHeadingSet = true; }
-
-                    S.lastPos = { lat, lon };
-                    S.lastTs = ts;
-                    debouncedReverseGeocode(lat, lon);
-                    debouncedWeatherFetch(lat, lon);
-                    throttledSave();
-                    updateGPSStatus();
-                } catch (e) {
-                    console.error('onPosition error:', e);
-                }
-            }
-
-            function onPositionError(e) {
-                console.warn('GPS error:', e.code, e.message);
-                if (e.code === 1) {
-                    S.gpsState = 'error';
-                    updateGPSStatus();
-                    showToast('❌ Izin lokasi ditolak — buka pengaturan');
-                } else if (e.code === 2) {
-                    S.gpsState = 'acquiring';
-                    updateGPSStatus();
-                } else if (e.code === 3) {
-                    S.gpsState = 'acquiring';
-                    updateGPSStatus();
-                    showToast('⏳ Timeout GPS — coba lagi di area terbuka');
-                } else {
-                    S.gpsState = 'acquiring';
-                    updateGPSStatus();
-                }
-            }
-
-            function updateGPSStatus() {
-                const dot = document.getElementById('gpsDot');
-                const txt = document.getElementById('gpsStatusText');
-                if (!dot || !txt) return;
-                dot.className = 'gps-dot';
-                if (S.gpsState === 'active') {
-                    dot.classList.add('active');
-                    txt.textContent = 'GPS AKTIF';
-                    txt.style.color = '#00ff41';
-                } else if (S.gpsState === 'acquiring') {
-                    dot.classList.add('acquiring');
-                    txt.textContent = 'MENCARI...';
-                    txt.style.color = '#ffb800';
-                } else if (S.gpsState === 'error') {
-                    txt.textContent = 'GPS ERROR';
-                    txt.style.color = '#ff2d42';
-                } else {
-                    txt.textContent = 'NONAKTIF';
-                    txt.style.color = '#b0c8e0';
-                }
-            }
-
-            /* =============================================
-               REVERSE GEOCODE
-               ============================================= */
-            function debouncedReverseGeocode(lat, lon) {
-                if (S.lastAddrLat !== null && haversine(S.lastAddrLat, S.lastAddrLon, lat, lon) < 8) return;
-                clearTimeout(S.addressTimer);
-                S.addressTimer = setTimeout(() => reverseGeocode(lat, lon), 1000);
-            }
-            async function reverseGeocode(lat, lon) {
-                try {
-                    const r = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`, {
-                            headers: { 'User-Agent': 'NexusAeroSpeedometer/3.0' }
-                        });
-                    if (!r.ok) return;
-                    const d = await r.json();
-                    if (d && d.display_name) {
-                        S.address = d.display_name.split(',').slice(0, Math.min(3, d.display_name.split(',').length)).join(
-                            ',').trim();
-                        S.lastAddrLat = lat;
-                        S.lastAddrLon = lon;
-                        const a = d.address || {};
-                        const jp = [a.road, a.pedestrian, a.footway, a.residential, a.house_number].filter(Boolean);
-                        S.addr.jalan = jp.length ? jp.join(' No. ') : '--';
-                        S.addr.lingkungan = a.neighbourhood || a.hamlet || a.quarter || a.residential || '--';
-                        S.addr.kelurahan = a.village || a.suburb || a.city_district || '--';
-                        S.addr.kecamatan = a.city_district || a.subdistrict || a.county || '--';
-                        S.addr.kota = a.city || a.town || a.regency || a.county || '--';
-                        S.addr.provinsi = a.state || '--';
-                        S.addr.postcode = a.postcode || '--';
-                    }
-                } catch (e) { /* rate limit or network — silent */ }
-            }
-
-            /* =============================================
-               CUACA (Open-Meteo)
-               ============================================= */
-            function debouncedWeatherFetch(lat, lon) {
-                const now = Date.now();
-                let moved = true;
-                if (S.lastWeatherLat !== null) moved = haversine(S.lastWeatherLat, S.lastWeatherLon, lat, lon) > 400;
-                if (!moved && (now - S.lastWeatherTs) < 300000) return;
-                fetchWeather(lat, lon);
-            }
-            async function fetchWeather(lat, lon) {
-                try {
-                    const r = await fetch(
-                        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,is_day&timezone=auto`
-                        );
-                    if (!r.ok) return;
-                    const d = await r.json();
-                    if (d && d.current) {
-                        Object.assign(S.weather, {
-                            temp: d.current.temperature_2m,
-                            humidity: d.current.relative_humidity_2m,
-                            windSpeed: d.current.wind_speed_10m,
-                            windDir: d.current.wind_direction_10m,
-                            code: d.current.weather_code,
-                            isDay: d.current.is_day
-                        });
-                        S.lastWeatherLat = lat;
-                        S.lastWeatherLon = lon;
-                        S.lastWeatherTs = Date.now();
-                    }
-                } catch (e) { /* silent */ }
-            }
-
-            function weatherInfo(code, isDay) {
-                const day = isDay !== 0;
-                const m = {
-                    0: { t: day ? 'Cerah' : 'Cerah Malam', i: day ? 'fa-sun' : 'fa-moon', c: '#ffb800' },
-                    1: { t: 'Cerah Berawan', i: day ? 'fa-cloud-sun' : 'fa-cloud-moon', c: '#ffb800' },
-                    2: { t: 'Berawan', i: 'fa-cloud-sun', c: '#b0c8e0' },
-                    3: { t: 'Mendung', i: 'fa-cloud', c: '#b0c8e0' },
-                    45: { t: 'Berkabut', i: 'fa-smog', c: '#b0c8e0' },
-                    48: { t: 'Kabut Beku', i: 'fa-smog', c: '#b0c8e0' },
-                    51: { t: 'Gerimis Ringan', i: 'fa-cloud-rain', c: '#00e5ff' },
-                    53: { t: 'Gerimis', i: 'fa-cloud-rain', c: '#00e5ff' },
-                    55: { t: 'Gerimis Lebat', i: 'fa-cloud-rain', c: '#00e5ff' },
-                    61: { t: 'Hujan Ringan', i: 'fa-cloud-rain', c: '#00e5ff' },
-                    63: { t: 'Hujan Sedang', i: 'fa-cloud-showers-heavy', c: '#00e5ff' },
-                    65: { t: 'Hujan Lebat', i: 'fa-cloud-showers-heavy', c: '#ff2d42' },
-                    71: { t: 'Salju Ringan', i: 'fa-snowflake', c: '#00e5ff' },
-                    73: { t: 'Salju', i: 'fa-snowflake', c: '#00e5ff' },
-                    75: { t: 'Salju Lebat', i: 'fa-snowflake', c: '#00e5ff' },
-                    80: { t: 'Hujan Lokal', i: 'fa-cloud-rain', c: '#00e5ff' },
-                    81: { t: 'Hujan Lokal Sedang', i: 'fa-cloud-showers-heavy', c: '#00e5ff' },
-                    82: { t: 'Hujan Lokal Deras', i: 'fa-cloud-showers-heavy', c: '#ff2d42' },
-                    95: { t: 'Badai Petir', i: 'fa-bolt', c: '#ff2d42' },
-                    96: { t: 'Badai + Hujan Es', i: 'fa-cloud-bolt', c: '#ff2d42' },
-                    99: { t: 'Badai Es Lebat', i: 'fa-cloud-bolt', c: '#ff2d42' }
-                };
-                return m[code] || { t: '--', i: 'fa-question', c: '#b0c8e0' };
-            }
-
-            /* =============================================
-               WAKE LOCK
-               ============================================= */
-            async function requestWakeLock() {
-                try {
-                    if ('wakeLock' in navigator && document.visibilityState === 'visible') {
-                        S.wakeLock = await navigator.wakeLock.request('screen');
-                        S.wakeLock.addEventListener('release', () => { S.wakeLock = null; });
-                    }
-                } catch (e) { /* not supported */ }
-            }
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') {
-                    if (!S.wakeLock) requestWakeLock();
-                    if (S.gpsStarted && S.watchId === null && S.gpsActivationAttempted) {
-                        startGPS();
-                    }
-                }
-            });
-
-            /* =============================================
-               BATTERY
-               ============================================= */
-            async function initBattery() {
-                try {
-                    if ('getBattery' in navigator) {
-                        const b = await navigator.getBattery();
-                        S.batteryLevel = b.level;
-                        S.batteryCharging = b.charging;
-                        b.addEventListener('levelchange', () => { S.batteryLevel = b.level; });
-                        b.addEventListener('chargingchange', () => { S.batteryCharging = b.charging; });
-                    }
-                } catch (e) { /* not supported */ }
-            }
-
-            function getBatteryHTML() {
-                if (S.batteryLevel === null) return '<i class="fas fa-battery-full"></i>';
-                const p = Math.round(S.batteryLevel * 100);
-                let i = 'fa-battery-full';
-                if (p <= 10) i = 'fa-battery-empty';
-                else if (p <= 25) i = 'fa-battery-quarter';
-                else if (p <= 50) i = 'fa-battery-half';
-                else if (p <= 75) i = 'fa-battery-three-quarters';
-                if (S.batteryCharging) i = 'fa-bolt';
-                return `<i class="fas ${i}"></i> <span style="font-size:9px;font-weight:700;">${p}%</span>`;
-            }
-
-            /* =============================================
-               DEVICE ORIENTATION (KOMPAS)
-               ============================================= */
-            function initDeviceOrientation() {
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent
-                    .requestPermission === 'function') {
-                    DeviceOrientationEvent.requestPermission().then(r => {
-                        if (r === 'granted') {
-                            S.orientationPermissionGranted = true;
-                            window.addEventListener('deviceorientation', onOrientation);
-                            showToast('✅ Sensor kompas diaktifkan');
-                        } else {
-                            showToast('⚠ Izin sensor gerak ditolak — menggunakan GPS heading');
-                        }
-                    }).catch(() => {
-                        tryFallbackOrientation();
-                    });
-                } else {
-                    tryFallbackOrientation();
-                }
-            }
-
-            function tryFallbackOrientation() {
-                const evt = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' :
-                    'deviceorientation';
-                if (typeof DeviceOrientationEvent !== 'undefined') {
-                    window.addEventListener(evt, onOrientation);
-                    S.orientationPermissionGranted = true;
-                }
-            }
-
-            function getScreenAngle() {
-                if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
-                if (typeof window.orientation === 'number') return window.orientation;
-                return 0;
-            }
-
-            function onOrientation(e) {
-                let raw = null;
-                if (typeof e.webkitCompassHeading === 'number' && isFinite(e.webkitCompassHeading)) {
-                    raw = e.webkitCompassHeading;
-                    S.compassAccuracy = (typeof e.webkitCompassAccuracy === 'number') ? e.webkitCompassAccuracy : null;
-                } else if (e.alpha !== null && e.alpha !== undefined) {
-                    raw = (360 - e.alpha + getScreenAngle()) % 360;
-                    if (raw < 0) raw += 360;
-                    S.compassAccuracy = null;
-                } else return;
-                S.orientationHeading = smoothHeading(S.orientationHeading, raw, 0.45);
-            }
-
-            /* =============================================
-               FULLSCREEN
-               ============================================= */
-            function toggleFullscreen() {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(() => {});
-                    try { screen.orientation.lock('any').catch(() => {}); } catch (e) {}
-                } else {
-                    document.exitFullscreen().catch(() => {});
-                }
-            }
-            document.addEventListener('fullscreenchange', () => {
-                const fsIcon = document.getElementById('fsIcon');
-                if (fsIcon) fsIcon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
-            });
-
-            /* =============================================
-               VIBRATION
-               ============================================= */
-            let lastVibSpd = 0;
-
-            function checkVibrate() {
-                [60, 80, 100, 120, 140, 160, 180, 200].forEach(t => {
-                    if (S.displaySpeed >= t && lastVibSpd < t) {
-                        if (navigator.vibrate) navigator.vibrate(40);
-                    }
-                });
-                lastVibSpd = Math.floor(S.displaySpeed);
-            }
-
-            /* =============================================
-               CANVAS SETUP
-               ============================================= */
-            let canvas, ctx, cSize, dpr, cCanvas, cCtx, cSize2;
-
-            function setupCanvas() {
-                canvas = document.getElementById('gaugeCanvas');
-                const area = document.getElementById('gaugeArea');
-                if (!canvas || !area) return;
-                const w = area.clientWidth - 8,
-                    h = area.clientHeight - 8;
-                cSize = Math.max(120, Math.min(w, h, 700));
-                dpr = Math.min(window.devicePixelRatio || 1, 2);
-                canvas.width = cSize * dpr;
-                canvas.height = cSize * dpr;
-                canvas.style.width = cSize + 'px';
-                canvas.style.height = cSize + 'px';
-                ctx = canvas.getContext('2d');
-                ctx.scale(dpr, dpr);
-
-                cCanvas = document.getElementById('compassCanvas');
-                if (!cCanvas) return;
-                cSize2 = Math.max(100, Math.min(cSize * 0.38, 210));
-                cCanvas.width = cSize2 * dpr;
-                cCanvas.height = cSize2 * dpr;
-                cCanvas.style.width = cSize2 + 'px';
-                cCanvas.style.height = cSize2 + 'px';
-                cCtx = cCanvas.getContext('2d');
-                cCtx.scale(dpr, dpr);
-            }
-
-            /* =============================================
-               DRAW SPEEDOMETER — AIRCRAFT AIRSPEED STYLE
-               ============================================= */
-            function drawGauge() {
-                if (cSize < 60 || !ctx) return;
-                const sz = cSize,
-                    cx = sz / 2,
-                    cy = sz / 2,
-                    R = sz * 0.47;
-                const startA = Math.PI * 0.72,
-                    endA = Math.PI * 2.28,
-                    totalA = endA - startA;
-                const mg = maxGauge();
-                const spd = Math.max(0, Math.min(toDisplay(S.displaySpeed), mg));
-                const pct = spd / mg;
-
-                ctx.clearRect(0, 0, sz, sz);
-
-                /* Outer ring shadow */
-                ctx.save();
-                ctx.shadowColor = 'rgba(0,229,255,0.3)';
-                ctx.shadowBlur = sz * 0.04;
-                ctx.beginPath();
-                ctx.arc(cx, cy, R * 0.97, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(0,229,255,0.2)';
-                ctx.lineWidth = sz * 0.012;
-                ctx.stroke();
-                ctx.restore();
-
-                /* Main background disc */
-                const bgGrad = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.02);
-                bgGrad.addColorStop(0, '#020d1f');
-                bgGrad.addColorStop(0.85, '#010712');
-                bgGrad.addColorStop(1, '#000308');
-                ctx.beginPath();
-                ctx.arc(cx, cy, R * 0.94, 0, Math.PI * 2);
-                ctx.fillStyle = bgGrad;
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(0,229,255,0.35)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                /* Colored zones (green/yellow/red arcs on inner ring) */
-                const zones = [
-                    { end: toDisplay(80), c: '#00ff41' },
-                    { end: toDisplay(130), c: '#ffb800' },
-                    { end: mg, c: '#ff2d42' }
-                ];
-                let zs = 0;
-                for (const z of zones) {
-                    const ze = Math.min(z.end, mg);
-                    if (ze <= zs) continue;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, R * 0.80, startA + (zs / mg) * totalA, startA + (ze / mg) * totalA);
-                    ctx.strokeStyle = z.c + '40';
-                    ctx.lineWidth = sz * 0.055;
-                    ctx.lineCap = 'butt';
-                    ctx.stroke();
-                    zs = ze;
-                    if (ze >= mg) break;
-                }
-
-                /* Tick marks — major & minor */
-                const majorStep = 20;
-                const minorStep = 10;
-                for (let v = 0; v <= mg; v += minorStep) {
-                    const a = startA + (v / mg) * totalA;
-                    const isMajor = v % majorStep === 0;
-                    const outerR = R * 0.93;
-                    let innerR, lw, col;
-                    if (isMajor) {
-                        innerR = R * 0.77;
-                        lw = sz * 0.022;
-                        col = 'rgba(0,251,255,0.9)';
-                    } else {
-                        innerR = R * 0.84;
-                        lw = sz * 0.01;
-                        col = 'rgba(0,229,255,0.45)';
-                    }
-                    ctx.beginPath();
-                    ctx.moveTo(cx + Math.cos(a) * innerR, cy + Math.sin(a) * innerR);
-                    ctx.lineTo(cx + Math.cos(a) * outerR, cy + Math.sin(a) * outerR);
-                    ctx.strokeStyle = col;
-                    ctx.lineWidth = lw;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
-
-                    if (isMajor) {
-                        const numR = R * 0.69;
-                        const nx = cx + Math.cos(a) * numR,
-                            ny = cy + Math.sin(a) * numR;
-                        ctx.fillStyle = 'rgba(0,251,255,0.9)';
-                        ctx.font = `900 ${Math.max(9,sz*0.035)}px 'Orbitron',sans-serif`;
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(Math.round(v), nx, ny);
-                    }
-                }
-
-                /* Active speed arc — bright glow */
-                if (spd > 0.3) {
-                    const spdA = startA + pct * totalA;
-                    const col = speedColor(pct);
-                    ctx.save();
-                    ctx.shadowColor = col;
-                    ctx.shadowBlur = 20 + pct * 28;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, R * 0.80, startA, spdA);
-                    ctx.strokeStyle = speedColorAlpha(pct, 0.5);
-                    ctx.lineWidth = sz * 0.045;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
-                    ctx.restore();
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, R * 0.80, startA, spdA);
-                    ctx.strokeStyle = col;
-                    ctx.lineWidth = sz * 0.028;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
-
-                    const tipX = cx + Math.cos(spdA) * R * 0.80,
-                        tipY = cy + Math.sin(spdA) * R * 0.80;
-                    ctx.save();
-                    ctx.shadowColor = col;
-                    ctx.shadowBlur = 18;
-                    ctx.beginPath();
-                    ctx.arc(tipX, tipY, sz * 0.014, 0, Math.PI * 2);
-                    ctx.fillStyle = col;
-                    ctx.fill();
-                    ctx.restore();
-                }
-
-                /* Dashed inner ring */
-                ctx.setLineDash([sz * 0.01, sz * 0.014]);
-                ctx.beginPath();
-                ctx.arc(cx, cy, R * 0.52, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(0,229,255,0.1)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                /* Needle */
-                const needleA = startA + pct * totalA;
-                const needleLen = R * 0.84;
-                const needleBase = R * 0.07;
-                const col = speedColor(pct);
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(needleA);
-                ctx.shadowColor = col;
-                ctx.shadowBlur = 14;
-                ctx.beginPath();
-                ctx.moveTo(needleLen, 0);
-                ctx.lineTo(-needleBase, -sz * 0.012);
-                ctx.lineTo(-needleBase, sz * 0.012);
-                ctx.closePath();
-                const ng = ctx.createLinearGradient(-needleBase, 0, needleLen, 0);
-                ng.addColorStop(0, 'rgba(255,255,255,0.3)');
-                ng.addColorStop(0.55, 'rgba(255,255,255,0.9)');
-                ng.addColorStop(1, col);
-                ctx.fillStyle = ng;
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(needleLen * 0.15, 0);
-                ctx.lineTo(needleLen * 0.85, 0);
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                ctx.lineWidth = 0.6;
-                ctx.stroke();
-                ctx.restore();
-
-                /* Center hub */
-                ctx.save();
-                ctx.shadowColor = 'rgba(0,229,255,0.5)';
-                ctx.shadowBlur = 12;
-                const hubG = ctx.createRadialGradient(cx, cy, 0, cx, cy, sz * 0.045);
-                hubG.addColorStop(0, 'rgba(0,229,255,0.4)');
-                hubG.addColorStop(0.6, 'rgba(0,229,255,0.15)');
-                hubG.addColorStop(1, 'rgba(0,229,255,0.02)');
-                ctx.beginPath();
-                ctx.arc(cx, cy, sz * 0.045, 0, Math.PI * 2);
-                ctx.fillStyle = hubG;
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(0,229,255,0.55)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.restore();
-                ctx.beginPath();
-                ctx.arc(cx, cy, sz * 0.01, 0, Math.PI * 2);
-                ctx.fillStyle = '#00fbff';
-                ctx.fill();
-
-                /* Digital speed readout */
-                const digSpd = Math.round(spd);
-                ctx.save();
-                ctx.shadowColor = col;
-                ctx.shadowBlur = 10;
-                ctx.fillStyle = col;
-                ctx.font = `900 ${Math.max(22,sz*0.15)}px 'Orbitron',sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(digSpd, cx, cy + sz * 0.20);
-                ctx.restore();
-
-                /* Unit label */
-                ctx.fillStyle = 'rgba(0,251,255,0.7)';
-                ctx.font = `700 ${Math.max(9,sz*0.038)}px 'Orbitron',sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(unitSpeed(), cx, cy + sz * 0.28);
-
-                /* Source */
-                ctx.fillStyle = 'rgba(176,200,224,0.4)';
-                ctx.font = `${Math.max(7,sz*0.024)}px 'SF Mono','Consolas',monospace`;
-                ctx.fillText('SRC: ' + S.speedSource, cx, cy + sz * 0.33);
-
-                /* Speed trail mini graph */
-                drawSpeedTrail(cx, cy + sz * 0.40, sz * 0.52, sz * 0.07);
-
-                /* End labels */
-                const degLabels = [{ v: 0, l: '0' }, { v: mg, l: String(mg) }];
-                for (const dl of degLabels) {
-                    const da = startA + (dl.v / mg) * totalA;
-                    const dx = cx + Math.cos(da) * R * 1.03,
-                        dy = cy + Math.sin(da) * R * 1.03;
-                    ctx.fillStyle = 'rgba(0,229,255,0.35)';
-                    ctx.font = `${Math.max(7,sz*0.022)}px 'SF Mono','Consolas',monospace`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(dl.l, dx, dy);
-                }
-            }
-
-            function drawSpeedTrail(cx, cy, w, h) {
-                if (speedTrail.length < 2) return;
-                const mg = maxGauge();
-                const x0 = cx - w / 2,
-                    y0 = cy - h / 2;
-                ctx.beginPath();
-                ctx.moveTo(x0, y0 + h);
-                for (let i = 0; i < speedTrail.length; i++) {
-                    const x = x0 + (i / (TRAIL_MAX - 1)) * w;
-                    const y = y0 + h - Math.max(0, Math.min(1, toDisplay(speedTrail[i]) / mg)) * h;
-                    ctx.lineTo(x, y);
-                }
-                ctx.lineTo(x0 + ((speedTrail.length - 1) / (TRAIL_MAX - 1)) * w, y0 + h);
-                ctx.closePath();
-                const sg = ctx.createLinearGradient(0, y0, 0, y0 + h);
-                sg.addColorStop(0, 'rgba(0,229,255,0.25)');
-                sg.addColorStop(1, 'rgba(0,229,255,0.02)');
-                ctx.fillStyle = sg;
-                ctx.fill();
-                ctx.beginPath();
-                for (let i = 0; i < speedTrail.length; i++) {
-                    const x = x0 + (i / (TRAIL_MAX - 1)) * w;
-                    const y = y0 + h - Math.max(0, Math.min(1, toDisplay(speedTrail[i]) / mg)) * h;
-                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }
-                ctx.strokeStyle = 'rgba(0,229,255,0.6)';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            }
-
-            /* =============================================
-               DRAW COMPASS — AIRCRAFT HEADING INDICATOR
-               ============================================= */
-            function drawCompass() {
-                if (cSize2 < 50 || !cCtx) return;
-                const sz = cSize2,
-                    cx = sz / 2,
-                    cy = sz / 2,
-                    R = sz * 0.46;
-                const displayH = S.orientationHeading !== null ? S.orientationHeading : (S.gpsHeadingSet ? S.heading : 0);
-
-                cCtx.clearRect(0, 0, sz, sz);
-
-                const bgG = cCtx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.05);
-                bgG.addColorStop(0, '#020d1f');
-                bgG.addColorStop(1, '#000308');
-                cCtx.beginPath();
-                cCtx.arc(cx, cy, R * 1.0, 0, Math.PI * 2);
-                cCtx.fillStyle = bgG;
-                cCtx.fill();
-                cCtx.strokeStyle = 'rgba(0,229,255,0.3)';
-                cCtx.lineWidth = 2;
-                cCtx.stroke();
-
-                cCtx.save();
-                cCtx.translate(cx, cy);
-                cCtx.rotate(-displayH * Math.PI / 180);
-
-                for (let d = 0; d < 360; d += 5) {
-                    const a = (d - 90) * Math.PI / 180;
-                    const isCard = d % 90 === 0;
-                    const isInter = d % 45 === 0 && !isCard;
-                    const oR = R * 0.94;
-                    let iR, lw, col;
-                    if (isCard) { iR = R * 0.76;
-                        lw = 2.5;
-                        col = 'rgba(0,251,255,0.95)'; } else if (isInter) { iR = R * 0.81;
-                        lw = 1.8;
-                        col = 'rgba(0,229,255,0.65)'; } else if (d % 15 === 0) { iR = R * 0.85;
-                        lw = 1.2;
-                        col = 'rgba(0,229,255,0.4)'; } else { iR = R * 0.88;
-                        lw = 0.6;
-                        col = 'rgba(0,229,255,0.2)'; }
-                    cCtx.beginPath();
-                    cCtx.moveTo(Math.cos(a) * iR, Math.sin(a) * iR);
-                    cCtx.lineTo(Math.cos(a) * oR, Math.sin(a) * oR);
-                    cCtx.strokeStyle = col;
-                    cCtx.lineWidth = lw;
-                    cCtx.stroke();
-                }
-
-                const dirs = [
-                    { d: 0, l: 'U', c: '#ff2d42', s: sz * 0.10 },
-                    { d: 90, l: 'T', c: 'rgba(0,251,255,0.85)', s: sz * 0.075 },
-                    { d: 180, l: 'S', c: 'rgba(255,255,255,0.75)', s: sz * 0.075 },
-                    { d: 270, l: 'B', c: 'rgba(0,251,255,0.85)', s: sz * 0.075 }
-                ];
-                for (const dir of dirs) {
-                    const a = (dir.d - 90) * Math.PI / 180;
-                    const lr = R * 0.64;
-                    cCtx.save();
-                    cCtx.translate(Math.cos(a) * lr, Math.sin(a) * lr);
-                    cCtx.fillStyle = dir.c;
-                    cCtx.font = `900 ${dir.s}px 'Orbitron',sans-serif`;
-                    cCtx.textAlign = 'center';
-                    cCtx.textBaseline = 'middle';
-                    cCtx.fillText(dir.l, 0, 0);
-                    cCtx.restore();
-                }
-
-                for (let d = 0; d < 360; d += 30) {
-                    if (d % 90 === 0 || d % 45 === 0) continue;
-                    const a = (d - 90) * Math.PI / 180;
-                    const lr = R * 0.64;
-                    cCtx.save();
-                    cCtx.translate(Math.cos(a) * lr, Math.sin(a) * lr);
-                    cCtx.fillStyle = 'rgba(0,229,255,0.25)';
-                    cCtx.font = `${sz*0.042}px 'SF Mono','Consolas',monospace`;
-                    cCtx.textAlign = 'center';
-                    cCtx.textBaseline = 'middle';
-                    cCtx.fillText(d + '°', 0, 0);
-                    cCtx.restore();
-                }
-
-                const nLen = R * 0.56,
-                    sLen = R * 0.34,
-                    nW = sz * 0.038;
-                cCtx.save();
-                cCtx.beginPath();
-                cCtx.moveTo(0, -nLen);
-                cCtx.lineTo(-nW, 0);
-                cCtx.lineTo(nW, 0);
-                cCtx.closePath();
-                const nG = cCtx.createLinearGradient(0, -nLen, 0, 0);
-                nG.addColorStop(0, '#ff2d42');
-                nG.addColorStop(1, 'rgba(255,45,66,0.35)');
-                cCtx.fillStyle = nG;
-                cCtx.fill();
-                cCtx.beginPath();
-                cCtx.moveTo(0, sLen);
-                cCtx.lineTo(-nW, 0);
-                cCtx.lineTo(nW, 0);
-                cCtx.closePath();
-                cCtx.fillStyle = 'rgba(255,255,255,0.15)';
-                cCtx.fill();
-                cCtx.beginPath();
-                cCtx.moveTo(0, -nLen);
-                cCtx.lineTo(0, sLen);
-                cCtx.strokeStyle = 'rgba(0,229,255,0.2)';
-                cCtx.lineWidth = 0.5;
-                cCtx.stroke();
-                cCtx.restore();
-
-                cCtx.restore();
-
-                const sweepA = (Date.now() % 3000) / 3000 * Math.PI * 2 - Math.PI / 2;
-                cCtx.save();
-                cCtx.translate(cx, cy);
-                cCtx.beginPath();
-                cCtx.moveTo(0, 0);
-                cCtx.arc(0, 0, R * 0.58, sweepA - 0.35, sweepA, false);
-                cCtx.closePath();
-                const rG = cCtx.createRadialGradient(0, 0, 0, 0, 0, R * 0.58);
-                rG.addColorStop(0, 'rgba(0,229,255,0)');
-                rG.addColorStop(0.5, 'rgba(0,229,255,0.04)');
-                rG.addColorStop(1, 'rgba(0,229,255,0.10)');
-                cCtx.fillStyle = rG;
-                cCtx.fill();
-                cCtx.restore();
-
-                const triS = sz * 0.04;
-                cCtx.save();
-                cCtx.shadowColor = '#ff2d42';
-                cCtx.shadowBlur = 10;
-                cCtx.beginPath();
-                cCtx.moveTo(cx, sz * 0.03 + triS * 1.6);
-                cCtx.lineTo(cx - triS * 0.8, sz * 0.03);
-                cCtx.lineTo(cx + triS * 0.8, sz * 0.03);
-                cCtx.closePath();
-                cCtx.fillStyle = '#ff2d42';
-                cCtx.fill();
-                cCtx.restore();
-
-                cCtx.beginPath();
-                cCtx.arc(cx, cy, sz * 0.022, 0, Math.PI * 2);
-                cCtx.fillStyle = 'rgba(0,229,255,0.55)';
-                cCtx.fill();
-                cCtx.beginPath();
-                cCtx.arc(cx, cy, sz * 0.009, 0, Math.PI * 2);
-                cCtx.fillStyle = '#00fbff';
-                cCtx.fill();
-
-                const calib = document.getElementById('compassCalib');
-                if (calib && S.compassAccuracy !== null && S.compassAccuracy > 0 && S.compassAccuracy < 20) {
-                    calib.style.display = 'block';
-                } else if (calib) {
-                    calib.style.display = 'none';
-                }
-            }
-
-            /* =============================================
-               MAIN LOOP — REAL-TIME UPDATE ALL PARAMETERS
-               ============================================= */
-            function mainLoop(timestamp) {
-                const now = timestamp || performance.now();
-
-                const diff = S.speed - S.displaySpeed;
-                if (Math.abs(diff) > 0.05) {
-                    const factor = Math.abs(diff) > 20 ? 0.18 : Math.abs(diff) > 5 ? 0.12 : 0.07;
-                    S.displaySpeed += diff * factor;
-                } else {
-                    S.displaySpeed = S.speed;
-                }
-                if (S.displaySpeed < 0) S.displaySpeed = 0;
-
-                if (S.prevTimeForG > 0) {
-                    const dt = (now - S.prevTimeForG) / 1000;
-                    if (dt > 0.04 && dt < 2) {
-                        const dv = (S.displaySpeed - S.prevSpeedForG) / 3.6;
-                        const accel = dv / dt;
-                        const g = accel / 9.81;
-                        S.currentGForce = S.currentGForce * 0.68 + Math.max(-3, Math.min(3, g)) * 0.32;
-                    }
-                }
-                S.prevSpeedForG = S.displaySpeed;
-                S.prevTimeForG = now;
-
-                if (S.gpsStarted && S.gpsState === 'active' && S.lastMovingCheck > 0) {
-                    if (S.displaySpeed > 2) S.totalMovingTime += (now - S.lastMovingCheck) / 1000;
-                }
-                S.lastMovingCheck = now;
-
-                if (now - lastTrailTime > TRAIL_INTERVAL) {
-                    speedTrail.push(S.displaySpeed);
-                    if (speedTrail.length > TRAIL_MAX) speedTrail.shift();
-                    lastTrailTime = now;
-                }
-
-                drawGauge();
-                drawCompass();
-                updateDOM();
-                checkVibrate();
-
-                requestAnimationFrame(mainLoop);
-            }
-
-            /* =============================================
-               UPDATE DOM — ALL PARAMETERS IN REAL-TIME
-               ============================================= */
-            function updateDOM() {
-                const mg = maxGauge();
-                const pct = Math.max(0, Math.min(1, toDisplay(S.displaySpeed) / mg));
-
-                const d = new Date();
-                const clockEl = document.getElementById('clock');
-                if (clockEl) clockEl.textContent =
-                    String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d
-                        .getSeconds()).padStart(2, '0');
-
-                const battEl = document.getElementById('batteryIcon');
-                if (battEl) battEl.innerHTML = getBatteryHTML();
-
-                const accEl = document.getElementById('accText');
-                if (accEl) accEl.textContent = S.gpsState === 'active' ? Math.round(S.accuracy) + 'm' : '--';
-
-                const md = document.getElementById('movingDot');
-                if (md) S.displaySpeed > 2 ? md.classList.add('active') : md.classList.remove('active');
-
-                const dh = S.orientationHeading !== null ? S.orientationHeading : (S.gpsHeadingSet ? S.heading : 0);
-                const cdEl = document.getElementById('compassDegree');
-                if (cdEl) cdEl.textContent = Math.round(dh) + '°';
-                const catEl = document.getElementById('compassArahText');
-                if (catEl) catEl.textContent = compassDirFull(dh);
-
-                const td = toDisplayDist(S.tripDist);
-                const tvEl = document.getElementById('tripVal');
-                if (tvEl) tvEl.textContent = td < 100 ? td.toFixed(3) : td.toFixed(1);
-                const tuEl = document.getElementById('tripUnit');
-                if (tuEl) tuEl.textContent = unitDist();
-                const od = toDisplayDist(S.odometer);
-                const ovEl = document.getElementById('odoVal');
-                if (ovEl) ovEl.textContent = od < 1000 ? od.toFixed(1) : od.toFixed(0);
-                const ouEl = document.getElementById('odoUnit');
-                if (ouEl) ouEl.textContent = unitDist();
-                const mvEl = document.getElementById('maxVal');
-                if (mvEl) {
-                    mvEl.textContent = Math.round(toDisplay(S.maxSpeed));
-                    mvEl.style.color = speedColor(Math.min(1, toDisplay(S.maxSpeed) / mg));
-                }
-                const muEl = document.getElementById('maxUnit');
-                if (muEl) muEl.textContent = unitSpeed();
-
-                const gf = Math.abs(S.currentGForce);
-                const gfEl = document.getElementById('gForceVal');
-                if (gfEl) {
-                    gfEl.textContent = (S.currentGForce >= 0 ? '+' : '') + S.currentGForce.toFixed(2);
-                    gfEl.style.color = gf > 0.8 ? '#ff2d42' : gf > 0.4 ? '#ffb800' : '#00ff41';
-                }
-
-                const avgSpd = S.totalMovingTime > 0 ? (S.tripDist / S.totalMovingTime * 3600) : 0;
-                const avEl = document.getElementById('avgVal');
-                if (avEl) avEl.textContent = Math.round(toDisplay(avgSpd));
-                const auEl = document.getElementById('avgUnit');
-                if (auEl) auEl.textContent = unitSpeed();
-
-                const vsEl = document.getElementById('vsVal');
-                if (vsEl) {
-                    vsEl.textContent = (S.verticalSpeed >= 0 ? '+' : '') + S.verticalSpeed.toFixed(1);
-                    vsEl.style.color = Math.abs(S.verticalSpeed) > 5 ? '#ffb800' : '#00e5ff';
-                }
-
-                if (S.gpsStartTime > 0) {
-                    const timeEl = document.getElementById('timeVal');
-                    if (timeEl) timeEl.textContent = formatTime((Date.now() - S.gpsStartTime) / 1000);
-                }
-
-                const altPEl = document.getElementById('altPanelVal');
-                if (altPEl) altPEl.textContent = S.altitude > 0 ? Math.round(S.altitude) : '--';
-                const accPEl = document.getElementById('accPanelVal');
-                if (accPEl) accPEl.textContent = S.gpsState === 'active' ? Math.round(S.accuracy) : '--';
-
-                const atEl = document.getElementById('addressText');
-                if (atEl) atEl.textContent = S.address;
-                const dEls = {
-                    dJalan: S.addr.jalan,
-                    dLingkungan: S.addr.lingkungan,
-                    dKelurahan: S.addr.kelurahan,
-                    dKecamatan: S.addr.kecamatan,
-                    dKota: S.addr.kota,
-                    dProvinsi: S.addr.provinsi,
-                    dPostcode: S.addr.postcode
-                };
-                for (const [id, val] of Object.entries(dEls)) {
-                    const el = document.getElementById(id);
-                    if (el) el.textContent = val;
-                }
-
-                if (S.weather.temp !== null) {
-                    const wtEl = document.getElementById('wxTemp');
-                    if (wtEl) wtEl.textContent = S.weather.temp.toFixed(0);
-                    const whEl = document.getElementById('wxHumidity');
-                    if (whEl) whEl.textContent = S.weather.humidity;
-                    const wwEl = document.getElementById('wxWind');
-                    if (wwEl) wwEl.textContent = S.weather.windSpeed.toFixed(0);
-                    const wd = S.weather.windDir;
-                    const wwdEl = document.getElementById('wxWindDir');
-                    if (wwdEl) wwdEl.textContent = 'km/h ' + compassDir(wd >= 0 ? wd : 0);
-                }
-
-                const altTextEl = document.getElementById('altText');
-                const coordEl = document.getElementById('coordText');
-                const satEl = document.getElementById('satText');
-                const acc2El = document.getElementById('accText2');
-                if (coordEl) coordEl.textContent = S.gpsStarted ? S.lat.toFixed(5) + ', ' + S.lon.toFixed(5) : '-, -';
-                if (satEl) satEl.textContent = S.gpsState === 'active' ? 'FIX' : '--';
-                if (acc2El) acc2El.textContent = S.gpsState === 'active' ? Math.round(S.accuracy) + ' m' : '-- m';
-                if (S.weather.code !== null) {
-                    const wi = weatherInfo(S.weather.code, S.weather.isDay);
-                    const ciEl = document.getElementById('condIcon');
-                    if (ciEl) ciEl.className = 'fas ' + wi.i;
-                    const ctEl = document.getElementById('condText');
-                    if (ctEl) ctEl.textContent = wi.t;
-                }
-
-                const ulEl = document.getElementById('unitLabel');
-                if (ulEl) ulEl.textContent = unitSpeed();
-            }
-
-            /* =============================================
-               EVENT LISTENERS
-               ============================================= */
-            function bindEvents() {
-                const btnActivate = document.getElementById('btnActivate');
-                if (btnActivate) {
-                    btnActivate.addEventListener('click', function() {
-                        const overlay = document.getElementById('gpsOverlay');
-                        if (overlay) overlay.classList.add('hidden');
-                        startGPS();
-                        requestWakeLock();
-                        initDeviceOrientation();
-                    });
-                }
-
-                const btnReset = document.getElementById('btnReset');
-                if (btnReset) {
-                    btnReset.addEventListener('click', function() {
-                        S.tripDist = 0;
-                        S.totalMovingTime = 0;
-                        S.maxSpeed = 0;
-                        speedTrail.length = 0;
-                        saveData();
-                        showToast('✓ Trip & max speed direset');
-                    });
-                }
-
-                const btnUnit = document.getElementById('btnUnit');
-                if (btnUnit) {
-                    btnUnit.addEventListener('click', function() {
-                        S.unit = S.unit === 'kmh' ? 'mph' : 'kmh';
-                        saveData();
-                        showToast('Satuan: ' + unitSpeed());
-                    });
-                }
-
-                const btnFS = document.getElementById('btnFS');
-                if (btnFS) {
-                    btnFS.addEventListener('click', toggleFullscreen);
-                }
-
-                const addressBox = document.getElementById('addressBox');
-                if (addressBox) {
-                    addressBox.addEventListener('click', function() {
-                        this.classList.toggle('open');
-                        const detail = document.getElementById('addressDetail');
-                        if (detail) detail.classList.toggle('open');
-                    });
-                }
-
-                window.addEventListener('resize', function() { setupCanvas(); });
-            }
-
-            /* =============================================
-               INISIALISASI
-               ============================================= */
-            function init() {
-                loadData();
-                initBattery();
-                setupCanvas();
-                bindEvents();
-                const ulEl = document.getElementById('unitLabel');
-                if (ulEl) ulEl.textContent = unitSpeed();
-                requestAnimationFrame(mainLoop);
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
-            }
-        })();
-    </script>
+    <div class="tst" id="tst"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===== STATE ===== */
+var S={
+    speed:0,dSpeed:0,maxSpd:0,trip:0,odo:0,
+    hdg:0,gpsHdgSet:false,compAcc:null,alt:0,
+    lat:0,lon:0,acc:0,gpsSt:'off',unit:'kmh',
+    addr:'Menunggu GPS...',src:'--',
+    lastP:null,lastTs:null,wId:null,wl:null,
+    addrTm:null,lastAL:null,lastALon:null,
+    oHdg:null,batLvl:null,batChg:false,
+    lastSv:0,refInt:null,gpsOn:false,lastFix:0,
+    t0:0,moveT:0,lastMC:0,
+    gF:0,prevSpd:0,prevT:0,
+    ad:{j:'--',l:'--',k:'--',kc:'--',ko:'--',p:'--',pc:'--'},
+    wx:{t:null,h:null,ws:null,wd:null,c:null,d:1},
+    wLat:null,wLon:null,wTs:0
+};
+var trail=[];var TMAX=60,TINT=500,lastTT=0;
+
+/* ===== UTIL ===== */
+function hav(a,b,c,d){var R=6371000,dL=(c-a)*Math.PI/180,dN=(d-b)*Math.PI/180,x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dN/2)*Math.sin(dN/2);return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function brng(a,b,c,d){var dL=(d-b)*Math.PI/180,y=Math.sin(dL)*Math.cos(c*Math.PI/180),x=Math.cos(a*Math.PI/180)*Math.sin(c*Math.PI/180)-Math.sin(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.cos(dL);return((Math.atan2(y,x)*180/Math.PI)+360)%360}
+function tD(k){return S.unit==='mph'?k*0.621371:k}
+function tDd(k){return S.unit==='mph'?k*0.621371:k}
+function uS(){return S.unit==='mph'?'mph':'km/h'}
+function uD(){return S.unit==='mph'?'mi':'km'}
+function mG(){return S.unit==='mph'?150:240}
+function sHue(p){return 128-Math.max(0,Math.min(1,p))*128}
+function sCol(p,a){var h=sHue(p);return a===undefined?'hsl('+h+',100%,50%)':'hsla('+h+',100%,50%,'+a+')'}
+var CA=['U','UTL','TL','TTL','T','TTG','TG','STG','S','SBD','BD','BBD','B','BBL','BL','UBL'];
+var CF=['Utara','Utara Timur Laut','Timur Laut','Timur Timur Laut','Timur','Timur Tenggara','Tenggara','Selatan Tenggara','Selatan','Selatan Barat Daya','Barat Daya','Barat Barat Daya','Barat','Barat Barat Laut','Barat Laut','Utara Barat Laut'];
+function cDir(d){return CA[Math.round(d/22.5)%16]}
+function cDirF(d){return CF[Math.round(d/22.5)%16]}
+function smH(prev,nxt,a){if(prev===null||!isFinite(prev))return nxt;var df=((nxt-prev+540)%360)-180;return(prev+df*a+360)%360}
+function toast(m){var t=document.getElementById('tst');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2000)}
+function fmtT(s){var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=Math.floor(s%60);return(h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(sc<10?'0':'')+sc}
+
+/* ===== PERSIST ===== */
+function ldD(){S.odo=parseFloat(localStorage.getItem('nx_o'))||0;S.unit=localStorage.getItem('nx_u')||'kmh';S.maxSpd=parseFloat(localStorage.getItem('nx_m'))||0}
+function svD(){try{localStorage.setItem('nx_o',S.odo.toFixed(3));localStorage.setItem('nx_u',S.unit);localStorage.setItem('nx_m',S.maxSpd.toFixed(1))}catch(e){}}
+function thSv(){var n=Date.now();if(n-S.lastSv>3000){S.lastSv=n;svD()}}
+
+/* ===== GPS ===== */
+function startGPS(){
+    try{
+        if(!navigator.geolocation){S.gpsSt='error';upGPS();toast('Geolocation tidak didukung');return}
+        S.gpsOn=true;S.gpsSt='acq';S.t0=Date.now();S.lastMC=Date.now();upGPS();
+        if(S.wId!==null){try{navigator.geolocation.clearWatch(S.wId)}catch(e){}S.wId=null}
+        S.wId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,timeout:30000,maximumAge:1000});
+        startRef();
+        toast('GPS aktif - mencari sinyal...');
+    }catch(e){console.error('startGPS:',e);toast('Gagal mulai GPS')}
+}
+function startRef(){stopRef();S.refInt=setInterval(function(){if(!S.gpsOn)return;if(S.lastFix>0&&(Date.now()-S.lastFix)>8000){if(S.wId!==null){try{navigator.geolocation.clearWatch(S.wId)}catch(e){}S.wId=null}S.wId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,timeout:30000,maximumAge:1000})}if(S.gpsSt==='active'||S.gpsSt==='acq'){navigator.geolocation.getCurrentPosition(onPos,function(){},{enableHighAccuracy:true,timeout:8000,maximumAge:1500})}},3000)}
+function stopRef(){if(S.refInt){clearInterval(S.refInt);S.refInt=null}}
+
+function onPos(pos){
+    try{
+        var c=pos.coords,ts=pos.timestamp||Date.now();
+        S.lastFix=Date.now();
+        S.gpsSt=c.accuracy<=30?'active':'acq';
+        S.lat=c.latitude;S.lon=c.longitude;S.acc=c.accuracy;
+        S.alt=(c.altitude!==null&&c.altitude!==undefined)?c.altitude:0;
+        var raw=0,src='CALC';
+        if(c.speed!==null&&c.speed>=0&&isFinite(c.speed)){raw=c.speed*3.6;src='GPS'}
+        if(S.lastP&&S.lastTs){var dt=(ts-S.lastTs)/1000;if(dt>0.1&&dt<10){var dist=hav(S.lastP.lat,S.lastP.lon,c.latitude,c.longitude),calc=(dist/dt)*3.6;if(c.speed===null||c.speed<0||!isFinite(c.speed)){raw=calc;src='CALC'}else{var df=Math.abs(raw-calc);if(df<20){raw=(raw+calc)/2;src='GPS+CALC'}}}}
+        S.src=src;
+        if(S.lastTs){var dt2=(ts-S.lastTs)/1000;if(dt2>0&&Math.abs(raw-S.speed)/dt2>120)raw=S.speed}
+        if(raw<0)raw=0;if(raw>400)raw=0;
+        S.speed=raw;
+        if(S.speed>S.maxSpd)S.maxSpd=S.speed;
+        if(S.lastP&&S.lastTs){var dK=hav(S.lastP.lat,S.lastP.lon,c.latitude,c.longitude)/1000;if(dK<0.5&&dK>0.00001){S.trip+=dK;S.odo+=dK}}
+        if(c.heading!==null&&c.heading>=0&&isFinite(c.heading)){S.hdg=c.heading;S.gpsHdgSet=true}else if(S.lastP){if(hav(S.lastP.lat,S.lastP.lon,c.latitude,c.longitude)>3){S.hdg=brng(S.lastP.lat,S.lastP.lon,c.latitude,c.longitude);S.gpsHdgSet=true}}
+        S.lastP={lat:c.latitude,lon:c.longitude};S.lastTs=ts;
+        debRev(c.latitude,c.longitude);debWx(c.latitude,c.longitude);thSv();upGPS();
+    }catch(e){console.error('onPos:',e)}
+}
+function onErr(e){if(e.code===1){S.gpsSt='error';upGPS();toast('Izin lokasi ditolak')}else{S.gpsSt='acq';upGPS()}}
+function upGPS(){var d=document.getElementById('gpsLed'),t=document.getElementById('gpsSt');d.className='led';if(S.gpsSt==='active'){d.classList.add('grn');t.textContent='ACTIVE';t.style.color='var(--green)'}else if(S.gpsSt==='acq'){d.classList.add('yel');t.textContent='ACQUIRING';t.style.color='var(--amber)'}else if(S.gpsSt==='error'){t.textContent='ERROR';t.style.color='var(--red)'}else{t.textContent='OFF';t.style.color='var(--muted)'}}
+
+/* ===== REVERSE GEOCODE ===== */
+function debRev(la,lo){if(S.lastAL!==null&&hav(S.lastAL,S.lastALon,la,lo)<10)return;clearTimeout(S.addrTm);S.addrTm=setTimeout(function(){doRev(la,lo)},1200)}
+function doRev(la,lo){try{fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+la+'&lon='+lo+'&zoom=18&addressdetails=1&accept-language=id',{headers:{'User-Agent':'NexusFD/2.0'}}).then(function(r){return r.json()}).then(function(d){if(d&&d.display_name){S.addr=d.display_name.split(',').slice(0,3).join(',').trim();S.lastAL=la;S.lastALon=lo;var a=d.address||{};var jp=[a.road,a.pedestrian,a.footway,a.residential,a.house_number].filter(Boolean);S.ad.j=jp.length?jp.join(' No. '):'--';S.ad.l=a.neighbourhood||a.hamlet||a.quarter||a.residential||'--';S.ad.k=a.village||a.suburb||a.city_district||'--';S.ad.kc=a.city_district||a.subdistrict||a.county||'--';S.ad.ko=a.city||a.town||a.regency||a.county||'--';S.ad.p=a.state||'--';S.ad.pc=a.postcode||'--'}}).catch(function(){})}catch(e){}}
+
+/* ===== WEATHER ===== */
+function debWx(la,lo){var n=Date.now(),mv=true;if(S.wLat!==null)mv=hav(S.wLat,S.wLon,la,lo)>500;if(!mv&&(n-S.wTs)<300000)return;doWx(la,lo)}
+function doWx(la,lo){try{fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,is_day&timezone=auto').then(function(r){return r.json()}).then(function(d){if(d&&d.current){S.wx.t=d.current.temperature_2m;S.wx.h=d.current.relative_humidity_2m;S.wx.ws=d.current.wind_speed_10m;S.wx.wd=d.current.wind_direction_10m;S.wx.c=d.current.weather_code;S.wx.d=d.current.is_day;S.wLat=la;S.wLon=lo;S.wTs=Date.now()}}).catch(function(){})}catch(e){}}
+function wxI(c,d){var day=d!==0,m={0:{t:day?'Cerah':'Cerah Malam',i:day?'fa-sun':'fa-moon'},1:{t:'Cerah Berawan',i:day?'fa-cloud-sun':'fa-cloud-moon'},2:{t:'Berawan Sebagian',i:'fa-cloud-sun'},3:{t:'Mendung',i:'fa-cloud'},45:{t:'Berkabut',i:'fa-smog'},48:{t:'Kabut Beku',i:'fa-smog'},51:{t:'Gerimis Ringan',i:'fa-cloud-rain'},53:{t:'Gerimis',i:'fa-cloud-rain'},55:{t:'Gerimis Lebat',i:'fa-cloud-rain'},61:{t:'Hujan Ringan',i:'fa-cloud-rain'},63:{t:'Hujan Sedang',i:'fa-cloud-showers-heavy'},65:{t:'Hujan Lebat',i:'fa-cloud-showers-heavy'},71:{t:'Salju Ringan',i:'fa-snowflake'},73:{t:'Salju Sedang',i:'fa-snowflake'},75:{t:'Salju Lebat',i:'fa-snowflake'},80:{t:'Hujan Lokal Ringan',i:'fa-cloud-rain'},81:{t:'Hujan Lokal Sedang',i:'fa-cloud-showers-heavy'},82:{t:'Hujan Lokal Deras',i:'fa-cloud-showers-heavy'},95:{t:'Badai Petir',i:'fa-bolt'},96:{t:'Badai + Hujan Es',i:'fa-cloud-bolt'},99:{t:'Badai + Hujan Es Lebat',i:'fa-cloud-bolt'}};return m[c]||{t:'--',i:'fa-question'}}
+
+/* ===== WAKE LOCK ===== */
+function reqWL(){try{if('wakeLock' in navigator)navigator.wakeLock.request('screen').then(function(l){S.wl=l;l.addEventListener('release',function(){S.wl=null})}).catch(function(){})}catch(e){}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(!S.wl)reqWL();if(S.gpsOn&&S.wId===null){try{S.wId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,timeout:30000,maximumAge:2000})}catch(e){}}}});
+
+/* ===== BATTERY ===== */
+function initBat(){try{if('getBattery' in navigator)navigator.getBattery().then(function(b){S.batLvl=b.level;S.batChg=b.charging;b.addEventListener('levelchange',function(){S.batLvl=b.level});b.addEventListener('chargingchange',function(){S.batChg=b.charging})}).catch(function(){})}catch(e){}}
+function batH(){if(S.batLvl===null)return'<i class="fas fa-battery-full"></i>';var p=Math.round(S.batLvl*100),i='fa-battery-full';if(p<=10)i='fa-battery-empty';else if(p<=25)i='fa-battery-quarter';else if(p<=50)i='fa-battery-half';else if(p<=75)i='fa-battery-three-quarters';if(S.batChg)i='fa-bolt';return'<i class="fas '+i+'"></i> '+p+'%'}
+
+/* ===== ORIENTATION ===== */
+function initOri(){
+    try{
+        var en=('ondeviceorientationabsolute' in window)?'deviceorientationabsolute':'deviceorientation';
+        if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+            DeviceOrientationEvent.requestPermission().then(function(r){if(r==='granted')window.addEventListener('deviceorientation',onOri)}).catch(function(){})
+        }else{window.addEventListener(en,onOri)}
+    }catch(e){console.warn('initOri:',e)}
+}
+function scrA(){if(screen.orientation&&typeof screen.orientation.angle==='number')return screen.orientation.angle;if(typeof window.orientation==='number')return window.orientation;return 0}
+function onOri(e){
+    try{
+        var raw=null;
+        if(typeof e.webkitCompassHeading==='number'&&isFinite(e.webkitCompassHeading)){raw=e.webkitCompassHeading;S.compAcc=(typeof e.webkitCompassAccuracy==='number')?e.webkitCompassAccuracy:null}
+        else if(e.alpha!==null&&e.alpha!==undefined){raw=(360-e.alpha+scrA())%360;if(raw<0)raw+=360;S.compAcc=null}
+        else return;
+        S.oHdg=smH(S.oHdg,raw,0.45);
+    }catch(e){}
+}
+
+/* ===== FULLSCREEN ===== */
+function togFS(){if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(function(){});try{screen.orientation.lock('any').catch(function(){})}catch(e){}}else{document.exitFullscreen().catch(function(){})}}
+document.addEventListener('fullscreenchange',function(){document.getElementById('fsIc').className=document.fullscreenElement?'fas fa-compress':'fas fa-expand'});
+
+/* ===== VIBRATE ===== */
+var lastVS=0;
+function chkVib(){[60,80,100,120,140,160,180,200].forEach(function(t){if(S.dSpeed>=t&&lastVS<t){if(navigator.vibrate)navigator.vibrate(50)}});lastVS=Math.floor(S.dSpeed)}
+
+/* ===== CANVAS ===== */
+var cv,cx,sz,dp,hcv,hcx,hw,hh;
+
+function setupCv(){
+    try{
+        cv=document.getElementById('gaugeCanvas');
+        var area=document.getElementById('gaugeArea');
+        var w=area.clientWidth-4,h=area.clientHeight-4;
+        sz=Math.max(80,Math.min(w,h,700));
+        dp=window.devicePixelRatio||1;
+        cv.width=sz*dp;cv.height=sz*dp;
+        cv.style.width=sz+'px';cv.style.height=sz+'px';
+        cx=cv.getContext('2d');cx.scale(dp,dp);
+
+        hcv=document.getElementById('hsiCanvas');
+        hw=hcv.parentElement.clientWidth-16;hh=48;
+        hcv.width=hw*dp;hcv.height=hh*dp;
+        hcv.style.width=hw+'px';hcv.style.height=hh+'px';
+        hcx=hcv.getContext('2d');hcx.scale(dp,dp);
+    }catch(e){console.error('setupCv:',e)}
+}
+
+/* ===== DRAW GAUGE ===== */
+function drawGauge(){
+    if(!cx||sz<50)return;
+    var s=sz,ccx=s/2,ccy=s/2,R=s*0.46;
+    var sA=Math.PI*0.75,eA=Math.PI*2.25,tA=eA-sA;
+    var mg=mG();
+    var spd=Math.max(0,Math.min(tD(S.dSpeed),mg));
+    var pct=spd/mg;
+    cx.clearRect(0,0,s,s);
+
+    /* Background circle */
+    var bg=cx.createRadialGradient(ccx,ccy,0,ccx,ccy,R*1.05);
+    bg.addColorStop(0,'#0d0d0d');bg.addColorStop(0.85,'#090909');bg.addColorStop(1,'#050505');
+    cx.beginPath();cx.arc(ccx,ccy,R*0.94,0,Math.PI*2);cx.fillStyle=bg;cx.fill();
+
+    /* Outer rings */
+    cx.beginPath();cx.arc(ccx,ccy,R*0.97,sA,eA);cx.strokeStyle='#333';cx.lineWidth=s*0.018;cx.lineCap='butt';cx.stroke();
+    cx.beginPath();cx.arc(ccx,ccy,R*1.0,sA,eA);cx.strokeStyle='#222';cx.lineWidth=s*0.005;cx.stroke();
+
+    /* Zone colors */
+    var zones=[{e:tD(80),c:'#00ff41'},{e:tD(120),c:'#ffb000'},{e:mg,c:'#ff2020'}];
+    var zs=0;
+    for(var zi=0;zi<zones.length;zi++){
+        var ze=Math.min(zones[zi].e,mg);if(ze<=zs)continue;
+        cx.beginPath();cx.arc(ccx,ccy,R*0.89,sA+(zs/mg)*tA,sA+(ze/mg)*tA);
+        cx.strokeStyle=zones[zi].c+'22';cx.lineWidth=s*0.05;cx.lineCap='butt';cx.stroke();
+        zs=ze;if(ze>=mg)break;
+    }
+
+    /* Ticks & numbers */
+    var step=S.unit==='mph'?20:20;
+    for(var v=0;v<=mg;v+=5){
+        var a=sA+(v/mg)*tA;
+        var isMaj=v%step===0;
+        var isMid=v%10===0&&!isMaj;
+        var oR=R*0.93;
+        var iR,lw,col;
+        if(isMaj){iR=R*0.79;lw=Math.max(1.5,s*0.016);col='#ffffff'}
+        else if(isMid){iR=R*0.84;lw=Math.max(1,s*0.009);col='rgba(255,255,255,0.5)'}
+        else{iR=R*0.87;lw=Math.max(0.5,s*0.005);col='rgba(255,255,255,0.2)'}
+        cx.beginPath();cx.moveTo(ccx+Math.cos(a)*iR,ccy+Math.sin(a)*iR);cx.lineTo(ccx+Math.cos(a)*oR,ccy+Math.sin(a)*oR);
+        cx.strokeStyle=col;cx.lineWidth=lw;cx.lineCap='round';cx.stroke();
+        if(isMaj){
+            var nR=R*0.72;
+            cx.fillStyle='#ffffff';
+            cx.font='bold '+Math.max(9,s*0.034)+'px "Orbitron",sans-serif';
+            cx.textAlign='center';cx.textBaseline='middle';
+            cx.fillText(Math.round(v),ccx+Math.cos(a)*nR,ccy+Math.sin(a)*nR);
+        }
+    }
+
+    /* Active arc */
+    if(spd>0.3){
+        var spA=sA+pct*tA;
+        var col=sCol(pct);
+        cx.save();cx.shadowColor=col;cx.shadowBlur=14+pct*18;
+        cx.beginPath();cx.arc(ccx,ccy,R*0.89,sA,spA);
+        cx.strokeStyle=sCol(pct,0.3);cx.lineWidth=s*0.032;cx.lineCap='round';cx.stroke();
+        cx.restore();
+        cx.beginPath();cx.arc(ccx,ccy,R*0.89,sA,spA);
+        cx.strokeStyle=col;cx.lineWidth=s*0.022;cx.lineCap='round';cx.stroke();
+        /* Tip dot */
+        var tx=ccx+Math.cos(spA)*R*0.89,ty=ccy+Math.sin(spA)*R*0.89;
+        cx.save();cx.shadowColor=col;cx.shadowBlur=10;
+        cx.beginPath();cx.arc(tx,ty,Math.max(2,s*0.01),0,Math.PI*2);cx.fillStyle=col;cx.fill();
+        cx.restore();
+    }
+
+    /* Inner dashed ring */
+    cx.setLineDash([s*0.006,s*0.01]);
+    cx.beginPath();cx.arc(ccx,ccy,R*0.56,0,Math.PI*2);cx.strokeStyle='rgba(255,255,255,0.06)';cx.lineWidth=1;cx.stroke();
+    cx.setLineDash([]);
+
+    /* Needle */
+    var nA=sA+pct*tA;
+    var nL=R*0.83,nB=R*0.06;
+    cx.save();cx.translate(ccx,ccy);cx.rotate(nA);
+    cx.shadowColor='rgba(255,255,255,0.5)';cx.shadowBlur=6;
+    cx.beginPath();cx.moveTo(nL,0);cx.lineTo(-nB,-s*0.008);cx.lineTo(-nB,s*0.008);cx.closePath();
+    var ng=cx.createLinearGradient(-nB,0,nL,0);
+    ng.addColorStop(0,'rgba(255,255,255,0.3)');ng.addColorStop(0.5,'#ffffff');ng.addColorStop(1,sCol(pct));
+    cx.fillStyle=ng;cx.fill();
+    cx.restore();
+
+    /* Center hub */
+    cx.beginPath();cx.arc(ccx,ccy,s*0.035,0,Math.PI*2);cx.fillStyle='#1a1a1a';cx.fill();
+    cx.strokeStyle='#555';cx.lineWidth=1.5;cx.stroke();
+    cx.beginPath();cx.arc(ccx,ccy,s*0.008,0,Math.PI*2);cx.fillStyle='#00ff41';cx.fill();
+
+    /* Digital speed */
+    var ds=Math.round(spd);
+    cx.save();cx.shadowColor=sCol(pct);cx.shadowBlur=10;
+    cx.fillStyle='#ffffff';
+    cx.font='900 '+Math.max(24,s*0.16)+'px "Orbitron",sans-serif';
+    cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText(ds,ccx,ccy+s*0.18);
+    cx.restore();
+
+    /* Unit label */
+    cx.fillStyle='rgba(255,255,255,0.7)';
+    cx.font='bold '+Math.max(9,s*0.038)+'px "Orbitron",sans-serif';
+    cx.fillText(uS(),ccx,ccy+s*0.27);
+
+    /* Source */
+    cx.fillStyle='rgba(255,255,255,0.3)';
+    cx.font=Math.max(6,s*0.022)+'px "Share Tech Mono",monospace';
+    cx.fillText(S.src,ccx,ccy+s*0.32);
+
+    /* Speed trail */
+    drawTrail(ccx,ccy+s*0.40,s*0.48,s*0.055);
+}
+
+/* ===== SPEED TRAIL ===== */
+function drawTrail(x,y,w,h){
+    if(trail.length<2)return;
+    var mg=mG(),x0=x-w/2,y0=y-h/2;
+    cx.beginPath();cx.moveTo(x0,y0+h);
+    for(var i=0;i<trail.length;i++){
+        var px=x0+(i/(TMAX-1))*w;
+        var py=y0+h-Math.max(0,Math.min(1,tD(trail[i])/mg))*h;
+        cx.lineTo(px,py);
+    }
+    cx.lineTo(x0+((trail.length-1)/(TMAX-1))*w,y0+h);cx.closePath();
+    var sg=cx.createLinearGradient(0,y0,0,y0+h);
+    sg.addColorStop(0,'rgba(0,255,65,0.2)');sg.addColorStop(1,'rgba(0,255,65,0.01)');
+    cx.fillStyle=sg;cx.fill();
+    cx.beginPath();
+    for(var j=0;j<trail.length;j++){
+        var px2=x0+(j/(TMAX-1))*w;
+        var py2=y0+h-Math.max(0,Math.min(1,tD(trail[j])/mg))*h;
+        j===0?cx.moveTo(px2,py2):cx.lineTo(px2,py2);
+    }
+    cx.strokeStyle='rgba(0,255,65,0.6)';cx.lineWidth=1.2;cx.stroke();
+}
+
+/* ===== DRAW HSI ===== */
+function drawHSI(){
+    if(!hcx||hw<20||hh<10)return;
+    var heading=S.oHdg!==null?S.oHdg:S.hdg;
+    hcx.clearRect(0,0,hw,hh);
+    hcx.fillStyle='#0e0e0e';hcx.fillRect(0,0,hw,hh);
+
+    var cX=hw/2;
+    var degPx=360/hw;
+
+    for(var off=-Math.ceil(hw/2*degPx);off<=Math.ceil(hw/2*degPx);off++){
+        var deg=((heading+off)%360+360)%360;
+        var dr=Math.round(deg);
+        var x=cX+off/degPx;
+        if(x<-20||x>hw+20)continue;
+
+        var isCard=dr%90===0;
+        var isInt=dr%45===0&&!isCard;
+        var isMaj=dr%10===0&&!isCard&&!isInt;
+        var isMin=dr%5===0&&!isMaj&&!isCard&&!isInt;
+
+        if(isCard){
+            hcx.strokeStyle='#ffffff';hcx.lineWidth=2;
+            hcx.beginPath();hcx.moveTo(x,0);hcx.lineTo(x,hh*0.55);hcx.stroke();
+            var lb={0:'N',90:'E',180:'S',270:'W'};
+            hcx.fillStyle=dr===0?'#ff2020':'#ffffff';
+            hcx.font='bold '+Math.max(12,hh*0.36)+'px "Orbitron",sans-serif';
+            hcx.textAlign='center';hcx.textBaseline='top';
+            hcx.fillText(lb[dr],x,hh*0.58);
+        }else if(isInt){
+            hcx.strokeStyle='rgba(255,255,255,0.45)';hcx.lineWidth=1.5;
+            hcx.beginPath();hcx.moveTo(x,0);hcx.lineTo(x,hh*0.38);hcx.stroke();
+            hcx.fillStyle='rgba(255,255,255,0.45)';
+            hcx.font='bold '+Math.max(7,hh*0.2)+'px "Share Tech Mono",monospace';
+            hcx.textAlign='center';hcx.textBaseline='top';
+            hcx.fillText(dr+'°',x,hh*0.40);
+        }else if(isMaj){
+            hcx.strokeStyle='rgba(255,255,255,0.25)';hcx.lineWidth=1;
+            hcx.beginPath();hcx.moveTo(x,0);hcx.lineTo(x,hh*0.28);hcx.stroke();
+        }else if(isMin){
+            hcx.strokeStyle='rgba(255,255,255,0.1)';hcx.lineWidth=0.5;
+            hcx.beginPath();hcx.moveTo(x,0);hcx.lineTo(x,hh*0.18);hcx.stroke();
+        }
+    }
+
+    /* Center dashed line */
+    hcx.strokeStyle='rgba(0,255,65,0.25)';hcx.lineWidth=1;hcx.setLineDash([3,3]);
+    hcx.beginPath();hcx.moveTo(cX,0);hcx.lineTo(cX,hh);hcx.stroke();
+    hcx.setLineDash([]);
+
+    /* Fixed triangle */
+    hcx.fillStyle='#00ff41';
+    hcx.beginPath();hcx.moveTo(cX,hh+3);hcx.lineTo(cX-7,hh-7);hcx.lineTo(cX+7,hh-7);hcx.closePath();hcx.fill();
+
+    /* Border */
+    hcx.strokeStyle='#2a2a2a';hcx.lineWidth=1;hcx.strokeRect(0,0,hw,hh);
+}
+
+/* ===== MAIN LOOP ===== */
+function mainLoop(){
+    try{
+        var now=performance.now();
+
+        /* Smooth speed */
+        var df=S.speed-S.dSpeed;
+        if(Math.abs(df)>0.05){var f=Math.abs(df)>20?0.15:Math.abs(df)>5?0.1:0.06;S.dSpeed+=df*f}
+        else S.dSpeed=S.speed;
+        if(S.dSpeed<0)S.dSpeed=0;
+
+        /* G-Force */
+        if(S.prevT>0){var dt=(now-S.prevT)/1000;if(dt>0.05&&dt<2){var dv=(S.dSpeed-S.prevSpd)/3.6;var ac=dv/dt;var g=ac/9.81;S.gF=S.gF*0.7+Math.max(-3,Math.min(3,g))*0.3}}
+        S.prevSpd=S.dSpeed;S.prevT=now;
+
+        /* Moving time */
+        if(S.gpsOn&&S.gpsSt==='active'&&S.lastMC>0){if(S.dSpeed>2)S.moveT+=(now-S.lastMC)/1000}
+        S.lastMC=now;
+
+        /* Trail */
+        if(now-lastTT>TINT){trail.push(S.dSpeed);if(trail.length>TMAX)trail.shift();lastTT=now}
+
+        /* Draw */
+        drawGauge();
+        drawHSI();
+
+        /* Update DOM */
+        upDOM();
+
+        /* Vibrate */
+        chkVib();
+    }catch(e){console.error('mainLoop:',e)}
+    requestAnimationFrame(mainLoop);
+}
+
+/* ===== UPDATE DOM ===== */
+function upDOM(){
+    try{
+        var mg=mG(),pct=Math.max(0,Math.min(1,tD(S.dSpeed)/mg));
+        var now=new Date();
+        document.getElementById('clock').textContent=(now.getHours()<10?'0':'')+now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+':'+(now.getSeconds()<10?'0':'')+now.getSeconds();
+        document.getElementById('batIc').innerHTML=batH();
+
+        /* Heading */
+        var dh=S.oHdg!==null?S.oHdg:S.hdg;
+        document.getElementById('hdgDeg').textContent=Math.round(dh)+'°';
+        document.getElementById('hdgDir').textContent=cDirF(dh);
+
+        /* Data link status */
+        var lk=document.getElementById('linkStat');
+        if(S.gpsOn&&S.lastFix>0&&(Date.now()-S.lastFix)<3000){lk.className='ok';lk.textContent='DATA LINK'}
+        else{lk.className='no';lk.textContent='NO LINK'}
+
+        /* Data panels */
+        var td=tDd(S.trip);document.getElementById('tripV').textContent=td<100?td.toFixed(3):td.toFixed(1);document.getElementById('tripU').textContent=uD();
+        var od=tDd(S.odo);document.getElementById('odoV').textContent=od<1000?od.toFixed(1):od.toFixed(0);document.getElementById('odoU').textContent=uD();
+        document.getElementById('maxV').textContent=Math.round(tD(S.maxSpd));
+        document.getElementById('maxV').style.color=sCol(Math.min(1,tD(S.maxSpd)/mg));
+        document.getElementById('maxU').textContent=uS();
+
+        /* Science */
+        var gf=Math.abs(S.gF);var ge=document.getElementById('gfV');
+        ge.textContent=(S.gF>=0?'+':'')+S.gF.toFixed(2);
+        ge.style.color=gf>0.8?'var(--red)':gf>0.4?'var(--amber)':'var(--green)';
+
+        var avg=S.moveT>0?(S.trip/S.moveT*3600):0;
+        document.getElementById('avgV').textContent=Math.round(tD(avg));document.getElementById('avgU').textContent=uS();
+        if(S.t0>0)document.getElementById('timeV').textContent=fmtT((Date.now()-S.t0)/1000);
+
+        /* Location */
+        document.getElementById('addrTxt').textContent=S.addr;
+        document.getElementById('dJ').textContent=S.ad.j;document.getElementById('dL').textContent=S.ad.l;
+        document.getElementById('dK').textContent=S.ad.k;document.getElementById('dKc').textContent=S.ad.kc;
+        document.getElementById('dKo').textContent=S.ad.ko;document.getElementById('dP').textContent=S.ad.p;
+        document.getElementById('dPC').textContent=S.ad.pc;
+
+        /* Weather */
+        if(S.wx.t!==null){
+            document.getElementById('wT').textContent=S.wx.t.toFixed(0);
+            document.getElementById('wH').textContent=S.wx.h;
+            document.getElementById('wW').textContent=S.wx.ws.toFixed(0);
+            document.getElementById('wWd').textContent='km/h '+cDir(S.wx.wd>=0?S.wx.wd:0);
+        }
+
+        /* Extra */
+        document.getElementById('altT').textContent=S.alt>0?Math.round(S.alt)+' m':'-- m';
+        document.getElementById('crdT').textContent=S.gpsOn?S.lat.toFixed(5)+', '+S.lon.toFixed(5):'-, -';
+        document.getElementById('satT').textContent=S.gpsSt==='active'?'FIX':'--';
+        document.getElementById('accT').textContent=S.gpsSt==='active'?Math.round(S.acc)+' m':'-- m';
+        if(S.wx.c!==null){var wi=wxI(S.wx.c,S.wx.d);document.getElementById('cdIc').className='fas '+wi.i;document.getElementById('cdTx').textContent=wi.t}
+
+        document.getElementById('untLb').textContent=uS();
+    }catch(e){console.error('upDOM:',e)}
+}
+
+/* ===== EVENTS ===== */
+document.getElementById('btnGo').addEventListener('click',function(){
+    try{
+        document.getElementById('gpsOvl').classList.add('hidden');
+        /* Delay canvas setup so layout recalculates after overlay hides */
+        setTimeout(function(){setupCv()},120);
+        startGPS();
+        reqWL();
+        initOri();
+    }catch(e){
+        console.error('btnGo:',e);
+        toast('Error: '+e.message);
+    }
+});
+document.getElementById('btnRst').addEventListener('click',function(){S.trip=0;S.moveT=0;S.maxSpd=0;trail.length=0;svD();toast('Trip & max speed direset')});
+document.getElementById('btnUnt').addEventListener('click',function(){S.unit=S.unit==='kmh'?'mph':'kmh';svD();toast('Satuan: '+uS())});
+document.getElementById('btnFS').addEventListener('click',togFS);
+document.getElementById('addrBox').addEventListener('click',function(){document.getElementById('addrBox').classList.toggle('open');document.getElementById('addrDet').classList.toggle('open')});
+window.addEventListener('resize',function(){try{setupCv()}catch(e){}});
+
+/* ===== INIT ===== */
+function init(){
+    try{
+        ldD();
+        initBat();
+        setupCv();
+        document.getElementById('untLb').textContent=uS();
+        requestAnimationFrame(mainLoop);
+    }catch(e){
+        console.error('init:',e);
+        /* Fallback: still try to make button work */
+        document.getElementById('btnGo').addEventListener('click',function(){
+            document.getElementById('gpsOvl').classList.add('hidden');
+            setTimeout(function(){setupCv()},120);
+            startGPS();reqWL();initOri();
+        });
+    }
+}
+
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init}
+
+})();
+</script>
 </body>
 </html>
