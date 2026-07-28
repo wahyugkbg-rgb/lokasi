@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS Speedometer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root{--bg:#030810;--card:rgba(6,14,30,0.97);--accent:#00f0ff;--accent2:#ff00e5;--green:#39ff14;--amber:#ffea00;--red:#ff0844;--purple:#7c4dff;--text:#fff;--muted:#a8d8ea;--border:rgba(0,240,255,0.4)}
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;-webkit-tap-highlight-color:transparent;user-select:none}
+        #app{width:100%;min-height:100%;display:flex;flex-direction:column;position:relative;overflow:visible}
+
+        /* Grid & scanlines */
+        #app::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,240,255,0.018)1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.018)1px,transparent 1px);background-size:32px 32px}
+        .scanlines{position:fixed;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05)2px,rgba(0,0,0,0.05)4px)}
+
+        /* Scan sweep */
+        .scan-sweep{position:fixed;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent 5%,rgba(0,240,255,0.18)50%,transparent 95%);z-index:998;pointer-events:none;animation:sweepDown 5s linear infinite}
+        @keyframes sweepDown{0%{top:-2px;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100%;opacity:0}}
+
+        /* Glow orbs */
+        .glow-orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.1;pointer-events:none;z-index:0}
+        .orb-1{width:350px;height:350px;background:var(--accent);top:-150px;left:-120px;animation:floatOrb 10s ease-in-out infinite}
+        .orb-2{width:280px;height:280px;background:var(--green);bottom:-100px;right:-100px;animation:floatOrb 13s ease-in-out infinite reverse}
+        .orb-3{width:200px;height:200px;background:var(--purple);top:35%;left:55%;animation:floatOrb 15s ease-in-out infinite 3s;opacity:0.05}
+        @keyframes floatOrb{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,20px)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px var(--accent),inset 0 0 8px rgba(0,240,255,0.05)}50%{box-shadow:0 0 20px var(--accent),inset 0 0 12px rgba(0,240,255,0.08)}}
+
+        /* HUD corner brackets */
+        .hud-frame{position:relative}
+        .hud-frame::before,.hud-frame::after{content:'';position:absolute;width:10px;height:10px;border-color:var(--accent);border-style:solid;opacity:.6;pointer-events:none}
+        .hud-frame::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+        .hud-frame::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+
+        /* Status bar */
+        #statusBar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:5px 12px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(3,8,16,0.8);backdrop-filter:blur(8px)}
+        .st-group{display:flex;align-items:center;gap:5px}
+        .gps-dot{width:6px;height:6px;border-radius:50%;background:var(--red);transition:all .5s;flex-shrink:0}
+        .gps-dot.acquiring{background:var(--amber);animation:pulse 1s ease-in-out infinite}
+        .gps-dot.active{background:var(--green);box-shadow:0 0 10px var(--green)}
+        #clock{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--accent);letter-spacing:2px}
+
+        /* Gauge area */
+        #gaugeArea{flex:1.3;display:flex;align-items:center;justify-content:center;position:relative;z-index:5;min-height:280px;padding:2px}
+        #gaugeCanvas{display:block}
+
+        /* Compass area */
+        #compassArea{position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px 6px;flex-shrink:0}
+        #compassCanvas{display:block;filter:drop-shadow(0 0 12px rgba(0,240,255,0.2))}
+        #compassInfo{display:flex;flex-direction:column;align-items:center;margin-top:-4px}
+        #compassDegree{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:var(--accent);letter-spacing:2px;text-shadow:0 0 14px rgba(0,240,255,0.6)}
+        #compassArahLabel{font-size:7px;letter-spacing:3px;color:var(--muted);margin-top:1px;font-weight:700}
+        #compassArahText{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--green);letter-spacing:2px;margin-top:1px;text-shadow:0 0 10px rgba(57,255,20,0.4);transition:color .3s}
+        #compassCalib{display:none;font-size:7px;letter-spacing:1px;font-weight:700;color:var(--amber);margin-top:3px;text-align:center;max-width:220px;animation:pulse 1.4s ease-in-out infinite}
+
+        /* Data panels */
+        #dataPanels{position:relative;z-index:10;padding:0 8px 4px;flex-shrink:0}
+        .data-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+        .data-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 6px;text-align:center;backdrop-filter:blur(6px);transition:border-color .3s,box-shadow .3s}
+        .data-card:hover{border-color:var(--accent);box-shadow:0 0 10px rgba(0,240,255,0.1)}
+        .data-label{font-size:7px;letter-spacing:3px;color:var(--muted);margin-bottom:1px;font-weight:700}
+        .data-value{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--text);transition:color .3s}
+        .data-unit{font-size:7px;color:var(--muted);margin-top:0;font-weight:700}
+
+        /* Location */
+        #locationInfo{position:relative;z-index:10;display:flex;align-items:center;gap:6px;padding:4px 10px;flex-shrink:0}
+        .address-box{flex:1;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:10px;color:var(--amber);font-weight:bold;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;backdrop-filter:blur(6px);cursor:pointer}
+        .address-box i{color:var(--accent);flex-shrink:0;font-size:10px}
+        .address-box span{overflow:hidden;text-overflow:ellipsis}
+        .address-box .chev{margin-left:auto;color:var(--accent);flex-shrink:0;font-size:8px;transition:transform .25s}
+        .address-box.open .chev{transform:rotate(180deg)}
+
+        /* Address detail */
+        #addressDetail{position:relative;z-index:10;margin:0 10px 4px;overflow:hidden;max-height:0;opacity:0;transition:max-height .35s ease,opacity .25s ease}
+        #addressDetail.open{max-height:260px;opacity:1}
+        #addressDetail .detail-inner{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;backdrop-filter:blur(6px)}
+        .detail-row{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dashed rgba(0,240,255,0.1);font-size:9px}
+        .detail-row:last-child{border-bottom:none}
+        .detail-row .dk{color:var(--muted);letter-spacing:1px;flex-shrink:0;font-weight:700}
+        .detail-row .dv{color:var(--text);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+        .detail-note{font-size:7px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+        /* Weather */
+        #weatherPanels{position:relative;z-index:10;padding:0 8px 4px;flex-shrink:0}
+        .weather-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+        .weather-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;backdrop-filter:blur(6px)}
+        .weather-card i{font-size:11px;margin-bottom:1px;display:block}
+        .weather-label{font-size:7px;letter-spacing:2px;color:var(--muted);margin-bottom:1px;font-weight:700}
+        .weather-value{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700}
+        .weather-unit{font-size:7px;color:var(--muted);font-weight:700}
+
+        /* Extra info */
+        #extraInfo{position:relative;z-index:10;display:flex;justify-content:center;flex-wrap:wrap;gap:8px 14px;padding:2px 12px;font-size:8px;color:var(--muted);flex-shrink:0;font-weight:700}
+        #extraInfo i{color:var(--accent);margin-right:2px;font-size:7px}
+        #extraInfo #condIcon{color:var(--amber)}
+
+        /* Controls */
+        #controls{position:relative;z-index:10;display:flex;justify-content:center;gap:6px;padding:6px 12px 12px;flex-shrink:0}
+        #controls button{background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:9px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;backdrop-filter:blur(6px)}
+        #controls button:active{background:rgba(0,240,255,0.1);border-color:var(--accent);transform:scale(.95)}
+        #controls button i{color:var(--accent);font-size:10px}
+
+        /* GPS overlay */
+        #gpsOverlay{position:fixed;inset:0;background:rgba(3,8,16,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;text-align:center;padding:40px;transition:opacity .6s,visibility .6s}
+        #gpsOverlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+        .overlay-icon{font-size:48px;color:var(--accent);margin-bottom:20px;animation:pulse 2s ease-in-out infinite}
+        .overlay-title{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;margin-bottom:6px;letter-spacing:6px;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .overlay-sub{color:var(--muted);font-size:11px;line-height:1.8;max-width:300px}
+        .overlay-ver{font-size:8px;color:rgba(0,240,255,0.3);margin-top:16px;letter-spacing:2px}
+        .btn-activate{margin-top:28px;background:linear-gradient(135deg,var(--accent),#00c8ff);border:none;border-radius:10px;color:#030810;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;padding:12px 40px;cursor:pointer;letter-spacing:2px;transition:all .2s;box-shadow:0 0 30px rgba(0,240,255,0.25)}
+        .btn-activate:active{transform:scale(.96)}
+
+        /* Toast */
+        .toast{position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--card);border:1px solid var(--accent);border-radius:6px;padding:7px 16px;font-size:10px;color:var(--accent);z-index:3000;opacity:0;transition:all .3s;pointer-events:none;backdrop-filter:blur(10px);box-shadow:0 0 20px rgba(0,240,255,0.15)}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+        /* Moving indicator */
+        .moving-dot{width:5px;height:5px;border-radius:50%;background:var(--red);transition:all .3s;flex-shrink:0}
+        .moving-dot.active{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1s ease-in-out infinite}
+
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+        @media(max-height:640px){
+            .data-card{padding:3px 4px}.data-value{font-size:12px}.data-label{font-size:6px}
+            #locationInfo{padding:3px 8px}#controls{padding:4px 8px 8px}
+            #compassArea{padding:0 8px 3px}#compassDegree{font-size:15px}#compassArahText{font-size:11px}
+            .weather-card{padding:3px 3px}.weather-value{font-size:11px}
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="scanlines"></div>
+    <div class="scan-sweep"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+
+    <header id="statusBar">
+        <div class="st-group">
+            <div class="gps-dot" id="gpsDot"></div>
+            <div class="moving-dot" id="movingDot"></div>
+            <span id="gpsStatusText">NONAKTIF</span>
+        </div>
+        <span style="font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:rgba(0,240,255,0.5)">NEXUS</span>
+        <span id="clock">00:00:00</span>
+        <div class="st-group">
+            <span id="batteryIcon"><i class="fas fa-battery-full"></i></span>
+            <span id="accText" style="font-size:8px">--</span>
+        </div>
+    </header>
+
+    <div id="gaugeArea"><canvas id="gaugeCanvas"></canvas></div>
+
+    <section id="compassArea">
+        <canvas id="compassCanvas"></canvas>
+        <div id="compassInfo">
+            <span id="compassDegree">---°</span>
+            <span id="compassArahLabel">SEDANG MENGHADAP</span>
+            <span id="compassArahText">MENUNGGU SENSOR</span>
+            <span id="compassCalib">GOYANGKAN HP MEMBENTUK ANGKA 8 UNTUK KALIBRASI</span>
+        </div>
+    </section>
+
+    <section id="dataPanels">
+        <div class="data-row">
+            <div class="data-card hud-frame"><div class="data-label">TRIP</div><div class="data-value" id="tripVal">0.000</div><div class="data-unit" id="tripUnit">km</div></div>
+            <div class="data-card hud-frame"><div class="data-label">ODOMETER</div><div class="data-value" id="odoVal">0.0</div><div class="data-unit" id="odoUnit">km</div></div>
+            <div class="data-card hud-frame"><div class="data-label">MAX</div><div class="data-value" id="maxVal">0</div><div class="data-unit" id="maxUnit">km/h</div></div>
+        </div>
+    </section>
+
+    <section id="sciencePanels" style="position:relative;z-index:10;padding:0 8px 4px;flex-shrink:0">
+        <div class="data-row">
+            <div class="data-card hud-frame"><div class="data-label">G-FORCE</div><div class="data-value" id="gForceVal" style="color:var(--green)">0.00</div><div class="data-unit">G</div></div>
+            <div class="data-card hud-frame"><div class="data-label">RATA-RATA</div><div class="data-value" id="avgVal">0</div><div class="data-unit" id="avgUnit">km/h</div></div>
+            <div class="data-card hud-frame"><div class="data-label">WAKTU</div><div class="data-value" id="timeVal" style="font-size:12px">00:00:00</div><div class="data-unit">ELAPSED</div></div>
+        </div>
+    </section>
+
+    <section id="locationInfo">
+        <div class="address-box" id="addressBox">
+            <i class="fas fa-map-marker-alt"></i>
+            <span id="addressText">Menunggu GPS...</span>
+            <i class="fas fa-chevron-down chev"></i>
+        </div>
+    </section>
+
+    <section id="addressDetail">
+        <div class="detail-inner">
+            <div class="detail-row"><span class="dk">JALAN</span><span class="dv" id="dJalan">--</span></div>
+            <div class="detail-row"><span class="dk">DUSUN/RT-RW</span><span class="dv" id="dLingkungan">--</span></div>
+            <div class="detail-row"><span class="dk">KELURAHAN/DESA</span><span class="dv" id="dKelurahan">--</span></div>
+            <div class="detail-row"><span class="dk">KECAMATAN</span><span class="dv" id="dKecamatan">--</span></div>
+            <div class="detail-row"><span class="dk">KOTA/KABUPATEN</span><span class="dv" id="dKota">--</span></div>
+            <div class="detail-row"><span class="dk">PROVINSI</span><span class="dv" id="dProvinsi">--</span></div>
+            <div class="detail-row"><span class="dk">KODE POS</span><span class="dv" id="dPostcode">--</span></div>
+            <div class="detail-note">Data RT/RW tidak selalu tersedia di OpenStreetMap. Yang ditampilkan adalah unit administratif paling rinci.</div>
+        </div>
+    </section>
+
+    <section id="weatherPanels">
+        <div class="weather-row">
+            <div class="weather-card hud-frame"><i class="fas fa-temperature-half" style="color:var(--amber)"></i><div class="weather-label">SUHU</div><div class="weather-value" id="wxTemp" style="color:var(--amber)">--</div><div class="weather-unit">°C</div></div>
+            <div class="weather-card hud-frame"><i class="fas fa-droplet" style="color:var(--accent)"></i><div class="weather-label">KELEMBABAN</div><div class="weather-value" id="wxHumidity" style="color:var(--accent)">--</div><div class="weather-unit">%RH</div></div>
+            <div class="weather-card hud-frame"><i class="fas fa-wind" style="color:var(--green)"></i><div class="weather-label">ANGIN</div><div class="weather-value" id="wxWind" style="color:var(--green)">--</div><div class="weather-unit" id="wxWindDir">km/h --</div></div>
+        </div>
+    </section>
+
+    <section id="extraInfo">
+        <span><i class="fas fa-mountain"></i><span id="altText">-- m</span></span>
+        <span><i class="fas fa-crosshairs"></i><span id="coordText">-, -</span></span>
+        <span><i class="fas fa-satellite"></i><span id="satText">--</span></span>
+        <span><i class="fas fa-cloud" id="condIcon"></i><span id="condText">--</span></span>
+        <span><i class="fas fa-bullseye"></i><span id="accText2">-- m</span></span>
+    </section>
+
+    <footer id="controls">
+        <button id="btnReset" aria-label="Reset trip"><i class="fas fa-undo"></i> Reset</button>
+        <button id="btnUnit" aria-label="Ganti satuan"><i class="fas fa-exchange-alt"></i> <span id="unitLabel">km/h</span></button>
+        <button id="btnFS" aria-label="Layar penuh"><i class="fas fa-expand" id="fsIcon"></i></button>
+    </footer>
+
+    <div id="gpsOverlay">
+        <div class="overlay-icon"><i class="fas fa-satellite-dish"></i></div>
+        <div class="overlay-title">NEXUS</div>
+        <div class="overlay-sub">Speedometer digital real-time berbasis GPS.<br>Izinkan akses lokasi presisi tinggi.</div>
+        <button class="btn-activate" id="btnActivate">AKTIFKAN GPS</button>
+        <div class="overlay-ver">v2.0 // REAL-TIME ENGINE</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =============================================
+   STATE & KONFIGURASI
+   ============================================= */
+const S = {
+    speed:0, displaySpeed:0, maxSpeed:0, tripDist:0, odometer:0,
+    heading:0, gpsHeadingSet:false, compassAccuracy:null, altitude:0,
+    lat:0, lon:0, accuracy:0, gpsState:'off', unit:'kmh',
+    address:'Menunggu GPS...', speedSource:'--',
+    lastPos:null, lastTs:null, watchId:null, wakeLock:null,
+    addressTimer:null, lastAddrLat:null, lastAddrLon:null,
+    orientationHeading:null, batteryLevel:null, batteryCharging:false,
+    lastSaveTime:0, refreshInterval:null, gpsStarted:false, lastFixTime:0,
+    gpsStartTime:0, totalMovingTime:0, lastMovingCheck:0,
+    currentGForce:0, prevSpeedForG:0, prevTimeForG:0,
+    addr:{jalan:'--',lingkungan:'--',kelurahan:'--',kecamatan:'--',kota:'--',provinsi:'--',postcode:'--'},
+    weather:{temp:null,humidity:null,windSpeed:null,windDir:null,code:null,isDay:1},
+    lastWeatherLat:null, lastWeatherLon:null, lastWeatherTs:0
+};
+
+const MAX_GAUGE_KMH=240, MAX_GAUGE_MPH=150, MAX_ACCEL=120;
+const speedTrail=[]; const TRAIL_MAX=80, TRAIL_INTERVAL=400;
+let lastTrailTime=0;
+
+function toDisplay(k){return S.unit==='mph'?k*0.621371:k}
+function toDisplayDist(k){return S.unit==='mph'?k*0.621371:k}
+function unitSpeed(){return S.unit==='mph'?'mph':'km/h'}
+function unitDist(){return S.unit==='mph'?'mi':'km'}
+function maxGauge(){return S.unit==='mph'?MAX_GAUGE_MPH:MAX_GAUGE_KMH}
+
+/* Warna kecepatan: hijau → kuning → merah */
+function speedHue(p){return 128-Math.max(0,Math.min(1,p))*128}
+function speedColor(p,a){
+    const h=speedHue(p);
+    return a===undefined?`hsl(${h},100%,50%)`:`hsla(${h},100%,50%,${a})`
+}
+
+/* 16 arah mata angin Bahasa Indonesia */
+const CA=['U','UTL','TL','TTL','T','TTG','TG','STG','S','SBD','BD','BBD','B','BBL','BL','UBL'];
+const CF=['Utara','Utara Timur Laut','Timur Laut','Timur Timur Laut','Timur','Timur Tenggara','Tenggara','Selatan Tenggara','Selatan','Selatan Barat Daya','Barat Daya','Barat Barat Daya','Barat','Barat Barat Laut','Barat Laut','Utara Barat Laut'];
+function compassDir(d){return CA[Math.round(d/22.5)%16]}
+function compassDirFull(d){return CF[Math.round(d/22.5)%16]}
+
+/* =============================================
+   UTILITAS
+   ============================================= */
+function haversine(a,b,c,d){
+    const R=6371000,dLat=(c-a)*Math.PI/180,dLon=(d-b)*Math.PI/180;
+    const x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))
+}
+function calcBearing(a,b,c,d){
+    const dL=(d-b)*Math.PI/180;
+    const y=Math.sin(dL)*Math.cos(c*Math.PI/180);
+    const x=Math.cos(a*Math.PI/180)*Math.sin(c*Math.PI/180)-Math.sin(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.cos(dL);
+    return((Math.atan2(y,x)*180/Math.PI)+360)%360
+}
+function smoothHeading(prev,next,alpha){
+    if(prev===null||!isFinite(prev))return next;
+    let diff=((next-prev+540)%360)-180;
+    return(prev+diff*alpha+360)%360
+}
+function showToast(m){
+    const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+    clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000)
+}
+function formatTime(s){
+    const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);
+    return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+}
+
+/* =============================================
+   PERSISTENSI
+   ============================================= */
+function loadData(){
+    S.odometer=parseFloat(localStorage.getItem('nx_odo'))||0;
+    S.unit=localStorage.getItem('nx_unit')||'kmh';
+    S.maxSpeed=parseFloat(localStorage.getItem('nx_max'))||0;
+}
+function saveData(){
+    localStorage.setItem('nx_odo',S.odometer.toFixed(3));
+    localStorage.setItem('nx_unit',S.unit);
+    localStorage.setItem('nx_max',S.maxSpeed.toFixed(1));
+}
+function throttledSave(){
+    const n=Date.now();if(n-S.lastSaveTime>3000){S.lastSaveTime=n;saveData()}
+}
+
+/* =============================================
+   GPS
+   ============================================= */
+function startGPS(){
+    if(!navigator.geolocation){S.gpsState='error';updateGPSStatus();showToast('Geolocation tidak didukung');return}
+    S.gpsStarted=true;S.gpsState='acquiring';S.gpsStartTime=Date.now();S.lastMovingCheck=Date.now();
+    updateGPSStatus();
+    if(S.watchId!==null){navigator.geolocation.clearWatch(S.watchId);S.watchId=null}
+    const opts={enableHighAccuracy:true,timeout:30000,maximumAge:1000};
+    S.watchId=navigator.geolocation.watchPosition(onPosition,onPositionError,opts);
+    startPeriodicRefresh();
+}
+function startPeriodicRefresh(){
+    stopPeriodicRefresh();
+    S.refreshInterval=setInterval(()=>{
+        if(!S.gpsStarted)return;
+        /* Watchdog: restart watch jika >8 detik tanpa fix baru */
+        if(S.lastFixTime>0&&(Date.now()-S.lastFixTime)>8000){
+            if(S.watchId!==null){navigator.geolocation.clearWatch(S.watchId);S.watchId=null}
+            S.watchId=navigator.geolocation.watchPosition(onPosition,onPositionError,{enableHighAccuracy:true,timeout:30000,maximumAge:1000});
+        }
+        if(S.gpsState==='active'||S.gpsState==='acquiring'){
+            navigator.geolocation.getCurrentPosition(onPosition,()=>{},{enableHighAccuracy:true,timeout:8000,maximumAge:1500});
+        }
+    },3000);
+}
+function stopPeriodicRefresh(){if(S.refreshInterval){clearInterval(S.refreshInterval);S.refreshInterval=null}}
+
+function onPosition(pos){
+    try{
+        const{latitude:lat,longitude:lon,accuracy:acc,altitude:alt,speed,heading}=pos.coords;
+        const ts=pos.timestamp||Date.now();
+        S.lastFixTime=Date.now();
+
+        S.gpsState=acc<=30?'active':'acquiring';
+        S.lat=lat;S.lon=lon;S.accuracy=acc;
+        S.altitude=(alt!==null&&alt!==undefined)?alt:0;
+
+        let raw=0,src='CALC';
+        if(speed!==null&&speed>=0&&isFinite(speed)){raw=speed*3.6;src='GPS'}
+        if(S.lastPos&&S.lastTs){
+            const dt=(ts-S.lastTs)/1000;
+            if(dt>0.1&&dt<10){
+                const dist=haversine(S.lastPos.lat,S.lastPos.lon,lat,lon);
+                const calc=(dist/dt)*3.6;
+                if(speed===null||speed<0||!isFinite(speed)){raw=calc;src='CALC'}
+                else{const d=Math.abs(raw-calc);if(d<20){raw=(raw+calc)/2;src='GPS+CALC'}}
+            }
+        }
+        S.speedSource=src;
+
+        /* Filter akselerasi tidak wajar */
+        if(S.lastTs){
+            const dt=(ts-S.lastTs)/1000;
+            if(dt>0&&Math.abs(raw-S.speed)/dt>MAX_ACCEL)raw=S.speed;
+        }
+        if(raw<0)raw=0;if(raw>400)raw=0;
+        S.speed=raw;
+        if(S.speed>S.maxSpeed)S.maxSpeed=S.speed;
+
+        /* Hitung jarak */
+        if(S.lastPos&&S.lastTs){
+            const dKm=haversine(S.lastPos.lat,S.lastPos.lon,lat,lon)/1000;
+            if(dKm<0.5&&dKm>0.00001){S.tripDist+=dKm;S.odometer+=dKm}
+        }
+
+        /* Heading */
+        if(heading!==null&&heading>=0&&isFinite(heading)){S.heading=heading;S.gpsHeadingSet=true}
+        else if(S.lastPos){
+            if(haversine(S.lastPos.lat,S.lastPos.lon,lat,lon)>3){S.heading=calcBearing(S.lastPos.lat,S.lastPos.lon,lat,lon);S.gpsHeadingSet=true}
+        }
+
+        S.lastPos={lat,lon};S.lastTs=ts;
+        debouncedReverseGeocode(lat,lon);
+        debouncedWeatherFetch(lat,lon);
+        throttledSave();updateGPSStatus();
+    }catch(e){console.error('onPosition:',e)}
+}
+function onPositionError(e){
+    if(e.code===1){S.gpsState='error';updateGPSStatus();showToast('Izin lokasi ditolak')}
+    else{S.gpsState='acquiring';updateGPSStatus()}
+}
+function updateGPSStatus(){
+    const dot=document.getElementById('gpsDot'),txt=document.getElementById('gpsStatusText');
+    dot.className='gps-dot';
+    if(S.gpsState==='active'){dot.classList.add('active');txt.textContent='GPS AKTIF';txt.style.color='var(--green)'}
+    else if(S.gpsState==='acquiring'){dot.classList.add('acquiring');txt.textContent='MENCARI...';txt.style.color='var(--amber)'}
+    else if(S.gpsState==='error'){txt.textContent='GPS ERROR';txt.style.color='var(--red)'}
+    else{txt.textContent='NONAKTIF';txt.style.color='var(--muted)'}
+}
+
+/* =============================================
+   REVERSE GEOCODE
+   ============================================= */
+function debouncedReverseGeocode(lat,lon){
+    if(S.lastAddrLat!==null&&haversine(S.lastAddrLat,S.lastAddrLon,lat,lon)<10)return;
+    clearTimeout(S.addressTimer);
+    S.addressTimer=setTimeout(()=>reverseGeocode(lat,lon),1200);
+}
+async function reverseGeocode(lat,lon){
+    try{
+        const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`,{headers:{'User-Agent':'NexusSpeedometer/2.0'}});
+        const d=await r.json();
+        if(d&&d.display_name){
+            S.address=d.display_name.split(',').slice(0,Math.min(3,d.display_name.split(',').length)).join(',').trim();
+            S.lastAddrLat=lat;S.lastAddrLon=lon;
+            const a=d.address||{};
+            const jp=[a.road,a.pedestrian,a.footway,a.residential,a.house_number].filter(Boolean);
+            S.addr.jalan=jp.length?jp.join(' No. '):'--';
+            S.addr.lingkungan=a.neighbourhood||a.hamlet||a.quarter||a.residential||'--';
+            S.addr.kelurahan=a.village||a.suburb||a.city_district||'--';
+            S.addr.kecamatan=a.city_district||a.subdistrict||a.county||'--';
+            S.addr.kota=a.city||a.town||a.regency||a.county||'--';
+            S.addr.provinsi=a.state||'--';
+            S.addr.postcode=a.postcode||'--';
+        }
+    }catch(e){}
+}
+
+/* =============================================
+   CUACA (Open-Meteo)
+   ============================================= */
+function debouncedWeatherFetch(lat,lon){
+    const now=Date.now();let moved=true;
+    if(S.lastWeatherLat!==null)moved=haversine(S.lastWeatherLat,S.lastWeatherLon,lat,lon)>500;
+    if(!moved&&(now-S.lastWeatherTs)<300000)return;
+    fetchWeather(lat,lon);
+}
+async function fetchWeather(lat,lon){
+    try{
+        const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,is_day&timezone=auto`);
+        const d=await r.json();
+        if(d&&d.current){
+            Object.assign(S.weather,{temp:d.current.temperature_2m,humidity:d.current.relative_humidity_2m,windSpeed:d.current.wind_speed_10m,windDir:d.current.wind_direction_10m,code:d.current.weather_code,isDay:d.current.is_day});
+            S.lastWeatherLat=lat;S.lastWeatherLon=lon;S.lastWeatherTs=Date.now();
+        }
+    }catch(e){}
+}
+function weatherInfo(code,isDay){
+    const day=isDay!==0;
+    const m={0:{t:day?'Cerah':'Cerah Malam',i:day?'fa-sun':'fa-moon',c:'var(--amber)'},1:{t:'Cerah Berawan',i:day?'fa-cloud-sun':'fa-cloud-moon',c:'var(--amber)'},2:{t:'Berawan Sebagian',i:'fa-cloud-sun',c:'var(--muted)'},3:{t:'Mendung',i:'fa-cloud',c:'var(--muted)'},45:{t:'Berkabut',i:'fa-smog',c:'var(--muted)'},48:{t:'Kabut Beku',i:'fa-smog',c:'var(--muted)'},51:{t:'Gerimis Ringan',i:'fa-cloud-rain',c:'var(--accent)'},53:{t:'Gerimis',i:'fa-cloud-rain',c:'var(--accent)'},55:{t:'Gerimis Lebat',i:'fa-cloud-rain',c:'var(--accent)'},56:{t:'Gerimis Beku',i:'fa-cloud-rain',c:'var(--accent)'},57:{t:'Gerimis Beku Lebat',i:'fa-cloud-rain',c:'var(--accent)'},61:{t:'Hujan Ringan',i:'fa-cloud-rain',c:'var(--accent)'},63:{t:'Hujan Sedang',i:'fa-cloud-showers-heavy',c:'var(--accent)'},65:{t:'Hujan Lebat',i:'fa-cloud-showers-heavy',c:'var(--red)'},71:{t:'Salju Ringan',i:'fa-snowflake',c:'var(--accent)'},73:{t:'Salju Sedang',i:'fa-snowflake',c:'var(--accent)'},75:{t:'Salju Lebat',i:'fa-snowflake',c:'var(--accent)'},80:{t:'Hujan Lokal Ringan',i:'fa-cloud-rain',c:'var(--accent)'},81:{t:'Hujan Lokal Sedang',i:'fa-cloud-showers-heavy',c:'var(--accent)'},82:{t:'Hujan Lokal Deras',i:'fa-cloud-showers-heavy',c:'var(--red)'},95:{t:'Badai Petir',i:'fa-bolt',c:'var(--red)'},96:{t:'Badai + Hujan Es',i:'fa-cloud-bolt',c:'var(--red)'},99:{t:'Badai + Hujan Es Lebat',i:'fa-cloud-bolt',c:'var(--red)'}};
+    return m[code]||{t:'--',i:'fa-question',c:'var(--muted)'}
+}
+
+/* =============================================
+   WAKE LOCK
+   ============================================= */
+async function requestWakeLock(){
+    try{if('wakeLock' in navigator){S.wakeLock=await navigator.wakeLock.request('screen');S.wakeLock.addEventListener('release',()=>{S.wakeLock=null})}}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'){
+        if(!S.wakeLock)requestWakeLock();
+        if(S.gpsStarted&&S.watchId===null)S.watchId=navigator.geolocation.watchPosition(onPosition,onPositionError,{enableHighAccuracy:true,timeout:30000,maximumAge:2000});
+    }
+});
+
+/* =============================================
+   BATTERY
+   ============================================= */
+async function initBattery(){
+    try{if('getBattery' in navigator){const b=await navigator.getBattery();S.batteryLevel=b.level;S.batteryCharging=b.charging;b.addEventListener('levelchange',()=>{S.batteryLevel=b.level});b.addEventListener('chargingchange',()=>{S.batteryCharging=b.charging})}}catch(e){}
+}
+function getBatteryHTML(){
+    if(S.batteryLevel===null)return'<i class="fas fa-battery-full"></i>';
+    const p=Math.round(S.batteryLevel*100);let i='fa-battery-full';
+    if(p<=10)i='fa-battery-empty';else if(p<=25)i='fa-battery-quarter';else if(p<=50)i='fa-battery-half';else if(p<=75)i='fa-battery-three-quarters';
+    if(S.batteryCharging)i='fa-bolt';
+    return`<i class="fas ${i}"></i> ${p}%`
+}
+
+/* =============================================
+   DEVICE ORIENTATION (KOMPAS)
+   ============================================= */
+function initDeviceOrientation(){
+    const evt=('ondeviceorientationabsolute' in window)?'deviceorientationabsolute':'deviceorientation';
+    if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+        DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',onOrientation)}).catch(()=>{});
+    }else{window.addEventListener(evt,onOrientation)}
+}
+function getScreenAngle(){
+    if(screen.orientation&&typeof screen.orientation.angle==='number')return screen.orientation.angle;
+    if(typeof window.orientation==='number')return window.orientation;
+    return 0
+}
+function onOrientation(e){
+    let raw=null;
+    if(typeof e.webkitCompassHeading==='number'&&isFinite(e.webkitCompassHeading)){
+        raw=e.webkitCompassHeading;
+        S.compassAccuracy=(typeof e.webkitCompassAccuracy==='number')?e.webkitCompassAccuracy:null;
+    }else if(e.alpha!==null&&e.alpha!==undefined){
+        raw=(360-e.alpha+getScreenAngle())%360;
+        if(raw<0)raw+=360;
+        S.compassAccuracy=null;
+    }else return;
+    S.orientationHeading=smoothHeading(S.orientationHeading,raw,0.45);
+}
+
+/* =============================================
+   FULLSCREEN
+   ============================================= */
+function toggleFullscreen(){
+    if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(()=>{});try{screen.orientation.lock('any').catch(()=>{}}catch(e){}}
+    else document.exitFullscreen().catch(()=>{});
+}
+document.addEventListener('fullscreenchange',()=>{document.getElementById('fsIcon').className=document.fullscreenElement?'fas fa-compress':'fas fa-expand'});
+
+/* =============================================
+   VIBRATION
+   ============================================= */
+let lastVibSpd=0;
+function checkVibrate(){
+    [60,80,100,120,140,160,180,200].forEach(t=>{if(S.displaySpeed>=t&&lastVibSpd<t){if(navigator.vibrate)navigator.vibrate(50)}});
+    lastVibSpd=Math.floor(S.displaySpeed);
+}
+
+/* =============================================
+   CANVAS SETUP
+   ============================================= */
+let canvas,ctx,cSize,dpr,cCanvas,cCtx,cSize2;
+
+function setupCanvas(){
+    canvas=document.getElementById('gaugeCanvas');
+    const area=document.getElementById('gaugeArea');
+    const w=area.clientWidth-4,h=area.clientHeight-4;
+    cSize=Math.max(100,Math.min(w,h,700));
+    dpr=window.devicePixelRatio||1;
+    canvas.width=cSize*dpr;canvas.height=cSize*dpr;
+    canvas.style.width=cSize+'px';canvas.style.height=cSize+'px';
+    ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+
+    cCanvas=document.getElementById('compassCanvas');
+    cSize2=Math.max(100,Math.min(cSize*0.4,200));
+    cCanvas.width=cSize2*dpr;cCanvas.height=cSize2*dpr;
+    cCanvas.style.width=cSize2+'px';cCanvas.style.height=cSize2+'px';
+    cCtx=cCanvas.getContext('2d');cCtx.scale(dpr,dpr);
+}
+
+/* =============================================
+   DRAW SPEEDOMETER
+   ============================================= */
+function drawGauge(){
+    if(cSize<50)return;
+    const sz=cSize,cx=sz/2,cy=sz/2,R=sz*0.46;
+    const startA=Math.PI*0.75,endA=Math.PI*2.25,totalA=endA-startA;
+    const mg=maxGauge();
+    const spd=Math.max(0,Math.min(toDisplay(S.displaySpeed),mg));
+    const pct=spd/mg;
+
+    ctx.clearRect(0,0,sz,sz);
+
+    /* Latar belakang lingkaran */
+    const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,R*1.05);
+    bg.addColorStop(0,'rgba(8,16,32,0.95)');bg.addColorStop(0.8,'rgba(4,10,22,0.98)');bg.addColorStop(1,'rgba(2,6,14,1)');
+    ctx.beginPath();ctx.arc(cx,cy,R*0.93,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+
+    /* Cincin luar dekoratif */
+    ctx.beginPath();ctx.arc(cx,cy,R*0.96,startA,endA);
+    ctx.strokeStyle='rgba(0,240,255,0.12)';ctx.lineWidth=sz*0.015;ctx.lineCap='butt';ctx.stroke();
+
+    /* Cincin luar tipis kedua */
+    ctx.beginPath();ctx.arc(cx,cy,R*0.99,startA,endA);
+    ctx.strokeStyle='rgba(0,240,255,0.06)';ctx.lineWidth=sz*0.005;ctx.stroke();
+
+    /* Zona warna latar (hijau/kuning/merah) — batas selalu dalam km/h lalu dikonversi */
+    const zones=[{end:toDisplay(80),c:'#39ff14'},{end:toDisplay(120),c:'#ffea00'},{end:mg,c:'#ff0844'}];
+    let zs=0;
+    for(const z of zones){
+        const ze=Math.min(z.end,mg);
+        if(ze<=zs)continue;
+        ctx.beginPath();ctx.arc(cx,cy,R*0.88,startA+(zs/mg)*totalA,startA+(ze/mg)*totalA);
+        ctx.strokeStyle=z.c+'28';ctx.lineWidth=sz*0.05;ctx.lineCap='butt';ctx.stroke();
+        zs=ze;if(ze>=mg)break;
+    }
+
+    /* Tick marks */
+    const majorStep=S.unit==='mph'?20:20;
+    const minorStep=S.unit==='mph'?10:10;
+    const subStep=S.unit==='mph'?5:5;
+    for(let v=0;v<=mg;v+=subStep){
+        const a=startA+(v/mg)*totalA;
+        const isMajor=v%majorStep===0;
+        const isMinor=v%minorStep===0&&!isMajor;
+        const outerR=R*0.92;
+        let innerR,len;
+        if(isMajor){innerR=R*0.78;len=sz*0.018;ctx.strokeStyle='rgba(0,240,255,0.9)'}
+        else if(isMinor){innerR=R*0.83;len=sz*0.01;ctx.strokeStyle='rgba(0,240,255,0.45)'}
+        else{innerR=R*0.86;len=sz*0.006;ctx.strokeStyle='rgba(0,240,255,0.2)'}
+        ctx.lineWidth=len;ctx.lineCap='round';
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(a)*innerR,cy+Math.sin(a)*innerR);
+        ctx.lineTo(cx+Math.cos(a)*outerR,cy+Math.sin(a)*outerR);
+        ctx.stroke();
+
+        /* Nomor kecepatan di major ticks */
+        if(isMajor){
+            const numR=R*0.72;
+            const nx=cx+Math.cos(a)*numR,ny=cy+Math.sin(a)*numR;
+            ctx.fillStyle='rgba(0,240,255,0.85)';
+            ctx.font=`${Math.max(8,sz*0.032)}px 'Orbitron',sans-serif`;
+            ctx.textAlign='center';ctx.textBaseline='middle';
+            ctx.fillText(Math.round(v),nx,ny);
+        }
+    }
+
+    /* Arc kecepatan aktif — gradasi warna real-time */
+    if(spd>0.3){
+        const spdA=startA+pct*totalA;
+        const col=speedColor(pct);
+        /* Glow layer */
+        ctx.save();ctx.shadowColor=col;ctx.shadowBlur=18+pct*25;
+        ctx.beginPath();ctx.arc(cx,cy,R*0.88,startA,spdA);
+        ctx.strokeStyle=speedColor(pct,0.35);ctx.lineWidth=sz*0.035;ctx.lineCap='round';ctx.stroke();
+        ctx.restore();
+        /* Solid layer */
+        ctx.beginPath();ctx.arc(cx,cy,R*0.88,startA,spdA);
+        ctx.strokeStyle=col;ctx.lineWidth=sz*0.025;ctx.lineCap='round';ctx.stroke();
+        /* Titik ujung arc menyala */
+        const tipX=cx+Math.cos(spdA)*R*0.88,tipY=cy+Math.sin(spdA)*R*0.88;
+        ctx.save();ctx.shadowColor=col;ctx.shadowBlur=15;
+        ctx.beginPath();ctx.arc(tipX,tipY,sz*0.012,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+        ctx.restore();
+    }
+
+    /* Cincin dalam dekoratif (putus-putus) */
+    ctx.setLineDash([sz*0.008,sz*0.012]);
+    ctx.beginPath();ctx.arc(cx,cy,R*0.55,0,Math.PI*2);
+    ctx.strokeStyle='rgba(0,240,255,0.08)';ctx.lineWidth=1;ctx.stroke();
+    ctx.setLineDash([]);
+
+    /* Jarum speedometer */
+    const needleA=startA+pct*totalA;
+    const needleLen=R*0.82;
+    const needleBase=R*0.08;
+    const col=speedColor(pct);
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(needleA);
+    ctx.shadowColor=col;ctx.shadowBlur=12;
+    /* Jarum — segitiga ramping */
+    ctx.beginPath();
+    ctx.moveTo(needleLen,0);
+    ctx.lineTo(-needleBase,-sz*0.01);
+    ctx.lineTo(-needleBase,sz*0.01);
+    ctx.closePath();
+    const ng=ctx.createLinearGradient(-needleBase,0,needleLen,0);
+    ng.addColorStop(0,'rgba(255,255,255,0.2)');ng.addColorStop(0.6,'rgba(255,255,255,0.85)');ng.addColorStop(1,col);
+    ctx.fillStyle=ng;ctx.fill();
+    /* Garis tengah jarum */
+    ctx.beginPath();ctx.moveTo(needleLen*0.2,0);ctx.lineTo(needleLen*0.9,0);
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.5;ctx.stroke();
+    ctx.restore();
+
+    /* Center hub */
+    ctx.save();ctx.shadowColor='rgba(0,240,255,0.4)';ctx.shadowBlur=10;
+    const hubG=ctx.createRadialGradient(cx,cy,0,cx,cy,sz*0.04);
+    hubG.addColorStop(0,'rgba(0,240,255,0.3)');hubG.addColorStop(0.7,'rgba(0,240,255,0.1)');hubG.addColorStop(1,'rgba(0,240,255,0.02)');
+    ctx.beginPath();ctx.arc(cx,cy,sz*0.04,0,Math.PI*2);ctx.fillStyle=hubG;ctx.fill();
+    ctx.strokeStyle='rgba(0,240,255,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.restore();
+    /* Titik pusat */
+    ctx.beginPath();ctx.arc(cx,cy,sz*0.008,0,Math.PI*2);ctx.fillStyle='#00f0ff';ctx.fill();
+
+    /* Angka digital kecepatan (pusat) */
+    const digSpd=Math.round(spd);
+    ctx.save();ctx.shadowColor=col;ctx.shadowBlur=8;
+    ctx.fillStyle=col;
+    ctx.font=`900 ${Math.max(20,sz*0.14)}px 'Orbitron',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(digSpd,cx,cy+sz*0.17);
+    ctx.restore();
+
+    /* Label satuan */
+    ctx.fillStyle='rgba(0,240,255,0.6)';
+    ctx.font=`700 ${Math.max(8,sz*0.035)}px 'Orbitron',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(unitSpeed(),cx,cy+sz*0.25);
+
+    /* Sumber kecepatan */
+    ctx.fillStyle='rgba(168,216,234,0.35)';
+    ctx.font=`${Math.max(6,sz*0.022)}px 'Share Tech Mono',monospace`;
+    ctx.fillText('SRC: '+S.speedSource,cx,cy+sz*0.30);
+
+    /* Speed trail (grafik mini di bagian bawah gauge) */
+    drawSpeedTrail(cx,cy+sz*0.38,sz*0.5,sz*0.06);
+
+    /* Dekorasi sudut — tanda derajat kecil di ujung arc */
+    const degLabels=[{v:0,l:'0'},{v:mg,l:String(mg)}];
+    for(const dl of degLabels){
+        const da=startA+(dl.v/mg)*totalA;
+        const dx=cx+Math.cos(da)*R*1.02,dy=cy+Math.sin(da)*R*1.02;
+        ctx.fillStyle='rgba(0,240,255,0.3)';
+        ctx.font=`${Math.max(6,sz*0.02)}px 'Share Tech Mono',monospace`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(dl.l,dx,dy);
+    }
+}
+
+/* =============================================
+   SPEED TRAIL (Grafik Mini Real-Time)
+   ============================================= */
+function drawSpeedTrail(cx,cy,w,h){
+    if(speedTrail.length<2)return;
+    const mg=maxGauge();
+    const x0=cx-w/2,y0=cy-h/2;
+    /* Area fill */
+    ctx.beginPath();
+    ctx.moveTo(x0,y0+h);
+    for(let i=0;i<speedTrail.length;i++){
+        const x=x0+(i/(TRAIL_MAX-1))*w;
+        const y=y0+h-Math.max(0,Math.min(1,toDisplay(speedTrail[i])/mg))*h;
+        ctx.lineTo(x,y);
+    }
+    ctx.lineTo(x0+((speedTrail.length-1)/(TRAIL_MAX-1))*w,y0+h);
+    ctx.closePath();
+    const sg=ctx.createLinearGradient(0,y0,0,y0+h);
+    sg.addColorStop(0,'rgba(0,240,255,0.2)');sg.addColorStop(1,'rgba(0,240,255,0.01)');
+    ctx.fillStyle=sg;ctx.fill();
+    /* Garis */
+    ctx.beginPath();
+    for(let i=0;i<speedTrail.length;i++){
+        const x=x0+(i/(TRAIL_MAX-1))*w;
+        const y=y0+h-Math.max(0,Math.min(1,toDisplay(speedTrail[i])/mg))*h;
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(0,240,255,0.55)';ctx.lineWidth=1.2;ctx.stroke();
+    /* Label kiri-kanan */
+    ctx.fillStyle='rgba(0,240,255,0.25)';ctx.font=`${Math.max(6,cSize*0.018)}px 'Share Tech Mono',monospace`;
+    ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText(mg,x0,y0+h-1);
+    ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('0',x0+w,y0+1);
+}
+
+/* =============================================
+   DRAW COMPASS
+   ============================================= */
+function drawCompass(){
+    if(cSize2<50)return;
+    const sz=cSize2,cx=sz/2,cy=sz/2,R=sz*0.44;
+    const displayH=S.orientationHeading!==null?S.orientationHeading:S.heading;
+
+    cCtx.clearRect(0,0,sz,sz);
+
+    /* Latar belakang */
+    const bg=cCtx.createRadialGradient(cx,cy,0,cx,cy,R*1.05);
+    bg.addColorStop(0,'rgba(6,14,30,0.95)');bg.addColorStop(1,'rgba(2,6,14,1)');
+    cCtx.beginPath();cCtx.arc(cx,cy,R*1.0,0,Math.PI*2);cCtx.fillStyle=bg;cCtx.fill();
+
+    /* Cincin luar */
+    cCtx.beginPath();cCtx.arc(cx,cy,R*0.98,0,Math.PI*2);
+    cCtx.strokeStyle='rgba(0,240,255,0.15)';cCtx.lineWidth=1.5;cCtx.stroke();
+    cCtx.beginPath();cCtx.arc(cx,cy,R*0.95,0,Math.PI*2);
+    cCtx.strokeStyle='rgba(0,240,255,0.08)';cCtx.lineWidth=1;cCtx.stroke();
+
+    /* Piringan berputar */
+    cCtx.save();cCtx.translate(cx,cy);cCtx.rotate(-displayH*Math.PI/180);
+
+    /* Tick marks setiap 5° */
+    for(let d=0;d<360;d+=5){
+        const a=(d-90)*Math.PI/180;
+        const isCard=d%90===0;
+        const isInter=d%45===0&&!isCard;
+        const isMajor=d%15===0&&!isCard&&!isInter;
+        const oR=R*0.94;
+        let iR,lw,col;
+        if(isCard){iR=R*0.78;lw=2;col='rgba(0,240,255,0.9)'}
+        else if(isInter){iR=R*0.82;lw=1.5;col='rgba(0,240,255,0.6)'}
+        else if(isMajor){iR=R*0.86;lw=1;col='rgba(0,240,255,0.35)'}
+        else{iR=R*0.89;lw=0.5;col='rgba(0,240,255,0.15)'}
+        cCtx.beginPath();
+        cCtx.moveTo(Math.cos(a)*iR,Math.sin(a)*iR);
+        cCtx.lineTo(Math.cos(a)*oR,Math.sin(a)*oR);
+        cCtx.strokeStyle=col;cCtx.lineWidth=lw;cCtx.stroke();
+    }
+
+    /* Label arah mata angin */
+    const dirs=[
+        {d:0,l:'U',c:'#ff0844',s:sz*0.09},{d:90,l:'T',c:'rgba(0,240,255,0.8)',s:sz*0.07},
+        {d:180,l:'S',c:'rgba(255,255,255,0.7)',s:sz*0.07},{d:270,l:'B',c:'rgba(0,240,255,0.8)',s:sz*0.07}
+    ];
+    for(const dir of dirs){
+        const a=(dir.d-90)*Math.PI/180;
+        const lr=R*0.68;
+        cCtx.save();cCtx.translate(Math.cos(a)*lr,Math.sin(a)*lr);
+        cCtx.fillStyle=dir.c;
+        cCtx.font=`900 ${dir.s}px 'Orbitron',sans-serif`;
+        cCtx.textAlign='center';cCtx.textBaseline='middle';
+        cCtx.fillText(dir.l,0,0);
+        cCtx.restore();
+    }
+
+    /* Label intercardinal (TL, TG, BD, BL) */
+    const interDirs=[{d:45,l:'TL'},{d:135,l:'TG'},{d:225,l:'BD'},{d:315,l:'BL'}];
+    for(const dir of interDirs){
+        const a=(dir.d-90)*Math.PI/180;
+        const lr=R*0.68;
+        cCtx.save();cCtx.translate(Math.cos(a)*lr,Math.sin(a)*lr);
+        cCtx.fillStyle='rgba(0,240,255,0.4)';
+        cCtx.font=`700 ${sz*0.045}px 'Orbitron',sans-serif`;
+        cCtx.textAlign='center';cCtx.textBaseline='middle';
+        cCtx.fillText(dir.l,0,0);
+        cCtx.restore();
+    }
+
+    /* Derajat kecil setiap 30° */
+    for(let d=0;d<360;d+=30){
+        if(d%90===0||d%45===0)continue;
+        const a=(d-90)*Math.PI/180;
+        const lr=R*0.68;
+        cCtx.save();cCtx.translate(Math.cos(a)*lr,Math.sin(a)*lr);
+        cCtx.fillStyle='rgba(0,240,255,0.2)';
+        cCtx.font=`${sz*0.04}px 'Share Tech Mono',monospace`;
+        cCtx.textAlign='center';cCtx.textBaseline='middle';
+        cCtx.fillText(d+'°',0,0);
+        cCtx.restore();
+    }
+
+    /* Jarum kompas — segitiga utara (merah) dan selatan (putih) */
+    const nLen=R*0.55,sLen=R*0.35,nW=sz*0.035;
+    /* Utara (merah) */
+    cCtx.save();cCtx.rotate(0);/* Utara sudah di posisi -90° karena rotasi piringan */
+    cCtx.beginPath();cCtx.moveTo(0,-nLen);cCtx.lineTo(-nW,0);cCtx.lineTo(nW,0);cCtx.closePath();
+    const nG=cCtx.createLinearGradient(0,-nLen,0,0);
+    nG.addColorStop(0,'#ff0844');nG.addColorStop(1,'rgba(255,8,68,0.3)');
+    cCtx.fillStyle=nG;cCtx.fill();
+    /* Selatan (putih/transparan) */
+    cCtx.beginPath();cCtx.moveTo(0,sLen);cCtx.lineTo(-nW,0);cCtx.lineTo(nW,0);cCtx.closePath();
+    cCtx.fillStyle='rgba(255,255,255,0.12)';cCtx.fill();
+    /* Garis tengah */
+    cCtx.beginPath();cCtx.moveTo(0,-nLen);cCtx.lineTo(0,sLen);
+    cCtx.strokeStyle='rgba(0,240,255,0.15)';cCtx.lineWidth=0.5;cCtx.stroke();
+    cCtx.restore();
+
+    cCtx.restore(); /* Akhir rotasi piringan */
+
+    /* Efek radar sweep */
+    const sweepA=(Date.now()%3000)/3000*Math.PI*2-Math.PI/2;
+    cCtx.save();cCtx.translate(cx,cy);
+    cCtx.beginPath();cCtx.moveTo(0,0);
+    cCtx.arc(0,0,R*0.6,sweepA-0.4,sweepA,false);
+    cCtx.closePath();
+    const rG=cCtx.createRadialGradient(0,0,0,0,0,R*0.6);
+    rG.addColorStop(0,'rgba(0,240,255,0)');rG.addColorStop(0.5,'rgba(0,240,255,0.03)');rG.addColorStop(1,'rgba(0,240,255,0.08)');
+    cCtx.fillStyle=rG;cCtx.fill();
+    cCtx.restore();
+
+    /* Indikator tetap di atas (segitiga menunjuk ke bawah) */
+    const triS=sz*0.035;
+    cCtx.save();cCtx.shadowColor='#ff0844';cCtx.shadowBlur=8;
+    cCtx.beginPath();
+    cCtx.moveTo(cx,sz*0.03+triS*1.5);
+    cCtx.lineTo(cx-triS*0.7,sz*0.03);
+    cCtx.lineTo(cx+triS*0.7,sz*0.03);
+    cCtx.closePath();cCtx.fillStyle='#ff0844';cCtx.fill();
+    cCtx.restore();
+
+    /* Center dot */
+    cCtx.beginPath();cCtx.arc(cx,cy,sz*0.02,0,Math.PI*2);
+    cCtx.fillStyle='rgba(0,240,255,0.5)';cCtx.fill();
+    cCtx.beginPath();cCtx.arc(cx,cy,sz*0.008,0,Math.PI*2);
+    cCtx.fillStyle='#00f0ff';cCtx.fill();
+
+    /* Tampilkan peringatan kalibrasi jika akurasi rendah (iOS) */
+    const calib=document.getElementById('compassCalib');
+    if(S.compassAccuracy!==null&&S.compassAccuracy>0&&S.compassAccuracy<20)calib.style.display='block';
+    else calib.style.display='none';
+}
+
+/* =============================================
+   MAIN LOOP — UPDATE REAL-TIME SEMUA PARAMETER
+   ============================================= */
+function mainLoop(){
+    const now=performance.now();
+
+    /* 1. Smooth kecepatan (jarum & angka digital) */
+    const diff=S.speed-S.displaySpeed;
+    if(Math.abs(diff)>0.05){
+        /* Smoothing adaptif: lebih cepat saat akselerasi, lebih halus saat mendekati target */
+        const factor=Math.abs(diff)>20?0.15:Math.abs(diff)>5?0.1:0.06;
+        S.displaySpeed+=diff*factor;
+    }else{
+        S.displaySpeed=S.speed;
+    }
+    if(S.displaySpeed<0)S.displaySpeed=0;
+
+    /* 2. G-Force */
+    if(S.prevTimeForG>0){
+        const dt=(now-S.prevTimeForG)/1000;
+        if(dt>0.05&&dt<2){
+            const dv=(S.displaySpeed-S.prevSpeedForG)/3.6;
+            const accel=dv/dt;
+            const g=accel/9.81;
+            S.currentGForce=S.currentGForce*0.7+Math.max(-3,Math.min(3,g))*0.3;
+        }
+    }
+    S.prevSpeedForG=S.displaySpeed;
+    S.prevTimeForG=now;
+
+    /* 3. Waktu bergerak (untuk rata-rata kecepatan) */
+    if(S.gpsStarted&&S.gpsState==='active'&&S.lastMovingCheck>0){
+        if(S.displaySpeed>2)S.totalMovingTime+=(now-S.lastMovingCheck)/1000;
+    }
+    S.lastMovingCheck=now;
+
+    /* 4. Speed trail */
+    if(now-lastTrailTime>TRAIL_INTERVAL){
+        speedTrail.push(S.displaySpeed);
+        if(speedTrail.length>TRAIL_MAX)speedTrail.shift();
+        lastTrailTime=now;
+    }
+
+    /* 5. Gambar canvas */
+    drawGauge();
+    drawCompass();
+
+    /* 6. Update semua DOM */
+    updateDOM();
+
+    /* 7. Vibration */
+    checkVibrate();
+
+    requestAnimationFrame(mainLoop);
+}
+
+/* =============================================
+   UPDATE DOM — SEMUA PARAMETER REAL-TIME
+   ============================================= */
+function updateDOM(){
+    const mg=maxGauge();
+    const pct=Math.max(0,Math.min(1,toDisplay(S.displaySpeed)/mg));
+
+    /* Jam */
+    const d=new Date();
+    document.getElementById('clock').textContent=
+        String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+
+    /* Baterai */
+    document.getElementById('batteryIcon').innerHTML=getBatteryHTML();
+
+    /* Akurasi GPS */
+    document.getElementById('accText').textContent=S.gpsState==='active'?Math.round(S.accuracy)+'m':'--';
+
+    /* Indikator bergerak/berhenti */
+    const md=document.getElementById('movingDot');
+    S.displaySpeed>2?md.classList.add('active'):md.classList.remove('active');
+
+    /* Kompas */
+    const dh=S.orientationHeading!==null?S.orientationHeading:S.heading;
+    document.getElementById('compassDegree').textContent=Math.round(dh)+'°';
+    document.getElementById('compassArahText').textContent=compassDirFull(dh);
+
+    /* Data panels */
+    const td=toDisplayDist(S.tripDist);
+    document.getElementById('tripVal').textContent=td<100?td.toFixed(3):td.toFixed(1);
+    document.getElementById('tripUnit').textContent=unitDist();
+    const od=toDisplayDist(S.odometer);
+    document.getElementById('odoVal').textContent=od<1000?od.toFixed(1):od.toFixed(0);
+    document.getElementById('odoUnit').textContent=unitDist();
+    document.getElementById('maxVal').textContent=Math.round(toDisplay(S.maxSpeed));
+    document.getElementById('maxVal').style.color=speedColor(Math.min(1,toDisplay(S.maxSpeed)/mg));
+    document.getElementById('maxUnit').textContent=unitSpeed();
+
+    /* Science panels */
+    const gf=Math.abs(S.currentGForce);
+    const gfEl=document.getElementById('gForceVal');
+    gfEl.textContent=(S.currentGForce>=0?'+':'')+S.currentGForce.toFixed(2);
+    gfEl.style.color=gf>0.8?'var(--red)':gf>0.4?'var(--amber)':'var(--green)';
+
+    const avgSpd=S.totalMovingTime>0?(S.tripDist/S.totalMovingTime*3600):0;
+    document.getElementById('avgVal').textContent=Math.round(toDisplay(avgSpd));
+    document.getElementById('avgUnit').textContent=unitSpeed();
+
+    if(S.gpsStartTime>0){
+        document.getElementById('timeVal').textContent=formatTime((Date.now()-S.gpsStartTime)/1000);
+    }
+
+    /* Lokasi */
+    document.getElementById('addressText').textContent=S.address;
+    document.getElementById('dJalan').textContent=S.addr.jalan;
+    document.getElementById('dLingkungan').textContent=S.addr.lingkungan;
+    document.getElementById('dKelurahan').textContent=S.addr.kelurahan;
+    document.getElementById('dKecamatan').textContent=S.addr.kecamatan;
+    document.getElementById('dKota').textContent=S.addr.kota;
+    document.getElementById('dProvinsi').textContent=S.addr.provinsi;
+    document.getElementById('dPostcode').textContent=S.addr.postcode;
+
+    /* Cuaca */
+    if(S.weather.temp!==null){
+        document.getElementById('wxTemp').textContent=S.weather.temp.toFixed(0);
+        document.getElementById('wxHumidity').textContent=S.weather.humidity;
+        document.getElementById('wxWind').textContent=S.weather.windSpeed.toFixed(0);
+        const wd=S.weather.windDir;
+        document.getElementById('wxWindDir').textContent='km/h '+compassDir(wd>=0?wd:0);
+    }
+
+    /* Extra info */
+    document.getElementById('altText').textContent=S.altitude>0?Math.round(S.altitude)+' m':'-- m';
+    document.getElementById('coordText').textContent=S.gpsStarted?S.lat.toFixed(5)+', '+S.lon.toFixed(5):'-, -';
+    document.getElementById('satText').textContent=S.gpsState==='active'?'FIX':'--';
+    document.getElementById('accText2').textContent=S.gpsState==='active'?Math.round(S.accuracy)+' m':'-- m';
+    if(S.weather.code!==null){
+        const wi=weatherInfo(S.weather.code,S.weather.isDay);
+        document.getElementById('condIcon').className='fas '+wi.i;
+        document.getElementById('condText').textContent=wi.t;
+    }
+
+    /* Satuan */
+    document.getElementById('unitLabel').textContent=unitSpeed();
+}
+
+/* =============================================
+   EVENT LISTENERS
+   ============================================= */
+document.getElementById('btnActivate').addEventListener('click',()=>{
+    document.getElementById('gpsOverlay').classList.add('hidden');
+    startGPS();requestWakeLock();initDeviceOrientation();
+    showToast('GPS diaktifkan — mencari sinyal...');
+});
+
+document.getElementById('btnReset').addEventListener('click',()=>{
+    S.tripDist=0;S.totalMovingTime=0;S.maxSpeed=0;
+    speedTrail.length=0;
+    saveData();showToast('Trip & max speed direset');
+});
+
+document.getElementById('btnUnit').addEventListener('click',()=>{
+    S.unit=S.unit==='kmh'?'mph':'kmh';
+    saveData();showToast('Satuan: '+unitSpeed());
+});
+
+document.getElementById('btnFS').addEventListener('click',toggleFullscreen);
+
+document.getElementById('addressBox').addEventListener('click',()=>{
+    document.getElementById('addressBox').classList.toggle('open');
+    document.getElementById('addressDetail').classList.toggle('open');
+});
+
+window.addEventListener('resize',()=>{setupCanvas()});
+
+/* =============================================
+   INISIALISASI
+   ============================================= */
+function init(){
+    loadData();initBattery();setupCanvas();
+
+    /* Set label satuan awal */
+    document.getElementById('unitLabel').textContent=unitSpeed();
+
+    /* Mulai main loop — SEMUA parameter update real-time di sini */
+    requestAnimationFrame(mainLoop);
+}
+
+/* Tunggu DOM siap */
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
+</script>
+</body>
+</html>
