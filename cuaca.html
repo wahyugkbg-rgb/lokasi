@@ -115,24 +115,19 @@ html,body{
   transform:translate(-50%,-50%);
 }
 .device-needle .shaft{
-  position:absolute; left:50%; bottom:2px; width:6px; height:calc(min(78vw,300px)*0.42);
+  position:absolute; left:50%; bottom:2px; width:16px; height:calc(min(78vw,300px)*0.40);
   transform:translateX(-50%);
-  background:linear-gradient(180deg, var(--danger) 0%, var(--magenta) 60%, rgba(255,46,166,0.15) 100%);
-  border-radius:4px;
+  background:linear-gradient(180deg, var(--danger) 0%, var(--magenta) 55%, rgba(255,46,166,0.2) 100%);
+  /* bentuk jarum jam: meruncing ke ujung, tanpa kepala anak panah terpisah */
+  clip-path: polygon(50% 0%, 68% 22%, 60% 100%, 40% 100%, 32% 22%);
   box-shadow:0 0 10px var(--danger), 0 0 22px rgba(255,46,166,0.65);
   animation: needlepulse 1.8s ease-in-out infinite;
 }
-.device-needle .arrowhead{
-  position:absolute; left:50%; bottom:calc(min(78vw,300px)*0.42 - 2px); transform:translateX(-50%);
-  width:0; height:0;
-  border-left:12px solid transparent; border-right:12px solid transparent;
-  border-bottom:24px solid var(--danger);
-  filter: drop-shadow(0 0 10px var(--danger)) drop-shadow(0 0 18px rgba(255,46,166,0.6));
-}
 .device-needle .tail{
-  position:absolute; left:50%; bottom:-14px; width:4px; height:16px; transform:translateX(-50%);
+  position:absolute; left:50%; bottom:-16px; width:8px; height:20px; transform:translateX(-50%);
   background:linear-gradient(180deg, rgba(0,246,255,0.7), transparent);
-  border-radius:3px;
+  clip-path: polygon(50% 100%, 100% 0%, 0% 0%);
+  border-radius:2px;
 }
 .device-needle .pivot{
   position:absolute; left:50%; bottom:-6px; width:14px; height:14px; transform:translate(-50%,50%);
@@ -140,6 +135,20 @@ html,body{
   box-shadow:0 0 12px var(--cyan);
 }
 @keyframes needlepulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.75; } }
+
+/* PANAH ORBIT — mengikuti arah hadap HP, bergerak tepat di tepi luar lingkaran kompas */
+.heading-orbit{
+  position:absolute; inset:0; z-index:7; pointer-events:none;
+  transform-origin:50% 50%;
+  will-change: transform;
+}
+.heading-orbit .marker{
+  position:absolute; left:50%; top:-3px; transform:translate(-50%,-50%);
+  width:0; height:0;
+  border-left:9px solid transparent; border-right:9px solid transparent;
+  border-bottom:17px solid var(--yellow);
+  filter: drop-shadow(0 0 6px var(--yellow)) drop-shadow(0 0 16px rgba(250,255,0,0.85));
+}
 
 .compass-dial{
   width:100%; height:100%; border-radius:50%;
@@ -211,8 +220,8 @@ html,body{
 .speedo-panel{ text-align:center; }
 .speedo-wrap{ display:flex; align-items:baseline; justify-content:center; gap:10px; margin:4px 0 2px; }
 .speedo-num{
-  font-family:'Orbitron',sans-serif; font-weight:900; font-size:74px; line-height:1;
-  color:var(--lime); letter-spacing:2px; font-variant-numeric: tabular-nums;
+  font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(38px, 12vw, 62px); line-height:1;
+  color:var(--lime); letter-spacing:1px; font-variant-numeric: tabular-nums;
   text-shadow:0 0 18px rgba(57,255,106,0.6), 0 0 42px rgba(57,255,106,0.25);
   transition: color 0.4s ease, text-shadow 0.4s ease;
 }
@@ -295,8 +304,10 @@ html,body{
       <div class="device-needle">
         <div class="tail"></div>
         <div class="shaft"></div>
-        <div class="arrowhead"></div>
         <div class="pivot"></div>
+      </div>
+      <div class="heading-orbit" id="headingOrbit">
+        <div class="marker"></div>
       </div>
       <div class="compass-center">
         <div class="heading-num" id="headingNum">--<span class="heading-deg">°</span></div>
@@ -324,7 +335,7 @@ html,body{
   <div class="panel speedo-panel">
     <div class="panel-title" style="justify-content:center;">Speedometer</div>
     <div class="speedo-wrap">
-      <div class="speedo-num" id="speedoNum">00</div>
+      <div class="speedo-num" id="speedoNum">000.00</div>
       <div class="speedo-unit">KM/JAM</div>
     </div>
     <div class="speedo-sub" id="speedoSub">Menunggu sinyal GPS...</div>
@@ -483,6 +494,20 @@ html,body{
     return d;
   }
 
+  // Short-term vector average of raw sensor samples — kills the rapid tremor/EMI
+  // jitter that shows up specifically when the phone is held in hand (magnetometer
+  // is far noisier off a flat, still surface).
+  const HEADING_SAMPLES = 8;
+  let sampleSin = [], sampleCos = [];
+  function bufferHeading(h){
+    const r = h * Math.PI/180;
+    sampleSin.push(Math.sin(r)); sampleCos.push(Math.cos(r));
+    if(sampleSin.length > HEADING_SAMPLES){ sampleSin.shift(); sampleCos.shift(); }
+    let sy=0, sx=0;
+    for(let i=0;i<sampleSin.length;i++){ sy+=sampleSin[i]; sx+=sampleCos[i]; }
+    return ((Math.atan2(sy, sx) * 180/Math.PI) + 360) % 360;
+  }
+
   function animateDial(){
     const diff = targetRotation - dialDisplay;
     if(Math.abs(diff) < 0.03){
@@ -491,6 +516,8 @@ html,body{
       dialDisplay += diff * 0.16; // easing factor: smaller = smoother/slower, larger = snappier
     }
     $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
+    // panah orbit mengikuti arah hadap HP (kebalikan dial) tepat di tepi luar lingkaran
+    $('headingOrbit').style.transform = `rotate(${-dialDisplay}deg)`;
     if(Math.abs(targetRotation - dialDisplay) > 0.01){
       dialRafId = requestAnimationFrame(animateDial);
     } else {
@@ -499,20 +526,25 @@ html,body{
   }
 
   function updateCompassUI(rawHeading){
+    const buffered = bufferHeading(rawHeading);
     if(smHeading === null){
-      smHeading = rawHeading;
-      targetRotation = -rawHeading;
+      smHeading = buffered;
+      targetRotation = -buffered;
       dialDisplay = targetRotation;
       $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
+      $('headingOrbit').style.transform = `rotate(${-dialDisplay}deg)`;
     } else {
-      // low-pass filter the raw sensor reading to kill jitter, then move the
-      // continuous rotation target by the same filtered amount (anti-spin safe)
-      const diff = angDiff(rawHeading, smHeading);
-      const filtered = diff * 0.35;
-      smHeading = ((smHeading + filtered) % 360 + 360) % 360;
-      targetRotation -= filtered;
-      if(dialRafId === null){
-        dialRafId = requestAnimationFrame(animateDial);
+      const diff = angDiff(buffered, smHeading);
+      // deadband: abaikan getaran kecil (di bawah ~0.5°) supaya angka & jarum
+      // diam total saat HP digenggam, hanya bereaksi pada perubahan arah nyata
+      if(Math.abs(diff) > 0.5){
+        // low-pass filter yang jauh lebih lembut daripada sebelumnya (0.35 -> 0.10)
+        const filtered = diff * 0.10;
+        smHeading = ((smHeading + filtered) % 360 + 360) % 360;
+        targetRotation -= filtered;
+        if(dialRafId === null){
+          dialRafId = requestAnimationFrame(animateDial);
+        }
       }
     }
     $('headingNum').innerHTML = Math.round(smHeading) + '<span class="heading-deg">°</span>';
@@ -589,8 +621,8 @@ html,body{
       const ease = Math.min(0.22, 0.06 + Math.abs(diff) * 0.01);
       speedRender += diff * ease;
     }
-    const shown = Math.max(0, Math.round(speedRender));
-    $('speedoNum').textContent = String(shown).padStart(2, '0');
+    const shown = Math.max(0, speedRender);
+    $('speedoNum').textContent = shown.toFixed(2).padStart(6, '0');
     if(Math.abs(speedTarget - speedRender) > 0.02){
       speedRafId = requestAnimationFrame(animateSpeedo);
     } else {
