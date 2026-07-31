@@ -330,9 +330,11 @@
             width: 0;
             height: 0;
             transform-origin: center center;
+            /* segitiga mengarah ke atas (border-top) agar ujung menunjuk ke luar */
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
-            border-bottom: 18px solid var(--yellow);
+            border-bottom: none;
+            border-top: 18px solid var(--yellow);
             filter: drop-shadow(0 0 8px var(--yellow)) drop-shadow(0 0 20px rgba(250, 255, 0, 0.85));
             transition: none;
             will-change: transform, left, top;
@@ -1226,7 +1228,8 @@
                 const y = center + radius * Math.sin(rad);
                 marker.style.left = x + 'px';
                 marker.style.top = y + 'px';
-                // marker mengarah ke luar (menjauhi pusat)
+                // Rotasi marker agar ujung segitiga menunjuk ke arah heading (ke luar)
+                // Karena segitiga dibuat dengan border-top (mengarah ke atas), rotasi = smHeading
                 marker.style.transform = `translate(-50%,-50%) rotate(${smHeading}deg)`;
             }
 
@@ -1927,7 +1930,6 @@
                 if (compassWrap) ro.observe(compassWrap);
             }
 
-            // fallback update marker saat ukuran berubah
             window.addEventListener('resize', () => { if (smHeading !== null) updateOrbitMarker(); });
 
         })();
