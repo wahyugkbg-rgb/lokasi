@@ -94,20 +94,62 @@ html,body{
 /* COMPASS */
 .compass-panel{ display:flex; flex-direction:column; align-items:center; }
 .compass-wrap{ position:relative; width:min(78vw, 300px); height:min(78vw,300px); margin:6px auto 4px; }
-.compass-fixed-ptr{
-  position:absolute; top:-2px; left:50%; transform:translateX(-50%);
-  width:0; height:0; z-index:5;
-  border-left:9px solid transparent; border-right:9px solid transparent;
-  border-top:16px solid var(--yellow); filter: drop-shadow(0 0 6px var(--yellow));
+
+/* RADAR SWEEP — decorative continuous sweep, independent of heading */
+.radar-sweep{
+  position:absolute; inset:0; border-radius:50%; z-index:1; pointer-events:none;
+  overflow:hidden;
+  background: conic-gradient(from 0deg, rgba(0,246,255,0.55) 0deg, rgba(0,246,255,0.22) 14deg, rgba(0,246,255,0.06) 30deg, transparent 60deg, transparent 360deg);
+  mix-blend-mode: screen;
+  animation: radarspin 3.4s linear infinite;
 }
+.radar-sweep::after{
+  content:''; position:absolute; inset:0; border-radius:50%;
+  box-shadow: inset 0 0 40px rgba(0,246,255,0.08);
+}
+@keyframes radarspin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+
+/* BOLD DEVICE-HEADING NEEDLE — fixed, points to top of screen (phone head) */
+.device-needle{
+  position:absolute; left:50%; top:50%; width:0; height:0; z-index:6; pointer-events:none;
+  transform:translate(-50%,-50%);
+}
+.device-needle .shaft{
+  position:absolute; left:50%; bottom:2px; width:6px; height:calc(min(78vw,300px)*0.42);
+  transform:translateX(-50%);
+  background:linear-gradient(180deg, var(--danger) 0%, var(--magenta) 60%, rgba(255,46,166,0.15) 100%);
+  border-radius:4px;
+  box-shadow:0 0 10px var(--danger), 0 0 22px rgba(255,46,166,0.65);
+  animation: needlepulse 1.8s ease-in-out infinite;
+}
+.device-needle .arrowhead{
+  position:absolute; left:50%; bottom:calc(min(78vw,300px)*0.42 - 2px); transform:translateX(-50%);
+  width:0; height:0;
+  border-left:12px solid transparent; border-right:12px solid transparent;
+  border-bottom:24px solid var(--danger);
+  filter: drop-shadow(0 0 10px var(--danger)) drop-shadow(0 0 18px rgba(255,46,166,0.6));
+}
+.device-needle .tail{
+  position:absolute; left:50%; bottom:-14px; width:4px; height:16px; transform:translateX(-50%);
+  background:linear-gradient(180deg, rgba(0,246,255,0.7), transparent);
+  border-radius:3px;
+}
+.device-needle .pivot{
+  position:absolute; left:50%; bottom:-6px; width:14px; height:14px; transform:translate(-50%,50%);
+  border-radius:50%; background:radial-gradient(circle, var(--white), var(--cyan) 70%);
+  box-shadow:0 0 12px var(--cyan);
+}
+@keyframes needlepulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.75; } }
+
 .compass-dial{
   width:100%; height:100%; border-radius:50%;
   border:3px solid var(--cyan);
   box-shadow:0 0 22px rgba(0,246,255,0.35), inset 0 0 30px rgba(0,246,255,0.12);
-  position:relative;
+  position:relative; z-index:2;
   background:
     repeating-conic-gradient(rgba(0,246,255,0.06) 0deg 2deg, transparent 2deg 30deg);
-  transition: transform 0.15s linear;
+  transition: none;
+  will-change: transform;
 }
 .compass-dial .ring{ position:absolute; inset:14px; border:1px solid rgba(0,246,255,0.25); border-radius:50%; }
 .compass-dial .ring2{ position:absolute; inset:34px; border:1px dashed rgba(0,246,255,0.18); border-radius:50%; }
@@ -165,6 +207,26 @@ html,body{
 .wind-info .v{ font-family:'Share Tech Mono',monospace; font-size:20px; font-weight:700; color:var(--white); }
 .wind-info .k{ font-size:11px; color:var(--dim); letter-spacing:1px; }
 
+/* SPEEDOMETER */
+.speedo-panel{ text-align:center; }
+.speedo-wrap{ display:flex; align-items:baseline; justify-content:center; gap:10px; margin:4px 0 2px; }
+.speedo-num{
+  font-family:'Orbitron',sans-serif; font-weight:900; font-size:74px; line-height:1;
+  color:var(--lime); letter-spacing:2px; font-variant-numeric: tabular-nums;
+  text-shadow:0 0 18px rgba(57,255,106,0.6), 0 0 42px rgba(57,255,106,0.25);
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+.speedo-num.stale{ color:var(--orange); text-shadow:0 0 18px rgba(255,154,31,0.55), 0 0 42px rgba(255,154,31,0.2); }
+.speedo-unit{ font-family:'Share Tech Mono',monospace; font-size:15px; color:var(--dim); letter-spacing:3px; }
+.speedo-sub{ font-size:11px; color:var(--dim); margin-top:6px; font-family:'Share Tech Mono',monospace; letter-spacing:0.5px; }
+
+/* QUAKE */
+.quake-hero{ display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+.quake-mag{ font-family:'Orbitron',sans-serif; font-size:50px; font-weight:900; color:var(--danger); text-shadow:0 0 16px rgba(255,59,59,0.55); line-height:1; flex-shrink:0; }
+.quake-mag span{ font-size:20px; color:var(--orange); margin-left:2px; }
+.quake-loc{ font-size:14.5px; font-weight:700; color:var(--white); line-height:1.35; }
+.quake-time{ font-size:11px; color:var(--dim); margin-top:5px; font-family:'Share Tech Mono',monospace; }
+
 /* FORECAST */
 .fc-scroll{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .fc-day{
@@ -181,9 +243,9 @@ html,body{
 /* GEOPHYSICS GRID */
 .geo-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .geo-card{ border:1px solid var(--line); border-radius:10px; padding:11px 12px; background:rgba(255,154,31,0.04); }
-.geo-card .k{ font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;}
-.geo-card .v{ font-family:'Share Tech Mono',monospace; font-size:16px; font-weight:700; color:var(--orange); }
-.geo-card .sub{ font-size:10.5px; color:var(--dim); margin-top:2px; }
+.geo-card .k{ font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;}
+.geo-card .v{ font-family:'Share Tech Mono',monospace; font-size:23px; font-weight:900; color:var(--yellow); text-shadow:0 0 10px rgba(250,255,0,0.45); }
+.geo-card .sub{ font-size:11px; color:var(--dim); margin-top:3px; }
 
 .foot{ text-align:center; font-size:10.5px; color:var(--dim); letter-spacing:1px; margin-top:6px; font-family:'Share Tech Mono',monospace; }
 
@@ -226,9 +288,15 @@ html,body{
   <div class="panel compass-panel">
     <div class="panel-title" style="align-self:flex-start;">Kompas &amp; Orientasi</div>
     <div class="compass-wrap">
-      <div class="compass-fixed-ptr"></div>
+      <div class="radar-sweep"></div>
       <div class="compass-dial" id="compassDial">
         <div class="ring"></div><div class="ring2"></div>
+      </div>
+      <div class="device-needle">
+        <div class="tail"></div>
+        <div class="shaft"></div>
+        <div class="arrowhead"></div>
+        <div class="pivot"></div>
       </div>
       <div class="compass-center">
         <div class="heading-num" id="headingNum">--<span class="heading-deg">°</span></div>
@@ -250,6 +318,16 @@ html,body{
       <div class="loc-item"><div class="k">Koordinat</div><div class="v" id="locCoord" style="font-size:12px;">-</div></div>
       <div class="loc-item"><div class="k">Akurasi</div><div class="v" id="locAcc">-</div></div>
     </div>
+  </div>
+
+  <!-- SPEEDOMETER -->
+  <div class="panel speedo-panel">
+    <div class="panel-title" style="justify-content:center;">Speedometer</div>
+    <div class="speedo-wrap">
+      <div class="speedo-num" id="speedoNum">00</div>
+      <div class="speedo-unit">KM/JAM</div>
+    </div>
+    <div class="speedo-sub" id="speedoSub">Menunggu sinyal GPS...</div>
   </div>
 
   <!-- WEATHER NOW -->
@@ -305,7 +383,28 @@ html,body{
     </div>
   </div>
 
-  <div class="foot">DATA: OPEN-METEO • OPENSTREETMAP NOMINATIM • SENSOR PERANGKAT — DIPERBARUI OTOMATIS<br>PEMBARUAN TERAKHIR: <span id="lastUpdate">-</span></div>
+  <!-- EARTHQUAKE -->
+  <div class="panel">
+    <div class="panel-title"><span class="dot" id="dotQuake" style="width:8px;height:8px;border-radius:50%;background:var(--dim);"></span>&nbsp;Info Gempa Terakhir</div>
+    <div class="quake-hero">
+      <div class="quake-mag" id="quakeMag">--<span>M</span></div>
+      <div class="quake-meta">
+        <div class="quake-loc" id="quakeLoc">Memuat data gempa BMKG...</div>
+        <div class="quake-time" id="quakeTime">-</div>
+      </div>
+    </div>
+    <div class="loc-grid">
+      <div class="loc-item"><div class="k">Koordinat Episentrum</div><div class="v" id="quakeCoord" style="font-size:12px;">-</div></div>
+      <div class="loc-item"><div class="k">Kedalaman</div><div class="v" id="quakeDepth">-</div></div>
+      <div class="loc-item"><div class="k">Klasifikasi</div><div class="v hl" id="quakeDepthClass">-</div></div>
+      <div class="loc-item"><div class="k">Darat / Laut</div><div class="v hl" id="quakeLandSea">-</div></div>
+      <div class="loc-item"><div class="k">Potensi</div><div class="v" id="quakePotensi" style="font-size:13px;">-</div></div>
+      <div class="loc-item"><div class="k">Dirasakan</div><div class="v" id="quakeDirasakan" style="font-size:12px;">-</div></div>
+    </div>
+    <div class="compass-note">Sumber: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)</div>
+  </div>
+
+  <div class="foot">DATA: OPEN-METEO • OPENSTREETMAP NOMINATIM • BMKG • SENSOR PERANGKAT — DIPERBARUI OTOMATIS<br>PEMBARUAN TERAKHIR: <span id="lastUpdate">-</span></div>
 
 </div>
 
@@ -317,7 +416,6 @@ html,body{
   let currentLat = null, currentLon = null, currentAlt = null, currentAcc = null;
   let lastGeocode = 0, lastWeatherFetch = 0, lastWeatherLat=null, lastWeatherLon=null;
   let wxCache = null;
-  let compassRotation = 0, lastRawHeading = null;
   let gpsWatchId = null, gpsWatchdogTimer = null;
 
   const cardinals16 = ["Utara","Timur Laut","Timur","Tenggara","Selatan","Barat Daya","Barat","Barat Laut"];
@@ -370,20 +468,55 @@ html,body{
   }
   buildCompassDial();
 
-  function updateCompassUI(heading){
-    // shortest-path continuous rotation (anti-spin)
-    if(lastRawHeading === null){
-      compassRotation = -heading;
+  // Smoothed heading state:
+  //  smHeading      = low-pass filtered compass heading (0-360, noise removed)
+  //  targetRotation = continuous (unwrapped) dial rotation target derived from smHeading
+  //  dialDisplay    = the rotation actually painted on screen, eased toward targetRotation every frame
+  let smHeading = null;
+  let targetRotation = 0;
+  let dialDisplay = 0;
+  let dialRafId = null;
+
+  function angDiff(a, b){
+    // shortest signed difference a-b, wrapped to [-180,180]
+    let d = ((a - b + 180) % 360 + 360) % 360 - 180;
+    return d;
+  }
+
+  function animateDial(){
+    const diff = targetRotation - dialDisplay;
+    if(Math.abs(diff) < 0.03){
+      dialDisplay = targetRotation;
     } else {
-      let delta = heading - lastRawHeading;
-      if(delta > 180) delta -= 360;
-      if(delta < -180) delta += 360;
-      compassRotation -= delta;
+      dialDisplay += diff * 0.16; // easing factor: smaller = smoother/slower, larger = snappier
     }
-    lastRawHeading = heading;
-    $('compassDial').style.transform = `rotate(${compassRotation}deg)`;
-    $('headingNum').innerHTML = Math.round(heading) + '<span class="heading-deg">°</span>';
-    const dir = dirFromDeg(heading);
+    $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
+    if(Math.abs(targetRotation - dialDisplay) > 0.01){
+      dialRafId = requestAnimationFrame(animateDial);
+    } else {
+      dialRafId = null;
+    }
+  }
+
+  function updateCompassUI(rawHeading){
+    if(smHeading === null){
+      smHeading = rawHeading;
+      targetRotation = -rawHeading;
+      dialDisplay = targetRotation;
+      $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
+    } else {
+      // low-pass filter the raw sensor reading to kill jitter, then move the
+      // continuous rotation target by the same filtered amount (anti-spin safe)
+      const diff = angDiff(rawHeading, smHeading);
+      const filtered = diff * 0.35;
+      smHeading = ((smHeading + filtered) % 360 + 360) % 360;
+      targetRotation -= filtered;
+      if(dialRafId === null){
+        dialRafId = requestAnimationFrame(animateDial);
+      }
+    }
+    $('headingNum').innerHTML = Math.round(smHeading) + '<span class="heading-deg">°</span>';
+    const dir = dirFromDeg(smHeading);
     $('headingLabel').textContent = dir.long.toUpperCase();
   }
 
@@ -440,12 +573,85 @@ html,body{
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
+  // ---------- SPEEDOMETER ----------
+  // speedTarget   = latest estimated speed (km/h), fed by real GPS fixes or dead-reckoning
+  // speedRender   = the value actually displayed, eased toward speedTarget every frame (no jumps)
+  // lastSpeedPos  = previous fix used for distance/time fallback calculation
+  let speedTarget = 0, speedRender = 0, speedRafId = null;
+  let lastSpeedPos = null, lastFixTime = 0;
+
+  function animateSpeedo(){
+    const diff = speedTarget - speedRender;
+    if(Math.abs(diff) < 0.04){
+      speedRender = speedTarget;
+    } else {
+      // adaptive easing: faster catch-up on big changes, gentle glide on small ones
+      const ease = Math.min(0.22, 0.06 + Math.abs(diff) * 0.01);
+      speedRender += diff * ease;
+    }
+    const shown = Math.max(0, Math.round(speedRender));
+    $('speedoNum').textContent = String(shown).padStart(2, '0');
+    if(Math.abs(speedTarget - speedRender) > 0.02){
+      speedRafId = requestAnimationFrame(animateSpeedo);
+    } else {
+      speedRafId = null;
+    }
+  }
+  function ensureSpeedRaf(){ if(speedRafId === null) speedRafId = requestAnimationFrame(animateSpeedo); }
+
+  function updateSpeed(pos){
+    const now = Date.now();
+    const gpsSpeed = pos.coords.speed; // m/s, native GPS Doppler-based speed when available
+    let instKmh = null;
+
+    if(typeof gpsSpeed === 'number' && !isNaN(gpsSpeed) && gpsSpeed >= 0){
+      instKmh = gpsSpeed * 3.6;
+    } else if(lastSpeedPos){
+      const dt = (now - lastSpeedPos.t) / 1000;
+      if(dt > 0.4){
+        const dist = haversine(pos.coords.latitude, pos.coords.longitude, lastSpeedPos.lat, lastSpeedPos.lon);
+        instKmh = (dist / dt) * 3.6;
+      }
+    }
+    lastSpeedPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, t: now };
+    lastFixTime = now;
+
+    if(instKmh !== null && !isNaN(instKmh) && isFinite(instKmh)){
+      instKmh = Math.min(instKmh, 300); // sanity clamp
+      const acc = pos.coords.accuracy || 999;
+      const jump = Math.abs(instKmh - speedTarget);
+      if(acc > 30 && jump > 25){
+        // weak-signal fix producing a big jump: trust it only partially to avoid a visible snap
+        speedTarget = speedTarget * 0.6 + instKmh * 0.4;
+      } else {
+        speedTarget = instKmh;
+      }
+      $('speedoNum').classList.remove('stale');
+      $('speedoSub').textContent = acc <= 15
+        ? `Sinyal GPS kuat • akurasi ± ${Math.round(acc)} m`
+        : `Sinyal GPS sedang • akurasi ± ${Math.round(acc)} m`;
+    }
+    ensureSpeedRaf();
+  }
+
+  // dead-reckoning: if no fresh GPS fix arrives, gently decay the speed instead of snapping to 0
+  setInterval(()=>{
+    if(lastFixTime && Date.now() - lastFixTime > 4000){
+      speedTarget *= 0.93;
+      if(speedTarget < 0.4) speedTarget = 0;
+      $('speedoNum').classList.add('stale');
+      $('speedoSub').textContent = 'Sinyal GPS lemah — estimasi kecepatan';
+      ensureSpeedRaf();
+    }
+  }, 700);
+
   function onPosition(pos){
     resetGpsWatchdog();
     currentLat = pos.coords.latitude;
     currentLon = pos.coords.longitude;
     currentAlt = pos.coords.altitude;
     currentAcc = pos.coords.accuracy;
+    updateSpeed(pos);
 
     $('dotGps').className = 'dot ok';
     $('txtGps').textContent = 'GPS: TERKUNCI';
@@ -628,6 +834,63 @@ html,body{
     });
   }
 
+  // ---------- EARTHQUAKE (BMKG) ----------
+  async function fetchQuake(){
+    const directUrl = 'https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json';
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl);
+    $('dotQuake').className = 'dot warn';
+    let data = null;
+    try{
+      const res = await fetch(directUrl, { cache: 'no-store' });
+      if(!res.ok) throw new Error('status ' + res.status);
+      data = await res.json();
+    }catch(e1){
+      try{
+        const res2 = await fetch(proxyUrl, { cache: 'no-store' });
+        if(!res2.ok) throw new Error('status ' + res2.status);
+        data = await res2.json();
+      }catch(e2){
+        $('dotQuake').className = 'dot err';
+        $('quakeLoc').textContent = 'Gagal memuat data gempa (offline / server BMKG tidak dapat diakses)';
+        return;
+      }
+    }
+    try{
+      const g = data.Infogempa.gempa;
+      renderQuake(g);
+      $('dotQuake').className = 'dot ok';
+    }catch(e){
+      $('dotQuake').className = 'dot err';
+      $('quakeLoc').textContent = 'Format data gempa tidak dikenali';
+    }
+  }
+
+  function renderQuake(g){
+    $('quakeMag').innerHTML = (g.Magnitude || '--') + '<span>M</span>';
+    $('quakeLoc').textContent = g.Wilayah || '-';
+    $('quakeTime').textContent = [g.Tanggal, g.Jam].filter(Boolean).join(' • ') || '-';
+    $('quakeCoord').textContent = `${g.Lintang || '-'}, ${g.Bujur || '-'}`;
+    $('quakeDepth').textContent = g.Kedalaman || '-';
+
+    const depthNum = parseFloat(String(g.Kedalaman || '').replace(/[^\d.]/g, ''));
+    let depthClass = '-';
+    if(!isNaN(depthNum)){
+      if(depthNum < 70) depthClass = 'Dangkal';
+      else if(depthNum <= 300) depthClass = 'Menengah';
+      else depthClass = 'Dalam';
+    }
+    $('quakeDepthClass').textContent = depthClass;
+
+    const wilayahLower = (g.Wilayah || '').toLowerCase();
+    let landSea = '-';
+    if(wilayahLower.includes('laut')) landSea = 'Laut';
+    else if(wilayahLower.includes('darat')) landSea = 'Darat';
+    $('quakeLandSea').textContent = landSea;
+
+    $('quakePotensi').textContent = g.Potensi || '-';
+    $('quakeDirasakan').textContent = g.Dirasakan || 'Tidak ada laporan dirasakan';
+  }
+
   function showError(msg){
     const box = $('errBox');
     box.style.display = 'block';
@@ -662,7 +925,14 @@ html,body{
         fetchWeather(currentLat, currentLon);
       }
     }
+    if(document.visibilityState === 'visible'){
+      fetchQuake();
+    }
   });
+
+  // Earthquake info doesn't need GPS/compass permission — load immediately and keep refreshing
+  fetchQuake();
+  setInterval(fetchQuake, 300000);
 
 })();
 </script>
