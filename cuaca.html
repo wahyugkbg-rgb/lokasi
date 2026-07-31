@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>GEOSTASIUN // Dasbor Cuaca &amp; Kompas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#050b14;
+  --bg-1:#0a1626;
+  --panel:#0d1b2e;
+  --line: #1c3a52;
+  --cyan:#00f6ff;
+  --yellow:#faff00;
+  --magenta:#ff2ea6;
+  --lime:#39ff6a;
+  --orange:#ff9a1f;
+  --white:#f4fbff;
+  --dim:#7fa8c2;
+  --danger:#ff3b3b;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+html,body{
+  margin:0; padding:0;
+  background: radial-gradient(ellipse at top, var(--bg-1) 0%, var(--bg-0) 65%);
+  color:var(--white);
+  font-family:'Rajdhani', sans-serif;
+  overflow-x:hidden;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.grid-overlay{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,246,255,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,246,255,0.045) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+.scanline{
+  position:fixed; left:0; right:0; height:2px; z-index:1; pointer-events:none;
+  background:linear-gradient(90deg, transparent, rgba(0,246,255,0.55), transparent);
+  animation: scan 5s linear infinite;
+  opacity:0.5;
+}
+@keyframes scan{ 0%{top:-2px;} 100%{top:100%;} }
+
+.wrap{ position:relative; z-index:2; max-width:720px; margin:0 auto; padding:12px 12px 40px; }
+
+/* HEADER */
+.topbar{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; margin-bottom:12px;
+  border:1px solid var(--line); border-radius:10px;
+  background:linear-gradient(180deg, rgba(13,27,46,0.9), rgba(10,22,38,0.7));
+}
+.brand{ font-family:'Orbitron',sans-serif; font-weight:900; font-size:15px; letter-spacing:2px; color:var(--cyan); text-shadow:0 0 12px rgba(0,246,255,0.6); }
+.brand span{ color:var(--yellow); }
+.clock{ text-align:right; }
+.clock .time{ font-family:'Share Tech Mono',monospace; font-size:20px; font-weight:700; color:var(--white); }
+.clock .date{ font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
+
+.status-row{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.pill{
+  flex:1; min-width:100px; display:flex; align-items:center; gap:6px;
+  padding:7px 10px; border-radius:20px; border:1px solid var(--line);
+  background:rgba(13,27,46,0.7); font-size:11px; letter-spacing:0.5px; color:var(--dim);
+  font-family:'Share Tech Mono',monospace;
+}
+.dot{ width:8px; height:8px; border-radius:50%; background:var(--dim); flex-shrink:0; }
+.dot.ok{ background:var(--lime); box-shadow:0 0 8px var(--lime); animation:pulse 1.6s infinite; }
+.dot.warn{ background:var(--orange); box-shadow:0 0 8px var(--orange); animation:pulse 1.6s infinite; }
+.dot.err{ background:var(--danger); box-shadow:0 0 8px var(--danger); }
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+/* PANEL GENERIC */
+.panel{
+  border:1px solid var(--line); border-radius:14px;
+  background:linear-gradient(180deg, rgba(13,27,46,0.85), rgba(9,18,30,0.85));
+  padding:16px; margin-bottom:12px;
+  position:relative; overflow:hidden;
+}
+.panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+.panel-title{
+  font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--cyan); margin-bottom:12px; display:flex; align-items:center; gap:8px;
+}
+.panel-title::before{ content:''; width:6px; height:6px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); transform:rotate(45deg); }
+
+/* COMPASS */
+.compass-panel{ display:flex; flex-direction:column; align-items:center; }
+.compass-wrap{ position:relative; width:min(78vw, 300px); height:min(78vw,300px); margin:6px auto 4px; }
+.compass-fixed-ptr{
+  position:absolute; top:-2px; left:50%; transform:translateX(-50%);
+  width:0; height:0; z-index:5;
+  border-left:9px solid transparent; border-right:9px solid transparent;
+  border-top:16px solid var(--yellow); filter: drop-shadow(0 0 6px var(--yellow));
+}
+.compass-dial{
+  width:100%; height:100%; border-radius:50%;
+  border:3px solid var(--cyan);
+  box-shadow:0 0 22px rgba(0,246,255,0.35), inset 0 0 30px rgba(0,246,255,0.12);
+  position:relative;
+  background:
+    repeating-conic-gradient(rgba(0,246,255,0.06) 0deg 2deg, transparent 2deg 30deg);
+  transition: transform 0.15s linear;
+}
+.compass-dial .ring{ position:absolute; inset:14px; border:1px solid rgba(0,246,255,0.25); border-radius:50%; }
+.compass-dial .ring2{ position:absolute; inset:34px; border:1px dashed rgba(0,246,255,0.18); border-radius:50%; }
+.tick{ position:absolute; left:50%; top:0; width:2px; height:12px; background:rgba(0,246,255,0.4); transform-origin:1px 150px; }
+.tick.major{ height:18px; width:3px; background:var(--cyan); }
+.deg-label{
+  position:absolute; left:50%; top:50%; font-family:'Share Tech Mono',monospace;
+  font-size:11px; color:var(--dim);
+}
+.cardinal{
+  position:absolute; left:50%; top:50%; font-family:'Orbitron',sans-serif; font-weight:900;
+  font-size:22px;
+}
+.cardinal.N{ color:var(--yellow); text-shadow:0 0 10px var(--yellow); }
+.cardinal.other{ color:var(--white); opacity:0.85; }
+.compass-center{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:3;
+}
+.heading-num{ font-family:'Orbitron',sans-serif; font-size:44px; font-weight:900; color:var(--white); text-shadow:0 0 14px rgba(244,251,255,0.5); line-height:1; }
+.heading-deg{ font-size:18px; color:var(--cyan); }
+.heading-label{ margin-top:4px; font-size:13px; letter-spacing:4px; color:var(--yellow); font-weight:700; }
+.compass-note{ font-size:11px; color:var(--dim); margin-top:8px; text-align:center; font-family:'Share Tech Mono',monospace; }
+
+/* LOCATION */
+.loc-main{ font-size:19px; font-weight:700; color:var(--lime); line-height:1.35; margin-bottom:10px; text-shadow:0 0 8px rgba(57,255,106,0.35); }
+.loc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.loc-item{ background:rgba(0,246,255,0.04); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
+.loc-item .k{ font-size:10px; color:var(--dim); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; }
+.loc-item .v{ font-family:'Share Tech Mono',monospace; font-size:15px; color:var(--white); font-weight:700; }
+.loc-item .v.hl{ color:var(--yellow); }
+
+/* WEATHER NOW */
+.wx-hero{ display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+.wx-icon{ font-size:56px; filter:drop-shadow(0 0 10px rgba(0,246,255,0.4)); }
+.wx-temp{ font-family:'Orbitron',sans-serif; font-size:52px; font-weight:900; color:var(--white); line-height:1; }
+.wx-temp span{ font-size:24px; color:var(--cyan); }
+.wx-desc{ font-size:14px; color:var(--yellow); font-weight:700; letter-spacing:1px; margin-top:2px;}
+.wx-feels{ font-size:11px; color:var(--dim); margin-top:3px; }
+
+.stat-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+.stat-card{
+  border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+  background:rgba(0,246,255,0.03);
+  display:flex; align-items:center; gap:10px;
+}
+.stat-ic{ font-size:22px; }
+.stat-k{ font-size:10px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
+.stat-v{ font-family:'Share Tech Mono',monospace; font-size:17px; font-weight:700; color:var(--white); }
+
+/* WIND */
+.wind-row{ display:flex; align-items:center; gap:16px; }
+.wind-arrow-wrap{ width:70px; height:70px; border-radius:50%; border:2px solid var(--magenta); display:flex; align-items:center; justify-content:center; box-shadow:0 0 16px rgba(255,46,166,0.35); flex-shrink:0; }
+.wind-arrow{ font-size:30px; color:var(--magenta); transition:transform 0.3s ease; }
+.wind-info .v{ font-family:'Share Tech Mono',monospace; font-size:20px; font-weight:700; color:var(--white); }
+.wind-info .k{ font-size:11px; color:var(--dim); letter-spacing:1px; }
+
+/* FORECAST */
+.fc-scroll{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+.fc-day{
+  flex:0 0 auto; min-width:78px; text-align:center; border:1px solid var(--line);
+  border-radius:12px; padding:10px 6px; background:rgba(0,246,255,0.03);
+}
+.fc-day.today{ border-color:var(--yellow); box-shadow:0 0 12px rgba(250,255,0,0.25); }
+.fc-day .d{ font-size:11px; color:var(--cyan); letter-spacing:1px; font-weight:700; text-transform:uppercase; }
+.fc-day .ic{ font-size:26px; margin:6px 0; }
+.fc-day .hi{ font-family:'Share Tech Mono',monospace; font-size:15px; color:var(--white); font-weight:700; }
+.fc-day .lo{ font-family:'Share Tech Mono',monospace; font-size:12px; color:var(--dim); }
+.fc-day .pop{ font-size:10px; color:var(--lime); margin-top:3px; }
+
+/* GEOPHYSICS GRID */
+.geo-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.geo-card{ border:1px solid var(--line); border-radius:10px; padding:11px 12px; background:rgba(255,154,31,0.04); }
+.geo-card .k{ font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;}
+.geo-card .v{ font-family:'Share Tech Mono',monospace; font-size:16px; font-weight:700; color:var(--orange); }
+.geo-card .sub{ font-size:10.5px; color:var(--dim); margin-top:2px; }
+
+.foot{ text-align:center; font-size:10.5px; color:var(--dim); letter-spacing:1px; margin-top:6px; font-family:'Share Tech Mono',monospace; }
+
+.btn{
+  display:block; width:100%; margin-top:10px; padding:14px; border-radius:12px; border:1px solid var(--cyan);
+  background:rgba(0,246,255,0.08); color:var(--cyan); font-family:'Orbitron',sans-serif; font-weight:700;
+  font-size:13px; letter-spacing:2px; text-transform:uppercase; cursor:pointer;
+}
+.btn:active{ background:rgba(0,246,255,0.2); }
+
+.err-box{ border:1px solid var(--danger); background:rgba(255,59,59,0.08); color:#ffb3b3; padding:10px 12px; border-radius:10px; font-size:12px; margin-top:10px; font-family:'Share Tech Mono',monospace; }
+
+@media (prefers-color-scheme: light){ /* force dark HUD regardless of system theme */ }
+</style>
+</head>
+<body>
+<div class="grid-overlay"></div>
+<div class="scanline"></div>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">GEO<span>STASIUN</span></div>
+    <div class="clock">
+      <div class="time" id="clockTime">--:--:--</div>
+      <div class="date" id="clockDate">-- --- ----</div>
+    </div>
+  </div>
+
+  <div class="status-row">
+    <div class="pill"><span class="dot" id="dotGps"></span><span id="txtGps">GPS: MENUNGGU</span></div>
+    <div class="pill"><span class="dot" id="dotCompass"></span><span id="txtCompass">KOMPAS: MENUNGGU</span></div>
+    <div class="pill"><span class="dot" id="dotWx"></span><span id="txtWx">CUACA: MENUNGGU</span></div>
+  </div>
+
+  <button class="btn" id="startBtn">▶ AKTIFKAN SENSOR</button>
+  <div class="err-box" id="errBox" style="display:none;"></div>
+
+  <!-- COMPASS -->
+  <div class="panel compass-panel">
+    <div class="panel-title" style="align-self:flex-start;">Kompas &amp; Orientasi</div>
+    <div class="compass-wrap">
+      <div class="compass-fixed-ptr"></div>
+      <div class="compass-dial" id="compassDial">
+        <div class="ring"></div><div class="ring2"></div>
+      </div>
+      <div class="compass-center">
+        <div class="heading-num" id="headingNum">--<span class="heading-deg">°</span></div>
+        <div class="heading-label" id="headingLabel">-----</div>
+      </div>
+    </div>
+    <div class="compass-note" id="compassNote">Arahkan HP mendatar untuk kalibrasi terbaik</div>
+  </div>
+
+  <!-- LOCATION -->
+  <div class="panel">
+    <div class="panel-title">Lokasi &amp; Wilayah Administratif</div>
+    <div class="loc-main" id="locAddress">Mencari lokasi...</div>
+    <div class="loc-grid">
+      <div class="loc-item"><div class="k">RT / RW</div><div class="v hl" id="locRtRw">-</div></div>
+      <div class="loc-item"><div class="k">Kelurahan/Desa</div><div class="v" id="locKel">-</div></div>
+      <div class="loc-item"><div class="k">Kecamatan</div><div class="v" id="locKec">-</div></div>
+      <div class="loc-item"><div class="k">Kab/Kota</div><div class="v" id="locKab">-</div></div>
+      <div class="loc-item"><div class="k">Koordinat</div><div class="v" id="locCoord" style="font-size:12px;">-</div></div>
+      <div class="loc-item"><div class="k">Akurasi</div><div class="v" id="locAcc">-</div></div>
+    </div>
+  </div>
+
+  <!-- WEATHER NOW -->
+  <div class="panel">
+    <div class="panel-title">Cuaca Saat Ini</div>
+    <div class="wx-hero">
+      <div class="wx-icon" id="wxIcon">🛰️</div>
+      <div>
+        <div class="wx-temp" id="wxTemp">--<span>°C</span></div>
+        <div class="wx-desc" id="wxDesc">-</div>
+        <div class="wx-feels" id="wxFeels">Terasa seperti --°C</div>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-ic">💧</div><div><div class="stat-k">Kelembaban</div><div class="stat-v" id="stHum">--%</div></div></div>
+      <div class="stat-card"><div class="stat-ic">🏔️</div><div><div class="stat-k">Ketinggian</div><div class="stat-v" id="stAlt">-- m</div></div></div>
+      <div class="stat-card"><div class="stat-ic">📊</div><div><div class="stat-k">Tekanan Udara</div><div class="stat-v" id="stPress">-- hPa</div></div></div>
+      <div class="stat-card"><div class="stat-ic">☀️</div><div><div class="stat-k">Indeks UV</div><div class="stat-v" id="stUv">--</div></div></div>
+    </div>
+  </div>
+
+  <!-- WIND -->
+  <div class="panel">
+    <div class="panel-title">Angin</div>
+    <div class="wind-row">
+      <div class="wind-arrow-wrap"><div class="wind-arrow" id="windArrow">↑</div></div>
+      <div class="wind-info">
+        <div class="v" id="windSpeed">-- km/j</div>
+        <div class="k" id="windDir">Arah: --° (--)</div>
+        <div class="k" id="windGust">Hembusan: -- km/j</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORECAST 7 DAYS -->
+  <div class="panel">
+    <div class="panel-title">Ramalan 7 Hari</div>
+    <div class="fc-scroll" id="fcScroll">
+      <div class="fc-day"><div class="d">...</div></div>
+    </div>
+  </div>
+
+  <!-- GEOPHYSICS -->
+  <div class="panel">
+    <div class="panel-title">Klimatologi &amp; Geofisika</div>
+    <div class="geo-grid">
+      <div class="geo-card"><div class="k">Terbit Matahari</div><div class="v" id="geoSunrise">--:--</div></div>
+      <div class="geo-card"><div class="k">Terbenam Matahari</div><div class="v" id="geoSunset">--:--</div></div>
+      <div class="geo-card"><div class="k">Curah Hujan (jam ini)</div><div class="v" id="geoPrecip">-- mm</div><div class="sub" id="geoPrecipProb">Peluang: --%</div></div>
+      <div class="geo-card"><div class="k">Titik Embun</div><div class="v" id="geoDew">--°C</div></div>
+      <div class="geo-card"><div class="k">Jarak Pandang</div><div class="v" id="geoVis">-- km</div></div>
+      <div class="geo-card"><div class="k">Tutupan Awan</div><div class="v" id="geoCloud">--%</div></div>
+    </div>
+  </div>
+
+  <div class="foot">DATA: OPEN-METEO • OPENSTREETMAP NOMINATIM • SENSOR PERANGKAT — DIPERBARUI OTOMATIS<br>PEMBARUAN TERAKHIR: <span id="lastUpdate">-</span></div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  let currentLat = null, currentLon = null, currentAlt = null, currentAcc = null;
+  let lastGeocode = 0, lastWeatherFetch = 0, lastWeatherLat=null, lastWeatherLon=null;
+  let wxCache = null;
+  let compassRotation = 0, lastRawHeading = null;
+  let gpsWatchId = null, gpsWatchdogTimer = null;
+
+  const cardinals16 = ["Utara","Timur Laut","Timur","Tenggara","Selatan","Barat Daya","Barat","Barat Laut"];
+  const dirShort = ["U","TL","T","TG","S","BD","B","BL"];
+
+  function dirFromDeg(deg){
+    const idx = Math.round(deg / 45) % 8;
+    return {long: cardinals16[idx], short: dirShort[idx]};
+  }
+
+  // ---------- CLOCK ----------
+  function tickClock(){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const ss = String(now.getSeconds()).padStart(2,'0');
+    $('clockTime').textContent = `${hh}:${mm}:${ss}`;
+    const hari = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][now.getDay()];
+    const bln = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][now.getMonth()];
+    $('clockDate').textContent = `${hari}, ${now.getDate()} ${bln} ${now.getFullYear()}`;
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  // ---------- COMPASS BUILD ----------
+  function buildCompassDial(){
+    const dial = $('compassDial');
+    for(let d=0; d<360; d+=10){
+      const isMajor = d % 90 === 0;
+      const isCardinal = d % 90 === 0;
+      const tick = document.createElement('div');
+      tick.className = 'tick' + (isMajor ? ' major' : '');
+      tick.style.transform = `rotate(${d}deg)`;
+      dial.appendChild(tick);
+      if(d % 30 === 0 && !isCardinal){
+        const lbl = document.createElement('div');
+        lbl.className = 'deg-label';
+        lbl.textContent = d;
+        lbl.style.transform = `rotate(${d}deg) translate(-50%,-124px) rotate(${-d}deg)`;
+        dial.appendChild(lbl);
+      }
+    }
+    const cardDefs = [{d:0,t:'U',cls:'N'},{d:90,t:'T',cls:'other'},{d:180,t:'S',cls:'other'},{d:270,t:'B',cls:'other'}];
+    cardDefs.forEach(c=>{
+      const el = document.createElement('div');
+      el.className = 'cardinal ' + c.cls;
+      el.textContent = c.t;
+      el.style.transform = `rotate(${c.d}deg) translate(-50%,-108px) rotate(${-c.d}deg)`;
+      dial.appendChild(el);
+    });
+  }
+  buildCompassDial();
+
+  function updateCompassUI(heading){
+    // shortest-path continuous rotation (anti-spin)
+    if(lastRawHeading === null){
+      compassRotation = -heading;
+    } else {
+      let delta = heading - lastRawHeading;
+      if(delta > 180) delta -= 360;
+      if(delta < -180) delta += 360;
+      compassRotation -= delta;
+    }
+    lastRawHeading = heading;
+    $('compassDial').style.transform = `rotate(${compassRotation}deg)`;
+    $('headingNum').innerHTML = Math.round(heading) + '<span class="heading-deg">°</span>';
+    const dir = dirFromDeg(heading);
+    $('headingLabel').textContent = dir.long.toUpperCase();
+  }
+
+  let orientationActive = false;
+  function handleOrientation(event){
+    let heading = null;
+    if(typeof event.webkitCompassHeading === 'number'){
+      heading = event.webkitCompassHeading;
+    } else if(event.alpha !== null && event.alpha !== undefined){
+      heading = 360 - event.alpha;
+    }
+    if(heading === null || isNaN(heading)) return;
+    heading = ((heading % 360) + 360) % 360;
+    if(!orientationActive){
+      orientationActive = true;
+      $('dotCompass').className = 'dot ok';
+      $('txtCompass').textContent = 'KOMPAS: AKTIF';
+    }
+    updateCompassUI(heading);
+  }
+
+  function startCompass(){
+    if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+      DeviceOrientationEvent.requestPermission().then(state=>{
+        if(state === 'granted'){
+          window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+          window.addEventListener('deviceorientation', handleOrientation, true);
+        } else {
+          $('txtCompass').textContent = 'KOMPAS: DITOLAK';
+          $('dotCompass').className = 'dot err';
+        }
+      }).catch(()=>{
+        $('txtCompass').textContent = 'KOMPAS: ERROR';
+        $('dotCompass').className = 'dot err';
+      });
+    } else {
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.addEventListener('deviceorientation', handleOrientation, true);
+      setTimeout(()=>{
+        if(!orientationActive){
+          $('txtCompass').textContent = 'KOMPAS: TDK TERSEDIA';
+          $('dotCompass').className = 'dot warn';
+        }
+      }, 4000);
+    }
+  }
+
+  // ---------- GPS ----------
+  function haversine(lat1, lon1, lat2, lon2){
+    const R = 6371000;
+    const toRad = x => x * Math.PI/180;
+    const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function onPosition(pos){
+    resetGpsWatchdog();
+    currentLat = pos.coords.latitude;
+    currentLon = pos.coords.longitude;
+    currentAlt = pos.coords.altitude;
+    currentAcc = pos.coords.accuracy;
+
+    $('dotGps').className = 'dot ok';
+    $('txtGps').textContent = 'GPS: TERKUNCI';
+    $('locCoord').textContent = `${currentLat.toFixed(6)}, ${currentLon.toFixed(6)}`;
+    $('locAcc').textContent = currentAcc ? `± ${Math.round(currentAcc)} m` : '-';
+    $('stAlt').textContent = (currentAlt !== null && currentAlt !== undefined) ? `${Math.round(currentAlt)} m` : '-- m';
+
+    const distMoved = (lastWeatherLat !== null) ? haversine(currentLat,currentLon,lastWeatherLat,lastWeatherLon) : Infinity;
+    const now = Date.now();
+
+    if(now - lastGeocode > 45000 || lastGeocode === 0){
+      lastGeocode = now;
+      reverseGeocode(currentLat, currentLon);
+    }
+    if(distMoved > 800 || now - lastWeatherFetch > 600000){
+      lastWeatherFetch = now;
+      lastWeatherLat = currentLat; lastWeatherLon = currentLon;
+      fetchWeather(currentLat, currentLon);
+    }
+  }
+
+  function onPositionError(err){
+    $('dotGps').className = 'dot err';
+    $('txtGps').textContent = 'GPS: GAGAL';
+    showError('Lokasi: ' + (err.message || 'Tidak dapat mengakses GPS. Pastikan izin lokasi diaktifkan.'));
+  }
+
+  function resetGpsWatchdog(){
+    if(gpsWatchdogTimer) clearTimeout(gpsWatchdogTimer);
+    gpsWatchdogTimer = setTimeout(()=>{
+      // watchPosition stalled — force a fresh single fix
+      $('dotGps').className = 'dot warn';
+      $('txtGps').textContent = 'GPS: MENYEGARKAN';
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(onPosition, onPositionError, {enableHighAccuracy:true, maximumAge:0, timeout:15000});
+      }
+    }, 20000);
+  }
+
+  function startGps(){
+    if(!navigator.geolocation){
+      $('txtGps').textContent = 'GPS: TDK DIDUKUNG';
+      $('dotGps').className = 'dot err';
+      return;
+    }
+    $('txtGps').textContent = 'GPS: MENCARI...';
+    $('dotGps').className = 'dot warn';
+    gpsWatchId = navigator.geolocation.watchPosition(onPosition, onPositionError, {
+      enableHighAccuracy:true, maximumAge:5000, timeout:20000
+    });
+    resetGpsWatchdog();
+  }
+
+  // ---------- REVERSE GEOCODE (RT/RW) ----------
+  async function reverseGeocode(lat, lon){
+    try{
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`;
+      const res = await fetch(url, {headers:{'Accept':'application/json'}});
+      const data = await res.json();
+      const a = data.address || {};
+
+      const road = a.road || a.pedestrian || a.footway || '';
+      const houseNum = a.house_number || '';
+      const hamlet = a.hamlet || a.neighbourhood || a.quarter || '';
+      const suburb = a.suburb || a.village || '';
+      const kel = suburb || hamlet || a.residential || '-';
+      const kec = a.city_district || a.subdistrict || a.municipality || '-';
+      const kab = a.county || a.city || a.regency || '-';
+      const prov = a.state || '';
+
+      let rtrw = '-';
+      const combined = [hamlet, a.neighbourhood, a.quarter, data.display_name].filter(Boolean).join(' ');
+      const m = combined.match(/RT\s*[.:]?\s*(\d{1,3})\s*[\/\-]?\s*RW\s*[.:]?\s*(\d{1,3})/i) ||
+                combined.match(/RW\s*[.:]?\s*(\d{1,3})\s*[\/\-]?\s*RT\s*[.:]?\s*(\d{1,3})/i);
+      if(m){
+        rtrw = /RT/i.test(combined.split(m[0])[0] + m[0]) && /^RT/i.test(m[0]) ? `RT ${m[1]}/RW ${m[2]}` : `RW ${m[1]}/RT ${m[2]}`;
+      }
+
+      const mainParts = [road, houseNum ? `No. ${houseNum}` : ''].filter(Boolean).join(' ');
+      $('locAddress').textContent = mainParts || (data.display_name ? data.display_name.split(',').slice(0,2).join(', ') : 'Alamat tidak diketahui');
+      $('locRtRw').textContent = rtrw;
+      $('locKel').textContent = kel;
+      $('locKec').textContent = kec;
+      $('locKab').textContent = kab + (prov ? `, ${prov}` : '');
+    }catch(e){
+      $('locAddress').textContent = 'Gagal memuat alamat (offline?)';
+    }
+  }
+
+  // ---------- WEATHER ----------
+  const wmoMap = {
+    0:['☀️','Cerah'],1:['🌤️','Cerah Berawan'],2:['⛅','Berawan Sebagian'],3:['☁️','Berawan Tebal'],
+    45:['🌫️','Berkabut'],48:['🌫️','Kabut Beku'],
+    51:['🌦️','Gerimis Ringan'],53:['🌦️','Gerimis'],55:['🌧️','Gerimis Lebat'],
+    56:['🌧️','Gerimis Beku'],57:['🌧️','Gerimis Beku Lebat'],
+    61:['🌧️','Hujan Ringan'],63:['🌧️','Hujan Sedang'],65:['🌧️','Hujan Lebat'],
+    66:['🌧️','Hujan Beku'],67:['🌧️','Hujan Beku Lebat'],
+    71:['🌨️','Salju Ringan'],73:['🌨️','Salju Sedang'],75:['❄️','Salju Lebat'],
+    80:['🌦️','Hujan Lokal Ringan'],81:['🌧️','Hujan Lokal'],82:['⛈️','Hujan Lokal Deras'],
+    95:['⛈️','Badai Petir'],96:['⛈️','Badai Petir + Es'],99:['⛈️','Badai Petir Hebat']
+  };
+  function wmoInfo(code){ return wmoMap[code] || ['🌡️','Data Tidak Diketahui']; }
+
+  async function fetchWeather(lat, lon){
+    try{
+      $('txtWx').textContent = 'CUACA: MEMUAT...';
+      $('dotWx').className = 'dot warn';
+      const params = new URLSearchParams({
+        latitude: lat, longitude: lon,
+        current: 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,dew_point_2m,uv_index,visibility',
+        hourly: 'uv_index,precipitation_probability,visibility',
+        daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset,uv_index_max',
+        timezone: 'auto', forecast_days: '7', wind_speed_unit: 'kmh'
+      });
+      const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      wxCache = data;
+      renderWeather(data);
+      $('dotWx').className = 'dot ok';
+      $('txtWx').textContent = 'CUACA: AKTIF';
+      $('lastUpdate').textContent = new Date().toLocaleTimeString('id-ID');
+    }catch(e){
+      $('dotWx').className = 'dot err';
+      $('txtWx').textContent = 'CUACA: GAGAL';
+      showError('Cuaca: gagal mengambil data. Periksa koneksi internet.');
+    }
+  }
+
+  function renderWeather(data){
+    const c = data.current;
+    if(!c) return;
+    const [icon, desc] = wmoInfo(c.weather_code);
+    $('wxIcon').textContent = icon;
+    $('wxTemp').innerHTML = Math.round(c.temperature_2m) + '<span>°C</span>';
+    $('wxDesc').textContent = desc;
+    $('wxFeels').textContent = `Terasa seperti ${Math.round(c.apparent_temperature)}°C`;
+    $('stHum').textContent = Math.round(c.relative_humidity_2m) + '%';
+    $('stPress').textContent = Math.round(c.surface_pressure) + ' hPa';
+    $('stUv').textContent = c.uv_index !== undefined ? c.uv_index.toFixed(1) : '--';
+
+    // wind
+    const wDir = c.wind_direction_10m;
+    const wd = dirFromDeg(wDir);
+    $('windSpeed').textContent = Math.round(c.wind_speed_10m) + ' km/j';
+    $('windDir').textContent = `Arah: ${Math.round(wDir)}° (${wd.short} - ${wd.long})`;
+    $('windGust').textContent = `Hembusan: ${Math.round(c.wind_gusts_10m || 0)} km/j`;
+    $('windArrow').style.transform = `rotate(${wDir + 180}deg)`;
+
+    $('geoPrecip').textContent = (c.precipitation ?? 0).toFixed(1) + ' mm';
+    $('geoDew').textContent = Math.round(c.dew_point_2m) + '°C';
+    $('geoCloud').textContent = Math.round(c.cloud_cover) + '%';
+    $('geoVis').textContent = c.visibility !== undefined ? (c.visibility/1000).toFixed(1) + ' km' : '-- km';
+
+    if(data.daily){
+      $('geoSunrise').textContent = new Date(data.daily.sunrise[0]).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+      $('geoSunset').textContent = new Date(data.daily.sunset[0]).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+      $('geoPrecipProb').textContent = `Peluang: ${data.daily.precipitation_probability_max[0]}%`;
+      renderForecast(data.daily);
+    }
+  }
+
+  function renderForecast(daily){
+    const scroll = $('fcScroll');
+    scroll.innerHTML = '';
+    const hariSingkat = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+    daily.time.forEach((dateStr, i)=>{
+      const d = new Date(dateStr + 'T00:00:00');
+      const [icon] = wmoInfo(daily.weather_code[i]);
+      const card = document.createElement('div');
+      card.className = 'fc-day' + (i===0 ? ' today' : '');
+      card.innerHTML = `
+        <div class="d">${i===0 ? 'HARI INI' : hariSingkat[d.getDay()] + ' ' + d.getDate()}</div>
+        <div class="ic">${icon}</div>
+        <div class="hi">${Math.round(daily.temperature_2m_max[i])}°</div>
+        <div class="lo">${Math.round(daily.temperature_2m_min[i])}°</div>
+        <div class="pop">💧${daily.precipitation_probability_max[i]}%</div>
+      `;
+      scroll.appendChild(card);
+    });
+  }
+
+  function showError(msg){
+    const box = $('errBox');
+    box.style.display = 'block';
+    box.textContent = '⚠ ' + msg;
+  }
+
+  // ---------- START ----------
+  $('startBtn').addEventListener('click', function(){
+    this.style.display = 'none';
+    $('errBox').style.display = 'none';
+    startGps();
+    startCompass();
+  });
+
+  // Auto-refresh weather periodically even without movement
+  setInterval(()=>{
+    if(currentLat !== null && currentLon !== null){
+      const now = Date.now();
+      if(now - lastWeatherFetch > 600000){
+        lastWeatherFetch = now;
+        fetchWeather(currentLat, currentLon);
+      }
+    }
+  }, 60000);
+
+  // Keep screen from looking frozen on slow devices — visibility handling
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && currentLat !== null){
+      const now = Date.now();
+      if(now - lastWeatherFetch > 600000){
+        lastWeatherFetch = now;
+        fetchWeather(currentLat, currentLon);
+      }
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
