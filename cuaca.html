@@ -272,7 +272,6 @@
             height: 0;
             z-index: 6;
             pointer-events: none;
-            transform: translate(-50%, -50%);
         }
         .device-needle .shaft {
             position: absolute;
@@ -318,7 +317,6 @@
             }
         }
 
-        /* -- ORBIT MARKER (bergerak di pinggir sesuai heading) -- */
         .heading-orbit {
             position: absolute;
             inset: 0;
@@ -329,8 +327,6 @@
             position: absolute;
             width: 0;
             height: 0;
-            transform-origin: center center;
-            /* segitiga mengarah ke atas (border-top) agar ujung menunjuk ke luar */
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
             border-bottom: none;
@@ -793,7 +789,7 @@
             font-family: 'Share Tech Mono', monospace;
         }
 
-        /* ALERT / POLICE */
+        /* ALERT */
         .alert-item {
             display: flex;
             align-items: flex-start;
@@ -891,7 +887,7 @@
         }
 
         @media (prefers-color-scheme: light) {
-            /* force dark HUD regardless of system theme */ }
+            /* force dark HUD */ }
     </style>
 </head>
 <body>
@@ -926,7 +922,7 @@
                 <div class="compass-dial" id="compassDial">
                     <div class="ring"></div><div class="ring2"></div>
                 </div>
-                <div class="device-needle">
+                <div class="device-needle" id="deviceNeedle">
                     <div class="tail"></div>
                     <div class="shaft"></div>
                     <div class="pivot"></div>
@@ -939,7 +935,7 @@
                     <div class="heading-label" id="headingLabel">-----</div>
                 </div>
             </div>
-            <div class="compass-note" id="compassNote">Arahkan HP mendatar untuk kalibrasi terbaik</div>
+            <div class="compass-note" id="compassNote">Arahkan HP mendatar – jarum merah menunjuk Utara, segitiga kuning menunjukkan arah hadap (atas)</div>
         </div>
 
         <!-- LOCATION -->
@@ -1083,6 +1079,10 @@
             let wakeLock = null;
             let isFullscreen = false;
 
+            // Cache data POI dan Alert
+            let cachedPOI = null; // { status: string, items: array }
+            let cachedAlerts = null; // { status: string, items: array }
+
             const cardinals16 = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
             const dirShort = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
 
@@ -1126,7 +1126,7 @@
                 $('fullscreenBtn').textContent = isFullscreen ? '⛶' : '⛶';
             });
 
-            // ---------- WAKE LOCK (mencegah layar mati) ----------
+            // ---------- WAKE LOCK ----------
             async function requestWakeLock() {
                 try {
                     if ('wakeLock' in navigator) {
@@ -1174,6 +1174,7 @@
 
             const marker = $('orbitMarker');
             const compassWrap = document.querySelector('.compass-wrap');
+            const deviceNeedle = $('deviceNeedle');
 
             function angDiff(a, b) {
                 let d = ((a - b + 180) % 360 + 360) % 360 - 180;
@@ -1205,8 +1206,12 @@
                     dialDisplay += diff * 0.16;
                 }
                 $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
-                // Marker di pinggir: posisi berdasarkan heading (smHeading)
+                // marker selalu di atas (tidak bergerak)
                 updateOrbitMarker();
+                // jarum device-needle diputar berlawanan dengan dial agar menunjuk utara
+                if (smHeading !== null) {
+                    deviceNeedle.style.transform = `translate(-50%, -50%) rotate(${-smHeading}deg)`;
+                }
                 if (Math.abs(targetRotation - dialDisplay) > 0.01) {
                     dialRafId = requestAnimationFrame(animateDial);
                 } else {
@@ -1215,22 +1220,14 @@
             }
 
             function updateOrbitMarker() {
-                if (smHeading === null) {
-                    marker.style.opacity = '0';
-                    return;
-                }
-                marker.style.opacity = '1';
+                // selalu di posisi 12 (atas)
                 const wrapSize = compassWrap ? compassWrap.offsetWidth : 300;
                 const radius = wrapSize * 0.44;
                 const center = wrapSize / 2;
-                const rad = (smHeading - 90) * Math.PI / 180;
-                const x = center + radius * Math.cos(rad);
-                const y = center + radius * Math.sin(rad);
-                marker.style.left = x + 'px';
-                marker.style.top = y + 'px';
-                // Rotasi marker agar ujung segitiga menunjuk ke arah heading (ke luar)
-                // Karena segitiga dibuat dengan border-top (mengarah ke atas), rotasi = smHeading
-                marker.style.transform = `translate(-50%,-50%) rotate(${smHeading}deg)`;
+                marker.style.left = center + 'px';
+                marker.style.top = (center - radius) + 'px';
+                marker.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+                marker.style.opacity = smHeading !== null ? '1' : '0';
             }
 
             function updateCompassUI(rawHeading) {
@@ -1240,6 +1237,7 @@
                     targetRotation = -buffered;
                     dialDisplay = targetRotation;
                     $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
+                    deviceNeedle.style.transform = `translate(-50%, -50%) rotate(${-smHeading}deg)`;
                     updateOrbitMarker();
                 } else {
                     const diff = angDiff(buffered, smHeading);
@@ -1256,6 +1254,9 @@
                 const dir = dirFromDeg(smHeading);
                 $('headingLabel').textContent = dir.long.toUpperCase();
                 updateOrbitMarker();
+                if (dialRafId === null && smHeading !== null) {
+                    deviceNeedle.style.transform = `translate(-50%, -50%) rotate(${-smHeading}deg)`;
+                }
             }
 
             let orientationActive = false;
@@ -1385,17 +1386,19 @@
                 }
             }, 700);
 
-            // ---------- POI & ALERT ----------
+            // ---------- POI ----------
             let lastPoiFetch = 0;
 
             async function fetchPOI(lat, lon) {
                 const now = Date.now();
                 if (now - lastPoiFetch < 45000) return;
                 lastPoiFetch = now;
-                const list = $('poiList');
-                const status = $('poiStatus');
-                status.textContent = '🔍 Mencari tempat terkenal...';
-                list.innerHTML = '';
+
+                const statusEl = $('poiStatus');
+                const listEl = $('poiList');
+
+                // Tampilkan status loading, tapi jangan hapus list
+                statusEl.textContent = '🔍 Memuat data tempat...';
 
                 try {
                     const overpassUrl =
@@ -1410,7 +1413,6 @@
                         if (!el.tags) continue;
                         let name = el.tags.name || el.tags.alt_name || el.tags.short_name || '';
                         if (!name) continue;
-                        const tagKeys = Object.keys(el.tags);
                         let type = 'tempat';
                         let icon = '📍';
                         const amenity = el.tags.amenity || '';
@@ -1468,127 +1470,149 @@
 
                     const sorted = Array.from(poiMap.values()).sort((a, b) => a.dist - b.dist);
                     if (sorted.length === 0) {
-                        status.textContent = '📍 Tidak ditemukan tempat terkenal dalam radius 200 m.';
-                        list.innerHTML = '';
-                        return;
+                        statusEl.textContent = '📍 Tidak ditemukan tempat terkenal dalam radius 200 m.';
+                        listEl.innerHTML = '';
+                        cachedPOI = { status: statusEl.textContent, items: [] };
+                    } else {
+                        const html = sorted.slice(0, 15).map(p =>
+                            `<div class="poi-item">
+                                <span class="poi-icon">${p.icon}</span>
+                                <span class="poi-name">${p.name}</span>
+                                <span class="poi-type">${p.type}</span>
+                                <span class="poi-dist">${Math.round(p.dist)} m</span>
+                            </div>`
+                        ).join('');
+                        listEl.innerHTML = html;
+                        statusEl.textContent = `🏛️ ${sorted.length} tempat ditemukan dalam radius 200 m`;
+                        cachedPOI = { status: statusEl.textContent, items: sorted };
                     }
-                    status.textContent = `🏛️ ${sorted.length} tempat ditemukan dalam radius 200 m`;
-                    list.innerHTML = sorted.slice(0, 15).map(p =>
-                        `<div class="poi-item">
-                            <span class="poi-icon">${p.icon}</span>
-                            <span class="poi-name">${p.name}</span>
-                            <span class="poi-type">${p.type}</span>
-                            <span class="poi-dist">${Math.round(p.dist)} m</span>
-                        </div>`
-                    ).join('');
-
                 } catch (e) {
-                    status.textContent = '⚠️ Gagal memuat data tempat (koneksi?)';
-                    list.innerHTML = '';
+                    // Gagal, pertahankan data lama jika ada, atau tampilkan pesan error
+                    if (cachedPOI) {
+                        statusEl.textContent = cachedPOI.status + ' ⚠️ (gagal refresh)';
+                        // list tetap seperti sebelumnya
+                    } else {
+                        statusEl.textContent = '⚠️ Gagal memuat data tempat (koneksi?)';
+                        listEl.innerHTML = '';
+                        cachedPOI = { status: statusEl.textContent, items: [] };
+                    }
                 }
             }
 
-            // ---- ALERT / POLICE ----
+            // ---- ALERT ----
             let lastAlertFetch = 0;
 
             async function fetchAlerts(lat, lon) {
                 const now = Date.now();
                 if (now - lastAlertFetch < 45000) return;
                 lastAlertFetch = now;
+
                 const container = $('alertList');
                 const status = $('alertStatus');
+
                 status.textContent = '🔄 Memuat informasi...';
-                container.innerHTML = '';
 
                 let alerts = [];
 
-                // 1. Kepolisian terdekat dari OSM
                 try {
-                    const url =
-                        `https://overpass-api.de/api/interpreter?data=[out:json];(node["amenity"="police"](around:5000,${lat},${lon});way["amenity"="police"](around:5000,${lat},${lon}););out body;`;
-                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    const data = await res.json();
-                    const cops = data.elements || [];
-                    for (const el of cops) {
-                        const name = el.tags?.name || 'Kantor Polisi';
-                        const d = haversine(lat, lon, el.lat || el.lat, el.lon || el.lon);
-                        alerts.push({
-                            type: 'police',
-                            icon: '👮',
-                            title: name,
-                            desc: `Jarak ${Math.round(d)} m • ${el.tags?.operator || 'Kepolisian RI'}`,
-                            src: 'OpenStreetMap'
-                        });
-                        if (alerts.length >= 3) break;
-                    }
-                } catch (e) {}
-
-                // 2. Peringatan cuaca dari Open-Meteo (weather alerts)
-                try {
-                    const wUrl =
-                        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code&daily=weather_code&timezone=auto&forecast_days=2`;
-                    const res = await fetch(wUrl);
-                    const data = await res.json();
-                    if (data.current) {
-                        const code = data.current.weather_code;
-                        // kode cuaca ekstrem: 95,96,99 = badai; 65,67,75,82 = hujan/salju lebat
-                        let warning = null;
-                        if ([95, 96, 99].includes(code)) {
-                            warning = { icon: '⛈️', title: 'Peringatan Badai Petir', desc: 'Badai petir terdeteksi di area Anda. Waspada angin kencang dan petir.' };
-                        } else if ([65, 67, 75, 82].includes(code)) {
-                            warning = { icon: '🌧️', title: 'Hujan Lebat', desc: 'Curah hujan lebat terjadi. Waspada banjir dan genangan air.' };
-                        } else if ([45, 48].includes(code)) {
-                            warning = { icon: '🌫️', title: 'Kabut Tebal', desc: 'Kabut tebal dapat mengurangi jarak pandang. Hati-hati saat berkendara.' };
-                        }
-                        if (warning) {
+                    // 1. Kepolisian terdekat
+                    try {
+                        const url =
+                            `https://overpass-api.de/api/interpreter?data=[out:json];(node["amenity"="police"](around:5000,${lat},${lon});way["amenity"="police"](around:5000,${lat},${lon}););out body;`;
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        const cops = data.elements || [];
+                        for (const el of cops) {
+                            const name = el.tags?.name || 'Kantor Polisi';
+                            const d = haversine(lat, lon, el.lat || el.lat, el.lon || el.lon);
                             alerts.push({
-                                type: 'warning',
-                                icon: warning.icon,
-                                title: warning.title,
-                                desc: warning.desc + ` (kode ${code})`,
-                                src: 'Open-Meteo / BMKG'
+                                type: 'police',
+                                icon: '👮',
+                                title: name,
+                                desc: `Jarak ${Math.round(d)} m • ${el.tags?.operator || 'Kepolisian RI'}`,
+                                src: 'OpenStreetMap'
                             });
+                            if (alerts.length >= 3) break;
                         }
-                    }
-                    // cek daily untuk peringatan 2 hari ke depan
-                    if (data.daily && data.daily.weather_code && data.daily.weather_code.length > 1) {
-                        const codes = data.daily.weather_code;
-                        for (let i = 1; i < Math.min(codes.length, 3); i++) {
-                            const c = codes[i];
-                            if ([95, 96, 99].includes(c)) {
-                                const date = new Date(data.daily.time[i] + 'T00:00:00');
-                                const dateStr = date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric',
-                                    month: 'short' });
+                    } catch (e) {}
+
+                    // 2. Peringatan cuaca
+                    try {
+                        const wUrl =
+                            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code&daily=weather_code&timezone=auto&forecast_days=2`;
+                        const res = await fetch(wUrl);
+                        const data = await res.json();
+                        if (data.current) {
+                            const code = data.current.weather_code;
+                            let warning = null;
+                            if ([95, 96, 99].includes(code)) {
+                                warning = { icon: '⛈️', title: 'Peringatan Badai Petir', desc: 'Badai petir terdeteksi di area Anda. Waspada angin kencang dan petir.' };
+                            } else if ([65, 67, 75, 82].includes(code)) {
+                                warning = { icon: '🌧️', title: 'Hujan Lebat', desc: 'Curah hujan lebat terjadi. Waspada banjir dan genangan air.' };
+                            } else if ([45, 48].includes(code)) {
+                                warning = { icon: '🌫️', title: 'Kabut Tebal', desc: 'Kabut tebal dapat mengurangi jarak pandang. Hati-hati saat berkendara.' };
+                            }
+                            if (warning) {
                                 alerts.push({
                                     type: 'warning',
-                                    icon: '⛈️',
-                                    title: `Badai Petir ${dateStr}`,
-                                    desc: `Potensi badai petir pada ${dateStr}. Tetap waspada.`,
-                                    src: 'Open-Meteo'
+                                    icon: warning.icon,
+                                    title: warning.title,
+                                    desc: warning.desc + ` (kode ${code})`,
+                                    src: 'Open-Meteo / BMKG'
                                 });
-                                break;
                             }
                         }
+                        if (data.daily && data.daily.weather_code && data.daily.weather_code.length > 1) {
+                            const codes = data.daily.weather_code;
+                            for (let i = 1; i < Math.min(codes.length, 3); i++) {
+                                const c = codes[i];
+                                if ([95, 96, 99].includes(c)) {
+                                    const date = new Date(data.daily.time[i] + 'T00:00:00');
+                                    const dateStr = date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric',
+                                        month: 'short' });
+                                    alerts.push({
+                                        type: 'warning',
+                                        icon: '⛈️',
+                                        title: `Badai Petir ${dateStr}`,
+                                        desc: `Potensi badai petir pada ${dateStr}. Tetap waspada.`,
+                                        src: 'Open-Meteo'
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+
+                    // Update UI
+                    if (alerts.length === 0) {
+                        status.textContent = '✅ Tidak ada peringatan aktif. Kepolisian terdekat dalam radius 5 km tidak ditemukan.';
+                        container.innerHTML = '';
+                        cachedAlerts = { status: status.textContent, items: [] };
+                    } else {
+                        status.textContent = `🚨 ${alerts.length} informasi tersedia`;
+                        container.innerHTML = alerts.map(a =>
+                            `<div class="alert-item ${a.type}">
+                                <span class="alert-icon">${a.icon}</span>
+                                <div class="alert-body">
+                                    <div class="alert-title">${a.title}</div>
+                                    <div class="alert-desc">${a.desc}</div>
+                                    <div class="alert-src">📡 ${a.src}</div>
+                                </div>
+                            </div>`
+                        ).join('');
+                        cachedAlerts = { status: status.textContent, items: alerts };
                     }
-                } catch (e) {}
-
-                if (alerts.length === 0) {
-                    status.textContent = '✅ Tidak ada peringatan aktif. Kepolisian terdekat dalam radius 5 km tidak ditemukan.';
-                    container.innerHTML = '';
-                    return;
+                } catch (e) {
+                    // Gagal, pertahankan data lama jika ada
+                    if (cachedAlerts) {
+                        status.textContent = cachedAlerts.status + ' ⚠️ (gagal refresh)';
+                        // container tetap seperti sebelumnya
+                    } else {
+                        status.textContent = '⚠️ Gagal memuat informasi (koneksi?)';
+                        container.innerHTML = '';
+                        cachedAlerts = { status: status.textContent, items: [] };
+                    }
                 }
-
-                status.textContent = `🚨 ${alerts.length} informasi tersedia`;
-                container.innerHTML = alerts.map(a =>
-                    `<div class="alert-item ${a.type}">
-                        <span class="alert-icon">${a.icon}</span>
-                        <div class="alert-body">
-                            <div class="alert-title">${a.title}</div>
-                            <div class="alert-desc">${a.desc}</div>
-                            <div class="alert-src">📡 ${a.src}</div>
-                        </div>
-                    </div>`
-                ).join('');
             }
 
             // ---------- WEATHER ----------
@@ -1833,7 +1857,6 @@
                     lastWeatherLon = currentLon;
                     fetchWeather(currentLat, currentLon);
                 }
-                // POI & Alert setiap kali posisi berubah signifikan
                 fetchPOI(currentLat, currentLon);
                 fetchAlerts(currentLat, currentLon);
             }
@@ -1886,7 +1909,6 @@
                 startGps();
                 startCompass();
                 requestWakeLock();
-                // fetch awal
                 if (currentLat !== null && currentLon !== null) {
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
