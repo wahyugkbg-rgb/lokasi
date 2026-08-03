@@ -846,6 +846,92 @@
             color: var(--danger);
         }
 
+        /* SITUATIONAL AWARENESS - NEW */
+        .situ-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .situ-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: rgba(0, 246, 255, 0.03);
+        }
+        .situ-card .situ-k {
+            font-size: 10px;
+            color: var(--dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .situ-card .situ-v {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .situ-card .situ-v.highlight {
+            color: var(--yellow);
+        }
+        .situ-card .situ-sub {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 2px;
+        }
+        .situ-list {
+            max-height: 180px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding-right: 4px;
+        }
+        .situ-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .situ-list::-webkit-scrollbar-track {
+            background: rgba(0, 246, 255, 0.05);
+            border-radius: 4px;
+        }
+        .situ-list::-webkit-scrollbar-thumb {
+            background: var(--cyan);
+            border-radius: 4px;
+        }
+        .situ-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(0, 246, 255, 0.04);
+            font-size: 12px;
+        }
+        .situ-item .situ-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .situ-item .situ-text {
+            flex: 1;
+            color: var(--white);
+        }
+        .situ-item .situ-meta {
+            font-size: 10px;
+            color: var(--dim);
+            flex-shrink: 0;
+            text-align: right;
+        }
+        .situ-item .situ-tag {
+            font-size: 9px;
+            background: rgba(0, 246, 255, 0.12);
+            padding: 1px 6px;
+            border-radius: 8px;
+            color: var(--cyan);
+            flex-shrink: 0;
+        }
+
         .foot {
             text-align: center;
             font-size: 10.5px;
@@ -1056,6 +1142,30 @@
             <div class="compass-note" style="margin-top:8px;">Sumber: OpenStreetMap (kepolisian) • PetaBencana.id (laporan warga) • BMKG / Open-Meteo</div>
         </div>
 
+        <!-- SITUATIONAL AWARENESS - NEW PANEL -->
+        <div class="panel" id="situPanel">
+            <div class="panel-title">📡 Situasional Awareness</div>
+            <div id="situContent">
+                <div class="situ-grid" id="situGrid">
+                    <div class="situ-card">
+                        <div class="situ-k">🔄 Status</div>
+                        <div class="situ-v" id="situStatus">Memuat data situasional...</div>
+                        <div class="situ-sub" id="situLastUpdate">-</div>
+                    </div>
+                    <div class="situ-card">
+                        <div class="situ-k">📋 Ringkasan</div>
+                        <div class="situ-v highlight" id="situSummary">-</div>
+                        <div class="situ-sub" id="situSubSummary">-</div>
+                    </div>
+                </div>
+                <div id="situDetails">
+                    <div class="situ-list" id="situIncidentList"></div>
+                    <div class="situ-list" id="situServiceList" style="margin-top:8px;"></div>
+                </div>
+            </div>
+            <div class="compass-note" style="margin-top:8px;">Sumber: PetaBencana.id • OpenStreetMap • RSS berita (jika tersedia)</div>
+        </div>
+
         <div class="foot">DATA: OPEN-METEO • OPENSTREETMAP NOMINATIM • BMKG • SENSOR PERANGKAT — DIPERBARUI OTOMATIS<br>PEMBARUAN TERAKHIR: <span id="lastUpdate">-</span></div>
 
     </div>
@@ -1082,6 +1192,9 @@
             // Cache data POI dan Alert
             let cachedPOI = null; // { status: string, items: array }
             let cachedAlerts = null; // { status: string, items: array }
+
+            // Cache Situasional
+            let cachedSitu = null; // { incidents: [], services: [], news: [], lastUpdate: timestamp }
 
             const cardinals16 = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
             const dirShort = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
@@ -1397,7 +1510,6 @@
                 const statusEl = $('poiStatus');
                 const listEl = $('poiList');
 
-                // Tampilkan status loading, tapi jangan hapus list
                 statusEl.textContent = '🔍 Memuat data tempat...';
 
                 try {
@@ -1487,10 +1599,8 @@
                         cachedPOI = { status: statusEl.textContent, items: sorted };
                     }
                 } catch (e) {
-                    // Gagal, pertahankan data lama jika ada, atau tampilkan pesan error
                     if (cachedPOI) {
                         statusEl.textContent = cachedPOI.status + ' ⚠️ (gagal refresh)';
-                        // list tetap seperti sebelumnya
                     } else {
                         statusEl.textContent = '⚠️ Gagal memuat data tempat (koneksi?)';
                         listEl.innerHTML = '';
@@ -1653,14 +1763,232 @@
                         cachedAlerts = { status: status.textContent, items: alerts };
                     }
                 } catch (e) {
-                    // Gagal, pertahankan data lama jika ada
                     if (cachedAlerts) {
                         status.textContent = cachedAlerts.status + ' ⚠️ (gagal refresh)';
-                        // container tetap seperti sebelumnya
                     } else {
                         status.textContent = '⚠️ Gagal memuat informasi (koneksi?)';
                         container.innerHTML = '';
                         cachedAlerts = { status: status.textContent, items: [] };
+                    }
+                }
+            }
+
+            // ---------- SITUATIONAL AWARENESS (NEW) ----------
+            let lastSituFetch = 0;
+
+            async function fetchSituational(lat, lon) {
+                const now = Date.now();
+                if (now - lastSituFetch < 60000) return; // refresh setiap 60 detik
+                lastSituFetch = now;
+
+                const statusEl = $('situStatus');
+                const summaryEl = $('situSummary');
+                const subSummaryEl = $('situSubSummary');
+                const incidentListEl = $('situIncidentList');
+                const serviceListEl = $('situServiceList');
+                const lastUpdateEl = $('situLastUpdate');
+
+                statusEl.textContent = '🔄 Memperbarui data...';
+                summaryEl.textContent = '---';
+                subSummaryEl.textContent = 'Menghubungi sumber...';
+
+                let incidents = [];
+                let services = [];
+
+                try {
+                    // 1. Ambil laporan dari PetaBencana (semua jenis) dalam radius 15 km
+                    try {
+                        const pbUrl = 'https://data.petabencana.id/reports?geoformat=geojson&timeperiod=21600';
+                        const pbRes = await fetch(pbUrl, { headers: { 'Accept': 'application/json' } });
+                        const pbData = await pbRes.json();
+                        const features = (pbData && pbData.result && Array.isArray(pbData.result.features)) ?
+                            pbData.result.features : [];
+
+                        const disasterMeta = {
+                            flood: { icon: '🌊', label: 'Banjir / Genangan', cls: 'danger' },
+                            fire: { icon: '🔥', label: 'Kebakaran', cls: 'danger' },
+                            haze: { icon: '🌫️', label: 'Kabut Asap', cls: 'warning' },
+                            wind: { icon: '💨', label: 'Angin Kencang', cls: 'warning' },
+                            earthquake: { icon: '📢', label: 'Gempa Dirasakan', cls: 'warning' },
+                            volcano: { icon: '🌋', label: 'Aktivitas Gunung Berapi', cls: 'danger' },
+                            traffic: { icon: '🚗', label: 'Kecelakaan / Kemacetan', cls: 'warning' },
+                            criminal: { icon: '🚨', label: 'Gangguan Kamtibmas / Kriminal', cls: 'danger' },
+                            utility: { icon: '⚡', label: 'Gangguan Layanan (listrik/air)', cls: 'warning' }
+                        };
+
+                        for (const f of features) {
+                            const p = f.properties || {};
+                            const coords = f.geometry && f.geometry.coordinates;
+                            if (!coords || coords.length < 2) continue;
+                            const flon = coords[0], flat = coords[1];
+                            if (!flat || !flon) continue;
+                            const d = haversine(lat, lon, flat, flon);
+                            if (d > 15000) continue;
+                            const type = p.disaster_type || '';
+                            const meta = disasterMeta[type];
+                            if (!meta) continue;
+                            if (p.status && p.status !== 'confirmed') continue;
+                            let ago = '';
+                            if (p.created_at) {
+                                const mins = Math.round((Date.now() - new Date(p.created_at).getTime()) / 60000);
+                                if (mins >= 0) ago = mins < 60 ? `${mins} menit` : `${Math.round(mins/60)} jam`;
+                            }
+                            incidents.push({
+                                icon: meta.icon,
+                                text: meta.label,
+                                meta: `Jarak ${Math.round(d)} m${ago ? ' • '+ago : ''}`,
+                                type: meta.cls,
+                                src: 'PetaBencana.id'
+                            });
+                        }
+                    } catch (e) {}
+
+                    // 2. Ambil fasilitas penting terdekat (listrik, air, telepon, pemadam, rumah sakit)
+                    try {
+                        const overpassQuery = `
+                            [out:json];
+                            (
+                              node["power"="substation"](around:3000,${lat},${lon});
+                              node["utility"="water"](around:3000,${lat},${lon});
+                              node["telecom"="tower"](around:3000,${lat},${lon});
+                              node["amenity"="fire_station"](around:3000,${lat},${lon});
+                              node["amenity"="hospital"](around:3000,${lat},${lon});
+                              node["amenity"="police"](around:3000,${lat},${lon});
+                              node["man_made"="water_works"](around:3000,${lat},${lon});
+                              way["power"="substation"](around:3000,${lat},${lon});
+                              way["utility"="water"](around:3000,${lat},${lon});
+                              way["telecom"="tower"](around:3000,${lat},${lon});
+                              way["amenity"="fire_station"](around:3000,${lat},${lon});
+                              way["amenity"="hospital"](around:3000,${lat},${lon});
+                              way["amenity"="police"](around:3000,${lat},${lon});
+                              way["man_made"="water_works"](around:3000,${lat},${lon});
+                            );
+                            out body;
+                        `;
+                        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        const elements = data.elements || [];
+
+                        const serviceMap = new Map();
+                        for (const el of elements) {
+                            const tags = el.tags || {};
+                            let name = tags.name || '';
+                            let type = '';
+                            let icon = '';
+                            if (tags.power === 'substation') { type = 'Gardu Listrik';
+                                icon = '⚡'; } else if (tags.utility === 'water') { type = 'Sumber Air';
+                                icon = '💧'; } else if (tags.telecom === 'tower') { type = 'Menara Telepon';
+                                icon = '📡'; } else if (tags.amenity === 'fire_station') { type = 'Pemadam Kebakaran';
+                                icon = '🚒'; } else if (tags.amenity === 'hospital') { type = 'Rumah Sakit';
+                                icon = '🏥'; } else if (tags.amenity === 'police') { type = 'Kepolisian';
+                                icon = '👮'; } else if (tags.man_made === 'water_works') { type = 'PDAM / Instalasi Air';
+                                icon = '💧'; } else continue;
+                            const d = haversine(lat, lon, el.lat || el.lat, el.lon || el.lon);
+                            const key = type + (name || '');
+                            if (!serviceMap.has(key) || serviceMap.get(key).dist > d) {
+                                serviceMap.set(key, { name: name || type, type, icon, dist: d });
+                            }
+                        }
+
+                        const sortedServices = Array.from(serviceMap.values()).sort((a, b) => a.dist - b.dist);
+                        for (const s of sortedServices.slice(0, 10)) {
+                            services.push({
+                                icon: s.icon,
+                                text: s.name,
+                                meta: `${Math.round(s.dist)} m`,
+                                type: s.type
+                            });
+                        }
+                    } catch (e) {}
+
+                    // 3. (Opsional) Berita lokal dari RSS – jika gagal, tidak masalah
+                    let newsItems = [];
+                    try {
+                        // Contoh menggunakan RSS Kompas dengan proxy allorigins
+                        const rssUrl = 'https://rss.kompas.com/';
+                        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(rssUrl);
+                        const res = await fetch(proxyUrl, { headers: { 'Accept': 'application/xml' } });
+                        const text = await res.text();
+                        const parser = new DOMParser();
+                        const xml = parser.parseFromString(text, 'text/xml');
+                        const items = xml.querySelectorAll('item');
+                        for (let i = 0; i < Math.min(items.length, 5); i++) {
+                            const item = items[i];
+                            const title = item.querySelector('title')?.textContent || '';
+                            const pubDate = item.querySelector('pubDate')?.textContent || '';
+                            const link = item.querySelector('link')?.textContent || '';
+                            // Filter topik yang relevan
+                            const keywords = ['kriminal', 'kecelakaan', 'kebakaran', 'macet', 'listrik', 'air', 'telepon',
+                                'bencana', 'banjir', 'gempa', 'kamtibmas'
+                            ];
+                            const lower = title.toLowerCase();
+                            if (keywords.some(k => lower.includes(k))) {
+                                newsItems.push({
+                                    icon: '📰',
+                                    text: title.substring(0, 80) + (title.length > 80 ? '...' : ''),
+                                    meta: pubDate ? new Date(pubDate).toLocaleTimeString('id-ID', { hour: '2-digit',
+                                        minute: '2-digit' }) : '',
+                                    type: 'Berita'
+                                });
+                            }
+                        }
+                    } catch (e) {}
+
+                    // Gabungkan semua kejadian: incidents + news sebagai incident (kecuali layanan)
+                    const allIncidents = [...incidents, ...newsItems.map(n => ({
+                        icon: n.icon,
+                        text: n.text,
+                        meta: n.meta,
+                        type: 'warning',
+                        src: 'RSS'
+                    }))];
+
+                    // Update UI
+                    statusEl.textContent = '✅ Data tersedia';
+                    const total = allIncidents.length + services.length;
+                    summaryEl.textContent = `${total} informasi`;
+                    subSummaryEl.textContent = `${allIncidents.length} kejadian, ${services.length} layanan`;
+
+                    if (allIncidents.length === 0) {
+                        incidentListEl.innerHTML =
+                            `<div class="situ-item"><span class="situ-icon">✅</span><span class="situ-text">Tidak ada kejadian terdeteksi di sekitar</span></div>`;
+                    } else {
+                        incidentListEl.innerHTML = allIncidents.slice(0, 8).map(inc =>
+                            `<div class="situ-item">
+                                <span class="situ-icon">${inc.icon}</span>
+                                <span class="situ-text">${inc.text}</span>
+                                <span class="situ-meta">${inc.meta}</span>
+                                ${inc.src ? `<span class="situ-tag">${inc.src}</span>` : ''}
+                            </div>`
+                        ).join('');
+                    }
+
+                    if (services.length === 0) {
+                        serviceListEl.innerHTML =
+                            `<div class="situ-item"><span class="situ-icon">ℹ️</span><span class="situ-text">Tidak ada fasilitas layanan terdekat ditemukan</span></div>`;
+                    } else {
+                        serviceListEl.innerHTML = services.slice(0, 8).map(srv =>
+                            `<div class="situ-item">
+                                <span class="situ-icon">${srv.icon}</span>
+                                <span class="situ-text">${srv.text}</span>
+                                <span class="situ-meta">${srv.meta}</span>
+                                <span class="situ-tag">${srv.type}</span>
+                            </div>`
+                        ).join('');
+                    }
+
+                    lastUpdateEl.textContent = `Diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+                    cachedSitu = { incidents: allIncidents, services, lastUpdate: Date.now() };
+
+                } catch (e) {
+                    statusEl.textContent = '⚠️ Gagal memuat data situasional';
+                    summaryEl.textContent = 'Error';
+                    subSummaryEl.textContent = 'Coba refresh manual';
+                    if (cachedSitu) {
+                        // pertahankan data lama
+                        incidentListEl.innerHTML =
+                            `<div class="situ-item"><span class="situ-icon">⚠️</span><span class="situ-text">Menggunakan data cache (${new Date(cachedSitu.lastUpdate).toLocaleTimeString('id-ID')})</span></div>`;
                     }
                 }
             }
@@ -1852,17 +2180,11 @@
                     const hamlet = a.hamlet || a.neighbourhood || a.quarter || '';
                     const suburb = a.suburb || a.village || '';
                     const kel = suburb || hamlet || a.residential || '-';
-                    // Fallback berlapis: Nominatim Indonesia tidak konsisten menaruh
-                    // info kecamatan di satu field saja, jadi dicoba beberapa kemungkinan.
                     const kec = a.city_district || a.district || a.subdistrict ||
                         a.municipality || a.town || a.state_district || kel;
                     const kab = a.county || a.city || a.regency || '-';
                     const prov = a.state || '';
 
-                    // RT/RW nyaris tidak pernah ada di basis data OSM/Nominatim untuk
-                    // sebagian besar lokasi (bukan level yang dipetakan secara terbuka).
-                    // Kode ini tetap mencoba menangkapnya bila kebetulan ter-tag manual,
-                    // termasuk dari extratags & namedetails, tapi hasil "-" adalah hal wajar.
                     let rtrw = '-';
                     const extraStr = Object.values(ex).filter(v => typeof v === 'string').join(' ');
                     const nameStr = data.namedetails ? Object.values(data.namedetails).filter(v => typeof v ===
@@ -1921,6 +2243,7 @@
                 }
                 fetchPOI(currentLat, currentLon);
                 fetchAlerts(currentLat, currentLon);
+                fetchSituational(currentLat, currentLon); // NEW
             }
 
             function onPositionError(err) {
@@ -1974,6 +2297,7 @@
                 if (currentLat !== null && currentLon !== null) {
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
+                    fetchSituational(currentLat, currentLon);
                 }
             });
 
@@ -1987,6 +2311,7 @@
                     }
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
+                    fetchSituational(currentLat, currentLon);
                 }
             }, 120000);
 
@@ -1999,6 +2324,7 @@
                     }
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
+                    fetchSituational(currentLat, currentLon);
                 }
                 if (document.visibilityState === 'visible') {
                     fetchQuake();
