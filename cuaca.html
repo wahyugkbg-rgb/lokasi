@@ -1053,7 +1053,7 @@
                 <div class="poi-empty" id="alertStatus">Memuat informasi...</div>
                 <div id="alertList"></div>
             </div>
-            <div class="compass-note" style="margin-top:8px;">Sumber: OpenStreetMap (kepolisian) &amp; BMKG / Open-Meteo</div>
+            <div class="compass-note" style="margin-top:8px;">Sumber: OpenStreetMap (kepolisian) • PetaBencana.id (laporan warga) • BMKG / Open-Meteo</div>
         </div>
 
         <div class="foot">DATA: OPEN-METEO • OPENSTREETMAP NOMINATIM • BMKG • SENSOR PERANGKAT — DIPERBARUI OTOMATIS<br>PEMBARUAN TERAKHIR: <span id="lastUpdate">-</span></div>
@@ -1536,7 +1536,57 @@
                         }
                     } catch (e) {}
 
-                    // 2. Peringatan cuaca
+                    // 2. Laporan bencana warga: banjir, kebakaran, kabut asap,
+                    // angin kencang, gempa dirasakan (crowdsource, seluruh Indonesia)
+                    try {
+                        const pbUrl = 'https://data.petabencana.id/reports?geoformat=geojson&timeperiod=21600';
+                        const pbRes = await fetch(pbUrl, { headers: { 'Accept': 'application/json' } });
+                        const pbData = await pbRes.json();
+                        const features = (pbData && pbData.result && Array.isArray(pbData.result.features)) ?
+                            pbData.result.features : [];
+
+                        const disasterMeta = {
+                            flood: { icon: '🌊', label: 'Banjir / Genangan', cls: 'danger' },
+                            fire: { icon: '🔥', label: 'Kebakaran', cls: 'danger' },
+                            haze: { icon: '🌫️', label: 'Kabut Asap', cls: 'warning' },
+                            wind: { icon: '💨', label: 'Angin Kencang', cls: 'warning' },
+                            earthquake: { icon: '📢', label: 'Gempa Dirasakan (Laporan Warga)', cls: 'warning' },
+                            volcano: { icon: '🌋', label: 'Aktivitas Gunung Berapi', cls: 'danger' }
+                        };
+
+                        const nearbyDisasters = [];
+                        for (const f of features) {
+                            const p = f.properties || {};
+                            const coords = f.geometry && f.geometry.coordinates;
+                            if (!coords || coords.length < 2) continue;
+                            const flon = coords[0], flat = coords[1];
+                            if (!flat || !flon) continue;
+                            const meta = disasterMeta[p.disaster_type];
+                            if (!meta) continue;
+                            if (p.status && p.status !== 'confirmed') continue;
+                            const dd = haversine(lat, lon, flat, flon);
+                            if (dd > 15000) continue;
+                            nearbyDisasters.push({ dd, p, meta });
+                        }
+                        nearbyDisasters.sort((a, b) => a.dd - b.dd);
+
+                        for (const item of nearbyDisasters.slice(0, 5)) {
+                            let ago = '';
+                            if (item.p.created_at) {
+                                const mins = Math.round((Date.now() - new Date(item.p.created_at).getTime()) / 60000);
+                                if (mins >= 0) ago = mins < 60 ? ` • ${mins} menit lalu` : ` • ${Math.round(mins / 60)} jam lalu`;
+                            }
+                            alerts.push({
+                                type: item.meta.cls,
+                                icon: item.meta.icon,
+                                title: item.meta.label,
+                                desc: `Laporan warga • Jarak ${Math.round(item.dd)} m${ago}`,
+                                src: 'PetaBencana.id'
+                            });
+                        }
+                    } catch (e) {}
+
+                    // 3. Peringatan cuaca
                     try {
                         const wUrl =
                             `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code&daily=weather_code&timezone=auto&forecast_days=2`;
@@ -1585,7 +1635,7 @@
 
                     // Update UI
                     if (alerts.length === 0) {
-                        status.textContent = '✅ Tidak ada peringatan aktif. Kepolisian terdekat dalam radius 5 km tidak ditemukan.';
+                        status.textContent = '✅ Tidak ada peringatan aktif. Kepolisian (5 km) & laporan bencana warga (15 km: banjir/kebakaran/asap/angin/gempa) tidak ditemukan.';
                         container.innerHTML = '';
                         cachedAlerts = { status: status.textContent, items: [] };
                     } else {
