@@ -298,6 +298,7 @@
         }
         .schedule-item .s-station {
             color: #b0c4d8;
+            font-weight: bold;
         }
         .schedule-item .s-time {
             color: #8cf0ff;
@@ -362,7 +363,7 @@
             </div>
             <!-- Tempat untuk jadwal tambahan -->
             <div id="scheduleExtra" class="schedule-extra" style="display:none;">
-                <h3>⏱️ Jadwal Keberangkatan Real‑time (stasiun terpilih)</h3>
+                <h3>⏱️ Estimasi Keberangkatan Terdekat</h3>
                 <div class="schedule-grid" id="scheduleGrid"></div>
             </div>
         </div>
@@ -433,18 +434,18 @@
         }
 
         // ============================================================
-        //  1. KERETA – data stasiun + upaya jadwal real‑time
+        //  1. KERETA – data stasiun + jadwal real‑time stasiun utama
         // ============================================================
         async function fetchTrains() {
             try {
-                // 1a. Data stasiun (tetap dari comuline)
+                // 1a. Data stasiun dari comuline
                 const url = 'https://api.comuline.com/v1/station';
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const json = await resp.json();
                 if (!json.data || !Array.isArray(json.data)) throw new Error('Format data tidak dikenal');
 
-                const stations = json.data.slice(0, 20);
+                const stations = json.data.slice(0, 10); // Ambil 10 stasiun saja agar ringkas
 
                 let html = `
                     <table class="train-table">
@@ -486,15 +487,12 @@
                 html += `
                         </tbody>
                     </table>
-                    <div style="margin-top:12px; font-size:0.75rem; color:#475569; text-align:right;">
-                        Sumber: api.comuline.com · diperbarui setiap 60 detik
-                    </div>
                 `;
 
                 trainBody.innerHTML = html;
                 setCardTime(trainTime, new Date());
 
-                // 1b. Upaya ambil jadwal real‑time dari endpoint /schedule (jika tersedia)
+                // 1b. Jalankan pemuatan jadwal spesifik
                 await fetchTrainSchedule();
 
                 setStatus('✅ Kereta & jadwal OK');
@@ -503,58 +501,64 @@
                     <div class="no-data">
                         ⚠️ Gagal memuat data stasiun<br>
                         <span style="font-size:0.85rem; color:#6b7f94;">${err.message}</span>
-                        <br><br>
-                        💡 Sumber: api.comuline.com (publik)
                     </div>
                 `;
                 setStatus('❌ Gagal kereta', true);
-                // tetap coba jadwal meskipun stasiun gagal
+                // Tetap coba jadwal meskipun stasiun gagal
                 await fetchTrainSchedule();
             }
         }
 
-        // Fungsi tambahan untuk mengambil jadwal dari comuline (jika ada)
+        // Fix Agresif: Ambil jadwal langsung dengan ID stasiun utama
         async function fetchTrainSchedule() {
             try {
-                // Coba endpoint /schedule (tidak resmi, tetapi mungkin ada)
-                const url = 'https://api.comuline.com/v1/schedule';
-                const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-                if (!resp.ok) throw new Error('Schedule endpoint tidak tersedia');
-                const json = await resp.json();
+                const targetStations = [
+                    { id: 'MRI', name: 'Manggarai' },
+                    { id: 'JAKK', name: 'Jakarta Kota' },
+                    { id: 'BKS', name: 'Bekasi' },
+                    { id: 'BOO', name: 'Bogor' }
+                ];
+                
+                let scheduleData = [];
+                
+                // Fetch paralel agar cepat
+                await Promise.allSettled(targetStations.map(async (st) => {
+                    const url = `https://api.comuline.com/v1/schedule/${st.id}`;
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                    if(resp.ok) {
+                        const json = await resp.json();
+                        if(json.data && Array.isArray(json.data)) {
+                            // Ambil jam estimasi dari 2 kereta terdekat
+                            const times = json.data.slice(0, 2).map(t => t.time_estimated || t.time_scheduled || '--:--');
+                            scheduleData.push({ name: st.name, times });
+                        }
+                    }
+                }));
 
-                // Asumsikan response memiliki array jadwal: misal [{ station, departures: [...] }]
-                if (!json.data || !Array.isArray(json.data)) throw new Error('Format jadwal tidak dikenal');
-
-                // Tampilkan 3-4 stasiun pertama dengan jadwal
-                const scheduleData = json.data.slice(0, 4);
-                let gridHtml = '';
-                scheduleData.forEach(item => {
-                    const st = item.station || item.name || 'Stasiun';
-                    const times = item.departures || item.times || [];
-                    let timeDisplay = times.length ? times.slice(0, 3).join(' · ') : '—';
-                    gridHtml += `
-                        <div class="schedule-item">
-                            <span class="s-station">${st}</span>
-                            <span class="s-time">${timeDisplay}</span>
-                        </div>
-                    `;
-                });
-
-                if (gridHtml) {
+                if(scheduleData.length > 0) {
+                    let gridHtml = '';
+                    scheduleData.forEach(item => {
+                        let timeDisplay = item.times.length ? item.times.join(' & ') : 'Tidak ada jadwal terdekat';
+                        gridHtml += `
+                            <div class="schedule-item">
+                                <span class="s-station">${item.name}</span>
+                                <span class="s-time">${timeDisplay}</span>
+                            </div>
+                        `;
+                    });
                     scheduleGrid.innerHTML = gridHtml;
                     scheduleExtra.style.display = 'block';
                 } else {
-                    scheduleExtra.style.display = 'none';
+                    throw new Error("Tidak ada data jadwal valid didapat");
                 }
             } catch (e) {
-                // Gagal ambil jadwal – sembunyikan bagian ekstra
                 scheduleExtra.style.display = 'none';
-                console.warn('Jadwal tidak tersedia dari comuline:', e.message);
+                console.warn('Jadwal real-time gagal dimuat:', e.message);
             }
         }
 
         // ============================================================
-        //  2. TINGGI MUKA AIR – scraping lebih akurat dari Posko Banjir
+        //  2. TINGGI MUKA AIR – Fix Agresif + Regex Fallback
         // ============================================================
         async function fetchWaterLevel() {
             try {
@@ -567,105 +571,94 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                // Cari semua tabel, ambil yang memiliki kolom lokasi dan tinggi
-                const tables = doc.querySelectorAll('table');
                 let items = [];
+                
+                // Metode 1: Cari dari tabel (seperti biasa)
+                const tables = doc.querySelectorAll('table');
                 for (const table of tables) {
                     const rows = table.querySelectorAll('tr');
-                    // Cek header untuk menentukan apakah ini tabel data
-                    let headerRow = rows[0];
-                    if (!headerRow) continue;
-                    const headers = headerRow.querySelectorAll('th, td');
-                    const headerTexts = Array.from(headers).map(th => th.textContent.trim().toLowerCase());
-                    // Cari indeks kolom yang mengandung 'lokasi', 'tinggi', 'status'
-                    let idxLokasi = -1, idxTinggi = -1, idxStatus = -1, idxSungai = -1;
-                    headerTexts.forEach((text, i) => {
-                        if (text.includes('lokasi') || text.includes('pos')) idxLokasi = i;
-                        else if (text.includes('tinggi') || text.includes('muka')) idxTinggi = i;
-                        else if (text.includes('status')) idxStatus = i;
-                        else if (text.includes('sungai') || text.includes('wilayah')) idxSungai = i;
-                    });
-                    if (idxLokasi === -1 || idxTinggi === -1) continue; // bukan tabel yang diinginkan
+                    let idxLokasi = -1, idxTinggi = -1, idxStatus = -1;
+                    
+                    if(rows[0]) {
+                        const headers = Array.from(rows[0].querySelectorAll('th, td')).map(th => th.textContent.trim().toLowerCase());
+                        headers.forEach((text, i) => {
+                            if (text.includes('lokasi') || text.includes('pos')) idxLokasi = i;
+                            else if (text.includes('tinggi') || text.includes('muka')) idxTinggi = i;
+                            else if (text.includes('status')) idxStatus = i;
+                        });
+                    }
 
-                    // Ambil data baris
-                    for (let i = 1; i < rows.length; i++) {
-                        const cells = rows[i].querySelectorAll('td');
-                        if (cells.length < Math.max(idxLokasi, idxTinggi) + 1) continue;
-                        const lokasi = cells[idxLokasi]?.textContent.trim() || '';
-                        const sungai = (idxSungai !== -1) ? (cells[idxSungai]?.textContent.trim() || '') : '';
-                        const tinggi = cells[idxTinggi]?.textContent.trim() || '';
-                        const status = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || '') : '';
-                        if (lokasi && tinggi) {
-                            items.push({ lokasi, sungai, tinggi, status });
+                    if (idxLokasi !== -1 && idxTinggi !== -1) {
+                        for (let i = 1; i < rows.length; i++) {
+                            const cells = rows[i].querySelectorAll('td');
+                            if (cells.length > idxTinggi) {
+                                const lokasi = cells[idxLokasi]?.textContent.trim();
+                                const tinggi = cells[idxTinggi]?.textContent.trim();
+                                const status = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || 'Normal') : 'Normal';
+                                if (lokasi && tinggi) items.push({ lokasi, tinggi, status });
+                            }
                         }
                     }
-                    if (items.length > 0) break; // ambil dari tabel pertama yang cocok
                 }
 
+                // Metode 2: Fallback Ekstraksi Regex (JIKA TABEL RUSAK/TIDAK ADA)
                 if (items.length === 0) {
-                    // Fallback ke metode lama (cari semua td)
-                    const allRows = doc.querySelectorAll('table tr');
-                    allRows.forEach(tr => {
-                        const tds = tr.querySelectorAll('td');
-                        if (tds.length >= 4) {
-                            const loc = tds[0]?.textContent.trim() || '';
-                            const sungai = tds[1]?.textContent.trim() || '';
-                            const tinggi = tds[2]?.textContent.trim() || '';
-                            const status = tds[5]?.textContent.trim() || '';
-                            if (loc && tinggi) items.push({ lokasi: loc, sungai, tinggi, status });
+                    const bodyText = doc.body.innerText;
+                    // Mencari pola: (Manggarai | Katulampa | Karet | dll) diikuti angka (cm)
+                    const gateNames = ['Katulampa', 'Manggarai', 'Karet', 'Pesanggrahan', 'Angke', 'Cipinang', 'Sunter', 'Pulogadung'];
+                    
+                    gateNames.forEach(gate => {
+                        // Mencari pola Nama Pintu Air terdekat dengan angka (misal: "Katulampa 40 cm" atau "Katulampa... 40")
+                        const regex = new RegExp(`${gate}[\\s\\S]{0,30}?(\\d{1,4})\\s*(cm)?`, 'i');
+                        const match = bodyText.match(regex);
+                        if(match && match[1]) {
+                            // Menentukan status darurat (dummy logic berdasarkan ketinggian umum)
+                            let h = parseInt(match[1]);
+                            let stat = h > 150 ? "WASPADA" : (h > 200 ? "SIAGA" : "Normal");
+                            items.push({ lokasi: gate, tinggi: match[1], status: stat });
                         }
                     });
                 }
 
-                if (items.length === 0) {
-                    throw new Error('Tidak ada data tabel – mungkin website berubah');
-                }
+                if (items.length === 0) throw new Error('Format website Posko Banjir tidak dikenali sama sekali.');
 
-                const show = items.slice(0, 10);
                 let htmlOut = '';
-                show.forEach(it => {
+                // Hapus duplikat
+                const uniqueItems = Array.from(new Set(items.map(a => a.lokasi)))
+                    .map(lokasi => items.find(a => a.lokasi === lokasi)).slice(0, 10);
+
+                uniqueItems.forEach(it => {
                     const statusLower = it.status.toLowerCase();
                     let statusClass = 'status-normal';
-                    let statusLabel = it.status || 'Normal';
                     if (statusLower.includes('siaga')) statusClass = 'status-siaga';
                     else if (statusLower.includes('waspada')) statusClass = 'status-waspada';
-                    else if (statusLower.includes('awas')) statusClass = 'status-awas';
+                    else if (statusLower.includes('awas') || statusLower.includes('bahaya')) statusClass = 'status-awas';
 
                     htmlOut += `
                         <div class="item">
-                            <span class="label">${it.lokasi} ${it.sungai ? `<span style="color:#6b7f94;font-size:0.8rem;">${it.sungai}</span>` : ''}</span>
+                            <span class="label">${it.lokasi}</span>
                             <span class="value">
-                                <span class="water-level">${it.tinggi}</span> cm
-                                <span class="${statusClass}">${statusLabel}</span>
+                                <span class="water-level">${it.tinggi.replace(/[^0-9]/g, '')}</span> cm
+                                <span class="${statusClass}">${it.status}</span>
                             </span>
                         </div>
                     `;
                 });
 
-                htmlOut += `
-                    <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                        Sumber: poskobanjir.dsdadki.web.id (Dinas SDA DKI Jakarta)
-                    </div>
-                `;
-
                 waterBody.innerHTML = htmlOut;
                 setCardTime(waterTime, new Date());
-                setStatus('✅ Air OK');
             } catch (err) {
                 waterBody.innerHTML = `
                     <div style="color:#f87171; padding:12px;">
                         ⚠️ Gagal memuat tinggi air<br>
                         <span style="font-size:0.85rem; color:#6b7f94;">${err.message}</span>
-                        <br><br>
-                        💡 Sumber: poskobanjir.dsdadki.web.id
                     </div>
                 `;
-                setStatus('❌ Gagal air', true);
             }
         }
 
         // ============================================================
-        //  3. GUNUNG API – scraping tabel dari MAGMA Indonesia
+        //  3. GUNUNG API – Fix Agresif + Keyword Scanner
         // ============================================================
         async function fetchVolcanoes() {
             try {
@@ -678,68 +671,57 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                // Cari tabel dengan data gunung api
-                const tables = doc.querySelectorAll('table');
                 let volcanoData = [];
-                for (const table of tables) {
-                    const rows = table.querySelectorAll('tr');
-                    if (rows.length < 2) continue;
-                    // Cek header
-                    const headerRow = rows[0];
-                    const headers = headerRow.querySelectorAll('th, td');
-                    const headerTexts = Array.from(headers).map(th => th.textContent.trim().toLowerCase());
-                    let idxNama = -1, idxLevel = -1, idxStatus = -1;
-                    headerTexts.forEach((text, i) => {
-                        if (text.includes('gunung') || text.includes('nama')) idxNama = i;
-                        else if (text.includes('level') || text.includes('status')) idxLevel = i;
-                        else if (text.includes('keterangan') || text.includes('aktivitas')) idxStatus = i;
-                    });
-                    if (idxNama === -1 || idxLevel === -1) continue;
-
-                    // Ambil data baris
-                    for (let i = 1; i < rows.length; i++) {
-                        const cells = rows[i].querySelectorAll('td');
-                        if (cells.length < Math.max(idxNama, idxLevel) + 1) continue;
-                        const nama = cells[idxNama]?.textContent.trim() || '';
-                        const level = cells[idxLevel]?.textContent.trim() || '';
-                        const keterangan = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || '') : '';
-                        if (nama && level) {
-                            volcanoData.push({ nama, level, keterangan });
-                        }
+                const bodyText = doc.body?.innerText || '';
+                
+                // Metode Agresif: Scanner teks untuk nama gunung terkenal & statusnya
+                const hotVolcanoes = ['Merapi', 'Semeru', 'Ibu', 'Lewotobi', 'Anak Krakatau', 'Marapi', 'Ruang', 'Kerinci'];
+                
+                hotVolcanoes.forEach(vol => {
+                    // Cari nama gunung dan tangkap kata status (Normal, Waspada, Siaga, Awas) di sekitarnya (dalam radius 50 karakter)
+                    const regex = new RegExp(`${vol}[\\s\\S]{0,50}?(Awas|Siaga|Waspada|Normal)`, 'i');
+                    const match = bodyText.match(regex);
+                    if(match) {
+                        volcanoData.push({ nama: 'Gunung ' + vol, level: match[1].toUpperCase() });
                     }
-                    if (volcanoData.length > 0) break;
-                }
+                });
 
-                // Fallback: cari teks yang mengandung "Gunung" dan level
+                // Jika scanner regex tidak dapat data, coba ambil tabel
                 if (volcanoData.length === 0) {
-                    const bodyText = doc.body?.innerText || '';
-                    const lines = bodyText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-                    let found = [];
-                    for (let line of lines) {
-                        if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal/i)) {
-                            if (!found.some(ex => ex === line)) {
-                                found.push(line);
+                    const tables = doc.querySelectorAll('table');
+                    for (const table of tables) {
+                        const rows = table.querySelectorAll('tr');
+                        if (rows.length < 2) continue;
+                        
+                        let idxNama = -1, idxLevel = -1;
+                        const headerTexts = Array.from(rows[0].querySelectorAll('th, td')).map(th => th.textContent.trim().toLowerCase());
+                        
+                        headerTexts.forEach((text, i) => {
+                            if (text.includes('gunung') || text.includes('nama')) idxNama = i;
+                            else if (text.includes('level') || text.includes('status')) idxLevel = i;
+                        });
+
+                        if (idxNama !== -1 && idxLevel !== -1) {
+                            for (let i = 1; i < rows.length; i++) {
+                                const cells = rows[i].querySelectorAll('td');
+                                if (cells.length > Math.max(idxNama, idxLevel)) {
+                                    const nama = cells[idxNama]?.textContent.trim();
+                                    const level = cells[idxLevel]?.textContent.trim();
+                                    if (nama && level) volcanoData.push({ nama, level });
+                                }
                             }
                         }
-                        if (found.length >= 15) break;
                     }
-                    // Konversi ke format item
-                    found.forEach(line => {
-                        let level = 'Normal';
-                        const lower = line.toLowerCase();
-                        if (lower.includes('awas')) level = 'AWAS';
-                        else if (lower.includes('siaga')) level = 'SIAGA';
-                        else if (lower.includes('waspada')) level = 'WASPADA';
-                        volcanoData.push({ nama: line.slice(0, 60), level, keterangan: '' });
-                    });
                 }
 
-                if (volcanoData.length === 0) {
-                    throw new Error('Tidak ditemukan data gunung – mungkin website berubah');
-                }
+                if (volcanoData.length === 0) throw new Error('Data status gunung api tidak ditemukan di halaman MAGMA.');
+
+                // Filter duplikat
+                const uniqueVolcanoes = Array.from(new Set(volcanoData.map(a => a.nama)))
+                    .map(nama => volcanoData.find(a => a.nama === nama)).slice(0, 10);
 
                 let htmlOut = '';
-                volcanoData.slice(0, 12).forEach(v => {
+                uniqueVolcanoes.forEach(v => {
                     let statusClass = 'status-normal';
                     let statusText = v.level || 'Normal';
                     const lower = statusText.toLowerCase();
@@ -747,34 +729,23 @@
                     else if (lower.includes('siaga')) statusClass = 'status-siaga';
                     else if (lower.includes('waspada')) statusClass = 'status-waspada';
 
-                    const displayNama = v.nama.length > 50 ? v.nama.slice(0, 50) + '…' : v.nama;
                     htmlOut += `
                         <div class="item">
-                            <span class="label">${displayNama}</span>
+                            <span class="label">${v.nama}</span>
                             <span class="value ${statusClass}">${statusText}</span>
                         </div>
                     `;
                 });
 
-                htmlOut += `
-                    <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                        Sumber: magma.vsi.esdm.go.id (PVMBG)
-                    </div>
-                `;
-
                 volcanoBody.innerHTML = htmlOut;
                 setCardTime(volcanoTime, new Date());
-                setStatus('✅ Gunung OK');
             } catch (err) {
                 volcanoBody.innerHTML = `
                     <div style="color:#f87171; padding:12px;">
                         ⚠️ Gagal memuat status gunung<br>
                         <span style="font-size:0.85rem; color:#6b7f94;">${err.message}</span>
-                        <br><br>
-                        💡 Sumber: magma.vsi.esdm.go.id
                     </div>
                 `;
-                setStatus('❌ Gagal gunung', true);
             }
         }
 
@@ -802,8 +773,6 @@
         refreshAll();
         setInterval(refreshAll, REFRESH_MS);
 
-        console.log('🚀 NUSANTARA MONITOR aktif – refresh setiap 60 detik');
-        console.log('📡 Sumber: api.comuline.com | poskobanjir.dsdadki.web.id | magma.vsi.esdm.go.id');
     })();
 </script>
 </body>
