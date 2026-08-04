@@ -106,6 +106,8 @@
             padding: 20px 24px 28px;
             box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.8);
             transition: transform 0.2s, border-color 0.3s;
+            display: flex;
+            flex-direction: column;
         }
         .card:hover {
             transform: translateY(-4px);
@@ -117,6 +119,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .card-header h2 {
             font-size: 1.4rem;
@@ -140,6 +144,7 @@
         .table-wrap {
             overflow-x: auto;
             margin-top: 6px;
+            flex: 1;
         }
 
         .train-table {
@@ -224,6 +229,7 @@
             overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: #1a3a5f transparent;
+            flex: 1;
         }
         .card-body::-webkit-scrollbar {
             width: 4px;
@@ -239,15 +245,20 @@
             padding: 8px 0;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             font-size: 0.95rem;
+            align-items: center;
+            gap: 12px;
         }
         .item:last-child {
             border-bottom: none;
         }
         .item .label {
             color: #b0c4d8;
+            flex: 1;
         }
         .item .value {
             font-weight: 500;
+            text-align: right;
+            white-space: nowrap;
         }
         .status-normal { color: #4ade80; }
         .status-waspada { color: #fbbf24; }
@@ -258,6 +269,42 @@
             font-size: 1.4rem;
             font-weight: 600;
             margin-right: 4px;
+        }
+
+        /* ----- SCHEDULE EXTRA (KA) ----- */
+        .schedule-extra {
+            margin-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 14px;
+        }
+        .schedule-extra h3 {
+            font-size: 0.9rem;
+            color: #7fc9ff;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+        }
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 6px 16px;
+        }
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding: 4px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.04);
+        }
+        .schedule-item .s-station {
+            color: #b0c4d8;
+        }
+        .schedule-item .s-time {
+            color: #8cf0ff;
+            font-weight: 500;
+        }
+        .schedule-item .s-time.na {
+            color: #6b7f94;
         }
 
         /* ----- FOOTER ----- */
@@ -303,15 +350,20 @@
 
     <!-- GRID -->
     <div class="grid">
-        <!-- CARD 1: KERETA -->
+        <!-- CARD 1: KERETA (dengan jadwal tambahan) -->
         <div class="card" id="trainCard" style="grid-column: 1 / -1;">
             <div class="card-header">
-                <h2>🚆 Commuter Line – Status Stasiun</h2>
+                <h2>🚆 Commuter Line – Status &amp; Jadwal</h2>
                 <span class="update-time" id="trainTime">--</span>
             </div>
             <div class="table-wrap" id="trainBody">
                 <div class="shimmer"></div><div class="shimmer" style="width:70%"></div>
                 <div class="shimmer"></div><div class="shimmer" style="width:90%"></div>
+            </div>
+            <!-- Tempat untuk jadwal tambahan -->
+            <div id="scheduleExtra" class="schedule-extra" style="display:none;">
+                <h3>⏱️ Jadwal Keberangkatan Real‑time (stasiun terpilih)</h3>
+                <div class="schedule-grid" id="scheduleGrid"></div>
             </div>
         </div>
 
@@ -351,7 +403,7 @@
         'use strict';
 
         // ----- KONFIGURASI -----
-        const REFRESH_MS = 60000; // 1 menit (agar tidak membebani server)
+        const REFRESH_MS = 60000; // 1 menit
         const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
         // ----- DOM refs -----
@@ -363,6 +415,8 @@
         const volcanoTime = document.getElementById('volcanoTime');
         const lastUpdateTime = document.getElementById('lastUpdateTime');
         const statusMsg = document.getElementById('statusMessage');
+        const scheduleExtra = document.getElementById('scheduleExtra');
+        const scheduleGrid = document.getElementById('scheduleGrid');
 
         // ----- helpers -----
         function formatTime(d) {
@@ -379,12 +433,11 @@
         }
 
         // ============================================================
-        //  1. KERETA – dari API publik Comuline (real‑time)
-        //     Menampilkan daftar stasiun & status aktif/tidak
-        //     TANPA simulasi jadwal atau posisi
+        //  1. KERETA – data stasiun + upaya jadwal real‑time
         // ============================================================
         async function fetchTrains() {
             try {
+                // 1a. Data stasiun (tetap dari comuline)
                 const url = 'https://api.comuline.com/v1/station';
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -399,8 +452,8 @@
                             <tr>
                                 <th>#</th>
                                 <th>Nama Stasiun</th>
-                                <th>Jalur / Line</th>
-                                <th>Status Operasional</th>
+                                <th>Jalur</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -408,11 +461,7 @@
 
                 stations.forEach((s, idx) => {
                     const name = s.name || s.id || 'Tidak diketahui';
-
-                    // Ambil line dari metadata
                     let line = s.metadata?.line || s.line || '-';
-
-                    // Status aktif dari metadata
                     const active = s.metadata?.active;
                     let statusClass = 'status-badge unknown';
                     let statusText = 'Tidak diketahui';
@@ -444,7 +493,11 @@
 
                 trainBody.innerHTML = html;
                 setCardTime(trainTime, new Date());
-                setStatus('✅ Kereta OK');
+
+                // 1b. Upaya ambil jadwal real‑time dari endpoint /schedule (jika tersedia)
+                await fetchTrainSchedule();
+
+                setStatus('✅ Kereta & jadwal OK');
             } catch (err) {
                 trainBody.innerHTML = `
                     <div class="no-data">
@@ -455,12 +508,53 @@
                     </div>
                 `;
                 setStatus('❌ Gagal kereta', true);
+                // tetap coba jadwal meskipun stasiun gagal
+                await fetchTrainSchedule();
+            }
+        }
+
+        // Fungsi tambahan untuk mengambil jadwal dari comuline (jika ada)
+        async function fetchTrainSchedule() {
+            try {
+                // Coba endpoint /schedule (tidak resmi, tetapi mungkin ada)
+                const url = 'https://api.comuline.com/v1/schedule';
+                const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                if (!resp.ok) throw new Error('Schedule endpoint tidak tersedia');
+                const json = await resp.json();
+
+                // Asumsikan response memiliki array jadwal: misal [{ station, departures: [...] }]
+                if (!json.data || !Array.isArray(json.data)) throw new Error('Format jadwal tidak dikenal');
+
+                // Tampilkan 3-4 stasiun pertama dengan jadwal
+                const scheduleData = json.data.slice(0, 4);
+                let gridHtml = '';
+                scheduleData.forEach(item => {
+                    const st = item.station || item.name || 'Stasiun';
+                    const times = item.departures || item.times || [];
+                    let timeDisplay = times.length ? times.slice(0, 3).join(' · ') : '—';
+                    gridHtml += `
+                        <div class="schedule-item">
+                            <span class="s-station">${st}</span>
+                            <span class="s-time">${timeDisplay}</span>
+                        </div>
+                    `;
+                });
+
+                if (gridHtml) {
+                    scheduleGrid.innerHTML = gridHtml;
+                    scheduleExtra.style.display = 'block';
+                } else {
+                    scheduleExtra.style.display = 'none';
+                }
+            } catch (e) {
+                // Gagal ambil jadwal – sembunyikan bagian ekstra
+                scheduleExtra.style.display = 'none';
+                console.warn('Jadwal tidak tersedia dari comuline:', e.message);
             }
         }
 
         // ============================================================
-        //  2. TINGGI MUKA AIR – dari Posko Banjir Dinas SDA DKI
-        //     Scrape HTML, tampilkan data apa adanya
+        //  2. TINGGI MUKA AIR – scraping lebih akurat dari Posko Banjir
         // ============================================================
         async function fetchWaterLevel() {
             try {
@@ -472,21 +566,56 @@
 
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                const rows = doc.querySelectorAll('table tr');
 
+                // Cari semua tabel, ambil yang memiliki kolom lokasi dan tinggi
+                const tables = doc.querySelectorAll('table');
                 let items = [];
-                rows.forEach(tr => {
-                    const tds = tr.querySelectorAll('td');
-                    if (tds.length >= 4) {
-                        const loc = tds[0]?.textContent?.trim() || '';
-                        const sungai = tds[1]?.textContent?.trim() || '';
-                        const tinggi = tds[2]?.textContent?.trim() || '';
-                        const status = tds[5]?.textContent?.trim() || '';
-                        if (loc && tinggi) {
-                            items.push({ loc, sungai, tinggi, status });
+                for (const table of tables) {
+                    const rows = table.querySelectorAll('tr');
+                    // Cek header untuk menentukan apakah ini tabel data
+                    let headerRow = rows[0];
+                    if (!headerRow) continue;
+                    const headers = headerRow.querySelectorAll('th, td');
+                    const headerTexts = Array.from(headers).map(th => th.textContent.trim().toLowerCase());
+                    // Cari indeks kolom yang mengandung 'lokasi', 'tinggi', 'status'
+                    let idxLokasi = -1, idxTinggi = -1, idxStatus = -1, idxSungai = -1;
+                    headerTexts.forEach((text, i) => {
+                        if (text.includes('lokasi') || text.includes('pos')) idxLokasi = i;
+                        else if (text.includes('tinggi') || text.includes('muka')) idxTinggi = i;
+                        else if (text.includes('status')) idxStatus = i;
+                        else if (text.includes('sungai') || text.includes('wilayah')) idxSungai = i;
+                    });
+                    if (idxLokasi === -1 || idxTinggi === -1) continue; // bukan tabel yang diinginkan
+
+                    // Ambil data baris
+                    for (let i = 1; i < rows.length; i++) {
+                        const cells = rows[i].querySelectorAll('td');
+                        if (cells.length < Math.max(idxLokasi, idxTinggi) + 1) continue;
+                        const lokasi = cells[idxLokasi]?.textContent.trim() || '';
+                        const sungai = (idxSungai !== -1) ? (cells[idxSungai]?.textContent.trim() || '') : '';
+                        const tinggi = cells[idxTinggi]?.textContent.trim() || '';
+                        const status = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || '') : '';
+                        if (lokasi && tinggi) {
+                            items.push({ lokasi, sungai, tinggi, status });
                         }
                     }
-                });
+                    if (items.length > 0) break; // ambil dari tabel pertama yang cocok
+                }
+
+                if (items.length === 0) {
+                    // Fallback ke metode lama (cari semua td)
+                    const allRows = doc.querySelectorAll('table tr');
+                    allRows.forEach(tr => {
+                        const tds = tr.querySelectorAll('td');
+                        if (tds.length >= 4) {
+                            const loc = tds[0]?.textContent.trim() || '';
+                            const sungai = tds[1]?.textContent.trim() || '';
+                            const tinggi = tds[2]?.textContent.trim() || '';
+                            const status = tds[5]?.textContent.trim() || '';
+                            if (loc && tinggi) items.push({ lokasi: loc, sungai, tinggi, status });
+                        }
+                    });
+                }
 
                 if (items.length === 0) {
                     throw new Error('Tidak ada data tabel – mungkin website berubah');
@@ -497,16 +626,17 @@
                 show.forEach(it => {
                     const statusLower = it.status.toLowerCase();
                     let statusClass = 'status-normal';
+                    let statusLabel = it.status || 'Normal';
                     if (statusLower.includes('siaga')) statusClass = 'status-siaga';
                     else if (statusLower.includes('waspada')) statusClass = 'status-waspada';
                     else if (statusLower.includes('awas')) statusClass = 'status-awas';
 
                     htmlOut += `
                         <div class="item">
-                            <span class="label">${it.loc} <span style="color:#6b7f94;font-size:0.8rem;">${it.sungai}</span></span>
+                            <span class="label">${it.lokasi} ${it.sungai ? `<span style="color:#6b7f94;font-size:0.8rem;">${it.sungai}</span>` : ''}</span>
                             <span class="value">
                                 <span class="water-level">${it.tinggi}</span> cm
-                                <span class="${statusClass}">${it.status || 'Normal'}</span>
+                                <span class="${statusClass}">${statusLabel}</span>
                             </span>
                         </div>
                     `;
@@ -535,8 +665,7 @@
         }
 
         // ============================================================
-        //  3. GUNUNG API – dari MAGMA Indonesia (PVMBG)
-        //     Scrape halaman utama, tampilkan status yang terdeteksi
+        //  3. GUNUNG API – scraping tabel dari MAGMA Indonesia
         // ============================================================
         async function fetchVolcanoes() {
             try {
@@ -548,48 +677,80 @@
 
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                const bodyText = doc.body?.innerText || '';
-                const lines = bodyText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
 
-                // Cari baris yang mengandung kata kunci gunung api
-                let volcanoLines = [];
-                for (let line of lines) {
-                    if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal|aktif|vulkanik/i)) {
-                        // Hindari duplikat yang terlalu mirip
-                        if (!volcanoLines.some(existing => existing === line)) {
-                            volcanoLines.push(line);
+                // Cari tabel dengan data gunung api
+                const tables = doc.querySelectorAll('table');
+                let volcanoData = [];
+                for (const table of tables) {
+                    const rows = table.querySelectorAll('tr');
+                    if (rows.length < 2) continue;
+                    // Cek header
+                    const headerRow = rows[0];
+                    const headers = headerRow.querySelectorAll('th, td');
+                    const headerTexts = Array.from(headers).map(th => th.textContent.trim().toLowerCase());
+                    let idxNama = -1, idxLevel = -1, idxStatus = -1;
+                    headerTexts.forEach((text, i) => {
+                        if (text.includes('gunung') || text.includes('nama')) idxNama = i;
+                        else if (text.includes('level') || text.includes('status')) idxLevel = i;
+                        else if (text.includes('keterangan') || text.includes('aktivitas')) idxStatus = i;
+                    });
+                    if (idxNama === -1 || idxLevel === -1) continue;
+
+                    // Ambil data baris
+                    for (let i = 1; i < rows.length; i++) {
+                        const cells = rows[i].querySelectorAll('td');
+                        if (cells.length < Math.max(idxNama, idxLevel) + 1) continue;
+                        const nama = cells[idxNama]?.textContent.trim() || '';
+                        const level = cells[idxLevel]?.textContent.trim() || '';
+                        const keterangan = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || '') : '';
+                        if (nama && level) {
+                            volcanoData.push({ nama, level, keterangan });
                         }
                     }
-                    if (volcanoLines.length >= 15) break;
+                    if (volcanoData.length > 0) break;
                 }
 
-                if (volcanoLines.length === 0) {
+                // Fallback: cari teks yang mengandung "Gunung" dan level
+                if (volcanoData.length === 0) {
+                    const bodyText = doc.body?.innerText || '';
+                    const lines = bodyText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+                    let found = [];
+                    for (let line of lines) {
+                        if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal/i)) {
+                            if (!found.some(ex => ex === line)) {
+                                found.push(line);
+                            }
+                        }
+                        if (found.length >= 15) break;
+                    }
+                    // Konversi ke format item
+                    found.forEach(line => {
+                        let level = 'Normal';
+                        const lower = line.toLowerCase();
+                        if (lower.includes('awas')) level = 'AWAS';
+                        else if (lower.includes('siaga')) level = 'SIAGA';
+                        else if (lower.includes('waspada')) level = 'WASPADA';
+                        volcanoData.push({ nama: line.slice(0, 60), level, keterangan: '' });
+                    });
+                }
+
+                if (volcanoData.length === 0) {
                     throw new Error('Tidak ditemukan data gunung – mungkin website berubah');
                 }
 
                 let htmlOut = '';
-                volcanoLines.slice(0, 12).forEach(line => {
+                volcanoData.slice(0, 12).forEach(v => {
                     let statusClass = 'status-normal';
-                    let statusText = 'Normal';
+                    let statusText = v.level || 'Normal';
+                    const lower = statusText.toLowerCase();
+                    if (lower.includes('awas')) statusClass = 'status-awas';
+                    else if (lower.includes('siaga')) statusClass = 'status-siaga';
+                    else if (lower.includes('waspada')) statusClass = 'status-waspada';
 
-                    const lower = line.toLowerCase();
-                    if (lower.includes('awas')) {
-                        statusClass = 'status-awas';
-                        statusText = 'AWAS';
-                    } else if (lower.includes('siaga')) {
-                        statusClass = 'status-siaga';
-                        statusText = 'SIAGA';
-                    } else if (lower.includes('waspada')) {
-                        statusClass = 'status-waspada';
-                        statusText = 'WASPADA';
-                    }
-
-                    // Potong jika terlalu panjang
-                    const display = line.length > 80 ? line.slice(0, 80) + '…' : line;
-
+                    const displayNama = v.nama.length > 50 ? v.nama.slice(0, 50) + '…' : v.nama;
                     htmlOut += `
                         <div class="item">
-                            <span class="label">${display}</span>
+                            <span class="label">${displayNama}</span>
                             <span class="value ${statusClass}">${statusText}</span>
                         </div>
                     `;
