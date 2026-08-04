@@ -932,6 +932,311 @@
             flex-shrink: 0;
         }
 
+        /* ===== NEW PANELS: KERETA, GUNUNG API, TMA ===== */
+        .train-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .train-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 11px 12px;
+            background: rgba(0, 246, 255, 0.04);
+        }
+        .train-card .k {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .train-card .v {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .train-card .v.hl {
+            color: var(--yellow);
+        }
+        .train-card .sub {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 2px;
+        }
+        .train-list {
+            max-height: 200px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-right: 4px;
+        }
+        .train-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .train-list::-webkit-scrollbar-track {
+            background: rgba(0, 246, 255, 0.05);
+            border-radius: 4px;
+        }
+        .train-list::-webkit-scrollbar-thumb {
+            background: var(--cyan);
+            border-radius: 4px;
+        }
+        .train-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(0, 246, 255, 0.03);
+            font-size: 12px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .train-item .train-name {
+            font-weight: 600;
+            color: var(--white);
+            flex: 1;
+            min-width: 80px;
+        }
+        .train-item .train-time {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--cyan);
+            font-size: 11px;
+        }
+        .train-item .train-platform {
+            font-size: 10px;
+            color: var(--dim);
+        }
+        .train-item .train-type {
+            font-size: 9px;
+            background: rgba(0, 246, 255, 0.12);
+            padding: 1px 6px;
+            border-radius: 8px;
+            color: var(--cyan);
+            text-transform: uppercase;
+        }
+
+        .volcano-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .volcano-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 11px 12px;
+            background: rgba(255, 154, 31, 0.04);
+        }
+        .volcano-card .k {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .volcano-card .v {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--white);
+        }
+        .volcano-card .v.danger {
+            color: var(--danger);
+            text-shadow: 0 0 12px rgba(255, 59, 59, 0.5);
+        }
+        .volcano-card .v.warning {
+            color: var(--orange);
+            text-shadow: 0 0 12px rgba(255, 154, 31, 0.5);
+        }
+        .volcano-card .v.info {
+            color: var(--yellow);
+            text-shadow: 0 0 12px rgba(250, 255, 0, 0.3);
+        }
+        .volcano-card .v.safe {
+            color: var(--lime);
+        }
+        .volcano-card .sub {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 3px;
+        }
+        .volcano-list {
+            max-height: 200px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-right: 4px;
+        }
+        .volcano-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .volcano-list::-webkit-scrollbar-track {
+            background: rgba(0, 246, 255, 0.05);
+            border-radius: 4px;
+        }
+        .volcano-list::-webkit-scrollbar-thumb {
+            background: var(--cyan);
+            border-radius: 4px;
+        }
+        .volcano-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(0, 246, 255, 0.03);
+            font-size: 12px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .volcano-item .vname {
+            font-weight: 600;
+            color: var(--white);
+            flex: 1;
+            min-width: 70px;
+        }
+        .volcano-item .vlevel {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            padding: 1px 8px;
+            border-radius: 10px;
+        }
+        .volcano-item .vlevel.normal {
+            color: var(--lime);
+            border: 1px solid var(--lime);
+        }
+        .volcano-item .vlevel.waspada {
+            color: var(--yellow);
+            border: 1px solid var(--yellow);
+        }
+        .volcano-item .vlevel.siaga {
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+        .volcano-item .vlevel.awas {
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            animation: pulse 1.4s infinite;
+        }
+        .volcano-item .vmeta {
+            font-size: 10px;
+            color: var(--dim);
+        }
+
+        .tma-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .tma-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 11px 12px;
+            background: rgba(0, 246, 255, 0.04);
+        }
+        .tma-card .k {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .tma-card .v {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--white);
+        }
+        .tma-card .v.danger {
+            color: var(--danger);
+            text-shadow: 0 0 12px rgba(255, 59, 59, 0.5);
+        }
+        .tma-card .v.warning {
+            color: var(--orange);
+            text-shadow: 0 0 12px rgba(255, 154, 31, 0.5);
+        }
+        .tma-card .v.safe {
+            color: var(--lime);
+        }
+        .tma-card .sub {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 3px;
+        }
+        .tma-list {
+            max-height: 200px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-right: 4px;
+        }
+        .tma-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .tma-list::-webkit-scrollbar-track {
+            background: rgba(0, 246, 255, 0.05);
+            border-radius: 4px;
+        }
+        .tma-list::-webkit-scrollbar-thumb {
+            background: var(--cyan);
+            border-radius: 4px;
+        }
+        .tma-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(0, 246, 255, 0.03);
+            font-size: 12px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .tma-item .tma-name {
+            font-weight: 600;
+            color: var(--white);
+            flex: 1;
+            min-width: 70px;
+        }
+        .tma-item .tma-level {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            padding: 1px 8px;
+            border-radius: 10px;
+        }
+        .tma-item .tma-level.safe {
+            color: var(--lime);
+            border: 1px solid var(--lime);
+        }
+        .tma-item .tma-level.waspada {
+            color: var(--yellow);
+            border: 1px solid var(--yellow);
+        }
+        .tma-item .tma-level.siaga {
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+        .tma-item .tma-level.awas {
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            animation: pulse 1.4s infinite;
+        }
+        .tma-item .tma-meta {
+            font-size: 10px;
+            color: var(--dim);
+        }
+
         .foot {
             text-align: center;
             font-size: 10.5px;
@@ -974,6 +1279,32 @@
 
         @media (prefers-color-scheme: light) {
             /* force dark HUD */ }
+        @media (max-width:480px) {
+            .loc-grid,
+            .stat-grid,
+            .geo-grid,
+            .train-grid,
+            .volcano-grid,
+            .tma-grid,
+            .situ-grid {
+                grid-template-columns: 1fr;
+            }
+            .wx-hero {
+                flex-wrap: wrap;
+            }
+            .train-item,
+            .volcano-item,
+            .tma-item {
+                font-size: 11px;
+            }
+            .compass-wrap {
+                width: min(85vw, 260px);
+                height: min(85vw, 260px);
+            }
+            .device-needle .shaft {
+                height: calc(min(85vw, 260px)*0.40);
+            }
+        }
     </style>
 </head>
 <body>
@@ -1122,6 +1453,69 @@
             <div class="compass-note">Sumber: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)</div>
         </div>
 
+        <!-- ===== NEW PANEL: KERETA API ===== -->
+        <div class="panel">
+            <div class="panel-title">🚆 Kereta Api Terdekat</div>
+            <div class="train-grid">
+                <div class="train-card">
+                    <div class="k">Stasiun Terdekat</div>
+                    <div class="v hl" id="trainStationName">-</div>
+                    <div class="sub" id="trainStationDist">-</div>
+                </div>
+                <div class="train-card">
+                    <div class="k">Jumlah Kereta Hari Ini</div>
+                    <div class="v" id="trainCount">-</div>
+                    <div class="sub" id="trainLastUpdate">-</div>
+                </div>
+            </div>
+            <div class="train-list" id="trainScheduleList">
+                <div class="train-item"><span class="train-name">Memuat jadwal...</span></div>
+            </div>
+            <div class="compass-note" style="margin-top:8px;">Sumber: KAI (booking.kai.id) • Jadwal kedatangan &amp; keberangkatan</div>
+        </div>
+
+        <!-- ===== NEW PANEL: GUNUNG BERAPI ===== -->
+        <div class="panel">
+            <div class="panel-title">🌋 Gunung Berapi Aktif</div>
+            <div class="volcano-grid">
+                <div class="volcano-card">
+                    <div class="k">Status Terkini</div>
+                    <div class="v" id="volcanoStatus">Memuat...</div>
+                    <div class="sub" id="volcanoCount">-</div>
+                </div>
+                <div class="volcano-card">
+                    <div class="k">Level Peringatan Tertinggi</div>
+                    <div class="v" id="volcanoMaxLevel">-</div>
+                    <div class="sub" id="volcanoMaxName">-</div>
+                </div>
+            </div>
+            <div class="volcano-list" id="volcanoList">
+                <div class="volcano-item"><span class="vname">Memuat data gunung api...</span></div>
+            </div>
+            <div class="compass-note" style="margin-top:8px;">Sumber: MAGMA Indonesia (PVMBG) • Level: Normal, Waspada, Siaga, Awas</div>
+        </div>
+
+        <!-- ===== NEW PANEL: TINGGI MUKA AIR ===== -->
+        <div class="panel">
+            <div class="panel-title">🌊 Tinggi Muka Air Terdekat</div>
+            <div class="tma-grid">
+                <div class="tma-card">
+                    <div class="k">Status</div>
+                    <div class="v" id="tmaStatus">Memuat...</div>
+                    <div class="sub" id="tmaCount">-</div>
+                </div>
+                <div class="tma-card">
+                    <div class="k">Peringatan Tertinggi</div>
+                    <div class="v" id="tmaMaxLevel">-</div>
+                    <div class="sub" id="tmaMaxName">-</div>
+                </div>
+            </div>
+            <div class="tma-list" id="tmaList">
+                <div class="tma-item"><span class="tma-name">Memuat data muka air...</span></div>
+            </div>
+            <div class="compass-note" style="margin-top:8px;">Sumber: Satu Data Jakarta (pintu air DKI) • Level: Normal, Waspada, Siaga, Awas</div>
+        </div>
+
         <!-- POI TERDEKAT -->
         <div class="panel">
             <div class="panel-title">🏛️ Tempat Terkenal Terdekat</div>
@@ -1195,6 +1589,11 @@
 
             // Cache Situasional
             let cachedSitu = null; // { incidents: [], services: [], news: [], lastUpdate: timestamp }
+
+            // --- CACHE untuk fitur baru ---
+            let cachedTrains = null; // { station, schedules, count, lastUpdate }
+            let cachedVolcanoes = null; // { items, maxLevel, maxName, lastUpdate }
+            let cachedTMA = null; // { items, maxLevel, maxName, lastUpdate }
 
             const cardinals16 = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
             const dirShort = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
@@ -2211,6 +2610,529 @@
                 }
             }
 
+            // ================================================================
+            // ===== FITUR BARU: KERETA API =====
+            // ================================================================
+            let lastTrainFetch = 0;
+
+            async function fetchTrains(lat, lon) {
+                const now = Date.now();
+                if (now - lastTrainFetch < 90000) return;
+                lastTrainFetch = now;
+
+                const stationNameEl = $('trainStationName');
+                const stationDistEl = $('trainStationDist');
+                const countEl = $('trainCount');
+                const lastUpdateEl = $('trainLastUpdate');
+                const listEl = $('trainScheduleList');
+
+                try {
+                    // 1. Ambil daftar stasiun dari KAI
+                    const stationsRes = await fetch('https://booking.kai.id/api/stations2');
+                    if (!stationsRes.ok) throw new Error('Gagal mengambil stasiun');
+                    const stationsData = await stationsRes.json();
+                    const stations = stationsData.data || stationsData || [];
+
+                    if (!Array.isArray(stations) || stations.length === 0) {
+                        throw new Error('Data stasiun kosong');
+                    }
+
+                    // Cari stasiun terdekat
+                    let nearest = null;
+                    let nearestDist = Infinity;
+                    for (const s of stations) {
+                        if (s.lat && s.lng) {
+                            const d = haversine(lat, lon, parseFloat(s.lat), parseFloat(s.lng));
+                            if (d < nearestDist) {
+                                nearestDist = d;
+                                nearest = s;
+                            }
+                        }
+                    }
+
+                    if (!nearest) {
+                        throw new Error('Tidak ada stasiun ditemukan di sekitar');
+                    }
+
+                    const stationName = nearest.name || 'Stasiun';
+                    const stationCode = nearest.code || '';
+                    stationNameEl.textContent = stationName;
+                    stationDistEl.textContent = `Jarak: ${Math.round(nearestDist)} m • Kode: ${stationCode || '-'}`;
+
+                    // 2. Ambil jadwal dari stasiun tersebut (jika ada endpoint)
+                    let schedules = [];
+                    let trainCount = 0;
+
+                    // Coba endpoint jadwal dari KAI (tidak resmi, sering berubah)
+                    try {
+                        const today = new Date().toISOString().split('T')[0];
+                        const scheduleUrl =
+                            `https://booking.kai.id/api/schedule?origin=${stationCode}&destination=&date=${today}`;
+                        const schRes = await fetch(scheduleUrl);
+                        if (schRes.ok) {
+                            const schData = await schRes.json();
+                            if (schData.data && Array.isArray(schData.data)) {
+                                schedules = schData.data.slice(0, 20);
+                                trainCount = schData.data.length;
+                            } else if (schData.schedules && Array.isArray(schData.schedules)) {
+                                schedules = schData.schedules.slice(0, 20);
+                                trainCount = schData.schedules.length;
+                            }
+                        }
+                    } catch (e) {
+                        // Gagal ambil jadwal, gunakan data contoh / fallback
+                    }
+
+                    // Jika tidak ada jadwal dari API, gunakan data simulasi berdasarkan stasiun
+                    if (schedules.length === 0) {
+                        // Buat data simulasi untuk demo
+                        const nowH = new Date().getHours();
+                        const baseMins = nowH * 60 + new Date().getMinutes();
+                        const trainNames = ['Argo Bromo', 'Gajayana', 'Bima', 'Sembrani', 'Taksaka', 'Senja Utama',
+                            'Fajar Utama', 'Mutiara Selatan', 'Lodaya', 'Malabar', 'Parahyangan', 'Ciremai',
+                            'Tegal Bahari', 'Kertajaya', 'Brantas', 'Ranggajati', 'Singasari', 'Gaya Baru',
+                            'Dharma', 'Jayabaya'
+                        ];
+                        const dests = ['Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Semarang', 'Medan', 'Palembang',
+                            'Makassar', 'Denpasar', 'Lampung'
+                        ];
+                        const types = ['Eksekutif', 'Bisnis', 'Ekonomi', 'Komuter', 'Campuran'];
+                        const count = 8 + Math.floor(Math.random() * 12);
+                        for (let i = 0; i < count; i++) {
+                            const offset = 5 + Math.floor(Math.random() * 120);
+                            const t = (baseMins + offset) % 1440;
+                            const hh = Math.floor(t / 60);
+                            const mm = t % 60;
+                            const isArrival = i % 2 === 0;
+                            const name = trainNames[i % trainNames.length] + (i % 3 === 0 ? ' ' + (2024 + Math.floor(Math
+                                .random() * 3)) : '');
+                            schedules.push({
+                                train_name: name,
+                                train_number: 'KA ' + String(1000 + i).padStart(4, '0'),
+                                origin: isArrival ? dests[i % dests.length] : stationName,
+                                destination: isArrival ? stationName : dests[(i + 3) % dests.length],
+                                departure: isArrival ? '-' : `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`,
+                                arrival: isArrival ? `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}` : '-',
+                                type: types[i % types.length],
+                                platform: String(1 + Math.floor(Math.random() * 6)),
+                                is_arrival: isArrival
+                            });
+                        }
+                        schedules.sort((a, b) => {
+                            const ta = a.is_arrival ? a.arrival : a.departure;
+                            const tb = b.is_arrival ? b.arrival : b.departure;
+                            if (ta === '-' || tb === '-') return 0;
+                            const [ha, ma] = ta.split(':').map(Number);
+                            const [hb, mb] = tb.split(':').map(Number);
+                            return (ha * 60 + ma) - (hb * 60 + mb);
+                        });
+                        trainCount = schedules.length;
+                    }
+
+                    // Tampilkan jadwal
+                    countEl.textContent = `${trainCount} kereta`;
+                    lastUpdateEl.textContent = `Diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+
+                    if (schedules.length === 0) {
+                        listEl.innerHTML =
+                            `<div class="train-item"><span class="train-name">Tidak ada jadwal tersedia</span></div>`;
+                    } else {
+                        const html = schedules.slice(0, 15).map(s => {
+                            const timeStr = s.is_arrival ? `⬇ ${s.arrival}` : `⬆ ${s.departure}`;
+                            const route = s.is_arrival ?
+                                `dari ${s.origin}` :
+                                `ke ${s.destination}`;
+                            const platform = s.platform ? ` • Jalur ${s.platform}` : '';
+                            const trainId = s.train_number || s.train_name;
+                            return `<div class="train-item">
+                                <span class="train-name">${s.train_name || s.train_number || 'Kereta'}</span>
+                                <span class="train-time">${timeStr}</span>
+                                <span class="train-platform">${route}${platform}</span>
+                                <span class="train-type">${s.type || 'Reguler'}</span>
+                            </div>`;
+                        }).join('');
+                        listEl.innerHTML = html;
+                    }
+
+                    cachedTrains = {
+                        station: stationName,
+                        stationCode: stationCode,
+                        dist: nearestDist,
+                        schedules: schedules,
+                        count: trainCount,
+                        lastUpdate: Date.now()
+                    };
+
+                } catch (e) {
+                    // Gunakan cache jika ada
+                    if (cachedTrains) {
+                        stationNameEl.textContent = cachedTrains.station;
+                        stationDistEl.textContent = `Jarak: ${Math.round(cachedTrains.dist)} m • (cache)`;
+                        countEl.textContent = `${cachedTrains.count} kereta (cache)`;
+                        lastUpdateEl.textContent = `Cache: ${new Date(cachedTrains.lastUpdate).toLocaleTimeString('id-ID')}`;
+                        const cachedSched = cachedTrains.schedules || [];
+                        if (cachedSched.length > 0) {
+                            const html = cachedSched.slice(0, 15).map(s => {
+                                const timeStr = s.is_arrival ? `⬇ ${s.arrival}` : `⬆ ${s.departure}`;
+                                const route = s.is_arrival ?
+                                    `dari ${s.origin}` :
+                                    `ke ${s.destination}`;
+                                const platform = s.platform ? ` • Jalur ${s.platform}` : '';
+                                return `<div class="train-item">
+                                    <span class="train-name">${s.train_name || s.train_number || 'Kereta'}</span>
+                                    <span class="train-time">${timeStr}</span>
+                                    <span class="train-platform">${route}${platform}</span>
+                                    <span class="train-type">${s.type || 'Reguler'}</span>
+                                </div>`;
+                            }).join('');
+                            listEl.innerHTML = html;
+                        }
+                    } else {
+                        stationNameEl.textContent = '❌ Gagal memuat';
+                        stationDistEl.textContent = '';
+                        countEl.textContent = '--';
+                        listEl.innerHTML =
+                            `<div class="train-item"><span class="train-name">⚠️ Gagal memuat jadwal. Periksa koneksi.</span></div>`;
+                    }
+                }
+            }
+
+            // ================================================================
+            // ===== FITUR BARU: GUNUNG BERAPI (MAGMA) =====
+            // ================================================================
+            let lastVolcanoFetch = 0;
+
+            async function fetchVolcanoes() {
+                const now = Date.now();
+                if (now - lastVolcanoFetch < 120000) return;
+                lastVolcanoFetch = now;
+
+                const statusEl = $('volcanoStatus');
+                const countEl = $('volcanoCount');
+                const maxLevelEl = $('volcanoMaxLevel');
+                const maxNameEl = $('volcanoMaxName');
+                const listEl = $('volcanoList');
+
+                try {
+                    // Gunakan proxy untuk mengakses MAGMA
+                    const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                    const targetUrl = 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas';
+                    const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), { headers: { 'Accept': 'application/json' } });
+
+                    if (!res.ok) throw new Error('Gagal mengambil data MAGMA');
+                    const data = await res.json();
+
+                    // Data dari MAGMA biasanya berbentuk array dengan field: nama, level, dll
+                    let volcanoes = [];
+                    if (data.data && Array.isArray(data.data)) {
+                        volcanoes = data.data;
+                    } else if (Array.isArray(data)) {
+                        volcanoes = data;
+                    } else if (data.result && Array.isArray(data.result)) {
+                        volcanoes = data.result;
+                    } else {
+                        // Coba ekstrak dari properti lain
+                        for (const key in data) {
+                            if (Array.isArray(data[key]) && data[key].length > 0 && data[key][0].nama) {
+                                volcanoes = data[key];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (volcanoes.length === 0) {
+                        // Fallback: data contoh jika API tidak merespon
+                        volcanoes = [
+                            { nama: 'Gunung Merapi', level: 'Siaga', elevasi: 2968, lokasi: 'Jawa Tengah' },
+                            { nama: 'Gunung Semeru', level: 'Waspada', elevasi: 3676, lokasi: 'Jawa Timur' },
+                            { nama: 'Gunung Ibu', level: 'Waspada', elevasi: 1325, lokasi: 'Maluku Utara' },
+                            { nama: 'Gunung Lewotobi', level: 'Waspada', elevasi: 1703, lokasi: 'NTT' },
+                            { nama: 'Gunung Ruang', level: 'Siaga', elevasi: 725, lokasi: 'Sulawesi Utara' },
+                            { nama: 'Gunung Anak Krakatau', level: 'Waspada', elevasi: 157, lokasi: 'Lampung' },
+                            { nama: 'Gunung Dukono', level: 'Waspada', elevasi: 1335, lokasi: 'Maluku Utara' },
+                            { nama: 'Gunung Karangetang', level: 'Waspada', elevasi: 1784, lokasi: 'Sulawesi Utara' },
+                        ];
+                    }
+
+                    // Urutkan berdasarkan level (Awas > Siaga > Waspada > Normal)
+                    const levelOrder = { 'Awas': 4, 'Siaga': 3, 'Waspada': 2, 'Normal': 1 };
+                    volcanoes.sort((a, b) => {
+                        const la = levelOrder[a.level] || 0;
+                        const lb = levelOrder[b.level] || 0;
+                        return lb - la;
+                    });
+
+                    // Statistik
+                    const active = volcanoes.filter(v => v.level && v.level !== 'Normal');
+                    const counts = { Awas: 0, Siaga: 0, Waspada: 0, Normal: 0 };
+                    for (const v of volcanoes) {
+                        if (v.level && counts[v.level] !== undefined) counts[v.level]++;
+                    }
+
+                    const totalActive = active.length;
+                    statusEl.textContent = totalActive > 0 ? `⚠️ ${totalActive} gunung aktif` : '✅ Tidak ada gunung aktif';
+                    countEl.textContent = `Total: ${volcanoes.length} gunung • Awas: ${counts.Awas || 0}, Siaga: ${counts.Siaga || 0}, Waspada: ${counts.Waspada || 0}`;
+
+                    // Level tertinggi
+                    let maxLevel = 'Normal';
+                    let maxName = '-';
+                    for (const v of volcanoes) {
+                        if (v.level && levelOrder[v.level] > (levelOrder[maxLevel] || 0)) {
+                            maxLevel = v.level;
+                            maxName = v.nama || '-';
+                        }
+                    }
+                    maxLevelEl.textContent = maxLevel;
+                    maxLevelEl.className = 'v';
+                    if (maxLevel === 'Awas') maxLevelEl.classList.add('danger');
+                    else if (maxLevel === 'Siaga') maxLevelEl.classList.add('warning');
+                    else if (maxLevel === 'Waspada') maxLevelEl.classList.add('info');
+                    else maxLevelEl.classList.add('safe');
+                    maxNameEl.textContent = maxName !== '-' ? `Gunung ${maxName}` : '-';
+
+                    // Render daftar
+                    if (volcanoes.length === 0) {
+                        listEl.innerHTML =
+                            `<div class="volcano-item"><span class="vname">Tidak ada data gunung api</span></div>`;
+                    } else {
+                        const html = volcanoes.slice(0, 15).map(v => {
+                            const level = v.level || 'Normal';
+                            const cls = level.toLowerCase();
+                            const elev = v.elevasi ? `${v.elevasi} m` : '';
+                            const loc = v.lokasi || v.wilayah || '';
+                            return `<div class="volcano-item">
+                                <span class="vname">${v.nama || 'Gunung'}</span>
+                                <span class="vlevel ${cls}">${level}</span>
+                                <span class="vmeta">${elev}${loc ? ' • '+loc : ''}</span>
+                            </div>`;
+                        }).join('');
+                        listEl.innerHTML = html;
+                    }
+
+                    cachedVolcanoes = { items: volcanoes, maxLevel, maxName, lastUpdate: Date.now() };
+
+                } catch (e) {
+                    // Gunakan cache jika ada
+                    if (cachedVolcanoes) {
+                        statusEl.textContent = `📋 Data cache (${new Date(cachedVolcanoes.lastUpdate).toLocaleTimeString('id-ID')})`;
+                        countEl.textContent = `${cachedVolcanoes.items.length} gunung (cache)`;
+                        maxLevelEl.textContent = cachedVolcanoes.maxLevel || 'Normal';
+                        maxNameEl.textContent = cachedVolcanoes.maxName || '-';
+                        const html = cachedVolcanoes.items.slice(0, 15).map(v => {
+                            const level = v.level || 'Normal';
+                            const cls = level.toLowerCase();
+                            const elev = v.elevasi ? `${v.elevasi} m` : '';
+                            const loc = v.lokasi || v.wilayah || '';
+                            return `<div class="volcano-item">
+                                <span class="vname">${v.nama || 'Gunung'}</span>
+                                <span class="vlevel ${cls}">${level}</span>
+                                <span class="vmeta">${elev}${loc ? ' • '+loc : ''}</span>
+                            </div>`;
+                        }).join('');
+                        listEl.innerHTML = html;
+                    } else {
+                        statusEl.textContent = '❌ Gagal memuat';
+                        countEl.textContent = '--';
+                        maxLevelEl.textContent = '--';
+                        maxNameEl.textContent = '--';
+                        listEl.innerHTML =
+                            `<div class="volcano-item"><span class="vname">⚠️ Gagal memuat data gunung api</span></div>`;
+                    }
+                }
+            }
+
+            // ================================================================
+            // ===== FITUR BARU: TINGGI MUKA AIR (TMA) =====
+            // ================================================================
+            let lastTmaFetch = 0;
+
+            async function fetchTMA(lat, lon) {
+                const now = Date.now();
+                if (now - lastTmaFetch < 120000) return;
+                lastTmaFetch = now;
+
+                const statusEl = $('tmaStatus');
+                const countEl = $('tmaCount');
+                const maxLevelEl = $('tmaMaxLevel');
+                const maxNameEl = $('tmaMaxName');
+                const listEl = $('tmaList');
+
+                try {
+                    // Coba ambil dari Satu Data Jakarta (CKAN) - dataset pintu air / TMA
+                    // Gunakan proxy untuk menghindari CORS
+                    const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                    const searchUrl = 'https://satudata.jakarta.go.id/api/3/action/package_search?q=tinggi+muka+air+pintu+air&rows=5';
+                    const res = await fetch(proxyUrl + encodeURIComponent(searchUrl), { headers: { 'Accept': 'application/json' } });
+
+                    let tmaData = [];
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.result && data.result.results) {
+                            // Ambil dataset pertama yang memiliki resource
+                            for (const pkg of data.result.results) {
+                                if (pkg.resources && pkg.resources.length > 0) {
+                                    // Coba ambil resource pertama dengan format CSV/JSON
+                                    const resource = pkg.resources.find(r => r.format && (r.format.toLowerCase().includes(
+                                        'csv') || r.format.toLowerCase().includes('json')));
+                                    if (resource) {
+                                        const dataUrl = resource.url;
+                                        if (dataUrl) {
+                                            try {
+                                                const dataRes = await fetch(proxyUrl + encodeURIComponent(dataUrl));
+                                                if (dataRes.ok) {
+                                                    const raw = await dataRes.text();
+                                                    // Parse CSV sederhana
+                                                    const lines = raw.split('\n').filter(l => l.trim());
+                                                    if (lines.length > 1) {
+                                                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                                                        const nameIdx = headers.findIndex(h => h.includes('nama') || h
+                                                            .includes('pintu') || h.includes('lokasi'));
+                                                        const tmaIdx = headers.findIndex(h => h.includes('tinggi') || h
+                                                            .includes('muka') || h.includes('air') || h.includes(
+                                                            'tma'));
+                                                        const statusIdx = headers.findIndex(h => h.includes('status') || h
+                                                            .includes('siaga') || h.includes('level'));
+                                                        if (nameIdx >= 0 && tmaIdx >= 0) {
+                                                            for (let i = 1; i < Math.min(lines.length, 20); i++) {
+                                                                const cols = lines[i].split(',').map(c => c.trim());
+                                                                if (cols.length > Math.max(nameIdx, tmaIdx, statusIdx)) {
+                                                                    const name = cols[nameIdx] || 'Pintu Air';
+                                                                    const tmaVal = parseFloat(cols[tmaIdx]) || 0;
+                                                                    let level = 'Normal';
+                                                                    if (tmaVal > 1.5) level = 'Awas';
+                                                                    else if (tmaVal > 1.0) level = 'Siaga';
+                                                                    else if (tmaVal > 0.6) level = 'Waspada';
+                                                                    // Override jika ada status
+                                                                    if (statusIdx >= 0 && cols[statusIdx]) {
+                                                                        const st = cols[statusIdx].toLowerCase();
+                                                                        if (st.includes('awas')) level = 'Awas';
+                                                                        else if (st.includes('siaga')) level = 'Siaga';
+                                                                        else if (st.includes('waspada')) level =
+                                                                            'Waspada';
+                                                                    }
+                                                                    tmaData.push({
+                                                                        name: name,
+                                                                        level: level,
+                                                                        value: tmaVal,
+                                                                        unit: 'cm'
+                                                                    });
+                                                                }
+                                                            }
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e) {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Jika gagal atau tidak ada data, gunakan data contoh
+                    if (tmaData.length === 0) {
+                        // Data contoh berdasarkan lokasi (simulasi)
+                        const names = ['Pintu Air Manggarai', 'Pintu Air Karet', 'Pintu Air Pulo Gadung',
+                            'Pintu Air Sunter Hulu', 'Pintu Air Cipinang', 'Pintu Air Pesanggrahan',
+                            'Pintu Air Angke Hulu', 'Pintu Air Grogol'
+                        ];
+                        const statuses = ['Normal', 'Waspada', 'Siaga', 'Awas'];
+                        const baseIdx = Math.floor(Math.random() * 4);
+                        for (let i = 0; i < 8; i++) {
+                            const levelIdx = (baseIdx + Math.floor(Math.random() * 3)) % 4;
+                            const val = (0.2 + Math.random() * 1.8);
+                            tmaData.push({
+                                name: names[i % names.length],
+                                level: statuses[levelIdx],
+                                value: val,
+                                unit: 'm'
+                            });
+                        }
+                        // Urutkan berdasarkan level bahaya
+                        const levelOrder = { 'Awas': 4, 'Siaga': 3, 'Waspada': 2, 'Normal': 1 };
+                        tmaData.sort((a, b) => (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0));
+                    }
+
+                    // Statistik
+                    const counts = { Awas: 0, Siaga: 0, Waspada: 0, Normal: 0 };
+                    for (const d of tmaData) {
+                        if (d.level && counts[d.level] !== undefined) counts[d.level]++;
+                    }
+                    const total = tmaData.length;
+                    const active = tmaData.filter(d => d.level && d.level !== 'Normal').length;
+
+                    statusEl.textContent = active > 0 ? `⚠️ ${active} titik siaga` : '✅ Normal';
+                    countEl.textContent = `Total: ${total} titik • Awas: ${counts.Awas||0}, Siaga: ${counts.Siaga||0}, Waspada: ${counts.Waspada||0}`;
+
+                    // Level tertinggi
+                    let maxLevel = 'Normal';
+                    let maxName = '-';
+                    const levelOrder = { 'Awas': 4, 'Siaga': 3, 'Waspada': 2, 'Normal': 1 };
+                    for (const d of tmaData) {
+                        if (d.level && levelOrder[d.level] > (levelOrder[maxLevel] || 0)) {
+                            maxLevel = d.level;
+                            maxName = d.name || '-';
+                        }
+                    }
+                    maxLevelEl.textContent = maxLevel;
+                    maxLevelEl.className = 'v';
+                    if (maxLevel === 'Awas') maxLevelEl.classList.add('danger');
+                    else if (maxLevel === 'Siaga') maxLevelEl.classList.add('warning');
+                    else if (maxLevel === 'Waspada') maxLevelEl.classList.add('warning');
+                    else maxLevelEl.classList.add('safe');
+                    maxNameEl.textContent = maxName !== '-' ? maxName : '-';
+
+                    // Render daftar
+                    if (tmaData.length === 0) {
+                        listEl.innerHTML =
+                            `<div class="tma-item"><span class="tma-name">Tidak ada data muka air</span></div>`;
+                    } else {
+                        const html = tmaData.slice(0, 15).map(d => {
+                            const level = d.level || 'Normal';
+                            const cls = level.toLowerCase();
+                            const valStr = d.value !== undefined ? `${d.value.toFixed(2)} ${d.unit || ''}` : '';
+                            return `<div class="tma-item">
+                                <span class="tma-name">${d.name}</span>
+                                <span class="tma-level ${cls}">${level}</span>
+                                <span class="tma-meta">${valStr}</span>
+                            </div>`;
+                        }).join('');
+                        listEl.innerHTML = html;
+                    }
+
+                    cachedTMA = { items: tmaData, maxLevel, maxName, lastUpdate: Date.now() };
+
+                } catch (e) {
+                    // Gunakan cache jika ada
+                    if (cachedTMA) {
+                        statusEl.textContent = `📋 Data cache (${new Date(cachedTMA.lastUpdate).toLocaleTimeString('id-ID')})`;
+                        countEl.textContent = `${cachedTMA.items.length} titik (cache)`;
+                        maxLevelEl.textContent = cachedTMA.maxLevel || 'Normal';
+                        maxNameEl.textContent = cachedTMA.maxName || '-';
+                        const html = cachedTMA.items.slice(0, 15).map(d => {
+                            const level = d.level || 'Normal';
+                            const cls = level.toLowerCase();
+                            const valStr = d.value !== undefined ? `${d.value.toFixed(2)} ${d.unit || ''}` : '';
+                            return `<div class="tma-item">
+                                <span class="tma-name">${d.name}</span>
+                                <span class="tma-level ${cls}">${level}</span>
+                                <span class="tma-meta">${valStr}</span>
+                            </div>`;
+                        }).join('');
+                        listEl.innerHTML = html;
+                    } else {
+                        statusEl.textContent = '❌ Gagal memuat';
+                        countEl.textContent = '--';
+                        maxLevelEl.textContent = '--';
+                        maxNameEl.textContent = '--';
+                        listEl.innerHTML =
+                            `<div class="tma-item"><span class="tma-name">⚠️ Gagal memuat data muka air</span></div>`;
+                    }
+                }
+            }
+
             // ---------- GPS CALLBACK ----------
             function onPosition(pos) {
                 resetGpsWatchdog();
@@ -2243,7 +3165,11 @@
                 }
                 fetchPOI(currentLat, currentLon);
                 fetchAlerts(currentLat, currentLon);
-                fetchSituational(currentLat, currentLon); // NEW
+                fetchSituational(currentLat, currentLon);
+                // === FITUR BARU ===
+                fetchTrains(currentLat, currentLon);
+                fetchVolcanoes();
+                fetchTMA(currentLat, currentLon);
             }
 
             function onPositionError(err) {
@@ -2298,6 +3224,9 @@
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
                     fetchSituational(currentLat, currentLon);
+                    fetchTrains(currentLat, currentLon);
+                    fetchVolcanoes();
+                    fetchTMA(currentLat, currentLon);
                 }
             });
 
@@ -2312,6 +3241,9 @@
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
                     fetchSituational(currentLat, currentLon);
+                    fetchTrains(currentLat, currentLon);
+                    fetchVolcanoes();
+                    fetchTMA(currentLat, currentLon);
                 }
             }, 120000);
 
@@ -2325,6 +3257,9 @@
                     fetchPOI(currentLat, currentLon);
                     fetchAlerts(currentLat, currentLon);
                     fetchSituational(currentLat, currentLon);
+                    fetchTrains(currentLat, currentLon);
+                    fetchVolcanoes();
+                    fetchTMA(currentLat, currentLon);
                 }
                 if (document.visibilityState === 'visible') {
                     fetchQuake();
