@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⚡ NUSANTARA MONITOR – Real‑time Dashboard</title>
+    <style>
+        /* ----- FUTURISTIC DARK THEME ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: #0b0d15;
+            color: #e0e8f0;
+            min-height: 100vh;
+            padding: 20px;
+            background-image: radial-gradient(circle at 20% 30%, #1a2a3a 0%, #0b0d15 70%);
+            animation: bgPulse 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgPulse {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: rgba(10, 20, 40, 0.65);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(0, 255, 255, 0.20);
+            border-radius: 40px;
+            box-shadow: 0 0 40px rgba(0, 180, 255, 0.08);
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #8cf0ff, #3b82f6, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header .badge {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        .badge .live {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .live .dot {
+            width: 10px;
+            height: 10px;
+            background: #22d3ee;
+            border-radius: 50%;
+            box-shadow: 0 0 12px #22d3ee;
+            animation: blink 1.4s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        /* grid cards */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 28px;
+            margin-bottom: 28px;
+        }
+
+        .card {
+            background: rgba(12, 22, 42, 0.70);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(100, 200, 255, 0.12);
+            border-radius: 32px;
+            padding: 22px 24px 28px;
+            box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.7);
+            transition: transform 0.25s ease, border-color 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 200, 255, 0.35);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .card-header h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            color: #c8d8e8;
+        }
+        .card-header .icon {
+            font-size: 1.8rem;
+            opacity: 0.7;
+        }
+        .card-header .update-time {
+            font-size: 0.7rem;
+            color: #6b7f94;
+            background: rgba(255,255,255,0.04);
+            padding: 4px 12px;
+            border-radius: 40px;
+        }
+
+        .card-body {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #1e3a5f transparent;
+        }
+        .card-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .card-body::-webkit-scrollbar-thumb {
+            background: #1e3a5f;
+            border-radius: 20px;
+        }
+
+        /* item list */
+        .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .item .label {
+            color: #b0c4d8;
+        }
+        .item .value {
+            font-weight: 500;
+        }
+        .status-normal { color: #4ade80; }
+        .status-waspada { color: #fbbf24; }
+        .status-siaga { color: #fb923c; }
+        .status-awas { color: #f87171; }
+
+        .water-level {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #475569;
+            font-size: 0.75rem;
+            padding: 24px 0 8px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+        .footer a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        /* loading shimmer */
+        .shimmer {
+            background: linear-gradient(90deg, #1a2a3a 25%, #2a3a4a 50%, #1a2a3a 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.8s infinite;
+            border-radius: 6px;
+            height: 1.2em;
+            width: 80%;
+            margin: 6px 0;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* responsive */
+        @media (max-width: 640px) {
+            .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .header h1 { font-size: 1.4rem; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+        <h1>⬡ NUSANTARA MONITOR</h1>
+        <div class="badge">
+            <span class="live"><span class="dot"></span> LIVE</span>
+            <span id="lastUpdateLabel">⏱️ <span id="lastUpdateTime">--</span></span>
+        </div>
+    </header>
+
+    <!-- GRID -->
+    <div class="grid" id="dashboardGrid">
+        <!-- CARD 1: KERETA COMMUTER -->
+        <div class="card" id="trainCard">
+            <div class="card-header">
+                <h2>🚆 Commuter Line</h2>
+                <span class="update-time" id="trainTime">--</span>
+            </div>
+            <div class="card-body" id="trainBody">
+                <div class="shimmer"></div><div class="shimmer" style="width:60%"></div>
+                <div class="shimmer"></div><div class="shimmer" style="width:70%"></div>
+            </div>
+        </div>
+
+        <!-- CARD 2: TINGGI MUKA AIR -->
+        <div class="card" id="waterCard">
+            <div class="card-header">
+                <h2>🌊 Tinggi Muka Air</h2>
+                <span class="update-time" id="waterTime">--</span>
+            </div>
+            <div class="card-body" id="waterBody">
+                <div class="shimmer"></div><div class="shimmer" style="width:55%"></div>
+                <div class="shimmer"></div><div class="shimmer" style="width:65%"></div>
+            </div>
+        </div>
+
+        <!-- CARD 3: GUNUNG API -->
+        <div class="card" id="volcanoCard">
+            <div class="card-header">
+                <h2>🌋 Status Gunung Api</h2>
+                <span class="update-time" id="volcanoTime">--</span>
+            </div>
+            <div class="card-body" id="volcanoBody">
+                <div class="shimmer"></div><div class="shimmer" style="width:50%"></div>
+                <div class="shimmer"></div><div class="shimmer" style="width:75%"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        Data real‑time dari sumber terbuka &nbsp;·&nbsp; 
+        <span id="statusMessage">⏳ memuat…</span>
+    </footer>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        // ----- CONFIG -----
+        const REFRESH_MS = 30000;          // 30 detik
+        const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
+        // ----- DOM refs -----
+        const trainBody = document.getElementById('trainBody');
+        const waterBody = document.getElementById('waterBody');
+        const volcanoBody = document.getElementById('volcanoBody');
+        const trainTime = document.getElementById('trainTime');
+        const waterTime = document.getElementById('waterTime');
+        const volcanoTime = document.getElementById('volcanoTime');
+        const lastUpdateTime = document.getElementById('lastUpdateTime');
+        const statusMsg = document.getElementById('statusMessage');
+
+        // ----- helpers -----
+        function formatTime(d) {
+            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function setStatus(msg, isError = false) {
+            statusMsg.textContent = msg;
+            statusMsg.style.color = isError ? '#f87171' : '#94a3b8';
+        }
+
+        function setCardTime(el, d) {
+            if (el) el.textContent = formatTime(d);
+        }
+
+        // ----- 1. KERETA (Comuline API) -----
+        async function fetchTrains() {
+            try {
+                const url = 'https://api.comuline.com/v1/station';
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                if (!json.data || !Array.isArray(json.data)) throw new Error('Format tidak dikenal');
+
+                // ambil 10 stasiun pertama sebagai sampel
+                const stations = json.data.slice(0, 10);
+                let html = `<div style="font-size:0.85rem; color:#94a3b8; margin-bottom:10px;">${stations.length} stasiun aktif</div>`;
+                stations.forEach(s => {
+                    const name = s.name || s.id || 'N/A';
+                    const active = s.metadata?.active ? '🟢' : '⚪';
+                    html += `<div class="item"><span class="label">${active} ${name}</span><span class="value">${s.id || ''}</span></div>`;
+                });
+                html += `<div style="margin-top:12px; font-size:0.8rem; color:#6b7f94;">↻ diperbarui setiap 30 detik</div>`;
+                trainBody.innerHTML = html;
+                setCardTime(trainTime, new Date());
+                setStatus('✅ Kereta OK');
+            } catch (err) {
+                trainBody.innerHTML = `<div style="color:#f87171;">⚠️ Gagal memuat stasiun<br><span style="font-size:0.8rem;">${err.message}</span></div>`;
+                setStatus('❌ Gagal kereta', true);
+            }
+        }
+
+        // ----- 2. TINGGI MUKA AIR (scrape Posko Banjir DKI) -----
+        async function fetchWaterLevel() {
+            try {
+                const target = 'https://poskobanjir.dsdadki.web.id/';
+                const proxyUrl = CORS_PROXY + encodeURIComponent(target);
+                const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const html = await resp.text();
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const rows = doc.querySelectorAll('table tr');
+                // cari baris data (minimal 2 kolom)
+                let items = [];
+                rows.forEach(tr => {
+                    const tds = tr.querySelectorAll('td');
+                    if (tds.length >= 4) {
+                        const loc = tds[0]?.textContent?.trim() || '';
+                        const sungai = tds[1]?.textContent?.trim() || '';
+                        const tinggi = tds[2]?.textContent?.trim() || '';
+                        const status = tds[5]?.textContent?.trim() || '';
+                        if (loc && tinggi) {
+                            items.push({ loc, sungai, tinggi, status });
+                        }
+                    }
+                });
+
+                if (items.length === 0) throw new Error('Tidak ada data tabel');
+
+                // ambil 8 pertama
+                const show = items.slice(0, 8);
+                let htmlOut = '';
+                show.forEach(it => {
+                    const statusClass = it.status.toLowerCase().includes('siaga') ? 'status-siaga' :
+                                       it.status.toLowerCase().includes('waspada') ? 'status-waspada' :
+                                       it.status.toLowerCase().includes('awas') ? 'status-awas' : 'status-normal';
+                    htmlOut += `<div class="item">
+                        <span class="label">${it.loc} <span style="color:#6b7f94;font-size:0.8rem;">${it.sungai}</span></span>
+                        <span class="value"><span class="water-level">${it.tinggi}</span> cm <span class="${statusClass}">${it.status || 'Normal'}</span></span>
+                    </div>`;
+                });
+                htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: Dinas SDA DKI Jakarta</div>`;
+                waterBody.innerHTML = htmlOut;
+                setCardTime(waterTime, new Date());
+                setStatus('✅ Air OK');
+            } catch (err) {
+                waterBody.innerHTML = `<div style="color:#f87171;">⚠️ Gagal memuat tinggi air<br><span style="font-size:0.8rem;">${err.message}</span></div>`;
+                setStatus('❌ Gagal air', true);
+            }
+        }
+
+        // ----- 3. GUNUNG API (scrape MAGMA Indonesia) -----
+        async function fetchVolcanoes() {
+            try {
+                const target = 'https://magma.vsi.esdm.go.id/';
+                const proxyUrl = CORS_PROXY + encodeURIComponent(target);
+                const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const html = await resp.text();
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                // cari elemen yang mengandung daftar status gunung
+                // biasanya ada di section "Status Gunung Api" – coba cari div dengan class tertentu
+                let found = [];
+                // pendekatan: cari semua teks yang mengandung "Level" atau "Siaga/Waspada"
+                const bodyText = doc.body?.innerText || '';
+                const lines = bodyText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
+                // ambil 10 baris yang mengandung kata kunci
+                let volcanoLines = [];
+                for (let line of lines) {
+                    if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal/i)) {
+                        volcanoLines.push(line);
+                    }
+                    if (volcanoLines.length >= 12) break;
+                }
+
+                if (volcanoLines.length === 0) throw new Error('Tidak ditemukan data gunung');
+
+                let htmlOut = '';
+                volcanoLines.slice(0, 10).forEach(line => {
+                    let statusClass = 'status-normal';
+                    let statusText = 'Normal';
+                    if (line.toLowerCase().includes('awas')) { statusClass = 'status-awas'; statusText = 'AWAS'; }
+                    else if (line.toLowerCase().includes('siaga')) { statusClass = 'status-siaga'; statusText = 'SIAGA'; }
+                    else if (line.toLowerCase().includes('waspada')) { statusClass = 'status-waspada'; statusText = 'WASPADA'; }
+
+                    // potong jika terlalu panjang
+                    const display = line.length > 60 ? line.slice(0, 60) + '…' : line;
+                    htmlOut += `<div class="item">
+                        <span class="label">${display}</span>
+                        <span class="value ${statusClass}">${statusText}</span>
+                    </div>`;
+                });
+                htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: MAGMA Indonesia (PVMBG)</div>`;
+                volcanoBody.innerHTML = htmlOut;
+                setCardTime(volcanoTime, new Date());
+                setStatus('✅ Gunung OK');
+            } catch (err) {
+                volcanoBody.innerHTML = `<div style="color:#f87171;">⚠️ Gagal memuat status gunung<br><span style="font-size:0.8rem;">${err.message}</span></div>`;
+                setStatus('❌ Gagal gunung', true);
+            }
+        }
+
+        // ----- UPDATE SEMUA -----
+        async function refreshAll() {
+            const start = Date.now();
+            setStatus('⏳ memperbarui…');
+
+            // jalankan paralel
+            await Promise.allSettled([
+                fetchTrains(),
+                fetchWaterLevel(),
+                fetchVolcanoes()
+            ]);
+
+            const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+            lastUpdateTime.textContent = formatTime(new Date()) + ` (${elapsed}s)`;
+            setStatus(`✅ diperbarui ${formatTime(new Date())}`);
+        }
+
+        // ----- START -----
+        // pertama kali langsung
+        refreshAll();
+
+        // lalu interval
+        setInterval(refreshAll, REFRESH_MS);
+
+        // jika tab tidak terlihat, tetap jalan (tidak terpengaruh save screen)
+        // karena setInterval tetap berjalan di background
+
+        console.log('🚀 NUSANTARA MONITOR aktif – refresh setiap 30 detik');
+    })();
+</script>
+</body>
+</html>
