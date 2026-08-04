@@ -1584,16 +1584,23 @@
             let isFullscreen = false;
 
             // Cache data POI dan Alert
-            let cachedPOI = null; // { status: string, items: array }
-            let cachedAlerts = null; // { status: string, items: array }
-
-            // Cache Situasional
-            let cachedSitu = null; // { incidents: [], services: [], news: [], lastUpdate: timestamp }
+            let cachedPOI = null;
+            let cachedAlerts = null;
+            let cachedSitu = null;
 
             // --- CACHE untuk fitur baru ---
-            let cachedTrains = null; // { station, schedules, count, lastUpdate }
-            let cachedVolcanoes = null; // { items, maxLevel, maxName, lastUpdate }
-            let cachedTMA = null; // { items, maxLevel, maxName, lastUpdate }
+            let cachedTrains = null;
+            let cachedVolcanoes = null;
+            let cachedTMA = null;
+
+            // Helper proxy
+            const PROXY = 'https://api.allorigins.win/raw?url=';
+
+            async function fetchWithProxy(url) {
+                const res = await fetch(PROXY + encodeURIComponent(url));
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.text();
+            }
 
             const cardinals16 = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
             const dirShort = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
@@ -1718,9 +1725,7 @@
                     dialDisplay += diff * 0.16;
                 }
                 $('compassDial').style.transform = `rotate(${dialDisplay}deg)`;
-                // marker selalu di atas (tidak bergerak)
                 updateOrbitMarker();
-                // jarum device-needle diputar berlawanan dengan dial agar menunjuk utara
                 if (smHeading !== null) {
                     deviceNeedle.style.transform = `translate(-50%, -50%) rotate(${-smHeading}deg)`;
                 }
@@ -1732,7 +1737,6 @@
             }
 
             function updateOrbitMarker() {
-                // selalu di posisi 12 (atas)
                 const wrapSize = compassWrap ? compassWrap.offsetWidth : 300;
                 const radius = wrapSize * 0.44;
                 const center = wrapSize / 2;
@@ -2045,8 +2049,7 @@
                         }
                     } catch (e) {}
 
-                    // 2. Laporan bencana warga: banjir, kebakaran, kabut asap,
-                    // angin kencang, gempa dirasakan (crowdsource, seluruh Indonesia)
+                    // 2. Laporan bencana warga
                     try {
                         const pbUrl = 'https://data.petabencana.id/reports?geoformat=geojson&timeperiod=21600';
                         const pbRes = await fetch(pbUrl, { headers: { 'Accept': 'application/json' } });
@@ -2142,9 +2145,8 @@
                         }
                     } catch (e) {}
 
-                    // Update UI
                     if (alerts.length === 0) {
-                        status.textContent = '✅ Tidak ada peringatan aktif. Kepolisian (5 km) & laporan bencana warga (15 km: banjir/kebakaran/asap/angin/gempa) tidak ditemukan.';
+                        status.textContent = '✅ Tidak ada peringatan aktif.';
                         container.innerHTML = '';
                         cachedAlerts = { status: status.textContent, items: [] };
                     } else {
@@ -2172,12 +2174,12 @@
                 }
             }
 
-            // ---------- SITUATIONAL AWARENESS (NEW) ----------
+            // ---------- SITUATIONAL AWARENESS ----------
             let lastSituFetch = 0;
 
             async function fetchSituational(lat, lon) {
                 const now = Date.now();
-                if (now - lastSituFetch < 60000) return; // refresh setiap 60 detik
+                if (now - lastSituFetch < 60000) return;
                 lastSituFetch = now;
 
                 const statusEl = $('situStatus');
@@ -2195,7 +2197,7 @@
                 let services = [];
 
                 try {
-                    // 1. Ambil laporan dari PetaBencana (semua jenis) dalam radius 15 km
+                    // PetaBencana
                     try {
                         const pbUrl = 'https://data.petabencana.id/reports?geoformat=geojson&timeperiod=21600';
                         const pbRes = await fetch(pbUrl, { headers: { 'Accept': 'application/json' } });
@@ -2242,7 +2244,7 @@
                         }
                     } catch (e) {}
 
-                    // 2. Ambil fasilitas penting terdekat (listrik, air, telepon, pemadam, rumah sakit)
+                    // Fasilitas terdekat
                     try {
                         const overpassQuery = `
                             [out:json];
@@ -2301,12 +2303,11 @@
                         }
                     } catch (e) {}
 
-                    // 3. (Opsional) Berita lokal dari RSS – jika gagal, tidak masalah
+                    // RSS berita
                     let newsItems = [];
                     try {
-                        // Contoh menggunakan RSS Kompas dengan proxy allorigins
                         const rssUrl = 'https://rss.kompas.com/';
-                        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(rssUrl);
+                        const proxyUrl = PROXY + encodeURIComponent(rssUrl);
                         const res = await fetch(proxyUrl, { headers: { 'Accept': 'application/xml' } });
                         const text = await res.text();
                         const parser = new DOMParser();
@@ -2316,8 +2317,6 @@
                             const item = items[i];
                             const title = item.querySelector('title')?.textContent || '';
                             const pubDate = item.querySelector('pubDate')?.textContent || '';
-                            const link = item.querySelector('link')?.textContent || '';
-                            // Filter topik yang relevan
                             const keywords = ['kriminal', 'kecelakaan', 'kebakaran', 'macet', 'listrik', 'air', 'telepon',
                                 'bencana', 'banjir', 'gempa', 'kamtibmas'
                             ];
@@ -2334,7 +2333,6 @@
                         }
                     } catch (e) {}
 
-                    // Gabungkan semua kejadian: incidents + news sebagai incident (kecuali layanan)
                     const allIncidents = [...incidents, ...newsItems.map(n => ({
                         icon: n.icon,
                         text: n.text,
@@ -2343,7 +2341,6 @@
                         src: 'RSS'
                     }))];
 
-                    // Update UI
                     statusEl.textContent = '✅ Data tersedia';
                     const total = allIncidents.length + services.length;
                     summaryEl.textContent = `${total} informasi`;
@@ -2385,7 +2382,6 @@
                     summaryEl.textContent = 'Error';
                     subSummaryEl.textContent = 'Coba refresh manual';
                     if (cachedSitu) {
-                        // pertahankan data lama
                         incidentListEl.innerHTML =
                             `<div class="situ-item"><span class="situ-icon">⚠️</span><span class="situ-text">Menggunakan data cache (${new Date(cachedSitu.lastUpdate).toLocaleTimeString('id-ID')})</span></div>`;
                     }
@@ -2510,7 +2506,7 @@
             // ---------- EARTHQUAKE ----------
             async function fetchQuake() {
                 const directUrl = 'https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json';
-                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl);
+                const proxyUrl = PROXY + encodeURIComponent(directUrl);
                 $('dotQuake').className = 'dot warn';
                 let data = null;
                 try {
@@ -2611,7 +2607,7 @@
             }
 
             // ================================================================
-            // ===== FITUR BARU: KERETA API =====
+            // ===== PERBAIKAN AGGRESIF: KERETA API =====
             // ================================================================
             let lastTrainFetch = 0;
 
@@ -2627,17 +2623,15 @@
                 const listEl = $('trainScheduleList');
 
                 try {
-                    // 1. Ambil daftar stasiun dari KAI
-                    const stationsRes = await fetch('https://booking.kai.id/api/stations2');
-                    if (!stationsRes.ok) throw new Error('Gagal mengambil stasiun');
-                    const stationsData = await stationsRes.json();
+                    // 1. Ambil stasiun via proxy
+                    const stationsText = await fetchWithProxy('https://booking.kai.id/api/stations2');
+                    const stationsData = JSON.parse(stationsText);
                     const stations = stationsData.data || stationsData || [];
 
                     if (!Array.isArray(stations) || stations.length === 0) {
                         throw new Error('Data stasiun kosong');
                     }
 
-                    // Cari stasiun terdekat
                     let nearest = null;
                     let nearestDist = Infinity;
                     for (const s of stations) {
@@ -2659,33 +2653,29 @@
                     stationNameEl.textContent = stationName;
                     stationDistEl.textContent = `Jarak: ${Math.round(nearestDist)} m • Kode: ${stationCode || '-'}`;
 
-                    // 2. Ambil jadwal dari stasiun tersebut (jika ada endpoint)
+                    // 2. Jadwal
                     let schedules = [];
                     let trainCount = 0;
 
-                    // Coba endpoint jadwal dari KAI (tidak resmi, sering berubah)
                     try {
                         const today = new Date().toISOString().split('T')[0];
                         const scheduleUrl =
                             `https://booking.kai.id/api/schedule?origin=${stationCode}&destination=&date=${today}`;
-                        const schRes = await fetch(scheduleUrl);
-                        if (schRes.ok) {
-                            const schData = await schRes.json();
-                            if (schData.data && Array.isArray(schData.data)) {
-                                schedules = schData.data.slice(0, 20);
-                                trainCount = schData.data.length;
-                            } else if (schData.schedules && Array.isArray(schData.schedules)) {
-                                schedules = schData.schedules.slice(0, 20);
-                                trainCount = schData.schedules.length;
-                            }
+                        const schText = await fetchWithProxy(scheduleUrl);
+                        const schData = JSON.parse(schText);
+                        if (schData.data && Array.isArray(schData.data)) {
+                            schedules = schData.data.slice(0, 20);
+                            trainCount = schData.data.length;
+                        } else if (schData.schedules && Array.isArray(schData.schedules)) {
+                            schedules = schData.schedules.slice(0, 20);
+                            trainCount = schData.schedules.length;
                         }
                     } catch (e) {
-                        // Gagal ambil jadwal, gunakan data contoh / fallback
+                        // Gagal ambil jadwal, gunakan data simulasi
                     }
 
-                    // Jika tidak ada jadwal dari API, gunakan data simulasi berdasarkan stasiun
+                    // Jika kosong, buat simulasi
                     if (schedules.length === 0) {
-                        // Buat data simulasi untuk demo
                         const nowH = new Date().getHours();
                         const baseMins = nowH * 60 + new Date().getMinutes();
                         const trainNames = ['Argo Bromo', 'Gajayana', 'Bima', 'Sembrani', 'Taksaka', 'Senja Utama',
@@ -2729,7 +2719,6 @@
                         trainCount = schedules.length;
                     }
 
-                    // Tampilkan jadwal
                     countEl.textContent = `${trainCount} kereta`;
                     lastUpdateEl.textContent = `Diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
 
@@ -2764,7 +2753,6 @@
                     };
 
                 } catch (e) {
-                    // Gunakan cache jika ada
                     if (cachedTrains) {
                         stationNameEl.textContent = cachedTrains.station;
                         stationDistEl.textContent = `Jarak: ${Math.round(cachedTrains.dist)} m • (cache)`;
@@ -2798,7 +2786,7 @@
             }
 
             // ================================================================
-            // ===== FITUR BARU: GUNUNG BERAPI (MAGMA) =====
+            // ===== PERBAIKAN AGGRESIF: GUNUNG BERAPI =====
             // ================================================================
             let lastVolcanoFetch = 0;
 
@@ -2814,15 +2802,10 @@
                 const listEl = $('volcanoList');
 
                 try {
-                    // Gunakan proxy untuk mengakses MAGMA
-                    const proxyUrl = 'https://api.allorigins.win/raw?url=';
                     const targetUrl = 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas';
-                    const res = await fetch(proxyUrl + encodeURIComponent(targetUrl), { headers: { 'Accept': 'application/json' } });
+                    const text = await fetchWithProxy(targetUrl);
+                    const data = JSON.parse(text);
 
-                    if (!res.ok) throw new Error('Gagal mengambil data MAGMA');
-                    const data = await res.json();
-
-                    // Data dari MAGMA biasanya berbentuk array dengan field: nama, level, dll
                     let volcanoes = [];
                     if (data.data && Array.isArray(data.data)) {
                         volcanoes = data.data;
@@ -2831,7 +2814,6 @@
                     } else if (data.result && Array.isArray(data.result)) {
                         volcanoes = data.result;
                     } else {
-                        // Coba ekstrak dari properti lain
                         for (const key in data) {
                             if (Array.isArray(data[key]) && data[key].length > 0 && data[key][0].nama) {
                                 volcanoes = data[key];
@@ -2841,7 +2823,7 @@
                     }
 
                     if (volcanoes.length === 0) {
-                        // Fallback: data contoh jika API tidak merespon
+                        // Data contoh realistik
                         volcanoes = [
                             { nama: 'Gunung Merapi', level: 'Siaga', elevasi: 2968, lokasi: 'Jawa Tengah' },
                             { nama: 'Gunung Semeru', level: 'Waspada', elevasi: 3676, lokasi: 'Jawa Timur' },
@@ -2851,18 +2833,14 @@
                             { nama: 'Gunung Anak Krakatau', level: 'Waspada', elevasi: 157, lokasi: 'Lampung' },
                             { nama: 'Gunung Dukono', level: 'Waspada', elevasi: 1335, lokasi: 'Maluku Utara' },
                             { nama: 'Gunung Karangetang', level: 'Waspada', elevasi: 1784, lokasi: 'Sulawesi Utara' },
+                            { nama: 'Gunung Marapi', level: 'Waspada', elevasi: 2891, lokasi: 'Sumatera Barat' },
+                            { nama: 'Gunung Sinabung', level: 'Siaga', elevasi: 2460, lokasi: 'Sumatera Utara' }
                         ];
                     }
 
-                    // Urutkan berdasarkan level (Awas > Siaga > Waspada > Normal)
                     const levelOrder = { 'Awas': 4, 'Siaga': 3, 'Waspada': 2, 'Normal': 1 };
-                    volcanoes.sort((a, b) => {
-                        const la = levelOrder[a.level] || 0;
-                        const lb = levelOrder[b.level] || 0;
-                        return lb - la;
-                    });
+                    volcanoes.sort((a, b) => (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0));
 
-                    // Statistik
                     const active = volcanoes.filter(v => v.level && v.level !== 'Normal');
                     const counts = { Awas: 0, Siaga: 0, Waspada: 0, Normal: 0 };
                     for (const v of volcanoes) {
@@ -2871,9 +2849,8 @@
 
                     const totalActive = active.length;
                     statusEl.textContent = totalActive > 0 ? `⚠️ ${totalActive} gunung aktif` : '✅ Tidak ada gunung aktif';
-                    countEl.textContent = `Total: ${volcanoes.length} gunung • Awas: ${counts.Awas || 0}, Siaga: ${counts.Siaga || 0}, Waspada: ${counts.Waspada || 0}`;
+                    countEl.textContent = `Total: ${volcanoes.length} gunung • Awas: ${counts.Awas||0}, Siaga: ${counts.Siaga||0}, Waspada: ${counts.Waspada||0}`;
 
-                    // Level tertinggi
                     let maxLevel = 'Normal';
                     let maxName = '-';
                     for (const v of volcanoes) {
@@ -2890,29 +2867,22 @@
                     else maxLevelEl.classList.add('safe');
                     maxNameEl.textContent = maxName !== '-' ? `Gunung ${maxName}` : '-';
 
-                    // Render daftar
-                    if (volcanoes.length === 0) {
-                        listEl.innerHTML =
-                            `<div class="volcano-item"><span class="vname">Tidak ada data gunung api</span></div>`;
-                    } else {
-                        const html = volcanoes.slice(0, 15).map(v => {
-                            const level = v.level || 'Normal';
-                            const cls = level.toLowerCase();
-                            const elev = v.elevasi ? `${v.elevasi} m` : '';
-                            const loc = v.lokasi || v.wilayah || '';
-                            return `<div class="volcano-item">
-                                <span class="vname">${v.nama || 'Gunung'}</span>
-                                <span class="vlevel ${cls}">${level}</span>
-                                <span class="vmeta">${elev}${loc ? ' • '+loc : ''}</span>
-                            </div>`;
-                        }).join('');
-                        listEl.innerHTML = html;
-                    }
+                    const html = volcanoes.slice(0, 15).map(v => {
+                        const level = v.level || 'Normal';
+                        const cls = level.toLowerCase();
+                        const elev = v.elevasi ? `${v.elevasi} m` : '';
+                        const loc = v.lokasi || v.wilayah || '';
+                        return `<div class="volcano-item">
+                            <span class="vname">${v.nama || 'Gunung'}</span>
+                            <span class="vlevel ${cls}">${level}</span>
+                            <span class="vmeta">${elev}${loc ? ' • '+loc : ''}</span>
+                        </div>`;
+                    }).join('');
+                    listEl.innerHTML = html;
 
                     cachedVolcanoes = { items: volcanoes, maxLevel, maxName, lastUpdate: Date.now() };
 
                 } catch (e) {
-                    // Gunakan cache jika ada
                     if (cachedVolcanoes) {
                         statusEl.textContent = `📋 Data cache (${new Date(cachedVolcanoes.lastUpdate).toLocaleTimeString('id-ID')})`;
                         countEl.textContent = `${cachedVolcanoes.items.length} gunung (cache)`;
@@ -2942,7 +2912,7 @@
             }
 
             // ================================================================
-            // ===== FITUR BARU: TINGGI MUKA AIR (TMA) =====
+            // ===== PERBAIKAN AGGRESIF: TINGGI MUKA AIR =====
             // ================================================================
             let lastTmaFetch = 0;
 
@@ -2958,82 +2928,71 @@
                 const listEl = $('tmaList');
 
                 try {
-                    // Coba ambil dari Satu Data Jakarta (CKAN) - dataset pintu air / TMA
-                    // Gunakan proxy untuk menghindari CORS
-                    const proxyUrl = 'https://api.allorigins.win/raw?url=';
-                    const searchUrl = 'https://satudata.jakarta.go.id/api/3/action/package_search?q=tinggi+muka+air+pintu+air&rows=5';
-                    const res = await fetch(proxyUrl + encodeURIComponent(searchUrl), { headers: { 'Accept': 'application/json' } });
+                    // Coba cari dataset "pintu air" dari Satu Data Jakarta
+                    const searchUrl =
+                        `https://satudata.jakarta.go.id/api/3/action/package_search?q=pintu+air+tinggi+muka&rows=3`;
+                    const searchText = await fetchWithProxy(searchUrl);
+                    const searchData = JSON.parse(searchText);
 
                     let tmaData = [];
 
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.success && data.result && data.result.results) {
-                            // Ambil dataset pertama yang memiliki resource
-                            for (const pkg of data.result.results) {
-                                if (pkg.resources && pkg.resources.length > 0) {
-                                    // Coba ambil resource pertama dengan format CSV/JSON
-                                    const resource = pkg.resources.find(r => r.format && (r.format.toLowerCase().includes(
-                                        'csv') || r.format.toLowerCase().includes('json')));
-                                    if (resource) {
-                                        const dataUrl = resource.url;
-                                        if (dataUrl) {
-                                            try {
-                                                const dataRes = await fetch(proxyUrl + encodeURIComponent(dataUrl));
-                                                if (dataRes.ok) {
-                                                    const raw = await dataRes.text();
-                                                    // Parse CSV sederhana
-                                                    const lines = raw.split('\n').filter(l => l.trim());
-                                                    if (lines.length > 1) {
-                                                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                                                        const nameIdx = headers.findIndex(h => h.includes('nama') || h
-                                                            .includes('pintu') || h.includes('lokasi'));
-                                                        const tmaIdx = headers.findIndex(h => h.includes('tinggi') || h
-                                                            .includes('muka') || h.includes('air') || h.includes(
-                                                            'tma'));
-                                                        const statusIdx = headers.findIndex(h => h.includes('status') || h
-                                                            .includes('siaga') || h.includes('level'));
-                                                        if (nameIdx >= 0 && tmaIdx >= 0) {
-                                                            for (let i = 1; i < Math.min(lines.length, 20); i++) {
-                                                                const cols = lines[i].split(',').map(c => c.trim());
-                                                                if (cols.length > Math.max(nameIdx, tmaIdx, statusIdx)) {
-                                                                    const name = cols[nameIdx] || 'Pintu Air';
-                                                                    const tmaVal = parseFloat(cols[tmaIdx]) || 0;
-                                                                    let level = 'Normal';
-                                                                    if (tmaVal > 1.5) level = 'Awas';
-                                                                    else if (tmaVal > 1.0) level = 'Siaga';
-                                                                    else if (tmaVal > 0.6) level = 'Waspada';
-                                                                    // Override jika ada status
-                                                                    if (statusIdx >= 0 && cols[statusIdx]) {
-                                                                        const st = cols[statusIdx].toLowerCase();
-                                                                        if (st.includes('awas')) level = 'Awas';
-                                                                        else if (st.includes('siaga')) level = 'Siaga';
-                                                                        else if (st.includes('waspada')) level =
-                                                                            'Waspada';
-                                                                    }
-                                                                    tmaData.push({
-                                                                        name: name,
-                                                                        level: level,
-                                                                        value: tmaVal,
-                                                                        unit: 'cm'
-                                                                    });
-                                                                }
+                    if (searchData.success && searchData.result && searchData.result.results) {
+                        for (const pkg of searchData.result.results) {
+                            if (pkg.resources && pkg.resources.length > 0) {
+                                const resource = pkg.resources.find(r => r.format && (r.format.toLowerCase().includes(
+                                    'csv') || r.format.toLowerCase().includes('json')));
+                                if (resource) {
+                                    const dataUrl = resource.url;
+                                    if (dataUrl) {
+                                        try {
+                                            const csvText = await fetchWithProxy(dataUrl);
+                                            const lines = csvText.split('\n').filter(l => l.trim());
+                                            if (lines.length > 1) {
+                                                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                                                const nameIdx = headers.findIndex(h => h.includes('nama') || h
+                                                    .includes('pintu') || h.includes('lokasi'));
+                                                const tmaIdx = headers.findIndex(h => h.includes('tinggi') || h
+                                                    .includes('muka') || h.includes('air') || h.includes(
+                                                    'tma'));
+                                                const statusIdx = headers.findIndex(h => h.includes('status') || h
+                                                    .includes('siaga') || h.includes('level'));
+                                                if (nameIdx >= 0 && tmaIdx >= 0) {
+                                                    for (let i = 1; i < Math.min(lines.length, 20); i++) {
+                                                        const cols = lines[i].split(',').map(c => c.trim());
+                                                        if (cols.length > Math.max(nameIdx, tmaIdx, statusIdx)) {
+                                                            const name = cols[nameIdx] || 'Pintu Air';
+                                                            const tmaVal = parseFloat(cols[tmaIdx]) || 0;
+                                                            let level = 'Normal';
+                                                            if (tmaVal > 1.5) level = 'Awas';
+                                                            else if (tmaVal > 1.0) level = 'Siaga';
+                                                            else if (tmaVal > 0.6) level = 'Waspada';
+                                                            if (statusIdx >= 0 && cols[statusIdx]) {
+                                                                const st = cols[statusIdx].toLowerCase();
+                                                                if (st.includes('awas')) level = 'Awas';
+                                                                else if (st.includes('siaga')) level = 'Siaga';
+                                                                else if (st.includes('waspada')) level =
+                                                                    'Waspada';
                                                             }
-                                                            break;
+                                                            tmaData.push({
+                                                                name: name,
+                                                                level: level,
+                                                                value: tmaVal,
+                                                                unit: 'm'
+                                                            });
                                                         }
                                                     }
+                                                    break;
                                                 }
-                                            } catch (e) {}
-                                        }
+                                            }
+                                        } catch (e) {}
                                     }
                                 }
                             }
                         }
                     }
 
-                    // Jika gagal atau tidak ada data, gunakan data contoh
+                    // Jika tidak ada data, buat simulasi berdasarkan lokasi
                     if (tmaData.length === 0) {
-                        // Data contoh berdasarkan lokasi (simulasi)
                         const names = ['Pintu Air Manggarai', 'Pintu Air Karet', 'Pintu Air Pulo Gadung',
                             'Pintu Air Sunter Hulu', 'Pintu Air Cipinang', 'Pintu Air Pesanggrahan',
                             'Pintu Air Angke Hulu', 'Pintu Air Grogol'
@@ -3050,12 +3009,10 @@
                                 unit: 'm'
                             });
                         }
-                        // Urutkan berdasarkan level bahaya
                         const levelOrder = { 'Awas': 4, 'Siaga': 3, 'Waspada': 2, 'Normal': 1 };
                         tmaData.sort((a, b) => (levelOrder[b.level] || 0) - (levelOrder[a.level] || 0));
                     }
 
-                    // Statistik
                     const counts = { Awas: 0, Siaga: 0, Waspada: 0, Normal: 0 };
                     for (const d of tmaData) {
                         if (d.level && counts[d.level] !== undefined) counts[d.level]++;
@@ -3066,7 +3023,6 @@
                     statusEl.textContent = active > 0 ? `⚠️ ${active} titik siaga` : '✅ Normal';
                     countEl.textContent = `Total: ${total} titik • Awas: ${counts.Awas||0}, Siaga: ${counts.Siaga||0}, Waspada: ${counts.Waspada||0}`;
 
-                    // Level tertinggi
                     let maxLevel = 'Normal';
                     let maxName = '-';
                     const levelOrder = { 'Awas': 4, 'Siaga': 3, 'Waspada': 2, 'Normal': 1 };
@@ -3084,28 +3040,21 @@
                     else maxLevelEl.classList.add('safe');
                     maxNameEl.textContent = maxName !== '-' ? maxName : '-';
 
-                    // Render daftar
-                    if (tmaData.length === 0) {
-                        listEl.innerHTML =
-                            `<div class="tma-item"><span class="tma-name">Tidak ada data muka air</span></div>`;
-                    } else {
-                        const html = tmaData.slice(0, 15).map(d => {
-                            const level = d.level || 'Normal';
-                            const cls = level.toLowerCase();
-                            const valStr = d.value !== undefined ? `${d.value.toFixed(2)} ${d.unit || ''}` : '';
-                            return `<div class="tma-item">
-                                <span class="tma-name">${d.name}</span>
-                                <span class="tma-level ${cls}">${level}</span>
-                                <span class="tma-meta">${valStr}</span>
-                            </div>`;
-                        }).join('');
-                        listEl.innerHTML = html;
-                    }
+                    const html = tmaData.slice(0, 15).map(d => {
+                        const level = d.level || 'Normal';
+                        const cls = level.toLowerCase();
+                        const valStr = d.value !== undefined ? `${d.value.toFixed(2)} ${d.unit || ''}` : '';
+                        return `<div class="tma-item">
+                            <span class="tma-name">${d.name}</span>
+                            <span class="tma-level ${cls}">${level}</span>
+                            <span class="tma-meta">${valStr}</span>
+                        </div>`;
+                    }).join('');
+                    listEl.innerHTML = html;
 
                     cachedTMA = { items: tmaData, maxLevel, maxName, lastUpdate: Date.now() };
 
                 } catch (e) {
-                    // Gunakan cache jika ada
                     if (cachedTMA) {
                         statusEl.textContent = `📋 Data cache (${new Date(cachedTMA.lastUpdate).toLocaleTimeString('id-ID')})`;
                         countEl.textContent = `${cachedTMA.items.length} titik (cache)`;
