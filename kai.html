@@ -12,22 +12,21 @@
             box-sizing: border-box;
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         }
+
         body {
             background: #070b14;
             color: #e2eaf2;
             min-height: 100vh;
             padding: 16px 24px;
             background-image: radial-gradient(circle at 10% 20%, #132435 0%, #070b14 80%);
-            animation: bgPulse 20s ease-in-out infinite alternate;
+            animation: bgPulse 16s ease-in-out infinite alternate;
         }
+
         @keyframes bgPulse {
-            0% {
-                background-position: 0% 0%;
-            }
-            100% {
-                background-position: 100% 100%;
-            }
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
         }
+
         .container {
             max-width: 1600px;
             margin: 0 auto;
@@ -48,6 +47,7 @@
             box-shadow: 0 8px 40px rgba(0, 120, 255, 0.06);
             margin-bottom: 30px;
         }
+
         .header h1 {
             font-size: 2.2rem;
             font-weight: 600;
@@ -56,6 +56,7 @@
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.5px;
         }
+
         .header .badge {
             display: flex;
             gap: 28px;
@@ -63,6 +64,7 @@
             font-size: 0.9rem;
             color: #94a3b8;
         }
+
         .badge .live {
             display: flex;
             align-items: center;
@@ -77,42 +79,8 @@
             animation: blink 1.4s infinite;
         }
         @keyframes blink {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.15;
-            }
-        }
-        .badge .module-status {
-            display: flex;
-            gap: 16px;
-            font-size: 0.75rem;
-        }
-        .module-status .ms-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 10px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.04);
-        }
-        .ms-item .ms-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .ms-dot.ok {
-            background: #4ade80;
-        }
-        .ms-dot.err {
-            background: #f87171;
-        }
-        .ms-dot.loading {
-            background: #fbbf24;
-            animation: blink 0.8s infinite;
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.15; }
         }
 
         /* ----- GRID ----- */
@@ -122,15 +90,12 @@
             gap: 28px;
             margin-bottom: 24px;
         }
+
         @media (max-width: 1024px) {
-            .grid {
-                grid-template-columns: 1fr 1fr;
-            }
+            .grid { grid-template-columns: 1fr 1fr; }
         }
         @media (max-width: 720px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
+            .grid { grid-template-columns: 1fr; }
         }
 
         .card {
@@ -141,21 +106,17 @@
             padding: 20px 24px 28px;
             box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.8);
             transition: transform 0.2s, border-color 0.3s;
-            display: flex;
-            flex-direction: column;
-            position: relative;
         }
         .card:hover {
             transform: translateY(-4px);
             border-color: rgba(0, 200, 255, 0.3);
         }
+
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 18px;
-            flex-wrap: wrap;
-            gap: 8px;
         }
         .card-header h2 {
             font-size: 1.4rem;
@@ -163,72 +124,68 @@
             letter-spacing: 0.2px;
             color: #c8d8e8;
         }
+        .card-header .icon {
+            font-size: 2rem;
+            opacity: 0.7;
+        }
         .card-header .update-time {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: #6b7f94;
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255,255,255,0.04);
             padding: 4px 14px;
             border-radius: 40px;
-            white-space: nowrap;
-        }
-        .card-header .update-time.warning {
-            color: #fbbf24;
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.15);
-        }
-        .card-header .update-time.error {
-            color: #f87171;
-            background: rgba(248, 113, 113, 0.1);
-            border: 1px solid rgba(248, 113, 113, 0.15);
         }
 
-        /* ----- TRAIN TABLE ----- */
+        /* ----- TABEL KERETA ----- */
         .table-wrap {
             overflow-x: auto;
-            flex: 1;
+            margin-top: 6px;
         }
+
         .train-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.85rem;
-            min-width: 460px;
+            font-size: 0.9rem;
+            min-width: 500px;
         }
+
         .train-table th {
             text-align: left;
-            padding: 8px 8px 6px 0;
+            padding: 10px 8px 6px 0;
             color: #6b8fa8;
             font-weight: 500;
             letter-spacing: 0.3px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.7rem;
-            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
+
         .train-table td {
-            padding: 8px 8px 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 10px 8px 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
             vertical-align: middle;
         }
+
         .train-table tr:last-child td {
             border-bottom: none;
         }
-        .train-table .station-name {
+
+        .station-name {
             font-weight: 500;
             color: #e8f0f8;
         }
-        .train-table .line-badge {
+        .line-badge {
             display: inline-block;
             background: rgba(0, 180, 255, 0.12);
             padding: 2px 14px;
             border-radius: 40px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: #7fc9ff;
             border: 1px solid rgba(0, 180, 255, 0.15);
         }
-        .train-table .status-badge {
+        .status-badge {
             display: inline-block;
             padding: 2px 12px;
             border-radius: 40px;
-            font-size: 0.65rem;
+            font-size: 0.7rem;
             font-weight: 500;
         }
         .status-badge.active {
@@ -246,270 +203,203 @@
             color: #94a3b8;
             border: 1px solid rgba(148, 163, 184, 0.15);
         }
-        .train-table .countdown {
-            font-weight: 600;
-            font-feature-settings: "tnum";
-            color: #8cf0ff;
-            font-size: 0.8rem;
-        }
-        .train-table .countdown.urgent {
-            color: #fbbf24;
-        }
-        .train-table .countdown.critical {
-            color: #f87171;
-            animation: blink 1s infinite;
-        }
-        .train-table .delay {
-            font-size: 0.7rem;
-            padding: 1px 8px;
-            border-radius: 20px;
-            background: rgba(248, 113, 113, 0.1);
-            color: #f87171;
-            border: 1px solid rgba(248, 113, 113, 0.1);
-        }
-        .train-table .delay.ontime {
-            background: rgba(74, 222, 128, 0.08);
-            color: #4ade80;
-            border-color: rgba(74, 222, 128, 0.1);
-        }
-        .train-table .dest {
-            color: #b0c4d8;
-            font-size: 0.8rem;
-        }
-
-        /* ----- WATER ----- */
-        .water-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            font-size: 0.9rem;
-            align-items: center;
-            gap: 12px;
-        }
-        .water-item:last-child {
-            border-bottom: none;
-        }
-        .water-item .w-loc {
-            color: #b0c4d8;
-            flex: 1;
-            font-weight: 400;
-        }
-        .water-item .w-loc .w-sub {
-            font-size: 0.7rem;
-            color: #6b7f94;
-            display: block;
-            font-weight: 300;
-        }
-        .water-item .w-value {
-            text-align: right;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .water-item .w-level {
-            font-size: 1.3rem;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
-        .water-item .w-status {
-            font-size: 0.7rem;
-            padding: 2px 12px;
-            border-radius: 40px;
+        .schedule-time {
             font-weight: 500;
-        }
-        .water-item .w-trend {
-            font-size: 0.85rem;
-        }
-        .water-item .w-trend.up {
-            color: #f87171;
-        }
-        .water-item .w-trend.down {
-            color: #4ade80;
-        }
-        .water-item .w-trend.stable {
-            color: #94a3b8;
-        }
-        .water-item .w-time {
-            font-size: 0.6rem;
-            color: #6b7f94;
-        }
-        .status-normal {
-            background: rgba(74, 222, 128, 0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74, 222, 128, 0.1);
-        }
-        .status-waspada {
-            background: rgba(251, 191, 36, 0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.1);
-        }
-        .status-siaga {
-            background: rgba(251, 146, 60, 0.1);
-            color: #fb923c;
-            border: 1px solid rgba(251, 146, 60, 0.1);
-        }
-        .status-awas {
-            background: rgba(248, 113, 113, 0.1);
-            color: #f87171;
-            border: 1px solid rgba(248, 113, 113, 0.1);
-        }
-
-        /* ----- VOLCANO ----- */
-        .volcano-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            font-size: 0.9rem;
-            align-items: center;
-            gap: 12px;
-        }
-        .volcano-item:last-child {
-            border-bottom: none;
-        }
-        .volcano-item .v-name {
-            color: #e8f0f8;
-            flex: 1;
-            font-weight: 500;
-        }
-        .volcano-item .v-name .v-sub {
-            font-size: 0.7rem;
-            color: #6b7f94;
-            font-weight: 300;
-            display: block;
-        }
-        .volcano-item .v-right {
-            text-align: right;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .volcano-item .v-level {
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 2px 12px;
-            border-radius: 40px;
-        }
-        .volcano-item .v-level.lv-1 {
-            background: rgba(74, 222, 128, 0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74, 222, 128, 0.1);
-        }
-        .volcano-item .v-level.lv-2 {
-            background: rgba(251, 191, 36, 0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.1);
-        }
-        .volcano-item .v-level.lv-3 {
-            background: rgba(251, 146, 60, 0.1);
-            color: #fb923c;
-            border: 1px solid rgba(251, 146, 60, 0.1);
-        }
-        .volcano-item .v-level.lv-4 {
-            background: rgba(248, 113, 113, 0.1);
-            color: #f87171;
-            border: 1px solid rgba(248, 113, 113, 0.1);
-        }
-        .volcano-item .v-rec {
-            font-size: 0.7rem;
-            color: #94a3b8;
-            background: rgba(255, 255, 255, 0.04);
-            padding: 2px 10px;
-            border-radius: 40px;
-        }
-        .volcano-item .v-time {
-            font-size: 0.6rem;
-            color: #6b7f94;
-        }
-
-        /* ----- SCHEDULE EXTRA (KA) ----- */
-        .schedule-extra {
-            margin-top: 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            padding-top: 14px;
-        }
-        .schedule-extra h3 {
-            font-size: 0.8rem;
-            color: #7fc9ff;
-            font-weight: 400;
-            letter-spacing: 0.3px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .schedule-extra h3 .countdown-toggle {
-            font-size: 0.6rem;
-            color: #6b7f94;
-            background: rgba(255, 255, 255, 0.04);
-            padding: 2px 10px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .schedule-extra h3 .countdown-toggle:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .schedule-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 4px 16px;
-        }
-        .schedule-item {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            padding: 4px 0;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.04);
-            align-items: center;
-        }
-        .schedule-item .s-station {
-            color: #b0c4d8;
-        }
-        .schedule-item .s-dest {
-            color: #6b7f94;
-            font-size: 0.7rem;
-        }
-        .schedule-item .s-time-wrap {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .schedule-item .s-time {
-            color: #8cf0ff;
-            font-weight: 500;
+            color: #b8d0e0;
             font-feature-settings: "tnum";
         }
-        .schedule-item .s-countdown {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #fbbf24;
-            padding: 1px 8px;
-            border-radius: 20px;
-            background: rgba(251, 191, 36, 0.08);
-            border: 1px solid rgba(251, 191, 36, 0.1);
-            min-width: 36px;
+        .position-info {
+            font-size: 0.8rem;
+            color: #8aa3b8;
+        }
+        .no-data {
+            color: #f87171;
+            padding: 12px 0;
             text-align: center;
         }
-        .schedule-item .s-countdown.critical {
-            color: #f87171;
-            border-color: rgba(248, 113, 113, 0.2);
-            background: rgba(248, 113, 113, 0.08);
+
+        /* ----- AIR & VOLCANO ----- */
+        .card-body {
+            max-height: 420px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #1a3a5f transparent;
         }
-        .schedule-item .s-countdown.ontime {
-            color: #4ade80;
-            border-color: rgba(74, 222, 128, 0.1);
-            background: rgba(74, 222, 128, 0.05);
+        .card-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .card-body::-webkit-scrollbar-thumb {
+            background: #1a3a5f;
+            border-radius: 20px;
         }
 
-        /* ----- SHIMMER ----- */
+        .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.95rem;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .item .label {
+            color: #b0c4d8;
+        }
+        .item .value {
+            font-weight: 500;
+        }
+        .status-normal { color: #4ade80; }
+        .status-waspada { color: #fbbf24; }
+        .status-siaga { color: #fb923c; }
+        .status-awas { color: #f87171; }
+
+        .water-level {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        /* ----- FOOTER ----- */
+        .footer {
+            text-align: center;
+            color: #475569;
+            font-size: 0.8rem;
+            padding: 24px 0 8px;
+            border-top: 1px solid rgba(255,255,255,0.03);
+            margin-top: 12px;
+        }
+        #statusMessage {
+            color: #94a3b8;
+        }
+
+        /* ----- SEARCH BOX STASIUN ----- */
+        .search-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 2px 0 14px;
+        }
+        .search-box {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(80, 180, 255, 0.15);
+            border-radius: 40px;
+            padding: 9px 18px;
+            color: #e2eaf2;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-box:focus { border-color: rgba(0, 200, 255, 0.5); }
+        .search-box::placeholder { color: #5a7085; }
+        .search-hint {
+            font-size: 0.72rem;
+            color: #6b7f94;
+            white-space: nowrap;
+        }
+
+        /* ----- BARIS STASIUN YANG BISA DIKLIK (JADWAL) ----- */
+        .train-table tbody tr.station-row { cursor: pointer; }
+        .train-table tbody tr.station-row:hover td {
+            background: rgba(0, 200, 255, 0.05);
+        }
+        .expand-hint {
+            display: inline-block;
+            margin-left: 6px;
+            color: #4a6a85;
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+        }
+        .station-row.open .expand-hint {
+            transform: rotate(90deg);
+            color: #22d3ee;
+        }
+        .schedule-row td {
+            padding: 0 !important;
+            border-bottom: 1px solid rgba(255,255,255,0.03) !important;
+        }
+        .schedule-panel {
+            background: rgba(0, 180, 255, 0.03);
+            border-left: 2px solid rgba(0, 200, 255, 0.3);
+            padding: 12px 16px;
+            margin: 2px 4px 8px;
+            border-radius: 0 12px 12px 0;
+        }
+        .schedule-panel .sched-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px dashed rgba(255,255,255,0.06);
+        }
+        .schedule-panel .sched-item:last-child { border-bottom: none; }
+        .sched-time {
+            font-weight: 600;
+            color: #7fe9ff;
+            font-feature-settings: "tnum";
+            min-width: 50px;
+        }
+        .sched-route {
+            flex: 1;
+            color: #b0c4d8;
+            font-size: 0.8rem;
+        }
+        .sched-line {
+            font-size: 0.7rem;
+            color: #7fc9ff;
+        }
+        .loading-inline {
+            color: #6b7f94;
+            font-size: 0.8rem;
+            padding: 10px 2px;
+        }
+
+        /* ----- TREN TINGGI AIR ----- */
+        .trend-up { color: #f87171; }
+        .trend-down { color: #4ade80; }
+        .trend-flat { color: #8aa3b8; }
+        .item-sub {
+            font-size: 0.72rem;
+            color: #5a7085;
+            margin-top: 2px;
+        }
+
+        /* ----- HEADER LEVEL GUNUNG API ----- */
+        .level-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            padding: 10px 0 6px;
+            margin-top: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .level-header:first-child { margin-top: 0; }
+        .volcano-link {
+            color: #7fc9ff;
+            text-decoration: none;
+            font-size: 0.72rem;
+        }
+        .volcano-link:hover { text-decoration: underline; }
+
+        /* ----- BANNER OFFLINE ----- */
+        .offline-banner {
+            display: none;
+            text-align: center;
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.25);
+            color: #f87171;
+            padding: 8px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }
+        .offline-banner.show { display: block; }
+
+        /* shimmer */
         .shimmer {
             background: linear-gradient(90deg, #1a2a3a 25%, #2a3a4a 50%, #1a2a3a 75%);
             background-size: 200% 100%;
@@ -520,957 +410,757 @@
             margin: 6px 0;
         }
         @keyframes shimmer {
-            0% {
-                background-position: -200% 0;
-            }
-            100% {
-                background-position: 200% 0;
-            }
-        }
-
-        /* ----- ERROR / STALE STATE ----- */
-        .stale-badge {
-            display: inline-block;
-            font-size: 0.65rem;
-            padding: 2px 10px;
-            border-radius: 40px;
-            background: rgba(251, 191, 36, 0.08);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 191, 36, 0.1);
-            margin-left: 6px;
-        }
-
-        /* ----- FOOTER ----- */
-        .footer {
-            text-align: center;
-            color: #475569;
-            font-size: 0.75rem;
-            padding: 24px 0 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.03);
-            margin-top: 12px;
-        }
-        #statusMessage {
-            color: #94a3b8;
-        }
-        .footer .footer-detail {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            flex-wrap: wrap;
-            margin-top: 4px;
-            font-size: 0.65rem;
-            color: #3a4a5a;
-        }
-
-        /* scrollbar */
-        .card-body {
-            max-height: 420px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #1a3a5f transparent;
-            flex: 1;
-        }
-        .card-body::-webkit-scrollbar {
-            width: 4px;
-        }
-        .card-body::-webkit-scrollbar-thumb {
-            background: #1a3a5f;
-            border-radius: 20px;
-        }
-
-        /* responsive tweaks */
-        @media (max-width: 600px) {
-            body {
-                padding: 8px 12px;
-            }
-            .header {
-                padding: 10px 16px;
-                border-radius: 28px;
-            }
-            .header h1 {
-                font-size: 1.4rem;
-            }
-            .badge .module-status {
-                display: none;
-            }
-            .card {
-                padding: 14px 16px 20px;
-                border-radius: 24px;
-            }
-            .train-table {
-                font-size: 0.75rem;
-                min-width: 320px;
-            }
-            .water-item .w-level {
-                font-size: 1rem;
-            }
-            .volcano-item .v-level {
-                font-size: 0.8rem;
-                padding: 1px 8px;
-            }
-            .schedule-grid {
-                grid-template-columns: 1fr;
-            }
-            .header .badge {
-                gap: 12px;
-                font-size: 0.75rem;
-            }
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+<div class="container">
 
-        <!-- HEADER -->
-        <header class="header">
-            <h1>⬡ NUSANTARA MONITOR</h1>
-            <div class="badge">
-                <span class="live"><span class="dot"></span> LIVE</span>
-                <span class="module-status">
-                    <span class="ms-item"><span class="ms-dot ok" id="msTrain"></span> KA</span>
-                    <span class="ms-item"><span class="ms-dot ok" id="msWater"></span> Air</span>
-                    <span class="ms-item"><span class="ms-dot ok" id="msVolcano"></span> Gunung</span>
-                </span>
-                <span>⏱️ <span id="lastUpdateTime">--</span></span>
+    <!-- HEADER -->
+    <header class="header">
+        <h1>⬡ NUSANTARA MONITOR</h1>
+        <div class="badge">
+            <span class="live"><span class="dot"></span> LIVE</span>
+            <span>🕐 <span id="clockNow">--:--:--</span></span>
+            <span>⏱️ <span id="lastUpdateTime">--</span></span>
+            <span>🔄 berikutnya <span id="nextRefreshCountdown">60</span>s</span>
+        </div>
+    </header>
+
+    <div class="offline-banner" id="offlineBanner">📡 Tidak ada koneksi internet — data akan diperbarui otomatis begitu koneksi kembali.</div>
+
+    <!-- GRID -->
+    <div class="grid">
+        <!-- CARD 1: KERETA -->
+        <div class="card" id="trainCard" style="grid-column: 1 / -1;">
+            <div class="card-header">
+                <h2>🚆 Commuter Line – Status Stasiun</h2>
+                <span class="update-time" id="trainTime">--</span>
             </div>
-        </header>
-
-        <!-- GRID -->
-        <div class="grid">
-            <!-- CARD 1: KERETA -->
-            <div class="card" id="trainCard" style="grid-column: 1 / -1;">
-                <div class="card-header">
-                    <h2>🚆 Commuter Line – Jadwal &amp; Status</h2>
-                    <span class="update-time" id="trainTime">--</span>
-                </div>
-                <div class="table-wrap" id="trainBody">
-                    <div class="shimmer"></div>
-                    <div class="shimmer" style="width:70%"></div>
-                    <div class="shimmer"></div>
-                    <div class="shimmer" style="width:90%"></div>
-                </div>
-                <div id="scheduleExtra" class="schedule-extra" style="display:none;">
-                    <h3>
-                        ⏱️ Keberangkatan Real‑time
-                        <span class="countdown-toggle" id="countdownToggle">⏸ countdown</span>
-                    </h3>
-                    <div class="schedule-grid" id="scheduleGrid"></div>
-                </div>
+            <div class="search-wrap">
+                <input type="text" id="stationSearch" class="search-box" placeholder="🔍 Cari nama stasiun… (mis. Manggarai, Bogor, Tanah Abang)" autocomplete="off" />
+                <span class="search-hint" id="searchHint"></span>
             </div>
-
-            <!-- CARD 2: AIR -->
-            <div class="card" id="waterCard">
-                <div class="card-header">
-                    <h2>🌊 Tinggi Muka Air</h2>
-                    <span class="update-time" id="waterTime">--</span>
-                </div>
-                <div class="card-body" id="waterBody">
-                    <div class="shimmer"></div>
-                    <div class="shimmer" style="width:55%"></div>
-                    <div class="shimmer"></div>
-                    <div class="shimmer" style="width:65%"></div>
-                </div>
-            </div>
-
-            <!-- CARD 3: GUNUNG -->
-            <div class="card" id="volcanoCard">
-                <div class="card-header">
-                    <h2>🌋 Status Gunung Api</h2>
-                    <span class="update-time" id="volcanoTime">--</span>
-                </div>
-                <div class="card-body" id="volcanoBody">
-                    <div class="shimmer"></div>
-                    <div class="shimmer" style="width:50%"></div>
-                    <div class="shimmer"></div>
-                    <div class="shimmer" style="width:75%"></div>
-                </div>
+            <div class="table-wrap" id="trainBody">
+                <div class="shimmer"></div><div class="shimmer" style="width:70%"></div>
+                <div class="shimmer"></div><div class="shimmer" style="width:90%"></div>
             </div>
         </div>
 
-        <footer class="footer">
-            <span id="statusMessage">⏳ memuat…</span>
-            <div class="footer-detail">
-                <span>🚆 KA: 15s &nbsp;·&nbsp; 🌊 Air: 30s &nbsp;·&nbsp; 🌋 Gunung: 90s</span>
-                <span>📡 comuline · poskobanjir · magma.vsi.esdm</span>
+        <!-- CARD 2: AIR -->
+        <div class="card" id="waterCard">
+            <div class="card-header">
+                <h2>🌊 Tinggi Muka Air</h2>
+                <span class="update-time" id="waterTime">--</span>
             </div>
-        </footer>
+            <div class="card-body" id="waterBody">
+                <div class="shimmer"></div><div class="shimmer" style="width:55%"></div>
+                <div class="shimmer"></div><div class="shimmer" style="width:65%"></div>
+            </div>
+        </div>
+
+        <!-- CARD 3: GUNUNG -->
+        <div class="card" id="volcanoCard">
+            <div class="card-header">
+                <h2>🌋 Status Gunung Api</h2>
+                <span class="update-time" id="volcanoTime">--</span>
+            </div>
+            <div class="card-body" id="volcanoBody">
+                <div class="shimmer"></div><div class="shimmer" style="width:50%"></div>
+                <div class="shimmer"></div><div class="shimmer" style="width:75%"></div>
+            </div>
+        </div>
     </div>
 
-    <script>
-        (function() {
-            'use strict';
+    <footer class="footer">
+        Data real‑time dari sumber resmi &nbsp;·&nbsp;
+        <span id="statusMessage">⏳ memuat…</span>
+    </footer>
+</div>
 
-            // ============================================================
-            //  KONFIGURASI
-            // ============================================================
-            const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+<script>
+    (function() {
+        'use strict';
 
-            // Interval per modul (ms)
-            const INTERVAL_TRAIN = 15000; // 15 detik
-            const INTERVAL_WATER = 30000; // 30 detik
-            const INTERVAL_VOLCANO = 90000; // 90 detik
+        // ============================================================
+        //  KONFIGURASI
+        // ============================================================
+        const REFRESH_MS = 60000; // 1 menit (agar tidak membebani server)
 
-            // Countdown update (setiap detik)
-            const COUNTDOWN_INTERVAL = 1000;
+        // Rantai proxy CORS — dicoba berurutan, sehingga jika satu proxy
+        // sedang down/limit, program otomatis mencoba proxy berikutnya
+        // tanpa perlu campur tangan pengguna.
+        const CORS_PROXIES = [
+            (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+            (u) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+            (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+        ];
 
-            // Retry config
-            const MAX_RETRIES = 3;
-            const RETRY_DELAY_MS = 2000;
+        const SOURCES = {
+            waterPrimary: 'https://bpbd.jakarta.go.id/waterlevel',
+            waterFallback: 'https://poskobanjir.dsdadki.web.id/',
+            volcanoPrimary: 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas',
+            volcanoFallback: 'https://magma.vsi.esdm.go.id/',
+        };
 
-            // ============================================================
-            //  DOM REFS
-            // ============================================================
-            const trainBody = document.getElementById('trainBody');
-            const waterBody = document.getElementById('waterBody');
-            const volcanoBody = document.getElementById('volcanoBody');
-            const trainTime = document.getElementById('trainTime');
-            const waterTime = document.getElementById('waterTime');
-            const volcanoTime = document.getElementById('volcanoTime');
-            const lastUpdateTime = document.getElementById('lastUpdateTime');
-            const statusMsg = document.getElementById('statusMessage');
-            const scheduleExtra = document.getElementById('scheduleExtra');
-            const scheduleGrid = document.getElementById('scheduleGrid');
-            const countdownToggle = document.getElementById('countdownToggle');
-            const msTrain = document.getElementById('msTrain');
-            const msWater = document.getElementById('msWater');
-            const msVolcano = document.getElementById('msVolcano');
+        // ----- DOM refs -----
+        const trainBody = document.getElementById('trainBody');
+        const waterBody = document.getElementById('waterBody');
+        const volcanoBody = document.getElementById('volcanoBody');
+        const trainTime = document.getElementById('trainTime');
+        const waterTime = document.getElementById('waterTime');
+        const volcanoTime = document.getElementById('volcanoTime');
+        const lastUpdateTime = document.getElementById('lastUpdateTime');
+        const statusMsg = document.getElementById('statusMessage');
+        const clockNowEl = document.getElementById('clockNow');
+        const nextRefreshEl = document.getElementById('nextRefreshCountdown');
+        const offlineBanner = document.getElementById('offlineBanner');
+        const searchInput = document.getElementById('stationSearch');
+        const searchHint = document.getElementById('searchHint');
 
-            // ============================================================
-            //  STATE
-            // ============================================================
-            // Data terakhir (cache)
-            let trainCache = { data: null, lastSuccess: null, error: null, loading: false };
-            let waterCache = { data: null, lastSuccess: null, error: null, loading: false };
-            let volcanoCache = { data: null, lastSuccess: null, error: null, loading: false };
+        // ----- state global -----
+        let allStations = [];
+        let stationMap = new Map(); // station_id -> nama stasiun
+        const scheduleCache = new Map(); // station_id -> { ts, data }
+        const waterDataCache = new Map(); // nama pos -> riwayat pembacaan
+        let nextRefreshAt = Date.now() + REFRESH_MS;
+        let lastSuccessfulRefresh = 0;
 
-            // Jadwal kereta (untuk countdown)
-            let scheduleData = [];
-            let countdownEnabled = true;
+        // ----- helpers umum -----
+        function formatTime(d) {
+            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
 
-            // ============================================================
-            //  HELPERS
-            // ============================================================
-            function formatTime(d) {
-                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            }
+        function setStatus(msg, isError = false) {
+            statusMsg.textContent = msg;
+            statusMsg.style.color = isError ? '#f87171' : '#94a3b8';
+        }
 
-            function formatTimeShort(d) {
-                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-            }
+        function setCardTime(el, d) {
+            if (el) el.textContent = formatTime(d);
+        }
 
-            function formatDate(d) {
-                return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-            }
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
 
-            function formatTimeAgo(ms) {
-                if (!ms) return '--';
-                const diff = Date.now() - ms;
-                if (diff < 60000) return Math.floor(diff / 1000) + ' detik lalu';
-                if (diff < 3600000) return Math.floor(diff / 60000) + ' menit lalu';
-                return Math.floor(diff / 3600000) + ' jam lalu';
-            }
-
-            function setStatus(msg, isError = false) {
-                statusMsg.textContent = msg;
-                statusMsg.style.color = isError ? '#f87171' : '#94a3b8';
-            }
-
-            function setCardTime(el, d, state = 'ok') {
-                if (!el) return;
-                const ts = formatTime(d);
-                el.textContent = ts;
-                el.className = 'update-time';
-                if (state === 'warning') el.classList.add('warning');
-                else if (state === 'error') el.classList.add('error');
-            }
-
-            function setModuleDot(el, state) {
-                el.className = 'ms-dot';
-                if (state === 'ok') el.classList.add('ok');
-                else if (state === 'error') el.classList.add('err');
-                else if (state === 'loading') el.classList.add('loading');
-            }
-
-            // Exponential backoff
-            function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-            async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
-                for (let i = 0; i <= retries; i++) {
-                    try {
-                        const resp = await fetch(url, {
-                            ...options,
-                            signal: AbortSignal.timeout(12000)
-                        });
-                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                        return await resp.text();
-                    } catch (err) {
-                        if (i === retries) throw err;
-                        const delay = RETRY_DELAY_MS * Math.pow(1.5, i);
-                        await sleep(delay);
-                    }
-                }
-                throw new Error('Max retries exceeded');
-            }
-
-            // ============================================================
-            //  1. KERETA API – STASIUN + SCHEDULE
-            // ============================================================
-            async function fetchTrains() {
-                trainCache.loading = true;
-                setModuleDot(msTrain, 'loading');
+        // Mengambil HTML sebuah URL lewat rantai proxy CORS, mencoba satu per
+        // satu sampai ada yang berhasil. Juga mendeteksi halaman blokir dari
+        // sistem keamanan situs sumber supaya tidak dianggap sukses palsu.
+        async function fetchTextResilient(targetUrl, timeout = 12000) {
+            let lastErr = new Error('Semua proxy CORS gagal diakses');
+            for (const buildUrl of CORS_PROXIES) {
                 try {
-                    // 1a. Ambil data stasiun dari comuline
-                    const stationUrl = 'https://api.comuline.com/v1/station';
-                    const stationText = await fetchWithRetry(stationUrl);
-                    const stationJson = JSON.parse(stationText);
-                    if (!stationJson.data || !Array.isArray(stationJson.data)) {
-                        throw new Error('Format stasiun tidak dikenal');
+                    const resp = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(timeout) });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const text = await resp.text();
+                    if (!text || text.length < 100) throw new Error('Respons kosong');
+                    if (text.length < 4000 && /aktivitas mencurigakan|support id|akses ditolak/i.test(text)) {
+                        throw new Error('Diblokir sistem keamanan situs sumber');
                     }
-
-                    const stations = stationJson.data.slice(0, 24);
-
-                    // 1b. Coba ambil jadwal dari /schedule
-                    let scheduleItems = [];
-                    try {
-                        const schedUrl = 'https://api.comuline.com/v1/schedule';
-                        const schedText = await fetchWithRetry(schedUrl, {}, 2);
-                        const schedJson = JSON.parse(schedText);
-                        if (schedJson.data && Array.isArray(schedJson.data)) {
-                            scheduleItems = schedJson.data.slice(0, 6);
-                        }
-                    } catch (_) {
-                        // Jadwal tidak tersedia — kita generate sendiri
-                        scheduleItems = generateScheduleData(stations);
-                    }
-
-                    // Render tabel stasiun
-                    renderTrainTable(stations);
-
-                    // Render jadwal + countdown
-                    scheduleData = scheduleItems.map(item => {
-                        // pastikan item punya waktu
-                        if (!item.departure && !item.time) {
-                            const now = new Date();
-                            const mins = 5 + Math.floor(Math.random() * 45);
-                            item.departure = new Date(now.getTime() + mins * 60000);
-                        } else if (typeof item.departure === 'string') {
-                            // parse string time
-                            const parts = item.departure.split(':');
-                            if (parts.length === 2) {
-                                const d = new Date();
-                                d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-                                if (d < new Date()) d.setDate(d.getDate() + 1);
-                                item.departure = d;
-                            }
-                        } else if (!item.departure) {
-                            item.departure = item.time ? new Date(item.time) : new Date(Date.now() + 300000);
-                        }
-                        return item;
-                    });
-
-                    renderSchedule(scheduleData);
-
-                    // Update cache
-                    trainCache.data = { stations, schedule: scheduleData };
-                    trainCache.lastSuccess = Date.now();
-                    trainCache.error = null;
-                    setModuleDot(msTrain, 'ok');
-                    setCardTime(trainTime, new Date());
-                    setStatus('✅ KA OK');
-
+                    return text;
                 } catch (err) {
-                    trainCache.error = err.message;
-                    setModuleDot(msTrain, 'error');
-                    if (trainCache.data) {
-                        // Data lama masih ada, tampilkan dengan warning
-                        setCardTime(trainTime, new Date(trainCache.lastSuccess || Date.now()), 'warning');
-                        setStatus('⚠️ KA: ' + err.message + ' (data lama)', true);
-                        // Render ulang dari cache
-                        if (trainCache.data.stations) {
-                            renderTrainTable(trainCache.data.stations);
-                        }
-                        if (trainCache.data.schedule) {
-                            scheduleData = trainCache.data.schedule;
-                            renderSchedule(scheduleData);
-                        }
-                    } else {
-                        setCardTime(trainTime, new Date(), 'error');
-                        trainBody.innerHTML = `
-                            <div style="color:#f87171;padding:16px 0;text-align:center;">
-                                ⚠️ Gagal memuat data stasiun<br>
-                                <span style="font-size:0.8rem;color:#6b7f94;">${err.message}</span>
-                                <br><br>
-                                💡 Sumber: api.comuline.com
-                            </div>
-                        `;
-                        setStatus('❌ KA gagal', true);
-                    }
-                } finally {
-                    trainCache.loading = false;
+                    lastErr = err;
                 }
             }
+            throw lastErr;
+        }
 
-            function generateScheduleData(stations) {
-                if (!stations || stations.length < 3) return [];
-                const dests = ['Jakarta Kota', 'Bogor', 'Depok', 'Tangerang', 'Rangkas', 'Tanah Abang', 'Manggarai', 'Cikarang',
-                    'Bekasi'
-                ];
-                const lines = ['Merah', 'Biru', 'Hijau', 'Kuning', 'Ungu'];
-                const result = [];
-                const count = Math.min(stations.length, 8);
-                for (let i = 0; i < count; i++) {
-                    const st = stations[i];
-                    const dest = dests[Math.floor(Math.random() * dests.length)];
-                    const now = new Date();
-                    const mins = 2 + Math.floor(Math.random() * 55);
-                    const dep = new Date(now.getTime() + mins * 60000);
-                    const line = lines[Math.floor(Math.random() * lines.length)];
-                    const delay = Math.random() > 0.7 ? Math.floor(Math.random() * 8) + 1 : 0;
-                    result.push({
-                        station: st.name || st.id || 'Stasiun ' + (i + 1),
-                        destination: dest,
-                        departure: dep,
-                        line: line,
-                        delay: delay,
-                        platform: Math.floor(Math.random() * 4) + 1,
-                        trainId: 'KA' + String(100 + Math.floor(Math.random() * 900))
-                    });
-                }
-                // sort by departure
-                result.sort((a, b) => a.departure - b.departure);
-                return result;
-            }
+        // ============================================================
+        //  1. KERETA – dari API publik Comuline (real‑time)
+        //     Daftar stasiun + status aktif/tidak + JADWAL KEBERANGKATAN
+        //     REAL per stasiun (klik nama stasiun untuk membuka)
+        // ============================================================
+        async function fetchTrains() {
+            try {
+                const url = 'https://api.comuline.com/v1/station';
+                const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                if (!json.data || !Array.isArray(json.data)) throw new Error('Format data tidak dikenal');
 
-            function renderTrainTable(stations) {
-                let html = `
-                    <table class="train-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Nama Stasiun</th>
-                                <th>Jalur</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                allStations = json.data;
+                stationMap = new Map(allStations.map((s) => [s.id, s.name || s.id]));
+
+                // Terapkan ulang filter pencarian yang sedang aktif (jika ada)
+                // supaya pencarian pengguna tidak hilang saat auto-refresh.
+                applyStationFilter();
+
+                setCardTime(trainTime, new Date());
+                setStatus('✅ Kereta OK');
+            } catch (err) {
+                trainBody.innerHTML = `
+                    <div class="no-data">
+                        ⚠️ Gagal memuat data stasiun<br>
+                        <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                        <br><br>
+                        💡 Sumber: api.comuline.com (publik)
+                    </div>
                 `;
-                stations.forEach((s, idx) => {
-                    const name = s.name || s.id || 'Tidak diketahui';
-                    const line = s.metadata?.line || s.line || '-';
-                    const active = s.metadata?.active;
-                    let statusClass = 'status-badge unknown';
-                    let statusText = 'Tidak diketahui';
-                    if (active === true) { statusClass = 'status-badge active';
-                        statusText = '🟢 Aktif'; } else if (active === false) { statusClass =
-                            'status-badge inactive';
-                        statusText = '🔴 Tutup'; }
-                    html += `
+                setStatus('❌ Gagal kereta', true);
+            }
+        }
+
+        function applyStationFilter() {
+            const q = (searchInput?.value || '').trim().toLowerCase();
+            if (!q) {
+                renderStationsTable(allStations.slice(0, 20));
+                if (searchHint) searchHint.textContent = '';
+                return;
+            }
+            const filtered = allStations.filter((s) =>
+                (s.name || '').toLowerCase().includes(q) || (s.id || '').toLowerCase().includes(q)
+            );
+            renderStationsTable(filtered.slice(0, 30));
+            if (searchHint) searchHint.textContent = `${filtered.length} hasil`;
+        }
+
+        function renderStationsTable(stations) {
+            if (!stations.length) {
+                trainBody.innerHTML = `<div class="no-data">Tidak ada stasiun yang cocok dengan pencarian.</div>`;
+                return;
+            }
+
+            let html = `
+                <table class="train-table">
+                    <thead>
                         <tr>
-                            <td>${idx+1}</td>
-                            <td class="station-name">${name}</td>
-                            <td><span class="line-badge">${line}</span></td>
-                            <td><span class="${statusClass}">${statusText}</span></td>
+                            <th>#</th>
+                            <th>Nama Stasiun</th>
+                            <th>Jenis</th>
+                            <th>Status Operasional</th>
                         </tr>
-                    `;
-                });
+                    </thead>
+                    <tbody>
+            `;
+
+            stations.forEach((s, idx) => {
+                const name = s.name || s.id || 'Tidak diketahui';
+                const type = s.type || '-';
+
+                const active = s.metadata?.active;
+                let statusClass = 'status-badge unknown';
+                let statusText = 'Tidak diketahui';
+                if (active === true) {
+                    statusClass = 'status-badge active';
+                    statusText = '🟢 Aktif';
+                } else if (active === false) {
+                    statusClass = 'status-badge inactive';
+                    statusText = '🔴 Tutup';
+                }
+
                 html += `
-                        </tbody>
-                    </table>
-                    <div style="margin-top:8px;font-size:0.65rem;color:#475569;text-align:right;">
-                        ${stations.length} stasiun · diperbarui ${formatTime(new Date())}
-                        ${trainCache.error ? ' <span style="color:#fbbf24;">⚠ data mungkin usang</span>' : ''}
+                    <tr class="station-row" data-station-id="${escapeHtml(s.id)}" data-station-name="${escapeHtml(name)}">
+                        <td>${idx + 1}</td>
+                        <td class="station-name">${escapeHtml(name)}<span class="expand-hint">▸</span></td>
+                        <td><span class="line-badge">${escapeHtml(type)}</span></td>
+                        <td><span class="${statusClass}">${statusText}</span></td>
+                    </tr>
+                    <tr class="schedule-row" style="display:none;">
+                        <td colspan="4"></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <div style="margin-top:12px; font-size:0.75rem; color:#475569; text-align:right;">
+                    💡 Klik nama stasiun untuk jadwal keberangkatan real-time · Sumber: api.comuline.com · diperbarui setiap 60 detik
+                </div>
+            `;
+
+            trainBody.innerHTML = html;
+        }
+
+        // Klik baris stasiun -> buka/tutup panel jadwal keberangkatan real.
+        // Delegasi event dipasang sekali saja di elemen induk yang stabil
+        // (trainBody tidak pernah diganti sebagai elemen, hanya innerHTML-nya).
+        trainBody.addEventListener('click', async (e) => {
+            const row = e.target.closest('tr.station-row');
+            if (!row) return;
+
+            const scheduleRow = row.nextElementSibling;
+            if (!scheduleRow || !scheduleRow.classList.contains('schedule-row')) return;
+
+            const stationId = row.dataset.stationId;
+            const stationName = row.dataset.stationName;
+
+            // Tutup baris lain yang sedang terbuka agar tabel tetap ringkas
+            trainBody.querySelectorAll('tr.station-row.open').forEach((r) => {
+                if (r !== row) {
+                    r.classList.remove('open');
+                    const otherSched = r.nextElementSibling;
+                    if (otherSched) otherSched.style.display = 'none';
+                }
+            });
+
+            const isOpen = row.classList.contains('open');
+            if (isOpen) {
+                row.classList.remove('open');
+                scheduleRow.style.display = 'none';
+                return;
+            }
+
+            row.classList.add('open');
+            scheduleRow.style.display = '';
+            const cell = scheduleRow.querySelector('td');
+            cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline">⏳ Memuat jadwal ${escapeHtml(stationName)}…</div></div>`;
+
+            try {
+                const schedules = await fetchStationSchedule(stationId);
+                cell.innerHTML = renderSchedulePanel(schedules, stationName);
+            } catch (err) {
+                cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline" style="color:#f87171;">⚠️ Gagal memuat jadwal: ${escapeHtml(err.message)}</div></div>`;
+            }
+        });
+
+        if (searchInput) {
+            searchInput.addEventListener('input', applyStationFilter);
+        }
+
+        async function fetchStationSchedule(stationId) {
+            const cached = scheduleCache.get(stationId);
+            if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+                return cached.data;
+            }
+            const resp = await fetch(`https://api.comuline.com/v1/schedule/${encodeURIComponent(stationId)}`, {
+                signal: AbortSignal.timeout(15000),
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const json = await resp.json();
+            if (!json.data || !Array.isArray(json.data)) throw new Error('Format jadwal tidak dikenal');
+            scheduleCache.set(stationId, { ts: Date.now(), data: json.data });
+            return json.data;
+        }
+
+        function renderSchedulePanel(schedules, stationName) {
+            const now = new Date();
+            const upcoming = schedules
+                .filter((s) => new Date(s.departs_at) >= now)
+                .sort((a, b) => new Date(a.departs_at) - new Date(b.departs_at))
+                .slice(0, 6);
+
+            if (upcoming.length === 0) {
+                return `
+                    <div class="schedule-panel">
+                        <div class="loading-inline">🌙 Tidak ada keberangkatan lagi dari ${escapeHtml(stationName)} untuk sisa hari ini pada data yang tersedia.</div>
                     </div>
                 `;
-                trainBody.innerHTML = html;
             }
 
-            function renderSchedule(items) {
-                if (!items || items.length === 0) {
-                    scheduleExtra.style.display = 'none';
-                    return;
-                }
-                scheduleExtra.style.display = 'block';
-                let html = '';
-                const now = Date.now();
-                items.forEach(item => {
-                    const dep = item.departure instanceof Date ? item.departure : new Date(item.departure);
-                    const diff = Math.max(0, Math.floor((dep.getTime() - now) / 1000));
-                    const mins = Math.floor(diff / 60);
-                    const secs = diff % 60;
-                    let countdownText = '';
-                    let cls = '';
-                    if (diff <= 0) { countdownText = '⏳ berangkat';
-                        cls = 'ontime'; } else if (diff < 120) { countdownText = `${diff}s`;
-                        cls = 'critical'; } else if (diff < 600) { countdownText = `${mins}m`;
-                        cls = ''; } else { countdownText = `${mins}m`;
-                        cls = 'ontime'; }
-
-                    const delayText = item.delay && item.delay > 0 ? `+${item.delay}mnt` : 'Tepat';
-                    const delayCls = item.delay && item.delay > 0 ? '' : 'ontime';
-
-                    html += `
-                        <div class="schedule-item" data-departure="${dep.getTime()}" data-delay="${item.delay||0}">
-                            <span>
-                                <span class="s-station">${item.station}</span>
-                                <span class="s-dest">→ ${item.destination}</span>
-                            </span>
-                            <span class="s-time-wrap">
-                                <span class="s-time">${formatTimeShort(dep)}</span>
-                                <span class="s-countdown ${cls}">${countdownText}</span>
-                                <span class="delay ${delayCls}">${delayText}</span>
-                            </span>
-                        </div>
-                    `;
+            let html = `<div class="schedule-panel">`;
+            upcoming.forEach((s) => {
+                const time = new Date(s.departs_at).toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta',
                 });
-                scheduleGrid.innerHTML = html;
+                const dest = stationMap.get(s.station_destination_id) || s.station_destination_id || '-';
+                const origin = stationMap.get(s.station_origin_id) || s.station_origin_id || '-';
+                html += `
+                    <div class="sched-item">
+                        <span class="sched-time">${time}</span>
+                        <span class="sched-route">${escapeHtml(origin)} → ${escapeHtml(dest)}<br><span class="sched-line">${escapeHtml(s.line || '')}</span></span>
+                        <span class="line-badge">KA ${escapeHtml(s.train_id || '-')}</span>
+                    </div>
+                `;
+            });
+            html += `<div class="item-sub" style="margin-top:6px;">Jam berangkat real dari jadwal resmi KAI (via api.comuline.com), zona waktu WIB.</div>`;
+            html += `</div>`;
+            return html;
+        }
 
-                // Store departure timestamps for countdown update
-                const itemsWithTs = items.map(item => ({
-                    ...item,
-                    departure: item.departure instanceof Date ? item.departure : new Date(item.departure)
-                }));
-                scheduleData = itemsWithTs;
-            }
+        // ============================================================
+        //  2. TINGGI MUKA AIR – dari BPBD DKI Jakarta (data Dinas SDA)
+        //     Sumber lama (poskobanjir.dsdadki.web.id) kini di balik
+        //     login sehingga tidak bisa lagi di-scrape; diganti ke
+        //     halaman publik bpbd.jakarta.go.id/waterlevel yang berisi
+        //     angka TMA per jam untuk 12 pos pantau di Jakarta.
+        // ============================================================
+        async function fetchWaterLevel() {
+            try {
+                const html = await fetchTextResilient(SOURCES.waterPrimary);
+                const stations = parseBpbdWaterLevel(html);
+                if (!stations.length) throw new Error('Tabel TMA tidak ditemukan di halaman sumber');
 
-            // Update countdown setiap detik
-            function updateCountdowns() {
-                if (!countdownEnabled) return;
-                const items = scheduleGrid.querySelectorAll('.schedule-item');
-                const now = Date.now();
-                items.forEach(el => {
-                    const depTs = parseInt(el.dataset.departure);
-                    if (!depTs) return;
-                    const diff = Math.max(0, Math.floor((depTs - now) / 1000));
-                    const cdEl = el.querySelector('.s-countdown');
-                    if (!cdEl) return;
-                    let text = '';
-                    let cls = '';
-                    if (diff <= 0) { text = '⏳ berangkat';
-                        cls = 'ontime'; } else if (diff < 120) { text = `${diff}s`;
-                        cls = 'critical'; } else if (diff < 600) { const m = Math.floor(diff / 60);
-                        text = `${m}m`;
-                        cls = ''; } else { const m = Math.floor(diff / 60);
-                        text = `${m}m`;
-                        cls = 'ontime'; }
-                    cdEl.textContent = text;
-                    cdEl.className = 's-countdown ' + cls;
-                });
-            }
-
-            // ============================================================
-            //  2. TINGGI AIR – scraping Posko Banjir
-            // ============================================================
-            async function fetchWaterLevel() {
-                waterCache.loading = true;
-                setModuleDot(msWater, 'loading');
+                renderWaterLevel(stations);
+                setCardTime(waterTime, new Date());
+                setStatus('✅ Air OK');
+                return;
+            } catch (err) {
+                // Fallback: coba sumber DSDA lama, siapa tahu suatu saat
+                // dibuka lagi ke publik tanpa login.
                 try {
-                    const target = 'https://poskobanjir.dsdadki.web.id/';
-                    const proxyUrl = CORS_PROXY + encodeURIComponent(target);
-                    const html = await fetchWithRetry(proxyUrl);
-
+                    const html2 = await fetchTextResilient(SOURCES.waterFallback);
                     const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
+                    const doc = parser.parseFromString(html2, 'text/html');
+                    const rows = doc.querySelectorAll('table tr');
                     let items = [];
-                    const tables = doc.querySelectorAll('table');
-                    for (const table of tables) {
-                        const rows = table.querySelectorAll('tr');
-                        if (rows.length < 2) continue;
-                        const headerRow = rows[0];
-                        const headers = headerRow.querySelectorAll('th, td');
-                        const headerTexts = Array.from(headers).map(th => th.textContent.trim().toLowerCase());
-                        let idxLokasi = -1,
-                            idxTinggi = -1,
-                            idxStatus = -1,
-                            idxSungai = -1;
-                        headerTexts.forEach((text, i) => {
-                            if (text.includes('lokasi') || text.includes('pos')) idxLokasi = i;
-                            else if (text.includes('tinggi') || text.includes('muka')) idxTinggi = i;
-                            else if (text.includes('status')) idxStatus = i;
-                            else if (text.includes('sungai') || text.includes('wilayah')) idxSungai = i;
-                        });
-                        if (idxLokasi === -1 || idxTinggi === -1) continue;
-
-                        for (let i = 1; i < rows.length; i++) {
-                            const cells = rows[i].querySelectorAll('td');
-                            if (cells.length < Math.max(idxLokasi, idxTinggi) + 1) continue;
-                            const lokasi = cells[idxLokasi]?.textContent.trim() || '';
-                            const sungai = (idxSungai !== -1) ? (cells[idxSungai]?.textContent.trim() || '') : '';
-                            const tinggi = cells[idxTinggi]?.textContent.trim() || '';
-                            const status = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || '') : '';
-                            if (lokasi && tinggi) {
-                                const levelNum = parseFloat(tinggi.replace(/[^0-9.]/g, ''));
-                                items.push({ lokasi, sungai, tinggi: levelNum || 0, rawTinggi: tinggi, status });
-                            }
+                    rows.forEach((tr) => {
+                        const tds = tr.querySelectorAll('td');
+                        if (tds.length >= 4) {
+                            const loc = tds[0]?.textContent?.trim() || '';
+                            const sungai = tds[1]?.textContent?.trim() || '';
+                            const tinggi = tds[2]?.textContent?.trim() || '';
+                            const status = tds[5]?.textContent?.trim() || '';
+                            if (loc && tinggi) items.push({ loc, sungai, tinggi, status });
                         }
-                        if (items.length > 0) break;
-                    }
-
-                    // fallback: cari td langsung
-                    if (items.length === 0) {
-                        const allRows = doc.querySelectorAll('table tr');
-                        allRows.forEach(tr => {
-                            const tds = tr.querySelectorAll('td');
-                            if (tds.length >= 4) {
-                                const loc = tds[0]?.textContent.trim() || '';
-                                const sungai = tds[1]?.textContent.trim() || '';
-                                const tinggi = tds[2]?.textContent.trim() || '';
-                                const status = tds[5]?.textContent.trim() || '';
-                                if (loc && tinggi) {
-                                    const levelNum = parseFloat(tinggi.replace(/[^0-9.]/g, ''));
-                                    items.push({ lokasi: loc, sungai, tinggi: levelNum || 0, rawTinggi: tinggi,
-                                        status });
-                                }
-                            }
-                        });
-                    }
-
-                    if (items.length === 0) {
-                        throw new Error('Tidak ada data tabel – struktur website berubah');
-                    }
-
-                    // Deteksi tren: bandingkan dengan data sebelumnya
-                    const prevData = waterCache.data || [];
-                    const itemsWithTrend = items.map((item, idx) => {
-                        const prev = prevData.find(p => p.lokasi === item.lokasi);
-                        let trend = 'stable',
-                            trendVal = 0;
-                        if (prev && prev.tinggi !== undefined) {
-                            const diff = item.tinggi - prev.tinggi;
-                            if (Math.abs(diff) > 1) {
-                                trend = diff > 0 ? 'up' : 'down';
-                                trendVal = Math.round(diff);
-                            }
-                        }
-                        return { ...item, trend, trendVal };
                     });
+                    if (items.length === 0) throw new Error('Tabel tidak ditemukan (kemungkinan situs berubah / perlu login)');
 
-                    // Update cache
-                    waterCache.data = itemsWithTrend;
-                    waterCache.lastSuccess = Date.now();
-                    waterCache.error = null;
-                    setModuleDot(msWater, 'ok');
-                    setCardTime(waterTime, new Date());
-
-                    renderWater(itemsWithTrend);
-                    setStatus('✅ Air OK');
-
-                } catch (err) {
-                    waterCache.error = err.message;
-                    setModuleDot(msWater, 'error');
-                    if (waterCache.data && waterCache.data.length > 0) {
-                        setCardTime(waterTime, new Date(waterCache.lastSuccess || Date.now()), 'warning');
-                        setStatus('⚠️ Air: ' + err.message + ' (data lama)', true);
-                        renderWater(waterCache.data);
-                    } else {
-                        setCardTime(waterTime, new Date(), 'error');
-                        waterBody.innerHTML = `
-                            <div style="color:#f87171;padding:16px 0;text-align:center;">
-                                ⚠️ Gagal memuat tinggi air<br>
-                                <span style="font-size:0.8rem;color:#6b7f94;">${err.message}</span>
-                                <br><br>
-                                💡 Sumber: poskobanjir.dsdadki.web.id
-                            </div>
-                        `;
-                        setStatus('❌ Air gagal', true);
-                    }
-                } finally {
-                    waterCache.loading = false;
-                }
-            }
-
-            function renderWater(items) {
-                if (!items || items.length === 0) {
-                    waterBody.innerHTML = `<div style="color:#6b7f94;padding:12px 0;">Tidak ada data</div>`;
-                    return;
-                }
-                const show = items.slice(0, 12);
-                let html = '';
-                const now = Date.now();
-                show.forEach(it => {
-                    const statusLower = (it.status || '').toLowerCase();
-                    let statusClass = 'status-normal';
-                    let statusLabel = it.status || 'Normal';
-                    if (statusLower.includes('siaga')) statusClass = 'status-siaga';
-                    else if (statusLower.includes('waspada')) statusClass = 'status-waspada';
-                    else if (statusLower.includes('awas')) statusClass = 'status-awas';
-
-                    const trendSymbol = it.trend === 'up' ? '⬆' : it.trend === 'down' ? '⬇' : '➡';
-                    const trendCls = it.trend === 'up' ? 'up' : it.trend === 'down' ? 'down' : 'stable';
-                    const trendText = it.trendVal !== 0 ? `${it.trendVal > 0 ? '+' : ''}${it.trendVal} cm` : '';
-
-                    html += `
-                        <div class="water-item">
-                            <span class="w-loc">
-                                ${it.lokasi}
-                                ${it.sungai ? `<span class="w-sub">${it.sungai}</span>` : ''}
-                            </span>
-                            <span class="w-value">
-                                <span class="w-level">${it.rawTinggi || it.tinggi}</span>
-                                <span class="w-status ${statusClass}">${statusLabel}</span>
-                                <span class="w-trend ${trendCls}">${trendSymbol} ${trendText}</span>
-                            </span>
-                        </div>
-                    `;
-                });
-
-                const lastUpdate = waterCache.lastSuccess ? formatTime(new Date(waterCache.lastSuccess)) : '--';
-                html += `
-                    <div style="margin-top:8px;font-size:0.65rem;color:#475569;text-align:right;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
-                        ${show.length} pos · terakhir ${lastUpdate}
-                        ${waterCache.error ? ' <span style="color:#fbbf24;">⚠ data usang</span>' : ''}
-                    </div>
-                `;
-                waterBody.innerHTML = html;
-            }
-
-            // ============================================================
-            //  3. GUNUNG API – scraping MAGMA
-            // ============================================================
-            async function fetchVolcanoes() {
-                volcanoCache.loading = true;
-                setModuleDot(msVolcano, 'loading');
-                try {
-                    const target = 'https://magma.vsi.esdm.go.id/';
-                    const proxyUrl = CORS_PROXY + encodeURIComponent(target);
-                    const html = await fetchWithRetry(proxyUrl);
-
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    let volcanoData = [];
-                    const tables = doc.querySelectorAll('table');
-                    for (const table of tables) {
-                        const rows = table.querySelectorAll('tr');
-                        if (rows.length < 2) continue;
-                        const headerRow = rows[0];
-                        const headers = headerRow.querySelectorAll('th, td');
-                        const headerTexts = Array.from(headers).map(th => th.textContent.trim().toLowerCase());
-                        let idxNama = -1,
-                            idxLevel = -1,
-                            idxStatus = -1,
-                            idxRec = -1;
-                        headerTexts.forEach((text, i) => {
-                            if (text.includes('gunung') || text.includes('nama')) idxNama = i;
-                            else if (text.includes('level')) idxLevel = i;
-                            else if (text.includes('keterangan') || text.includes('aktivitas')) idxStatus = i;
-                            else if (text.includes('rekomendasi') || text.includes('radius')) idxRec = i;
-                        });
-                        if (idxNama === -1 || idxLevel === -1) continue;
-
-                        for (let i = 1; i < rows.length; i++) {
-                            const cells = rows[i].querySelectorAll('td');
-                            if (cells.length < Math.max(idxNama, idxLevel) + 1) continue;
-                            const nama = cells[idxNama]?.textContent.trim() || '';
-                            const level = cells[idxLevel]?.textContent.trim() || '';
-                            const status = (idxStatus !== -1) ? (cells[idxStatus]?.textContent.trim() || '') : '';
-                            const rec = (idxRec !== -1) ? (cells[idxRec]?.textContent.trim() || '') : '';
-                            if (nama && level) {
-                                volcanoData.push({ nama, level, status, rekomendasi: rec });
-                            }
-                        }
-                        if (volcanoData.length > 0) break;
-                    }
-
-                    // fallback: teks
-                    if (volcanoData.length === 0) {
-                        const bodyText = doc.body?.innerText || '';
-                        const lines = bodyText.split('\n').map(s => s.trim()).filter(s => s.length > 0 && s.length < 200);
-                        let found = [];
-                        for (let line of lines) {
-                            if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal/i)) {
-                                if (!found.some(ex => ex === line)) {
-                                    found.push(line);
-                                }
-                            }
-                            if (found.length >= 12) break;
-                        }
-                        found.forEach(line => {
-                            let level = 'Normal';
-                            let status = '';
-                            const lower = line.toLowerCase();
-                            if (lower.includes('awas')) { level = 'IV';
-                                status = 'AWAS'; } else if (lower.includes('siaga')) { level = 'III';
-                                status = 'SIAGA'; } else if (lower.includes('waspada')) { level = 'II';
-                                status = 'WASPADA'; } else if (lower.includes('normal')) { level = 'I';
-                                status = 'NORMAL'; }
-                            volcanoData.push({
-                                nama: line.slice(0, 60),
-                                level,
-                                status,
-                                rekomendasi: '—'
-                            });
-                        });
-                    }
-
-                    if (volcanoData.length === 0) {
-                        throw new Error('Tidak ditemukan data gunung – website berubah');
-                    }
-
-                    // Tambahkan info tambahan (simulasi)
-                    const enriched = volcanoData.slice(0, 14).map(v => {
-                        const levelNum = parseInt(v.level) || 0;
-                        let levelClass = 'lv-1';
-                        if (levelNum >= 4) levelClass = 'lv-4';
-                        else if (levelNum >= 3) levelClass = 'lv-3';
-                        else if (levelNum >= 2) levelClass = 'lv-2';
-                        const recText = v.rekomendasi || (levelNum >= 3 ? 'Radius 5-7 km' : 'Radius 1-3 km');
-                        return {
-                            ...v,
-                            levelClass,
-                            recText,
-                            time: new Date(),
-                            eruptionCount: Math.floor(Math.random() * 30),
-                            ashColumn: levelNum >= 3 ? (1000 + Math.floor(Math.random() * 2000)) + ' m' : '—'
-                        };
-                    });
-
-                    volcanoCache.data = enriched;
-                    volcanoCache.lastSuccess = Date.now();
-                    volcanoCache.error = null;
-                    setModuleDot(msVolcano, 'ok');
-                    setCardTime(volcanoTime, new Date());
-
-                    renderVolcanoes(enriched);
-                    setStatus('✅ Gunung OK');
-
-                } catch (err) {
-                    volcanoCache.error = err.message;
-                    setModuleDot(msVolcano, 'error');
-                    if (volcanoCache.data && volcanoCache.data.length > 0) {
-                        setCardTime(volcanoTime, new Date(volcanoCache.lastSuccess || Date.now()), 'warning');
-                        setStatus('⚠️ Gunung: ' + err.message + ' (data lama)', true);
-                        renderVolcanoes(volcanoCache.data);
-                    } else {
-                        setCardTime(volcanoTime, new Date(), 'error');
-                        volcanoBody.innerHTML = `
-                            <div style="color:#f87171;padding:16px 0;text-align:center;">
-                                ⚠️ Gagal memuat status gunung<br>
-                                <span style="font-size:0.8rem;color:#6b7f94;">${err.message}</span>
-                                <br><br>
-                                💡 Sumber: magma.vsi.esdm.go.id
-                            </div>
-                        `;
-                        setStatus('❌ Gunung gagal', true);
-                    }
-                } finally {
-                    volcanoCache.loading = false;
-                }
-            }
-
-            function renderVolcanoes(items) {
-                if (!items || items.length === 0) {
-                    volcanoBody.innerHTML = `<div style="color:#6b7f94;padding:12px 0;">Tidak ada data</div>`;
-                    return;
-                }
-                let html = '';
-                items.forEach(v => {
-                    const displayName = v.nama.length > 45 ? v.nama.slice(0, 45) + '…' : v.nama;
-                    const statusLabel = v.status || v.level || 'Normal';
-                    html += `
-                        <div class="volcano-item">
-                            <span class="v-name">
-                                ${displayName}
-                                <span class="v-sub">
-                                    ${v.eruptionCount !== undefined ? '🌋 ' + v.eruptionCount + ' x erupsi' : ''}
-                                    ${v.ashColumn && v.ashColumn !== '—' ? ' · kolom ' + v.ashColumn : ''}
+                    let htmlOut = '';
+                    items.slice(0, 10).forEach((it) => {
+                        const statusLower = it.status.toLowerCase();
+                        let statusClass = 'status-normal';
+                        if (statusLower.includes('siaga')) statusClass = 'status-siaga';
+                        else if (statusLower.includes('waspada')) statusClass = 'status-waspada';
+                        else if (statusLower.includes('awas')) statusClass = 'status-awas';
+                        htmlOut += `
+                            <div class="item">
+                                <span class="label">${escapeHtml(it.loc)} <span style="color:#6b7f94;font-size:0.8rem;">${escapeHtml(it.sungai)}</span></span>
+                                <span class="value">
+                                    <span class="water-level">${escapeHtml(it.tinggi)}</span> cm
+                                    <span class="${statusClass}">${escapeHtml(it.status || 'Normal')}</span>
                                 </span>
-                            </span>
-                            <span class="v-right">
-                                <span class="v-level ${v.levelClass}">${statusLabel}</span>
-                                ${v.recText ? `<span class="v-rec">${v.recText}</span>` : ''}
-                            </span>
+                            </div>
+                        `;
+                    });
+                    htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: poskobanjir.dsdadki.web.id (fallback)</div>`;
+                    waterBody.innerHTML = htmlOut;
+                    setCardTime(waterTime, new Date());
+                    setStatus('✅ Air OK (fallback)');
+                } catch (err2) {
+                    waterBody.innerHTML = `
+                        <div style="color:#f87171; padding:12px;">
+                            ⚠️ Gagal memuat tinggi air<br>
+                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                            <br><br>
+                            💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
                         </div>
                     `;
-                });
-                const lastUpdate = volcanoCache.lastSuccess ? formatTime(new Date(volcanoCache.lastSuccess)) : '--';
-                html += `
-                    <div style="margin-top:8px;font-size:0.65rem;color:#475569;text-align:right;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">
-                        ${items.length} gunung · terakhir ${lastUpdate} 
-                        ${volcanoCache.error ? ' <span style="color:#fbbf24;">⚠ data usang</span>' : ''}
-                    </div>
-                `;
-                volcanoBody.innerHTML = html;
-            }
-
-            // ============================================================
-            //  UPDATE SEMUA (INDEPENDENT)
-            // ============================================================
-            function updateGlobalTimestamp() {
-                lastUpdateTime.textContent = formatTime(new Date());
-            }
-
-            // ============================================================
-            //  WAKE LOCK – keep screen on
-            // ============================================================
-            async function requestWakeLock() {
-                try {
-                    if ('wakeLock' in navigator) {
-                        const lock = await navigator.wakeLock.request('screen');
-                        console.log('🔒 Wake Lock aktif');
-                        // Re-request when page visibility changes
-                        document.addEventListener('visibilitychange', () => {
-                            if (document.visibilityState === 'visible') {
-                                navigator.wakeLock.request('screen').catch(() => {});
-                            }
-                        });
-                    }
-                } catch (e) {
-                    console.log('⚠️ Wake Lock tidak didukung:', e.message);
+                    setStatus('❌ Gagal air', true);
                 }
             }
+        }
 
-            // ============================================================
-            //  START
-            // ============================================================
-            async function init() {
-                // Request wake lock
-                await requestWakeLock();
+        // Parser halaman bpbd.jakarta.go.id/waterlevel. Halaman ini adalah
+        // HTML biasa (bukan aplikasi JS), berisi 12 pos pantau dengan 20
+        // pembacaan per jam berformat "N cm (KODE_CUACA)". Diparse lewat teks
+        // agar tahan terhadap perubahan kecil pada struktur tag.
+        function parseBpbdWaterLevel(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            let text = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
 
-                // Muat semua data pertama kali
-                await Promise.allSettled([
-                    fetchTrains(),
-                    fetchWaterLevel(),
-                    fetchVolcanoes()
-                ]);
-                updateGlobalTimestamp();
-
-                // Set interval per modul (independen)
-                setInterval(() => {
-                    fetchTrains().catch(() => {});
-                    updateGlobalTimestamp();
-                }, INTERVAL_TRAIN);
-
-                setInterval(() => {
-                    fetchWaterLevel().catch(() => {});
-                    updateGlobalTimestamp();
-                }, INTERVAL_WATER);
-
-                setInterval(() => {
-                    fetchVolcanoes().catch(() => {});
-                    updateGlobalTimestamp();
-                }, INTERVAL_VOLCANO);
-
-                // Countdown update per detik
-                setInterval(() => {
-                    updateCountdowns();
-                }, COUNTDOWN_INTERVAL);
-
-                // Toggle countdown
-                countdownToggle.addEventListener('click', () => {
-                    countdownEnabled = !countdownEnabled;
-                    countdownToggle.textContent = countdownEnabled ? '⏸ countdown' : '▶ countdown';
-                    if (countdownEnabled) updateCountdowns();
-                });
-
-                console.log('🚀 NUSANTARA MONITOR aktif');
-                console.log(`📡 Interval: KA ${INTERVAL_TRAIN/1000}s | Air ${INTERVAL_WATER/1000}s | Gunung ${INTERVAL_VOLCANO/1000}s`);
-                console.log('📡 Sumber: api.comuline.com | poskobanjir.dsdadki.web.id | magma.vsi.esdm.go.id');
+            const startIdx = text.search(/PEMANTAUAN TINGGI MUKA AIR/i);
+            const legendIdx = text.search(/Siaga I\b/);
+            if (startIdx !== -1) {
+                text = text.slice(startIdx, legendIdx !== -1 && legendIdx > startIdx ? legendIdx : undefined);
             }
 
-            init().catch(console.error);
+            const hourMatches = [...text.matchAll(/\b([01]\d|2[0-3]):00\b/g)].map((m) => m[0]);
+            const latestHour = hourMatches[0] || '--:--';
 
-        })();
-    </script>
+            const stationRegex = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-\s]{2,40}?)\s+((?:-?\d+\s*cm\s*\([A-Z]{1,2}\)\s*){2,20})/g;
+            const stations = [];
+            let match;
+            while ((match = stationRegex.exec(text)) !== null) {
+                let name = match[1].trim().replace(/^Pintu Air\s*/i, '').trim();
+                if (!name || /^(Filter|Waktu|Pintu Air)$/i.test(name)) continue;
+
+                const readings = [...match[2].matchAll(/(-?\d+)\s*cm\s*\(([A-Z]{1,2})\)/g)].map((r) => ({
+                    cm: parseInt(r[1], 10),
+                    code: r[2],
+                }));
+                if (readings.length === 0) continue;
+
+                stations.push({ name, readings });
+            }
+
+            waterDataCache.clear();
+            stations.forEach((s) => waterDataCache.set(s.name, s.readings));
+
+            return stations.map((s) => ({
+                name: s.name,
+                hourLabel: latestHour,
+                latest: s.readings[0],
+                prev: s.readings[1] || null,
+            }));
+        }
+
+        function renderWaterLevel(stations) {
+            const weatherMap = { T: 'Cerah', MT: 'Mendung Tipis', M: 'Mendung', G: 'Gerimis', H: 'Hujan' };
+            let html = '';
+
+            stations.forEach((st) => {
+                const delta = st.prev ? st.latest.cm - st.prev.cm : 0;
+                let trendIcon = '▬';
+                let trendClass = 'trend-flat';
+                if (delta > 0) { trendIcon = '▲'; trendClass = 'trend-up'; }
+                else if (delta < 0) { trendIcon = '▼'; trendClass = 'trend-down'; }
+
+                const weatherText = weatherMap[st.latest.code] || st.latest.code || '';
+
+                html += `
+                    <div class="item">
+                        <span class="label">
+                            ${escapeHtml(st.name)}
+                            <div class="item-sub">per ${escapeHtml(st.hourLabel)} WIB${weatherText ? ' · ' + escapeHtml(weatherText) : ''}</div>
+                        </span>
+                        <span class="value">
+                            <span class="water-level">${st.latest.cm}</span> cm
+                            <span class="${trendClass}">${trendIcon}</span>
+                        </span>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
+                    Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · pembaruan tiap jam
+                </div>
+            `;
+
+            waterBody.innerHTML = html;
+        }
+
+        // ============================================================
+        //  3. GUNUNG API – dari MAGMA Indonesia (PVMBG), halaman
+        //     "Tingkat Aktivitas Gunung Api" yang berisi tabel resmi
+        //     terkelompok per level (Awas/Siaga/Waspada/Normal),
+        //     bukan lagi menebak dari homepage peta yang butuh JS.
+        // ============================================================
+        async function fetchVolcanoes() {
+            try {
+                const html = await fetchTextResilient(SOURCES.volcanoPrimary);
+                const groups = parseMagmaActivityTable(html);
+                const totalCount = Object.values(groups).reduce((a, arr) => a + arr.length, 0);
+                if (totalCount === 0) throw new Error('Tabel tingkat aktivitas tidak ditemukan di halaman sumber');
+
+                renderVolcanoes(groups);
+                setCardTime(volcanoTime, new Date());
+                setStatus('✅ Gunung OK');
+                return;
+            } catch (err) {
+                // Fallback: heuristik kasar dari homepage peta lama
+                try {
+                    const html2 = await fetchTextResilient(SOURCES.volcanoFallback);
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html2, 'text/html');
+                    const bodyText = doc.body?.innerText || doc.body?.textContent || '';
+                    const lines = bodyText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+
+                    let volcanoLines = [];
+                    for (let line of lines) {
+                        if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal|aktif|vulkanik/i)) {
+                            if (!volcanoLines.includes(line)) volcanoLines.push(line);
+                        }
+                        if (volcanoLines.length >= 15) break;
+                    }
+                    if (volcanoLines.length === 0) throw new Error('Tidak ditemukan data gunung (kemungkinan situs berubah)');
+
+                    let htmlOut = '';
+                    volcanoLines.slice(0, 12).forEach((line) => {
+                        let statusClass = 'status-normal';
+                        let statusText = 'Normal';
+                        const lower = line.toLowerCase();
+                        if (lower.includes('awas')) { statusClass = 'status-awas'; statusText = 'AWAS'; }
+                        else if (lower.includes('siaga')) { statusClass = 'status-siaga'; statusText = 'SIAGA'; }
+                        else if (lower.includes('waspada')) { statusClass = 'status-waspada'; statusText = 'WASPADA'; }
+                        const display = line.length > 80 ? line.slice(0, 80) + '…' : line;
+                        htmlOut += `<div class="item"><span class="label">${escapeHtml(display)}</span><span class="value ${statusClass}">${statusText}</span></div>`;
+                    });
+                    htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: magma.vsi.esdm.go.id (fallback, ringkasan kasar)</div>`;
+                    volcanoBody.innerHTML = htmlOut;
+                    setCardTime(volcanoTime, new Date());
+                    setStatus('✅ Gunung OK (fallback)');
+                } catch (err2) {
+                    volcanoBody.innerHTML = `
+                        <div style="color:#f87171; padding:12px;">
+                            ⚠️ Gagal memuat status gunung<br>
+                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                            <br><br>
+                            💡 Cek langsung: <a href="${SOURCES.volcanoPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">magma.esdm.go.id</a>
+                        </div>
+                    `;
+                    setStatus('❌ Gagal gunung', true);
+                }
+            }
+        }
+
+        // Parser tabel resmi "Tingkat Aktivitas Gunung Api" di magma.esdm.go.id.
+        // Struktur: <div class="table-responsive"><table><tbody> berisi baris
+        // header per level (mis. "Level III (Siaga)") diikuti baris-baris
+        // data "Nama Gunung - Lokasi" dengan tautan "Lihat laporan".
+        function parseMagmaActivityTable(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const wrap = doc.querySelector('div.table-responsive');
+            const tbody = (wrap || doc).querySelector('table tbody') || doc.querySelector('tbody');
+            const groups = {};
+            if (!tbody) return groups;
+
+            let currentLevel = null;
+            tbody.querySelectorAll('tr').forEach((tr) => {
+                const cells = tr.querySelectorAll('td');
+                const headerLink = tr.querySelector('a.tx-inverse, a.d-block');
+                const candidateHeaderText = (headerLink && headerLink.textContent.trim())
+                    || (cells.length <= 1 ? tr.textContent.trim() : '');
+
+                if (/^Level\s+[IVX]+\s*\(/i.test(candidateHeaderText)) {
+                    currentLevel = candidateHeaderText.trim();
+                    if (!groups[currentLevel]) groups[currentLevel] = [];
+                    return;
+                }
+
+                if (!currentLevel) return;
+
+                cells.forEach((td) => {
+                    const raw = td.textContent.trim();
+                    if (!raw || /^\d+$/.test(raw)) return; // lewati kolom nomor urut
+                    const cleaned = raw.replace(/Lihat laporan/gi, '').trim();
+                    if (!cleaned) return;
+
+                    const parts = cleaned.split(/\s-\s/);
+                    const name = (parts[0] || cleaned).trim();
+                    const location = (parts.slice(1).join(' - ') || '').trim();
+                    const link = td.querySelector('a[href]:not([class])');
+
+                    groups[currentLevel].push({
+                        name,
+                        location,
+                        link: link ? link.href : null,
+                    });
+                });
+            });
+
+            return groups;
+        }
+
+        function renderVolcanoes(groups) {
+            const order = ['Level IV (Awas)', 'Level III (Siaga)', 'Level II (Waspada)', 'Level I (Normal)'];
+            const levelClassMap = {
+                'Level IV (Awas)': 'status-awas',
+                'Level III (Siaga)': 'status-siaga',
+                'Level II (Waspada)': 'status-waspada',
+                'Level I (Normal)': 'status-normal',
+            };
+
+            const knownKeys = Object.keys(groups);
+            const orderedKeys = [
+                ...order.filter((k) => knownKeys.includes(k)),
+                ...knownKeys.filter((k) => !order.includes(k)),
+            ];
+
+            let html = '';
+            orderedKeys.forEach((level) => {
+                const list = groups[level] || [];
+                const cls = levelClassMap[level] || 'status-normal';
+                html += `<div class="level-header ${cls}">${escapeHtml(level)} · ${list.length} gunung</div>`;
+
+                if (list.length === 0) {
+                    html += `<div class="item"><span class="label" style="color:#5a7085;">Tidak ada gunung pada level ini saat ini</span></div>`;
+                } else {
+                    list.forEach((v) => {
+                        html += `
+                            <div class="item">
+                                <span class="label">
+                                    ${escapeHtml(v.name)}
+                                    ${v.location ? `<div class="item-sub">${escapeHtml(v.location)}</div>` : ''}
+                                </span>
+                                <span class="value">
+                                    ${v.link ? `<a class="volcano-link" href="${escapeHtml(v.link)}" target="_blank" rel="noopener noreferrer">Lihat laporan ↗</a>` : ''}
+                                </span>
+                            </div>
+                        `;
+                    });
+                }
+            });
+
+            html += `
+                <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
+                    Sumber: magma.esdm.go.id (PVMBG) · tingkat aktivitas resmi
+                </div>
+            `;
+
+            volcanoBody.innerHTML = html;
+        }
+
+        // ============================================================
+        //  UPDATE SEMUA
+        // ============================================================
+        async function refreshAll() {
+            const start = Date.now();
+            setStatus('⏳ memperbarui…');
+
+            await Promise.allSettled([
+                fetchTrains(),
+                fetchWaterLevel(),
+                fetchVolcanoes()
+            ]);
+
+            const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+            lastUpdateTime.textContent = formatTime(new Date()) + ` (${elapsed}s)`;
+            setStatus(`✅ diperbarui ${formatTime(new Date())}`);
+
+            lastSuccessfulRefresh = Date.now();
+            nextRefreshAt = Date.now() + REFRESH_MS;
+        }
+
+        // ============================================================
+        //  JAM BERJALAN & JAMINAN REAL-TIME
+        //  - Jam & hitung mundur berjalan tiap detik secara independen
+        //    dari siklus fetch, jadi terlihat jelas program masih hidup.
+        //  - Saat tab disembunyikan lalu dibuka lagi (umum di HP saat
+        //    berpindah aplikasi), langsung refresh jika sudah lewat jadwal.
+        //  - Saat koneksi sempat putus lalu tersambung lagi, langsung
+        //    refresh otomatis.
+        // ============================================================
+        function tickClock() {
+            const now = new Date();
+            if (clockNowEl) clockNowEl.textContent = formatTime(now);
+            if (nextRefreshEl) {
+                const remain = Math.max(0, Math.round((nextRefreshAt - Date.now()) / 1000));
+                nextRefreshEl.textContent = remain;
+            }
+        }
+        setInterval(tickClock, 1000);
+        tickClock();
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                const overdue = Date.now() - lastSuccessfulRefresh;
+                if (overdue > REFRESH_MS) {
+                    refreshAll();
+                }
+            }
+        });
+
+        window.addEventListener('online', () => {
+            if (offlineBanner) offlineBanner.classList.remove('show');
+            setStatus('📡 Koneksi kembali, memperbarui…');
+            refreshAll();
+        });
+
+        window.addEventListener('offline', () => {
+            if (offlineBanner) offlineBanner.classList.add('show');
+            setStatus('📡 Tidak ada koneksi internet', true);
+        });
+
+        // ============================================================
+        //  START
+        // ============================================================
+        refreshAll();
+        setInterval(refreshAll, REFRESH_MS);
+
+        console.log('🚀 NUSANTARA MONITOR aktif – refresh setiap 60 detik');
+        console.log('📡 Sumber: api.comuline.com | bpbd.jakarta.go.id/waterlevel | magma.esdm.go.id');
+    })();
+</script>
 </body>
 </html>
