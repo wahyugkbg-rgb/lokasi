@@ -413,6 +413,108 @@
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
         }
+
+        /* ----- ANIMASI TAMBAHAN ----- */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .item, .train-table tbody tr {
+            animation: fadeInUp 0.45s ease both;
+        }
+        .item:nth-child(1), .train-table tbody tr:nth-child(1) { animation-delay: 0.02s; }
+        .item:nth-child(2), .train-table tbody tr:nth-child(2) { animation-delay: 0.05s; }
+        .item:nth-child(3), .train-table tbody tr:nth-child(3) { animation-delay: 0.08s; }
+        .item:nth-child(4), .train-table tbody tr:nth-child(4) { animation-delay: 0.11s; }
+        .item:nth-child(5), .train-table tbody tr:nth-child(5) { animation-delay: 0.14s; }
+        .item:nth-child(6), .train-table tbody tr:nth-child(6) { animation-delay: 0.17s; }
+        .item:nth-child(n+7), .train-table tbody tr:nth-child(n+7) { animation-delay: 0.2s; }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-6px) scaleY(0.96); }
+            to { opacity: 1; transform: translateY(0) scaleY(1); }
+        }
+        .schedule-panel {
+            animation: slideDown 0.28s ease both;
+            transform-origin: top;
+        }
+
+        @keyframes cardFlash {
+            0% { border-color: rgba(0, 200, 255, 0.55); box-shadow: 0 0 0 1px rgba(0,200,255,0.25), 0 20px 60px -16px rgba(0,0,0,0.8); }
+            100% { border-color: rgba(80, 180, 255, 0.08); box-shadow: 0 20px 60px -16px rgba(0,0,0,0.8); }
+        }
+        .card.just-updated {
+            animation: cardFlash 1.1s ease-out;
+        }
+
+        @keyframes valueFlash {
+            0% { text-shadow: 0 0 12px rgba(0, 220, 255, 0.9); }
+            100% { text-shadow: none; }
+        }
+        .water-level.flash {
+            animation: valueFlash 0.9s ease-out;
+        }
+
+        @keyframes spin360 {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .schedule-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(0, 200, 255, 0.25);
+            border-top-color: #22d3ee;
+            border-radius: 50%;
+            animation: spin360 0.7s linear infinite;
+            margin-right: 6px;
+            vertical-align: -1px;
+        }
+
+        /* Tanda naik/turun tinggi air dengan angka +/- */
+        .delta-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 1px 8px;
+            border-radius: 40px;
+            margin-left: 6px;
+            font-feature-settings: "tnum";
+        }
+        .delta-up { background: rgba(248, 113, 113, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.2); }
+        .delta-down { background: rgba(74, 222, 128, 0.12); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.2); }
+        .delta-flat { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.15); }
+
+        /* Status tren tinggi air (bukan status resmi banjir, hanya tren) */
+        .trend-status {
+            display: block;
+            margin-top: 3px;
+            font-size: 0.68rem;
+            letter-spacing: 0.2px;
+        }
+        .trend-status.rise-fast { color: #f87171; }
+        .trend-status.rise { color: #fb923c; }
+        .trend-status.stable { color: #8aa3b8; }
+        .trend-status.fall { color: #4ade80; }
+        .trend-status.fall-fast { color: #22d3ee; }
+
+        /* Indikator "baru diperbarui" pada baris/kartu */
+        .live-refresh-tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            color: #22d3ee;
+            margin-left: 6px;
+            opacity: 0;
+            animation: fadeInUp 0.5s ease both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -525,8 +627,11 @@
         let stationMap = new Map(); // station_id -> nama stasiun
         const scheduleCache = new Map(); // station_id -> { ts, data }
         const waterDataCache = new Map(); // nama pos -> riwayat pembacaan
+        const waterLevelDisplayed = new Map(); // nama pos -> angka cm terakhir ditampilkan (utk animasi hitung)
         let nextRefreshAt = Date.now() + REFRESH_MS;
         let lastSuccessfulRefresh = 0;
+        let openStationId = null;   // stasiun yang panel jadwalnya sedang terbuka
+        let openStationName = null;
 
         // ----- helpers umum -----
         function formatTime(d) {
@@ -570,6 +675,42 @@
             throw lastErr;
         }
 
+        // Mengambil JSON dari API real-time (mis. Comuline) dengan strategi
+        // berlapis: (1) fetch langsung dua kali (percobaan ulang cepat bila
+        // gagal sesaat/timeout), (2) bila API publik sedang bermasalah CORS
+        // atau down, coba lewat rantai proxy CORS yang sama seperti sumber
+        // lain, supaya jadwal & status stasiun tetap bisa real-time didapat
+        // dari berbagai jalur tanpa campur tangan pengguna.
+        async function fetchJsonResilient(url, { timeout = 12000, directRetries = 2 } = {}) {
+            let lastErr = new Error('Gagal mengambil data JSON');
+
+            for (let i = 0; i < directRetries; i++) {
+                try {
+                    const resp = await fetch(url, {
+                        signal: AbortSignal.timeout(timeout),
+                        cache: 'no-store',
+                    });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    return await resp.json();
+                } catch (err) {
+                    lastErr = err;
+                }
+            }
+
+            for (const buildUrl of CORS_PROXIES) {
+                try {
+                    const resp = await fetch(buildUrl(url), { signal: AbortSignal.timeout(timeout) });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const text = await resp.text();
+                    return JSON.parse(text);
+                } catch (err) {
+                    lastErr = err;
+                }
+            }
+
+            throw lastErr;
+        }
+
         // ============================================================
         //  1. KERETA – dari API publik Comuline (real‑time)
         //     Daftar stasiun + status aktif/tidak + JADWAL KEBERANGKATAN
@@ -578,9 +719,7 @@
         async function fetchTrains() {
             try {
                 const url = 'https://api.comuline.com/v1/station';
-                const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const json = await resp.json();
+                const json = await fetchJsonResilient(url, { timeout: 15000 });
                 if (!json.data || !Array.isArray(json.data)) throw new Error('Format data tidak dikenal');
 
                 allStations = json.data;
@@ -675,6 +814,32 @@
             `;
 
             trainBody.innerHTML = html;
+
+            // Jika ada stasiun yang panel jadwalnya sedang terbuka sebelum
+            // tabel ini dibangun ulang (mis. saat auto-refresh 60 detik),
+            // kembalikan tampilan "terbuka"-nya di sini supaya pengguna
+            // tidak merasa panelnya tiba-tiba tertutup sendiri — kesan
+            // "real-time" jadi utuh, bukan reset tiap menit.
+            if (openStationId) {
+                const row = trainBody.querySelector(`tr.station-row[data-station-id="${CSS.escape(openStationId)}"]`);
+                if (row) {
+                    row.classList.add('open');
+                    const scheduleRow = row.nextElementSibling;
+                    if (scheduleRow) {
+                        scheduleRow.style.display = '';
+                        const cell = scheduleRow.querySelector('td');
+                        const cachedSched = scheduleCache.get(openStationId);
+                        cell.innerHTML = cachedSched
+                            ? renderSchedulePanel(cachedSched.data, openStationName)
+                            : `<div class="schedule-panel"><div class="loading-inline"><span class="schedule-spinner"></span>Memuat jadwal real-time ${escapeHtml(openStationName)}…</div></div>`;
+                    }
+                } else {
+                    // Stasiun yang tadinya terbuka tidak ada lagi di hasil
+                    // filter pencarian saat ini — biarkan tertutup wajar.
+                    openStationId = null;
+                    openStationName = null;
+                }
+            }
         }
 
         // Klik baris stasiun -> buka/tutup panel jadwal keberangkatan real.
@@ -703,16 +868,20 @@
             if (isOpen) {
                 row.classList.remove('open');
                 scheduleRow.style.display = 'none';
+                openStationId = null;
+                openStationName = null;
                 return;
             }
 
             row.classList.add('open');
             scheduleRow.style.display = '';
+            openStationId = stationId;
+            openStationName = stationName;
             const cell = scheduleRow.querySelector('td');
-            cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline">⏳ Memuat jadwal ${escapeHtml(stationName)}…</div></div>`;
+            cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline"><span class="schedule-spinner"></span>Memuat jadwal real-time ${escapeHtml(stationName)}…</div></div>`;
 
             try {
-                const schedules = await fetchStationSchedule(stationId);
+                const schedules = await fetchStationSchedule(stationId, true);
                 cell.innerHTML = renderSchedulePanel(schedules, stationName);
             } catch (err) {
                 cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline" style="color:#f87171;">⚠️ Gagal memuat jadwal: ${escapeHtml(err.message)}</div></div>`;
@@ -723,19 +892,55 @@
             searchInput.addEventListener('input', applyStationFilter);
         }
 
-        async function fetchStationSchedule(stationId) {
+        // Cache jadwal dibuat singkat (selaras dengan siklus REFRESH_MS) agar
+        // data yang tampil betul-betul real-time; `force=true` (dipakai saat
+        // auto-refresh berkala) selalu mengambil data terbaru dari server,
+        // melewati cache sepenuhnya.
+        async function fetchStationSchedule(stationId, force = false) {
             const cached = scheduleCache.get(stationId);
-            if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+            if (!force && cached && Date.now() - cached.ts < REFRESH_MS) {
                 return cached.data;
             }
-            const resp = await fetch(`https://api.comuline.com/v1/schedule/${encodeURIComponent(stationId)}`, {
-                signal: AbortSignal.timeout(15000),
-            });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const json = await resp.json();
+            const json = await fetchJsonResilient(
+                `https://api.comuline.com/v1/schedule/${encodeURIComponent(stationId)}`,
+                { timeout: 15000 }
+            );
             if (!json.data || !Array.isArray(json.data)) throw new Error('Format jadwal tidak dikenal');
             scheduleCache.set(stationId, { ts: Date.now(), data: json.data });
             return json.data;
+        }
+
+        // Menyegarkan panel jadwal yang sedang terbuka (dipanggil tiap siklus
+        // refreshAll) supaya jadwal keberangkatan tetap real-time mengikuti
+        // waktu berjalan, tanpa perlu pengguna klik ulang stasiunnya.
+        async function refreshOpenSchedulePanel() {
+            if (!openStationId) return;
+            const row = trainBody.querySelector(`tr.station-row[data-station-id="${CSS.escape(openStationId)}"]`);
+            if (!row || !row.classList.contains('open')) { openStationId = null; openStationName = null; return; }
+            const scheduleRow = row.nextElementSibling;
+            const cell = scheduleRow?.querySelector('td');
+            if (!cell) return;
+
+            const existingPanel = cell.querySelector('.schedule-panel');
+            if (existingPanel) {
+                // Tandai sedang menyegarkan tanpa menghapus tampilan lama,
+                // supaya tidak "berkedip" kosong saat auto-refresh.
+                let tag = existingPanel.querySelector('.live-refresh-tag');
+                if (!tag) {
+                    tag = document.createElement('span');
+                    tag.className = 'live-refresh-tag';
+                    tag.innerHTML = '<span class="schedule-spinner"></span>menyegarkan…';
+                    existingPanel.prepend(tag);
+                }
+            }
+
+            try {
+                const schedules = await fetchStationSchedule(openStationId, true);
+                cell.innerHTML = renderSchedulePanel(schedules, openStationName);
+            } catch (err) {
+                const tag = cell.querySelector('.live-refresh-tag');
+                if (tag) tag.remove();
+            }
         }
 
         function renderSchedulePanel(schedules, stationName) {
@@ -754,6 +959,7 @@
             }
 
             let html = `<div class="schedule-panel">`;
+            html += `<div class="item-sub" style="margin-bottom:6px;">🟢 Real-time · diperbarui ${escapeHtml(formatTime(now))} WIB</div>`;
             upcoming.forEach((s) => {
                 const time = new Date(s.departs_at).toLocaleTimeString('id-ID', {
                     hour: '2-digit',
@@ -820,6 +1026,33 @@
                         if (statusLower.includes('siaga')) statusClass = 'status-siaga';
                         else if (statusLower.includes('waspada')) statusClass = 'status-waspada';
                         else if (statusLower.includes('awas')) statusClass = 'status-awas';
+
+                        const cmNow = parseInt(String(it.tinggi).replace(/[^\-\d]/g, ''), 10);
+                        let deltaBadge = '';
+                        if (!Number.isNaN(cmNow)) {
+                            const prevCm = waterLevelDisplayed.get(it.loc);
+                            if (prevCm !== undefined) {
+                                const d = cmNow - prevCm;
+                                const sign = d > 0 ? '+' : (d < 0 ? '−' : '±');
+                                const dCls = d > 0 ? 'delta-up' : (d < 0 ? 'delta-down' : 'delta-flat');
+                                deltaBadge = `<span class="delta-badge ${dCls}">${sign}${Math.abs(d)} cm</span>`;
+                            }
+                            const isChanged = waterLevelDisplayed.get(it.loc) !== cmNow;
+                            waterLevelDisplayed.set(it.loc, cmNow);
+                            htmlOut += `
+                                <div class="item">
+                                    <span class="label">${escapeHtml(it.loc)} <span style="color:#6b7f94;font-size:0.8rem;">${escapeHtml(it.sungai)}</span></span>
+                                    <span class="value" style="text-align:right;">
+                                        <span>
+                                            <span class="water-level${isChanged ? ' flash' : ''}">${cmNow}</span> cm ${deltaBadge}
+                                        </span>
+                                        <span class="trend-status ${statusClass}">${escapeHtml(it.status || 'Normal')}</span>
+                                    </span>
+                                </div>
+                            `;
+                            return;
+                        }
+
                         htmlOut += `
                             <div class="item">
                                 <span class="label">${escapeHtml(it.loc)} <span style="color:#6b7f94;font-size:0.8rem;">${escapeHtml(it.sungai)}</span></span>
@@ -893,18 +1126,34 @@
             }));
         }
 
+        // Klasifikasi TREN kenaikan/penurunan berdasarkan selisih cm antar
+        // pembacaan (BUKAN status siaga banjir resmi — sumber BPBD ini tidak
+        // menyertakan level siaga per pos, jadi label di sini murni
+        // menggambarkan arah & kecepatan perubahan muka air).
+        function classifyWaterTrend(delta) {
+            if (delta > 10) return { cls: 'rise-fast', text: '⤴ Naik cepat' };
+            if (delta > 0) return { cls: 'rise', text: '↗ Naik' };
+            if (delta === 0) return { cls: 'stable', text: '▬ Stabil' };
+            if (delta >= -10) return { cls: 'fall', text: '↘ Turun' };
+            return { cls: 'fall-fast', text: '⤵ Turun cepat' };
+        }
+
         function renderWaterLevel(stations) {
             const weatherMap = { T: 'Cerah', MT: 'Mendung Tipis', M: 'Mendung', G: 'Gerimis', H: 'Hujan' };
             let html = '';
 
             stations.forEach((st) => {
                 const delta = st.prev ? st.latest.cm - st.prev.cm : 0;
-                let trendIcon = '▬';
-                let trendClass = 'trend-flat';
-                if (delta > 0) { trendIcon = '▲'; trendClass = 'trend-up'; }
-                else if (delta < 0) { trendIcon = '▼'; trendClass = 'trend-down'; }
+                const trend = classifyWaterTrend(delta);
+                const sign = delta > 0 ? '+' : (delta < 0 ? '−' : '±');
+                const deltaCls = delta > 0 ? 'delta-up' : (delta < 0 ? 'delta-down' : 'delta-flat');
+                const deltaLabel = `${sign}${Math.abs(delta)} cm`;
 
                 const weatherText = weatherMap[st.latest.code] || st.latest.code || '';
+
+                const prevDisplayed = waterLevelDisplayed.get(st.name);
+                const isChanged = prevDisplayed === undefined || prevDisplayed !== st.latest.cm;
+                waterLevelDisplayed.set(st.name, st.latest.cm);
 
                 html += `
                     <div class="item">
@@ -912,9 +1161,12 @@
                             ${escapeHtml(st.name)}
                             <div class="item-sub">per ${escapeHtml(st.hourLabel)} WIB${weatherText ? ' · ' + escapeHtml(weatherText) : ''}</div>
                         </span>
-                        <span class="value">
-                            <span class="water-level">${st.latest.cm}</span> cm
-                            <span class="${trendClass}">${trendIcon}</span>
+                        <span class="value" style="text-align:right;">
+                            <span>
+                                <span class="water-level${isChanged ? ' flash' : ''}" data-station="${escapeHtml(st.name)}">${st.latest.cm}</span> cm
+                                <span class="delta-badge ${deltaCls}">${deltaLabel}</span>
+                            </span>
+                            <span class="trend-status ${trend.cls}">${trend.text}</span>
                         </span>
                     </div>
                 `;
@@ -922,7 +1174,7 @@
 
             html += `
                 <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                    Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · pembaruan tiap jam
+                    Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · pembaruan tiap jam · label tren dihitung dari selisih pembacaan, bukan status siaga resmi
                 </div>
             `;
 
@@ -1104,9 +1356,25 @@
                 fetchVolcanoes()
             ]);
 
+            // Dijalankan SETELAH tabel stasiun selesai dibangun ulang di atas
+            // (bukan bersamaan), supaya panel jadwal yang tadinya terbuka
+            // pasti sudah ada di DOM sebelum disegarkan dengan data terbaru.
+            await refreshOpenSchedulePanel();
+
             const elapsed = ((Date.now() - start) / 1000).toFixed(1);
             lastUpdateTime.textContent = formatTime(new Date()) + ` (${elapsed}s)`;
             setStatus(`✅ diperbarui ${formatTime(new Date())}`);
+
+            // Efek kilau halus di tiap kartu supaya terlihat jelas data baru
+            // saja masuk — sekaligus jadi "bukti visual" real-time berjalan.
+            ['trainCard', 'waterCard', 'volcanoCard'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('just-updated');
+                // reflow supaya animasi bisa diputar ulang tiap siklus
+                void el.offsetWidth;
+                el.classList.add('just-updated');
+            });
 
             lastSuccessfulRefresh = Date.now();
             nextRefreshAt = Date.now() + REFRESH_MS;
