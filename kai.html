@@ -1458,6 +1458,14 @@
                 (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
             ];
 
+            // Proxy khusus untuk sumber air: dicoba lebih dulu karena me-render
+            // seperti browser sungguhan sehingga jarang diblokir sistem keamanan
+            // (WAF) situs bpbd.jakarta.go.id, baru jika gagal turun ke CORS_PROXIES umum.
+            const WATER_PROXIES = [
+                (u) => 'https://r.jina.ai/' + u,
+                ...CORS_PROXIES,
+            ];
+
             const SOURCES = {
                 waterPrimary: 'https://bpbd.jakarta.go.id/waterlevel',
                 volcanoPrimary: 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas',
@@ -1573,10 +1581,29 @@
                 throw lastErr;
             }
 
+            async function fetchWaterTextResilient(targetUrl, timeout = 15000) {
+                let lastErr = new Error('Semua sumber air gagal diakses');
+                for (const buildUrl of WATER_PROXIES) {
+                    try {
+                        const resp = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(timeout) });
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const text = await resp.text();
+                        if (!text || text.length < 100) throw new Error('Respons kosong');
+                        if (text.length < 4000 && /aktivitas mencurigakan|support id|akses ditolak/i.test(text)) {
+                            throw new Error('Diblokir sistem keamanan situs sumber');
+                        }
+                        return text;
+                    } catch (err) {
+                        lastErr = err;
+                    }
+                }
+                throw lastErr;
+            }
+
             // ---- WATER ----
             async function fetchWaterLevel() {
                 try {
-                    const html = await fetchTextResilient(SOURCES.waterPrimary);
+                    const html = await fetchWaterTextResilient(SOURCES.waterPrimary);
                     const stations = parseBpbdWaterLevel(html);
                     if (!stations.length) throw new Error('Tabel TMA tidak ditemukan');
                     renderWaterLevel(stations);
