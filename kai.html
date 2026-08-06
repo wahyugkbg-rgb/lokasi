@@ -650,7 +650,10 @@
 
         const SOURCES = {
             waterPrimary: 'https://bpbd.jakarta.go.id/waterlevel',
-            waterFallback: 'https://poskobanjir.dsdadki.web.id/',
+            // waterFallback (poskobanjir.dsdadki.web.id) sengaja tidak
+            // dipakai lagi — situs itu sudah di balik login, sehingga
+            // scraping ke sana berisiko salah membaca kolom (lihat catatan
+            // di fetchWaterLevel).
             volcanoPrimary: 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas',
             volcanoFallback: 'https://magma.vsi.esdm.go.id/',
         };
@@ -1186,107 +1189,61 @@
             try {
                 const html = await fetchTextResilient(SOURCES.waterPrimary);
                 const stations = parseBpbdWaterLevel(html);
-                if (!stations.length) throw new Error('Tabel TMA tidak ditemukan di halaman sumber');
+                if (!stations.length) throw new Error('Tabel TMA tidak ditemukan / tidak valid di halaman sumber');
 
                 renderWaterLevel(stations);
+                clearStaleWarning('waterStaleWarn');
                 waterHasData = true;
                 waterLastSuccessAt = Date.now();
                 setCardTime(waterTime, new Date());
                 setStatus('✅ Air OK');
-                return;
             } catch (err) {
-                // Fallback: coba sumber DSDA lama, siapa tahu suatu saat
-                // dibuka lagi ke publik tanpa login.
-                try {
-                    const html2 = await fetchTextResilient(SOURCES.waterFallback);
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html2, 'text/html');
-                    const rows = doc.querySelectorAll('table tr');
-                    let items = [];
-                    rows.forEach((tr) => {
-                        const tds = tr.querySelectorAll('td');
-                        if (tds.length >= 4) {
-                            const loc = tds[0]?.textContent?.trim() || '';
-                            const sungai = tds[1]?.textContent?.trim() || '';
-                            const tinggi = tds[2]?.textContent?.trim() || '';
-                            const status = tds[5]?.textContent?.trim() || '';
-                            if (loc && tinggi) items.push({ loc, sungai, tinggi, status });
-                        }
-                    });
-                    if (items.length === 0) throw new Error('Tabel tidak ditemukan (kemungkinan situs berubah / perlu login)');
-
-                    let htmlOut = '';
-                    items.slice(0, 10).forEach((it) => {
-                        const statusLower = it.status.toLowerCase();
-                        let statusClass = 'status-normal';
-                        if (statusLower.includes('siaga')) statusClass = 'status-siaga';
-                        else if (statusLower.includes('waspada')) statusClass = 'status-waspada';
-                        else if (statusLower.includes('awas')) statusClass = 'status-awas';
-
-                        const cmNow = parseInt(String(it.tinggi).replace(/[^\-\d]/g, ''), 10);
-                        let deltaBadge = '';
-                        if (!Number.isNaN(cmNow)) {
-                            const prevCm = waterLevelDisplayed.get(it.loc);
-                            if (prevCm !== undefined) {
-                                const d = cmNow - prevCm;
-                                const sign = d > 0 ? '+' : (d < 0 ? '−' : '±');
-                                const dCls = d > 0 ? 'delta-up' : (d < 0 ? 'delta-down' : 'delta-flat');
-                                deltaBadge = `<span class="delta-badge ${dCls}">${sign}${Math.abs(d)} cm</span>`;
-                            }
-                            const isChanged = waterLevelDisplayed.get(it.loc) !== cmNow;
-                            waterLevelDisplayed.set(it.loc, cmNow);
-                            htmlOut += `
-                                <div class="item">
-                                    <span class="label">${escapeHtml(it.loc)} <span style="color:#6b7f94;font-size:0.8rem;">${escapeHtml(it.sungai)}</span></span>
-                                    <span class="value" style="text-align:right;">
-                                        <span>
-                                            <span class="water-level${isChanged ? ' flash' : ''}">${cmNow}</span> cm ${deltaBadge}
-                                        </span>
-                                        <span class="trend-status ${statusClass}">${escapeHtml(it.status || 'Normal')}</span>
-                                    </span>
-                                </div>
-                            `;
-                            return;
-                        }
-
-                        htmlOut += `
-                            <div class="item">
-                                <span class="label">${escapeHtml(it.loc)} <span style="color:#6b7f94;font-size:0.8rem;">${escapeHtml(it.sungai)}</span></span>
-                                <span class="value">
-                                    <span class="water-level">${escapeHtml(it.tinggi)}</span> cm
-                                    <span class="${statusClass}">${escapeHtml(it.status || 'Normal')}</span>
-                                </span>
-                            </div>
-                        `;
-                    });
-                    htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: poskobanjir.dsdadki.web.id (fallback)</div>`;
-                    waterBody.innerHTML = htmlOut;
-                    waterHasData = true;
-                    waterLastSuccessAt = Date.now();
-                    setCardTime(waterTime, new Date());
-                    setStatus('✅ Air OK (fallback)');
-                } catch (err2) {
-                    if (waterHasData) {
-                        // Sudah pernah berhasil dimuat sebelumnya — data lama
-                        // dibiarkan tetap tampil apa adanya, hanya diberi
-                        // catatan kecil. Siklus refresh berikutnya (tiap
-                        // REFRESH_MS, otomatis selama aplikasi terbuka) akan
-                        // mencoba lagi tanpa perlu tindakan pengguna.
-                        renderStaleWarning(waterBody, 'waterStaleWarn', waterLastSuccessAt, err.message);
-                        setStatus('⚠️ Air: pakai data terakhir', true);
-                    } else {
-                        waterBody.innerHTML = `
-                            <div style="color:#f87171; padding:12px;">
-                                ⚠️ Gagal memuat tinggi air<br>
-                                <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                                <br><br>
-                                💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
-                            </div>
-                        `;
-                        setStatus('❌ Gagal air', true);
-                    }
+                // CATATAN: sumber cadangan lama (poskobanjir.dsdadki.web.id)
+                // SENGAJA tidak lagi dipakai — situs itu sudah di balik
+                // login sehingga strukturnya berubah/tidak bisa ditebak.
+                // Mencoba scrape situs semacam itu berisiko salah memetakan
+                // kolom (mis. kolom "tanggal update" ikut terbaca sebagai
+                // angka cm), sehingga bisa menampilkan angka yang SALAH
+                // tanpa terlihat seperti error. Untuk data ketinggian air,
+                // lebih aman menampilkan status jujur (data lama / belum
+                // ada data) daripada angka yang berpotensi keliru.
+                if (waterHasData) {
+                    // Sudah pernah berhasil dimuat & TERVALIDASI sebelumnya
+                    // — tabel lama (lengkap dengan angka cm & +/- tiap pos)
+                    // dibiarkan tetap tampil apa adanya, hanya diberi
+                    // catatan kecil. Siklus refresh berikutnya (tiap
+                    // REFRESH_MS, otomatis selama aplikasi terbuka) akan
+                    // mencoba lagi tanpa perlu tindakan pengguna.
+                    renderStaleWarning(waterBody, 'waterStaleWarn', waterLastSuccessAt, err.message);
+                    setStatus('⚠️ Air: pakai data terakhir', true);
+                } else {
+                    // Belum pernah berhasil sama sekali sejak halaman
+                    // dibuka — tegaskan secara eksplisit bahwa datanya
+                    // BELUM ADA (bukan 0 cm / kosong), supaya tidak
+                    // disalahartikan sebagai data asli.
+                    waterBody.innerHTML = `
+                        <div style="color:#f87171; padding:12px;">
+                            ⚠️ Belum ada data — belum berhasil terhubung ke sumber tinggi muka air<br>
+                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                            <br><br>
+                            <span style="font-size:0.8rem; color:#6b7f94;">Dashboard akan mencoba lagi otomatis tiap ${Math.round(REFRESH_MS / 1000)} detik.</span>
+                            <br><br>
+                            💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
+                        </div>
+                    `;
+                    setStatus('❌ Belum ada data air', true);
                 }
             }
+        }
+
+        // Validasi kewajaran angka cm hasil parsing — pos pantau TMA di
+        // Jakarta berkisar sekitar -300..+700 cm; rentang longgar di bawah
+        // ini dipakai untuk menyaring hasil parsing yang keliru (mis. teks
+        // lain di halaman yang kebetulan cocok pola regex) SEBELUM
+        // ditampilkan ke pengguna, supaya angka yang tampil selalu berupa
+        // ketinggian air sungguhan.
+        function isPlausibleWaterCm(n) {
+            return Number.isFinite(n) && n > -1000 && n < 3000;
         }
 
         // Parser halaman bpbd.jakarta.go.id/waterlevel. Halaman ini adalah
@@ -1314,10 +1271,9 @@
                 let name = match[1].trim().replace(/^Pintu Air\s*/i, '').trim();
                 if (!name || /^(Filter|Waktu|Pintu Air)$/i.test(name)) continue;
 
-                const readings = [...match[2].matchAll(/(-?\d+)\s*cm\s*\(([A-Z]{1,2})\)/g)].map((r) => ({
-                    cm: parseInt(r[1], 10),
-                    code: r[2],
-                }));
+                const readings = [...match[2].matchAll(/(-?\d+)\s*cm\s*\(([A-Z]{1,2})\)/g)]
+                    .map((r) => ({ cm: parseInt(r[1], 10), code: r[2] }))
+                    .filter((r) => isPlausibleWaterCm(r.cm));
                 if (readings.length === 0) continue;
 
                 stations.push({ name, readings });
