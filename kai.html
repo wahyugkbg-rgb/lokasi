@@ -1587,19 +1587,13 @@
                     setStatus('✅ Air OK');
                 } catch (err) {
                     if (waterHasData) {
-                        renderStaleWarning(waterBody, 'waterStaleWarn', waterLastSuccessAt, err.message);
+                        // Belum ada update baru: biarkan data ketinggian terakhir yang
+                        // sudah tertampil (lengkap dengan jam pembacaan & +/-) tetap
+                        // tampil apa adanya, tanpa menambahkan teks lain di kartu air.
                         setStatus('⚠️ Air: pakai data terakhir', true);
                     } else {
-                        waterBody.innerHTML = `
-                            <div style="color:#f87171; padding:12px;">
-                                ⚠️ Belum ada data — belum berhasil terhubung ke sumber tinggi muka air<br>
-                                <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                                <br><br>
-                                <span style="font-size:0.8rem; color:#6b7f94;">Dashboard akan mencoba lagi otomatis tiap ${Math.round(OTHER_REFRESH_MS / 1000)} detik.</span>
-                                <br><br>
-                                💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
-                            </div>
-                        `;
+                        // Belum pernah ada data ketinggian sama sekali: pertahankan
+                        // skeleton loading (bukan teks) sambil menunggu percobaan berikutnya.
                         setStatus('❌ Belum ada data air', true);
                     }
                 }
@@ -1687,12 +1681,6 @@
                         </div>
                     `;
                 });
-
-                html += `
-                    <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                        Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · diperbarui tiap ${Math.round(OTHER_REFRESH_MS / 1000)} detik
-                    </div>
-                `;
 
                 waterBody.innerHTML = html;
             }
