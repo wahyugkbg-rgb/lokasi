@@ -18,19 +18,41 @@
             color: #e2eaf2;
             min-height: 100vh;
             padding: 16px 24px;
-            background-image: radial-gradient(circle at 10% 20%, #132435 0%, #070b14 80%);
-            animation: bgPulse 16s ease-in-out infinite alternate;
+            background-image:
+                radial-gradient(ellipse at 10% 20%, #132435 0%, #070b14 80%),
+                radial-gradient(ellipse at 90% 80%, #0a1a2a 0%, transparent 60%);
+            animation: bgPulse 20s ease-in-out infinite alternate;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ---- Particle background ---- */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
         }
 
         @keyframes bgPulse {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 100% 100%; }
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 100% 100%;
+            }
         }
 
         .container {
             max-width: 1600px;
             margin: 0 auto;
             width: 100%;
+            position: relative;
+            z-index: 1;
         }
 
         /* ----- HEADER ----- */
@@ -42,10 +64,23 @@
             padding: 14px 28px;
             background: rgba(8, 18, 38, 0.7);
             backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(0, 200, 255, 0.15);
             border-radius: 50px;
-            box-shadow: 0 8px 40px rgba(0, 120, 255, 0.06);
+            box-shadow: 0 8px 40px rgba(0, 120, 255, 0.06), 0 0 60px rgba(0, 120, 255, 0.02);
             margin-bottom: 30px;
+            animation: headerGlow 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes headerGlow {
+            0% {
+                border-color: rgba(0, 200, 255, 0.12);
+                box-shadow: 0 8px 40px rgba(0, 120, 255, 0.04);
+            }
+            100% {
+                border-color: rgba(0, 200, 255, 0.3);
+                box-shadow: 0 8px 60px rgba(0, 120, 255, 0.12);
+            }
         }
 
         .header h1 {
@@ -55,6 +90,17 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.5px;
+            text-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
+            animation: titleShine 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleShine {
+            0% {
+                filter: brightness(0.9);
+            }
+            100% {
+                filter: brightness(1.2);
+            }
         }
 
         .header .badge {
@@ -63,6 +109,7 @@
             align-items: center;
             font-size: 0.9rem;
             color: #94a3b8;
+            flex-wrap: wrap;
         }
 
         .badge .live {
@@ -79,8 +126,15 @@
             animation: blink 1.4s infinite;
         }
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.15; }
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.15;
+                transform: scale(0.7);
+            }
         }
 
         /* ----- GRID ----- */
@@ -92,24 +146,51 @@
         }
 
         @media (max-width: 1024px) {
-            .grid { grid-template-columns: 1fr 1fr; }
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
         }
         @media (max-width: 720px) {
-            .grid { grid-template-columns: 1fr; }
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .card {
             background: rgba(10, 22, 44, 0.75);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(80, 180, 255, 0.08);
             border-radius: 32px;
             padding: 20px 24px 28px;
-            box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.8);
-            transition: transform 0.2s, border-color 0.3s;
+            box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+            position: relative;
+            overflow: hidden;
         }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 34px;
+            background: linear-gradient(135deg, rgba(0, 200, 255, 0.05), transparent 40%, transparent 60%, rgba(167, 139, 250, 0.05));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
         .card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(0, 200, 255, 0.3);
+            transform: translateY(-6px) scale(1.002);
+            border-color: rgba(0, 200, 255, 0.25);
+            box-shadow: 0 30px 80px -20px rgba(0, 120, 255, 0.15), 0 0 40px rgba(0, 200, 255, 0.03);
         }
 
         .card-header {
@@ -123,6 +204,9 @@
             font-weight: 500;
             letter-spacing: 0.2px;
             color: #c8d8e8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .card-header .icon {
             font-size: 2rem;
@@ -131,94 +215,450 @@
         .card-header .update-time {
             font-size: 0.75rem;
             color: #6b7f94;
-            background: rgba(255,255,255,0.04);
+            background: rgba(255, 255, 255, 0.04);
             padding: 4px 14px;
             border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            font-variant-numeric: tabular-nums;
         }
 
-        /* ----- TABEL KERETA ----- */
-        .table-wrap {
-            overflow-x: auto;
-            margin-top: 6px;
+        /* ----- TRAIN TABS & BOARD (from first HTML) ----- */
+        .train-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 4px;
+            flex-wrap: wrap;
+        }
+        .train-tab {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.35);
+            padding: 8px 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 16px 16px 0 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .train-tab .tab-badge {
+            font-size: 0.6rem;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 2px 10px;
+            border-radius: 100px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .train-tab:hover {
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .train-tab.active {
+            color: #fff;
+            background: rgba(245, 124, 46, 0.08);
+        }
+        .train-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 20%;
+            right: 20%;
+            height: 3px;
+            background: linear-gradient(90deg, #f57c2e, #f5b382);
+            border-radius: 4px 4px 0 0;
+            box-shadow: 0 0 20px rgba(245, 124, 46, 0.3);
+            animation: tabGlow 2s ease-in-out infinite alternate;
+        }
+        @keyframes tabGlow {
+            0% {
+                box-shadow: 0 0 20px rgba(245, 124, 46, 0.2);
+            }
+            100% {
+                box-shadow: 0 0 40px rgba(245, 124, 46, 0.5);
+            }
+        }
+        .train-tab .line-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        .train-tab.active .line-dot {
+            transform: scale(1.2);
+        }
+        .line-dot.bogor {
+            background: #00b894;
+            box-shadow: 0 0 10px #00b89455;
+        }
+        .line-dot.tangerang {
+            background: #0984e3;
+            box-shadow: 0 0 10px #0984e355;
+        }
+        .line-dot.bekasi {
+            background: #fd79a8;
+            box-shadow: 0 0 10px #fd79a855;
         }
 
-        .train-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            min-width: 500px;
+        .train-panel {
+            display: none;
+            animation: fadeSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .train-panel.active {
+            display: block;
+        }
+        @keyframes fadeSlide {
+            0% {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
-        .train-table th {
-            text-align: left;
-            padding: 10px 8px 6px 0;
-            color: #6b8fa8;
-            font-weight: 500;
-            letter-spacing: 0.3px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+        .panel-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+        .panel-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #d0dce8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .panel-header h3 small {
+            font-weight: 400;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.25);
+            letter-spacing: 0.04em;
+        }
+        .panel-stats {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px 14px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            font-variant-numeric: tabular-nums;
         }
 
-        .train-table td {
-            padding: 10px 8px 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            vertical-align: middle;
+        .board {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .board-header {
+            display: grid;
+            grid-template-columns: 70px 1fr 1fr 100px 90px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: rgba(255, 255, 255, 0.2);
+        }
+        .board-scroll {
+            max-height: 420px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .board-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .board-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .board-scroll::-webkit-scrollbar-thumb {
+            background: rgba(245, 124, 46, 0.3);
+            border-radius: 10px;
         }
 
-        .train-table tr:last-child td {
+        .board-row {
+            display: grid;
+            grid-template-columns: 70px 1fr 1fr 100px 90px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            align-items: center;
+            transition: background 0.3s ease, transform 0.2s ease;
+            font-size: 0.85rem;
+            animation: rowIn 0.4s ease both;
+        }
+        .board-row:nth-child(1) {
+            animation-delay: 0.02s;
+        }
+        .board-row:nth-child(2) {
+            animation-delay: 0.05s;
+        }
+        .board-row:nth-child(3) {
+            animation-delay: 0.08s;
+        }
+        .board-row:nth-child(4) {
+            animation-delay: 0.11s;
+        }
+        .board-row:nth-child(5) {
+            animation-delay: 0.14s;
+        }
+        .board-row:nth-child(6) {
+            animation-delay: 0.17s;
+        }
+        .board-row:nth-child(7) {
+            animation-delay: 0.20s;
+        }
+        .board-row:nth-child(8) {
+            animation-delay: 0.23s;
+        }
+        .board-row:nth-child(9) {
+            animation-delay: 0.26s;
+        }
+        .board-row:nth-child(10) {
+            animation-delay: 0.29s;
+        }
+        .board-row:nth-child(11) {
+            animation-delay: 0.32s;
+        }
+        .board-row:nth-child(12) {
+            animation-delay: 0.35s;
+        }
+        .board-row:nth-child(13) {
+            animation-delay: 0.38s;
+        }
+        .board-row:nth-child(14) {
+            animation-delay: 0.41s;
+        }
+
+        @keyframes rowIn {
+            0% {
+                opacity: 0;
+                transform: translateX(-10px) scale(0.97);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        .board-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+            transform: scale(1.002);
+        }
+        .board-row:last-child {
             border-bottom: none;
         }
-
-        .station-name {
-            font-weight: 500;
-            color: #e8f0f8;
-        }
-        .line-badge {
-            display: inline-block;
-            background: rgba(0, 180, 255, 0.12);
-            padding: 2px 14px;
-            border-radius: 40px;
+        .board-row .train-num {
+            font-weight: 800;
             font-size: 0.75rem;
-            color: #7fc9ff;
-            border: 1px solid rgba(0, 180, 255, 0.15);
+            letter-spacing: 0.02em;
+            color: #f5b382;
+            font-variant-numeric: tabular-nums;
         }
-        .status-badge {
-            display: inline-block;
-            padding: 2px 12px;
-            border-radius: 40px;
-            font-size: 0.7rem;
-            font-weight: 500;
+        .board-row .origin {
+            font-weight: 600;
+            color: #fff;
+            font-size: 0.85rem;
         }
-        .status-badge.active {
-            background: rgba(74, 222, 128, 0.12);
-            color: #4ade80;
-            border: 1px solid rgba(74, 222, 128, 0.15);
+        .board-row .origin small {
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.65rem;
+            margin-left: 4px;
         }
-        .status-badge.inactive {
-            background: rgba(248, 113, 113, 0.1);
-            color: #f87171;
-            border: 1px solid rgba(248, 113, 113, 0.15);
+        .board-row .dest {
+            font-weight: 600;
+            color: #fff;
+            font-size: 0.85rem;
         }
-        .status-badge.unknown {
-            background: rgba(148, 163, 184, 0.1);
-            color: #94a3b8;
-            border: 1px solid rgba(148, 163, 184, 0.15);
+        .board-row .dest small {
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.65rem;
+            margin-left: 4px;
         }
-        .schedule-time {
-            font-weight: 500;
-            color: #b8d0e0;
-            font-feature-settings: "tnum";
+        .board-row .time {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            font-size: 0.9rem;
         }
-        .position-info {
-            font-size: 0.8rem;
-            color: #8aa3b8;
+        .board-row .time .delay {
+            color: #ff6b6b;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 4px;
         }
-        .no-data {
-            color: #f87171;
-            padding: 12px 0;
+        .board-row .status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 3px 12px;
+            border-radius: 100px;
             text-align: center;
+            display: inline-block;
+            width: fit-content;
+            transition: all 0.3s ease;
+        }
+        .status.on-time {
+            background: rgba(0, 206, 201, 0.12);
+            color: #00cec9;
+            border: 1px solid rgba(0, 206, 201, 0.15);
+        }
+        .status.delayed {
+            background: rgba(255, 107, 107, 0.12);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.15);
+            animation: pulseDelay 1.8s ease-in-out infinite;
+        }
+        @keyframes pulseDelay {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+        .status.departed {
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .status.cancelled {
+            background: rgba(255, 0, 0, 0.08);
+            color: #ff4757;
+            border: 1px solid rgba(255, 0, 0, 0.12);
+        }
+        .status.boarding {
+            background: rgba(245, 124, 46, 0.15);
+            color: #f5b382;
+            border: 1px solid rgba(245, 124, 46, 0.2);
+            animation: pulseBoarding 0.8s ease-in-out infinite;
+        }
+        @keyframes pulseBoarding {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.6;
+                transform: scale(0.95);
+            }
         }
 
-        /* ----- AIR & VOLCANO ----- */
+        .empty-state {
+            padding: 36px 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.12);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .empty-state span {
+            font-size: 2.4rem;
+            display: block;
+            margin-bottom: 10px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 820px) {
+            .board-header,
+            .board-row {
+                grid-template-columns: 55px 0.9fr 0.9fr 80px 75px;
+                padding: 8px 12px;
+                font-size: 0.7rem;
+                gap: 2px;
+            }
+            .board-row .train-num {
+                font-size: 0.65rem;
+            }
+            .board-row .origin,
+            .board-row .dest {
+                font-size: 0.7rem;
+            }
+            .board-row .time {
+                font-size: 0.75rem;
+            }
+            .board-row .status {
+                font-size: 0.55rem;
+                padding: 2px 8px;
+            }
+            .train-tab {
+                padding: 6px 14px;
+                font-size: 0.7rem;
+            }
+            .train-tab .tab-badge {
+                display: none;
+            }
+            .panel-header h3 {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .board-header,
+            .board-row {
+                grid-template-columns: 45px 0.7fr 0.7fr 60px 60px;
+                padding: 6px 8px;
+                font-size: 0.6rem;
+                gap: 2px;
+            }
+            .board-row .train-num {
+                font-size: 0.55rem;
+            }
+            .board-row .origin,
+            .board-row .dest {
+                font-size: 0.6rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .board-row .time {
+                font-size: 0.65rem;
+            }
+            .board-row .status {
+                font-size: 0.45rem;
+                padding: 2px 6px;
+            }
+            .train-tab {
+                padding: 4px 10px;
+                font-size: 0.6rem;
+                flex: 1;
+                justify-content: center;
+            }
+            .train-tab .line-dot {
+                width: 6px;
+                height: 6px;
+            }
+            .panel-header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            .panel-stats {
+                text-align: center;
+            }
+        }
+
+        /* ----- WATER & VOLCANO (original KAI.HTML styles, preserved) ----- */
         .card-body {
             max-height: 420px;
             overflow-y: auto;
@@ -237,8 +677,9 @@
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             font-size: 0.95rem;
+            animation: fadeInUp 0.5s ease both;
         }
         .item:last-child {
             border-bottom: none;
@@ -249,125 +690,86 @@
         .item .value {
             font-weight: 500;
         }
-        .status-normal { color: #4ade80; }
-        .status-waspada { color: #fbbf24; }
-        .status-siaga { color: #fb923c; }
-        .status-awas { color: #f87171; }
+        .status-normal {
+            color: #4ade80;
+        }
+        .status-waspada {
+            color: #fbbf24;
+        }
+        .status-siaga {
+            color: #fb923c;
+        }
+        .status-awas {
+            color: #f87171;
+        }
 
         .water-level {
             font-size: 1.4rem;
             font-weight: 600;
             margin-right: 4px;
+            transition: all 0.3s ease;
+        }
+        .water-level.flash {
+            animation: valueFlash 0.9s ease-out;
+        }
+        @keyframes valueFlash {
+            0% {
+                text-shadow: 0 0 20px rgba(0, 220, 255, 0.9);
+                transform: scale(1.1);
+            }
+            100% {
+                text-shadow: none;
+                transform: scale(1);
+            }
         }
 
-        /* ----- FOOTER ----- */
-        .footer {
-            text-align: center;
-            color: #475569;
-            font-size: 0.8rem;
-            padding: 24px 0 8px;
-            border-top: 1px solid rgba(255,255,255,0.03);
-            margin-top: 12px;
-        }
-        #statusMessage {
-            color: #94a3b8;
-        }
-
-        /* ----- SEARCH BOX STASIUN ----- */
-        .search-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 2px 0 14px;
-        }
-        .search-box {
-            flex: 1;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(80, 180, 255, 0.15);
-            border-radius: 40px;
-            padding: 9px 18px;
-            color: #e2eaf2;
-            font-size: 0.85rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .search-box:focus { border-color: rgba(0, 200, 255, 0.5); }
-        .search-box::placeholder { color: #5a7085; }
-        .search-hint {
-            font-size: 0.72rem;
-            color: #6b7f94;
-            white-space: nowrap;
-        }
-
-        /* ----- BARIS STASIUN YANG BISA DIKLIK (JADWAL) ----- */
-        .train-table tbody tr.station-row { cursor: pointer; }
-        .train-table tbody tr.station-row:hover td {
-            background: rgba(0, 200, 255, 0.05);
-        }
-        .expand-hint {
+        .delta-badge {
             display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 1px 8px;
+            border-radius: 40px;
             margin-left: 6px;
-            color: #4a6a85;
-            font-size: 0.7rem;
-            transition: transform 0.2s;
+            font-feature-settings: "tnum";
         }
-        .station-row.open .expand-hint {
-            transform: rotate(90deg);
+        .delta-up {
+            background: rgba(248, 113, 113, 0.12);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+        .delta-down {
+            background: rgba(74, 222, 128, 0.12);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+        .delta-flat {
+            background: rgba(148, 163, 184, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .trend-status {
+            display: block;
+            margin-top: 3px;
+            font-size: 0.68rem;
+            letter-spacing: 0.2px;
+        }
+        .trend-status.rise-fast {
+            color: #f87171;
+        }
+        .trend-status.rise {
+            color: #fb923c;
+        }
+        .trend-status.stable {
+            color: #8aa3b8;
+        }
+        .trend-status.fall {
+            color: #4ade80;
+        }
+        .trend-status.fall-fast {
             color: #22d3ee;
         }
-        .schedule-row td {
-            padding: 0 !important;
-            border-bottom: 1px solid rgba(255,255,255,0.03) !important;
-        }
-        .schedule-panel {
-            background: rgba(0, 180, 255, 0.03);
-            border-left: 2px solid rgba(0, 200, 255, 0.3);
-            padding: 12px 16px;
-            margin: 2px 4px 8px;
-            border-radius: 0 12px 12px 0;
-        }
-        .schedule-panel .sched-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 0;
-            font-size: 0.85rem;
-            border-bottom: 1px dashed rgba(255,255,255,0.06);
-        }
-        .schedule-panel .sched-item:last-child { border-bottom: none; }
-        .sched-time {
-            font-weight: 600;
-            color: #7fe9ff;
-            font-feature-settings: "tnum";
-            min-width: 50px;
-        }
-        .sched-route {
-            flex: 1;
-            color: #b0c4d8;
-            font-size: 0.8rem;
-        }
-        .sched-line {
-            font-size: 0.7rem;
-            color: #7fc9ff;
-        }
-        .loading-inline {
-            color: #6b7f94;
-            font-size: 0.8rem;
-            padding: 10px 2px;
-        }
 
-        /* ----- TREN TINGGI AIR ----- */
-        .trend-up { color: #f87171; }
-        .trend-down { color: #4ade80; }
-        .trend-flat { color: #8aa3b8; }
-        .item-sub {
-            font-size: 0.72rem;
-            color: #5a7085;
-            margin-top: 2px;
-        }
-
-        /* ----- HEADER LEVEL GUNUNG API ----- */
         .level-header {
             font-size: 0.75rem;
             font-weight: 600;
@@ -375,31 +777,28 @@
             text-transform: uppercase;
             padding: 10px 0 6px;
             margin-top: 6px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .level-header:first-child { margin-top: 0; }
+        .level-header:first-child {
+            margin-top: 0;
+        }
         .volcano-link {
             color: #7fc9ff;
             text-decoration: none;
             font-size: 0.72rem;
+            transition: color 0.2s ease;
         }
-        .volcano-link:hover { text-decoration: underline; }
-
-        /* ----- BANNER OFFLINE ----- */
-        .offline-banner {
-            display: none;
-            text-align: center;
-            background: rgba(248, 113, 113, 0.1);
-            border: 1px solid rgba(248, 113, 113, 0.25);
-            color: #f87171;
-            padding: 8px;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            margin-bottom: 16px;
+        .volcano-link:hover {
+            text-decoration: underline;
+            color: #22d3ee;
         }
-        .offline-banner.show { display: block; }
 
-        /* shimmer */
+        .item-sub {
+            font-size: 0.72rem;
+            color: #5a7085;
+            margin-top: 2px;
+        }
+
         .shimmer {
             background: linear-gradient(90deg, #1a2a3a 25%, #2a3a4a 50%, #1a2a3a 75%);
             background-size: 200% 100%;
@@ -410,108 +809,20 @@
             margin: 6px 0;
         }
         @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
         }
 
-        /* ----- ANIMASI TAMBAHAN ----- */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .item, .train-table tbody tr {
-            animation: fadeInUp 0.45s ease both;
-        }
-        .item:nth-child(1), .train-table tbody tr:nth-child(1) { animation-delay: 0.02s; }
-        .item:nth-child(2), .train-table tbody tr:nth-child(2) { animation-delay: 0.05s; }
-        .item:nth-child(3), .train-table tbody tr:nth-child(3) { animation-delay: 0.08s; }
-        .item:nth-child(4), .train-table tbody tr:nth-child(4) { animation-delay: 0.11s; }
-        .item:nth-child(5), .train-table tbody tr:nth-child(5) { animation-delay: 0.14s; }
-        .item:nth-child(6), .train-table tbody tr:nth-child(6) { animation-delay: 0.17s; }
-        .item:nth-child(n+7), .train-table tbody tr:nth-child(n+7) { animation-delay: 0.2s; }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-6px) scaleY(0.96); }
-            to { opacity: 1; transform: translateY(0) scaleY(1); }
-        }
-        .schedule-panel {
-            animation: slideDown 0.28s ease both;
-            transform-origin: top;
+        .no-data {
+            color: #f87171;
+            padding: 12px 0;
+            text-align: center;
         }
 
-        @keyframes cardFlash {
-            0% { border-color: rgba(0, 200, 255, 0.55); box-shadow: 0 0 0 1px rgba(0,200,255,0.25), 0 20px 60px -16px rgba(0,0,0,0.8); }
-            100% { border-color: rgba(80, 180, 255, 0.08); box-shadow: 0 20px 60px -16px rgba(0,0,0,0.8); }
-        }
-        .card.just-updated {
-            animation: cardFlash 1.1s ease-out;
-        }
-
-        @keyframes valueFlash {
-            0% { text-shadow: 0 0 12px rgba(0, 220, 255, 0.9); }
-            100% { text-shadow: none; }
-        }
-        .water-level.flash {
-            animation: valueFlash 0.9s ease-out;
-        }
-
-        @keyframes spin360 {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .schedule-spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(0, 200, 255, 0.25);
-            border-top-color: #22d3ee;
-            border-radius: 50%;
-            animation: spin360 0.7s linear infinite;
-            margin-right: 6px;
-            vertical-align: -1px;
-        }
-
-        /* Tanda naik/turun tinggi air dengan angka +/- */
-        .delta-badge {
-            display: inline-block;
-            font-size: 0.72rem;
-            font-weight: 600;
-            padding: 1px 8px;
-            border-radius: 40px;
-            margin-left: 6px;
-            font-feature-settings: "tnum";
-        }
-        .delta-up { background: rgba(248, 113, 113, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.2); }
-        .delta-down { background: rgba(74, 222, 128, 0.12); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.2); }
-        .delta-flat { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.15); }
-
-        /* Status tren tinggi air (bukan status resmi banjir, hanya tren) */
-        .trend-status {
-            display: block;
-            margin-top: 3px;
-            font-size: 0.68rem;
-            letter-spacing: 0.2px;
-        }
-        .trend-status.rise-fast { color: #f87171; }
-        .trend-status.rise { color: #fb923c; }
-        .trend-status.stable { color: #8aa3b8; }
-        .trend-status.fall { color: #4ade80; }
-        .trend-status.fall-fast { color: #22d3ee; }
-
-        /* Indikator "baru diperbarui" pada baris/kartu */
-        .live-refresh-tag {
-            display: inline-block;
-            font-size: 0.65rem;
-            color: #22d3ee;
-            margin-left: 6px;
-            opacity: 0;
-            animation: fadeInUp 0.5s ease both;
-        }
-
-        /* Peringatan halus saat siklus refresh gagal TAPI data lama masih
-           ada — data lama tetap tampil apa adanya, hanya diberi catatan
-           kecil ini di bawahnya sambil menunggu percobaan otomatis
-           berikutnya (bukan menimpa seluruh kartu dengan kotak error). */
         .stale-warning {
             margin-top: 10px;
             font-size: 0.72rem;
@@ -524,1085 +835,1173 @@
             animation: fadeInUp 0.4s ease both;
         }
 
-        /* ----- BADGE NOMOR KA (BISA DIKLIK UNTUK LIHAT RUTE LENGKAP) ----- */
-        .sched-route-toggle {
-            cursor: pointer;
-            user-select: none;
-            transition: filter 0.15s, transform 0.15s;
-        }
-        .sched-route-toggle:hover { filter: brightness(1.3); }
-        .sched-route-toggle.open { filter: brightness(1.35); }
-
-        .route-panel {
-            margin: 2px 0 10px;
-            padding: 8px 14px;
-            background: rgba(0, 180, 255, 0.04);
-            border-left: 2px dashed rgba(0, 200, 255, 0.25);
-            border-radius: 0 10px 10px 0;
-            animation: slideDown 0.25s ease both;
-        }
-        .route-stop {
-            display: flex;
-            gap: 10px;
-            align-items: baseline;
-            padding: 3px 0;
-            font-size: 0.78rem;
-            color: #9db4c8;
-        }
-        .route-stop-time {
-            font-feature-settings: "tnum";
-            color: #7fe9ff;
-            min-width: 42px;
-            font-weight: 600;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.001ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.001ms !important;
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
             }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .offline-banner {
+            display: none;
+            text-align: center;
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.25);
+            color: #f87171;
+            padding: 8px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }
+        .offline-banner.show {
+            display: block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .card.just-updated {
+            animation: cardFlash 1.1s ease-out;
+        }
+        @keyframes cardFlash {
+            0% {
+                border-color: rgba(0, 200, 255, 0.55);
+                box-shadow: 0 0 0 1px rgba(0, 200, 255, 0.25), 0 20px 60px -16px rgba(0, 0, 0, 0.8);
+            }
+            100% {
+                border-color: rgba(80, 180, 255, 0.08);
+                box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.8);
+            }
+        }
+
+        /* ----- FOOTER ----- */
+        .footer {
+            text-align: center;
+            color: #475569;
+            font-size: 0.8rem;
+            padding: 24px 0 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            margin-top: 12px;
+        }
+        #statusMessage {
+            color: #94a3b8;
+            transition: color 0.3s ease;
+        }
+
+        /* ----- Glow ring for live indicator ----- */
+        .glow-ring {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .live .dot {
+            position: relative;
+        }
+        .live .dot::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            border: 1px solid rgba(34, 211, 238, 0.15);
+            animation: ringPulse 2s ease-in-out infinite;
+        }
+        @keyframes ringPulse {
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        /* ----- Responsive tweaks ----- */
+        @media (max-width: 720px) {
+            body {
+                padding: 10px 12px;
+            }
+            .header {
+                padding: 10px 16px;
+                border-radius: 28px;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .header .badge {
+                gap: 12px;
+                font-size: 0.7rem;
+            }
+            .card {
+                padding: 14px 16px 20px;
+                border-radius: 24px;
+            }
+            .card-header h2 {
+                font-size: 1.1rem;
+            }
+            .card-header .update-time {
+                font-size: 0.6rem;
+                padding: 2px 10px;
+            }
+        }
+
+        /* Scrollbar global */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a1628;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1a3a5f;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a4a7f;
+        }
+
+        /* Status message color variations */
+        .status-ok {
+            color: #4ade80;
+        }
+        .status-warn {
+            color: #fbbf24;
+        }
+        .status-err {
+            color: #f87171;
         }
     </style>
 </head>
 <body>
-<div class="container">
 
-    <!-- HEADER -->
-    <header class="header">
-        <h1>⬡ NUSANTARA MONITOR</h1>
-        <div class="badge">
-            <span class="live"><span class="dot"></span> LIVE</span>
-            <span>🕐 <span id="clockNow">--:--:--</span></span>
-            <span>⏱️ <span id="lastUpdateTime">--</span></span>
-            <span>🔄 berikutnya <span id="nextRefreshCountdown">60</span>s</span>
+    <!-- Particle Background Canvas -->
+    <canvas id="particles-canvas"></canvas>
+
+    <div class="container">
+
+        <!-- HEADER -->
+        <header class="header">
+            <h1>⬡ NUSANTARA MONITOR</h1>
+            <div class="badge">
+                <span class="live"><span class="dot"></span> LIVE</span>
+                <span>🕐 <span id="clockNow">--:--:--</span></span>
+                <span>⏱️ <span id="lastUpdateTime">--</span></span>
+                <span>🔄 berikutnya <span id="nextRefreshCountdown">60</span>s</span>
+            </div>
+        </header>
+
+        <div class="offline-banner" id="offlineBanner">📡 Tidak ada koneksi internet — data akan diperbarui otomatis begitu koneksi kembali.</div>
+
+        <!-- GRID -->
+        <div class="grid">
+            <!-- CARD 1: KERETA (replaced with tabbed train board from first HTML) -->
+            <div class="card" id="trainCard" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <h2>🚆 KRL Real-Time · Jakarta–Bogor–Tangerang–Bekasi</h2>
+                    <span class="update-time" id="trainTime">--</span>
+                </div>
+
+                <!-- Tabs -->
+                <div class="train-tabs" id="trainTabs">
+                    <button class="train-tab active" data-line="bogor">
+                        <span class="line-dot bogor"></span> Bogor
+                        <span class="tab-badge" id="count-bogor">0</span>
+                    </button>
+                    <button class="train-tab" data-line="tangerang">
+                        <span class="line-dot tangerang"></span> Tangerang
+                        <span class="tab-badge" id="count-tangerang">0</span>
+                    </button>
+                    <button class="train-tab" data-line="bekasi">
+                        <span class="line-dot bekasi"></span> Bekasi
+                        <span class="tab-badge" id="count-bekasi">0</span>
+                    </button>
+                </div>
+
+                <!-- Panels -->
+                <div id="panel-bogor" class="train-panel active">
+                    <div class="panel-header">
+                        <h3>🚉 Jakarta Kota → Bogor <small>via Manggarai</small></h3>
+                        <span class="panel-stats" id="stats-bogor">— trains</span>
+                    </div>
+                    <div class="board">
+                        <div class="board-header">
+                            <span>Kereta</span>
+                            <span>Asal</span>
+                            <span>Tujuan</span>
+                            <span>Jadwal</span>
+                            <span>Status</span>
+                        </div>
+                        <div class="board-scroll" id="board-bogor"></div>
+                    </div>
+                </div>
+
+                <div id="panel-tangerang" class="train-panel">
+                    <div class="panel-header">
+                        <h3>🚉 Duri / Tanah Abang → Tangerang <small>via Serpong</small></h3>
+                        <span class="panel-stats" id="stats-tangerang">— trains</span>
+                    </div>
+                    <div class="board">
+                        <div class="board-header">
+                            <span>Kereta</span>
+                            <span>Asal</span>
+                            <span>Tujuan</span>
+                            <span>Jadwal</span>
+                            <span>Status</span>
+                        </div>
+                        <div class="board-scroll" id="board-tangerang"></div>
+                    </div>
+                </div>
+
+                <div id="panel-bekasi" class="train-panel">
+                    <div class="panel-header">
+                        <h3>🚉 Jakarta Kota → Bekasi <small>via Jatinegara</small></h3>
+                        <span class="panel-stats" id="stats-bekasi">— trains</span>
+                    </div>
+                    <div class="board">
+                        <div class="board-header">
+                            <span>Kereta</span>
+                            <span>Asal</span>
+                            <span>Tujuan</span>
+                            <span>Jadwal</span>
+                            <span>Status</span>
+                        </div>
+                        <div class="board-scroll" id="board-bekasi"></div>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px; font-size:0.7rem; color:#475569; text-align:right;">
+                    💡 Data simulasi real-time · diperbarui tiap 15 detik · inspired by
+                    <a href="https://github.com/comuline/api" target="_blank" style="color:#7fc9ff;text-decoration:none;">comuline/api</a>
+                </div>
+            </div>
+
+            <!-- CARD 2: AIR -->
+            <div class="card" id="waterCard">
+                <div class="card-header">
+                    <h2>🌊 Tinggi Muka Air</h2>
+                    <span class="update-time" id="waterTime">--</span>
+                </div>
+                <div class="card-body" id="waterBody">
+                    <div class="shimmer"></div><div class="shimmer" style="width:55%"></div>
+                    <div class="shimmer"></div><div class="shimmer" style="width:65%"></div>
+                </div>
+            </div>
+
+            <!-- CARD 3: GUNUNG -->
+            <div class="card" id="volcanoCard">
+                <div class="card-header">
+                    <h2>🌋 Status Gunung Api</h2>
+                    <span class="update-time" id="volcanoTime">--</span>
+                </div>
+                <div class="card-body" id="volcanoBody">
+                    <div class="shimmer"></div><div class="shimmer" style="width:50%"></div>
+                    <div class="shimmer"></div><div class="shimmer" style="width:75%"></div>
+                </div>
+            </div>
         </div>
-    </header>
 
-    <div class="offline-banner" id="offlineBanner">📡 Tidak ada koneksi internet — data akan diperbarui otomatis begitu koneksi kembali.</div>
-
-    <!-- GRID -->
-    <div class="grid">
-        <!-- CARD 1: KERETA -->
-        <div class="card" id="trainCard" style="grid-column: 1 / -1;">
-            <div class="card-header">
-                <h2>🚆 Commuter Line – Status Stasiun</h2>
-                <span class="update-time" id="trainTime">--</span>
-            </div>
-            <div class="search-wrap">
-                <input type="text" id="stationSearch" class="search-box" placeholder="🔍 Cari nama stasiun… (mis. Manggarai, Bogor, Tanah Abang)" autocomplete="off" />
-                <span class="search-hint" id="searchHint"></span>
-            </div>
-            <div class="table-wrap" id="trainBody">
-                <div class="shimmer"></div><div class="shimmer" style="width:70%"></div>
-                <div class="shimmer"></div><div class="shimmer" style="width:90%"></div>
-            </div>
-        </div>
-
-        <!-- CARD 2: AIR -->
-        <div class="card" id="waterCard">
-            <div class="card-header">
-                <h2>🌊 Tinggi Muka Air</h2>
-                <span class="update-time" id="waterTime">--</span>
-            </div>
-            <div class="card-body" id="waterBody">
-                <div class="shimmer"></div><div class="shimmer" style="width:55%"></div>
-                <div class="shimmer"></div><div class="shimmer" style="width:65%"></div>
-            </div>
-        </div>
-
-        <!-- CARD 3: GUNUNG -->
-        <div class="card" id="volcanoCard">
-            <div class="card-header">
-                <h2>🌋 Status Gunung Api</h2>
-                <span class="update-time" id="volcanoTime">--</span>
-            </div>
-            <div class="card-body" id="volcanoBody">
-                <div class="shimmer"></div><div class="shimmer" style="width:50%"></div>
-                <div class="shimmer"></div><div class="shimmer" style="width:75%"></div>
-            </div>
-        </div>
+        <footer class="footer">
+            Data real‑time dari sumber resmi &nbsp;·&nbsp;
+            <span id="statusMessage">⏳ memuat…</span>
+        </footer>
     </div>
 
-    <footer class="footer">
-        Data real‑time dari sumber resmi &nbsp;·&nbsp;
-        <span id="statusMessage">⏳ memuat…</span>
-    </footer>
-</div>
+    <script>
+        (function() {
+            'use strict';
 
-<script>
-    (function() {
-        'use strict';
+            // ============================================================
+            //  KONFIGURASI
+            // ============================================================
+            const TRAIN_REFRESH_MS = 15000; // 15 detik untuk kereta
+            const OTHER_REFRESH_MS = 60000; // 60 detik untuk air & gunung
 
-        // ============================================================
-        //  KONFIGURASI
-        // ============================================================
-        const REFRESH_MS = 60000; // 1 menit (agar tidak membebani server)
+            // ============================================================
+            //  PARTICLE BACKGROUND
+            // ============================================================
+            (function initParticles() {
+                const canvas = document.getElementById('particles-canvas');
+                const ctx = canvas.getContext('2d');
+                let w, h;
+                const particles = [];
+                const COUNT = 60;
 
-        // Rantai proxy CORS — dicoba berurutan, sehingga jika satu proxy
-        // sedang down/limit, program otomatis mencoba proxy berikutnya
-        // tanpa perlu campur tangan pengguna.
-        const CORS_PROXIES = [
-            (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-            (u) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-            (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-        ];
+                function resize() {
+                    w = canvas.width = window.innerWidth;
+                    h = canvas.height = window.innerHeight;
+                }
+                window.addEventListener('resize', resize);
+                resize();
 
-        const SOURCES = {
-            waterPrimary: 'https://bpbd.jakarta.go.id/waterlevel',
-            // waterFallback (poskobanjir.dsdadki.web.id) sengaja tidak
-            // dipakai lagi — situs itu sudah di balik login, sehingga
-            // scraping ke sana berisiko salah membaca kolom (lihat catatan
-            // di fetchWaterLevel).
-            volcanoPrimary: 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas',
-            volcanoFallback: 'https://magma.vsi.esdm.go.id/',
-        };
-
-        // ----- DOM refs -----
-        const trainBody = document.getElementById('trainBody');
-        const waterBody = document.getElementById('waterBody');
-        const volcanoBody = document.getElementById('volcanoBody');
-        const trainTime = document.getElementById('trainTime');
-        const waterTime = document.getElementById('waterTime');
-        const volcanoTime = document.getElementById('volcanoTime');
-        const lastUpdateTime = document.getElementById('lastUpdateTime');
-        const statusMsg = document.getElementById('statusMessage');
-        const clockNowEl = document.getElementById('clockNow');
-        const nextRefreshEl = document.getElementById('nextRefreshCountdown');
-        const offlineBanner = document.getElementById('offlineBanner');
-        const searchInput = document.getElementById('stationSearch');
-        const searchHint = document.getElementById('searchHint');
-
-        // ----- state global -----
-        let allStations = [];
-        let stationMap = new Map(); // station_id -> nama stasiun
-        const scheduleCache = new Map(); // station_id -> { ts, data }
-        const waterDataCache = new Map(); // nama pos -> riwayat pembacaan
-        const waterLevelDisplayed = new Map(); // nama pos -> angka cm terakhir ditampilkan (utk animasi hitung)
-        let nextRefreshAt = Date.now() + REFRESH_MS;
-        let lastSuccessfulRefresh = 0;
-        let openStationId = null;   // stasiun yang panel jadwalnya sedang terbuka
-        let openStationName = null;
-        const routeCache = new Map(); // train_id -> { ts, data } — hasil GET /v1/route/{train_id}
-
-        // Penanda "pernah berhasil dimuat" + kapan terakhir sukses, per kartu.
-        // Dipakai supaya saat SATU siklus refresh gagal (mis. proxy CORS
-        // sedang limit), data yang sudah tampil TIDAK ditimpa kotak error —
-        // cukup diberi catatan kecil, dan siklus berikutnya (tiap
-        // REFRESH_MS) otomatis mencoba lagi. Ini yang membuat pembaruan
-        // (terutama tinggi air) benar-benar berjalan periodik selama
-        // aplikasi dibuka, bukan "macet" begitu sekali gagal.
-        let trainsHasData = false, trainsLastSuccessAt = 0;
-        let waterHasData = false, waterLastSuccessAt = 0;
-        let volcanoHasData = false, volcanoLastSuccessAt = 0;
-
-        // ----- helpers umum -----
-        function formatTime(d) {
-            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }
-
-        function setStatus(msg, isError = false) {
-            statusMsg.textContent = msg;
-            statusMsg.style.color = isError ? '#f87171' : '#94a3b8';
-        }
-
-        function setCardTime(el, d) {
-            if (el) el.textContent = formatTime(d);
-        }
-
-        function escapeHtml(str) {
-            return String(str ?? '').replace(/[&<>"']/g, (c) => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
-
-        // Memvalidasi kode warna hex dari API (mis. metadata.origin.color
-        // pada jadwal comuline) sebelum dipakai di atribut style, supaya
-        // tidak ada nilai aneh/berbahaya yang lolos ke DOM.
-        function sanitizeHexColor(c) {
-            return typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : null;
-        }
-
-        // Menampilkan/memperbarui catatan kecil "gagal menyegarkan, pakai
-        // data lama" TANPA menghapus konten kartu yang sudah berhasil
-        // dimuat sebelumnya. Dipanggil hanya ketika siklus refresh gagal
-        // padahal sudah pernah ada data sukses sebelumnya.
-        function renderStaleWarning(bodyEl, warnId, lastSuccessAt, message) {
-            let warn = document.getElementById(warnId);
-            if (!warn) {
-                warn = document.createElement('div');
-                warn.id = warnId;
-                warn.className = 'stale-warning';
-                bodyEl.appendChild(warn);
-            }
-            const lastStr = lastSuccessAt ? formatTime(new Date(lastSuccessAt)) : '--';
-            warn.textContent = `⚠️ Gagal menyegarkan (${message}) — menampilkan data terakhir pukul ${lastStr} WIB. Mencoba lagi otomatis tiap ${Math.round(REFRESH_MS / 1000)} detik…`;
-        }
-
-        function clearStaleWarning(warnId) {
-            const warn = document.getElementById(warnId);
-            if (warn) warn.remove();
-        }
-
-        // Mengambil HTML sebuah URL lewat rantai proxy CORS, mencoba satu per
-        // satu sampai ada yang berhasil. Juga mendeteksi halaman blokir dari
-        // sistem keamanan situs sumber supaya tidak dianggap sukses palsu.
-        async function fetchTextResilient(targetUrl, timeout = 12000) {
-            let lastErr = new Error('Semua proxy CORS gagal diakses');
-            for (const buildUrl of CORS_PROXIES) {
-                try {
-                    const resp = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(timeout) });
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    const text = await resp.text();
-                    if (!text || text.length < 100) throw new Error('Respons kosong');
-                    if (text.length < 4000 && /aktivitas mencurigakan|support id|akses ditolak/i.test(text)) {
-                        throw new Error('Diblokir sistem keamanan situs sumber');
+                class Particle {
+                    constructor() {
+                        this.reset();
                     }
-                    return text;
-                } catch (err) {
-                    lastErr = err;
-                }
-            }
-            throw lastErr;
-        }
-
-        // Mengambil JSON dari API real-time (mis. Comuline) dengan strategi
-        // berlapis: (1) fetch langsung dua kali (percobaan ulang cepat bila
-        // gagal sesaat/timeout), (2) bila API publik sedang bermasalah CORS
-        // atau down, coba lewat rantai proxy CORS yang sama seperti sumber
-        // lain, supaya jadwal & status stasiun tetap bisa real-time didapat
-        // dari berbagai jalur tanpa campur tangan pengguna.
-        async function fetchJsonResilient(url, { timeout = 12000, directRetries = 2 } = {}) {
-            let lastErr = new Error('Gagal mengambil data JSON');
-
-            for (let i = 0; i < directRetries; i++) {
-                try {
-                    const resp = await fetch(url, {
-                        signal: AbortSignal.timeout(timeout),
-                        cache: 'no-store',
-                    });
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    return await resp.json();
-                } catch (err) {
-                    lastErr = err;
-                }
-            }
-
-            for (const buildUrl of CORS_PROXIES) {
-                try {
-                    const resp = await fetch(buildUrl(url), { signal: AbortSignal.timeout(timeout) });
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    const text = await resp.text();
-                    return JSON.parse(text);
-                } catch (err) {
-                    lastErr = err;
-                }
-            }
-
-            throw lastErr;
-        }
-
-        // ============================================================
-        //  1. KERETA – dari API publik Comuline (real‑time)
-        //     Daftar stasiun + status aktif/tidak + JADWAL KEBERANGKATAN
-        //     REAL per stasiun (klik nama stasiun untuk membuka)
-        // ============================================================
-        async function fetchTrains() {
-            try {
-                const url = 'https://api.comuline.com/v1/station';
-                const json = await fetchJsonResilient(url, { timeout: 15000 });
-                if (!json.data || !Array.isArray(json.data)) throw new Error('Format data tidak dikenal');
-
-                allStations = json.data;
-                stationMap = new Map(allStations.map((s) => [s.id, s.name || s.id]));
-
-                // Terapkan ulang filter pencarian yang sedang aktif (jika ada)
-                // supaya pencarian pengguna tidak hilang saat auto-refresh.
-                applyStationFilter();
-
-                trainsHasData = true;
-                trainsLastSuccessAt = Date.now();
-                setCardTime(trainTime, new Date());
-                setStatus('✅ Kereta OK');
-            } catch (err) {
-                if (trainsHasData) {
-                    // Tabel stasiun yang sudah berhasil dimuat sebelumnya tetap
-                    // dibiarkan tampil; cukup beri catatan kecil, siklus
-                    // berikutnya otomatis mencoba lagi.
-                    renderStaleWarning(trainBody, 'trainStaleWarn', trainsLastSuccessAt, err.message);
-                    setStatus('⚠️ Kereta: pakai data terakhir', true);
-                } else {
-                    trainBody.innerHTML = `
-                        <div class="no-data">
-                            ⚠️ Gagal memuat data stasiun<br>
-                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                            <br><br>
-                            💡 Sumber: api.comuline.com (publik)
-                        </div>
-                    `;
-                    setStatus('❌ Gagal kereta', true);
-                }
-            }
-        }
-
-        function applyStationFilter() {
-            const q = (searchInput?.value || '').trim().toLowerCase();
-            if (!q) {
-                renderStationsTable(allStations.slice(0, 20));
-                if (searchHint) searchHint.textContent = '';
-                return;
-            }
-            const filtered = allStations.filter((s) =>
-                (s.name || '').toLowerCase().includes(q) || (s.id || '').toLowerCase().includes(q)
-            );
-            renderStationsTable(filtered.slice(0, 30));
-            if (searchHint) searchHint.textContent = `${filtered.length} hasil`;
-        }
-
-        function renderStationsTable(stations) {
-            if (!stations.length) {
-                trainBody.innerHTML = `<div class="no-data">Tidak ada stasiun yang cocok dengan pencarian.</div>`;
-                return;
-            }
-
-            let html = `
-                <table class="train-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Nama Stasiun</th>
-                            <th>Jenis</th>
-                            <th>Status Operasional</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            stations.forEach((s, idx) => {
-                const name = s.name || s.id || 'Tidak diketahui';
-                const type = s.type || '-';
-
-                const active = s.metadata?.active;
-                let statusClass = 'status-badge unknown';
-                let statusText = 'Tidak diketahui';
-                if (active === true) {
-                    statusClass = 'status-badge active';
-                    statusText = '🟢 Aktif';
-                } else if (active === false) {
-                    statusClass = 'status-badge inactive';
-                    statusText = '🔴 Tutup';
-                }
-
-                html += `
-                    <tr class="station-row" data-station-id="${escapeHtml(s.id)}" data-station-name="${escapeHtml(name)}">
-                        <td>${idx + 1}</td>
-                        <td class="station-name">${escapeHtml(name)}<span class="expand-hint">▸</span></td>
-                        <td><span class="line-badge">${escapeHtml(type)}</span></td>
-                        <td><span class="${statusClass}">${statusText}</span></td>
-                    </tr>
-                    <tr class="schedule-row" style="display:none;">
-                        <td colspan="4"></td>
-                    </tr>
-                `;
-            });
-
-            html += `
-                    </tbody>
-                </table>
-                <div style="margin-top:12px; font-size:0.75rem; color:#475569; text-align:right;">
-                    💡 Klik nama stasiun untuk jadwal keberangkatan real-time · Sumber: api.comuline.com · diperbarui setiap 60 detik
-                </div>
-            `;
-
-            trainBody.innerHTML = html;
-
-            // Jika ada stasiun yang panel jadwalnya sedang terbuka sebelum
-            // tabel ini dibangun ulang (mis. saat auto-refresh 60 detik),
-            // kembalikan tampilan "terbuka"-nya di sini supaya pengguna
-            // tidak merasa panelnya tiba-tiba tertutup sendiri — kesan
-            // "real-time" jadi utuh, bukan reset tiap menit.
-            if (openStationId) {
-                const row = trainBody.querySelector(`tr.station-row[data-station-id="${CSS.escape(openStationId)}"]`);
-                if (row) {
-                    row.classList.add('open');
-                    const scheduleRow = row.nextElementSibling;
-                    if (scheduleRow) {
-                        scheduleRow.style.display = '';
-                        const cell = scheduleRow.querySelector('td');
-                        const cachedSched = scheduleCache.get(openStationId);
-                        cell.innerHTML = cachedSched
-                            ? renderSchedulePanel(cachedSched.data, openStationName)
-                            : `<div class="schedule-panel"><div class="loading-inline"><span class="schedule-spinner"></span>Memuat jadwal real-time ${escapeHtml(openStationName)}…</div></div>`;
+                    reset() {
+                        this.x = Math.random() * w;
+                        this.y = Math.random() * h;
+                        this.r = Math.random() * 1.8 + 0.6;
+                        this.dx = (Math.random() - 0.5) * 0.35;
+                        this.dy = (Math.random() - 0.5) * 0.35;
+                        this.alpha = Math.random() * 0.4 + 0.1;
                     }
-                } else {
-                    // Stasiun yang tadinya terbuka tidak ada lagi di hasil
-                    // filter pencarian saat ini — biarkan tertutup wajar.
-                    openStationId = null;
-                    openStationName = null;
+                    update() {
+                        this.x += this.dx;
+                        this.y += this.dy;
+                        if (this.x < 0 || this.x > w) this.dx *= -1;
+                        if (this.y < 0 || this.y > h) this.dy *= -1;
+                        if (this.x < 0) this.x = 0;
+                        if (this.x > w) this.x = w;
+                        if (this.y < 0) this.y = 0;
+                        if (this.y > h) this.y = h;
+                    }
+                    draw() {
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(100, 200, 255, ${this.alpha})`;
+                        ctx.fill();
+                        // glow
+                        ctx.shadowColor = 'rgba(100, 200, 255, 0.2)';
+                        ctx.shadowBlur = 8;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
                 }
-            }
-        }
 
-        // Klik baris stasiun -> buka/tutup panel jadwal keberangkatan real.
-        // Delegasi event dipasang sekali saja di elemen induk yang stabil
-        // (trainBody tidak pernah diganti sebagai elemen, hanya innerHTML-nya).
-        trainBody.addEventListener('click', async (e) => {
-            const row = e.target.closest('tr.station-row');
-            if (!row) return;
-
-            const scheduleRow = row.nextElementSibling;
-            if (!scheduleRow || !scheduleRow.classList.contains('schedule-row')) return;
-
-            const stationId = row.dataset.stationId;
-            const stationName = row.dataset.stationName;
-
-            // Tutup baris lain yang sedang terbuka agar tabel tetap ringkas
-            trainBody.querySelectorAll('tr.station-row.open').forEach((r) => {
-                if (r !== row) {
-                    r.classList.remove('open');
-                    const otherSched = r.nextElementSibling;
-                    if (otherSched) otherSched.style.display = 'none';
+                for (let i = 0; i < COUNT; i++) {
+                    particles.push(new Particle());
                 }
-            });
 
-            const isOpen = row.classList.contains('open');
-            if (isOpen) {
-                row.classList.remove('open');
-                scheduleRow.style.display = 'none';
-                openStationId = null;
-                openStationName = null;
-                return;
-            }
-
-            row.classList.add('open');
-            scheduleRow.style.display = '';
-            openStationId = stationId;
-            openStationName = stationName;
-            const cell = scheduleRow.querySelector('td');
-            cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline"><span class="schedule-spinner"></span>Memuat jadwal real-time ${escapeHtml(stationName)}…</div></div>`;
-
-            try {
-                const schedules = await fetchStationSchedule(stationId, true);
-                cell.innerHTML = renderSchedulePanel(schedules, stationName);
-            } catch (err) {
-                cell.innerHTML = `<div class="schedule-panel"><div class="loading-inline" style="color:#f87171;">⚠️ Gagal memuat jadwal: ${escapeHtml(err.message)}</div></div>`;
-            }
-        });
-
-        // Klik badge "KA <nomor>" di dalam panel jadwal -> buka/tutup rute
-        // lengkap pemberhentian kereta tersebut (fitur endpoint /v1/route
-        // dari comuline/api yang sebelumnya belum dipakai di dashboard ini).
-        trainBody.addEventListener('click', async (e) => {
-            const badge = e.target.closest('.sched-route-toggle');
-            if (!badge) return;
-            e.stopPropagation();
-
-            const trainId = badge.dataset.trainId;
-            if (!trainId) return;
-
-            const item = badge.closest('.sched-item');
-            if (!item) return;
-
-            const existingPanel = item.nextElementSibling;
-            if (existingPanel && existingPanel.classList.contains('route-panel')) {
-                existingPanel.remove();
-                badge.classList.remove('open');
-                return;
-            }
-
-            // Tutup panel rute lain yang mungkin sedang terbuka di jadwal
-            // stasiun yang sama, supaya panel tetap ringkas.
-            const panelContainer = item.closest('.schedule-panel');
-            if (panelContainer) {
-                panelContainer.querySelectorAll('.route-panel').forEach((el) => el.remove());
-                panelContainer.querySelectorAll('.sched-route-toggle.open').forEach((el) => el.classList.remove('open'));
-            }
-
-            badge.classList.add('open');
-            const panel = document.createElement('div');
-            panel.className = 'route-panel';
-            panel.innerHTML = `<div class="loading-inline"><span class="schedule-spinner"></span>Memuat rute KA ${escapeHtml(trainId)}…</div>`;
-            item.after(panel);
-
-            try {
-                const route = await fetchTrainRoute(trainId);
-                panel.innerHTML = renderRoutePanel(route);
-            } catch (err) {
-                panel.innerHTML = `<div class="loading-inline" style="color:#f87171;">⚠️ Gagal memuat rute: ${escapeHtml(err.message)}</div>`;
-            }
-        });
-
-        if (searchInput) {
-            searchInput.addEventListener('input', applyStationFilter);
-        }
-
-        // Cache jadwal dibuat singkat (selaras dengan siklus REFRESH_MS) agar
-        // data yang tampil betul-betul real-time; `force=true` (dipakai saat
-        // auto-refresh berkala) selalu mengambil data terbaru dari server,
-        // melewati cache sepenuhnya.
-        async function fetchStationSchedule(stationId, force = false) {
-            const cached = scheduleCache.get(stationId);
-            if (!force && cached && Date.now() - cached.ts < REFRESH_MS) {
-                return cached.data;
-            }
-            const json = await fetchJsonResilient(
-                `https://api.comuline.com/v1/schedule/${encodeURIComponent(stationId)}`,
-                { timeout: 15000 }
-            );
-            if (!json.data || !Array.isArray(json.data)) throw new Error('Format jadwal tidak dikenal');
-            scheduleCache.set(stationId, { ts: Date.now(), data: json.data });
-            return json.data;
-        }
-
-        // Menyegarkan panel jadwal yang sedang terbuka (dipanggil tiap siklus
-        // refreshAll) supaya jadwal keberangkatan tetap real-time mengikuti
-        // waktu berjalan, tanpa perlu pengguna klik ulang stasiunnya.
-        async function refreshOpenSchedulePanel() {
-            if (!openStationId) return;
-            const row = trainBody.querySelector(`tr.station-row[data-station-id="${CSS.escape(openStationId)}"]`);
-            if (!row || !row.classList.contains('open')) { openStationId = null; openStationName = null; return; }
-            const scheduleRow = row.nextElementSibling;
-            const cell = scheduleRow?.querySelector('td');
-            if (!cell) return;
-
-            const existingPanel = cell.querySelector('.schedule-panel');
-            if (existingPanel) {
-                // Tandai sedang menyegarkan tanpa menghapus tampilan lama,
-                // supaya tidak "berkedip" kosong saat auto-refresh.
-                let tag = existingPanel.querySelector('.live-refresh-tag');
-                if (!tag) {
-                    tag = document.createElement('span');
-                    tag.className = 'live-refresh-tag';
-                    tag.innerHTML = '<span class="schedule-spinner"></span>menyegarkan…';
-                    existingPanel.prepend(tag);
-                }
-            }
-
-            try {
-                const schedules = await fetchStationSchedule(openStationId, true);
-                cell.innerHTML = renderSchedulePanel(schedules, openStationName);
-            } catch (err) {
-                const tag = cell.querySelector('.live-refresh-tag');
-                if (tag) tag.remove();
-            }
-        }
-
-        function renderSchedulePanel(schedules, stationName) {
-            const now = new Date();
-            const upcoming = schedules
-                .filter((s) => new Date(s.departs_at) >= now)
-                .sort((a, b) => new Date(a.departs_at) - new Date(b.departs_at))
-                .slice(0, 6);
-
-            if (upcoming.length === 0) {
-                return `
-                    <div class="schedule-panel">
-                        <div class="loading-inline">🌙 Tidak ada keberangkatan lagi dari ${escapeHtml(stationName)} untuk sisa hari ini pada data yang tersedia.</div>
-                    </div>
-                `;
-            }
-
-            let html = `<div class="schedule-panel">`;
-            html += `<div class="item-sub" style="margin-bottom:6px;">🟢 Real-time · diperbarui ${escapeHtml(formatTime(now))} WIB</div>`;
-            upcoming.forEach((s) => {
-                const time = new Date(s.departs_at).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'Asia/Jakarta',
-                });
-                const dest = stationMap.get(s.station_destination_id) || s.station_destination_id || '-';
-                const origin = stationMap.get(s.station_origin_id) || s.station_origin_id || '-';
-
-                // Warna resmi jalur (mis. "#DD0067") disediakan API di
-                // metadata.origin.color — dipakai mewarnai badge KA supaya
-                // sesuai dengan warna jalur commuter line yang sebenarnya.
-                const lineColor = sanitizeHexColor(s.metadata?.origin?.color);
-                const badgeStyle = lineColor
-                    ? ` style="color:${lineColor};border-color:${lineColor}99;background:${lineColor}22;"`
-                    : '';
-
-                html += `
-                    <div class="sched-item">
-                        <span class="sched-time">${time}</span>
-                        <span class="sched-route">${escapeHtml(origin)} → ${escapeHtml(dest)}<br><span class="sched-line">${escapeHtml(s.line || '')}</span></span>
-                        <span class="line-badge sched-route-toggle" data-train-id="${escapeHtml(s.train_id || '')}"${badgeStyle} title="Klik untuk lihat rute lengkap pemberhentian">KA ${escapeHtml(s.train_id || '-')} ▾</span>
-                    </div>
-                `;
-            });
-            html += `<div class="item-sub" style="margin-top:6px;">Jam berangkat real dari jadwal resmi KAI (via api.comuline.com), zona waktu WIB · 💡 klik nomor KA untuk lihat rute lengkap pemberhentian.</div>`;
-            html += `</div>`;
-            return html;
-        }
-
-        // ============================================================
-        //  RUTE LENGKAP KERETA (GET /v1/route/{train_id})
-        //  Endpoint resmi comuline/api ini mengembalikan seluruh urutan
-        //  stasiun pemberhentian satu nomor KA — dipakai saat pengguna
-        //  klik badge "KA <nomor>" pada panel jadwal di atas.
-        // ============================================================
-        async function fetchTrainRoute(trainId, force = false) {
-            const cached = routeCache.get(trainId);
-            if (!force && cached && Date.now() - cached.ts < REFRESH_MS * 5) {
-                return cached.data;
-            }
-            const json = await fetchJsonResilient(
-                `https://api.comuline.com/v1/route/${encodeURIComponent(trainId)}`,
-                { timeout: 15000 }
-            );
-            // API mengembalikan array kosong [] bila train_id tak ditemukan,
-            // atau objek {routes, details} bila ditemukan — lihat
-            // route.controller.ts pada comuline/api.
-            const data = (json.data && !Array.isArray(json.data)) ? json.data : { routes: [], details: {} };
-            routeCache.set(trainId, { ts: Date.now(), data });
-            return data;
-        }
-
-        function renderRoutePanel(route) {
-            const stops = Array.isArray(route?.routes) ? route.routes : [];
-            if (!stops.length) {
-                return `<div class="route-panel-inner"><div class="loading-inline">Data rute lengkap tidak tersedia untuk KA ini.</div></div>`;
-            }
-            const det = route.details || {};
-            let html = `<div class="route-panel-inner">`;
-            html += `<div class="item-sub" style="margin-bottom:6px;">🚉 Rute lengkap: ${escapeHtml(det.station_origin_name || '-')} → ${escapeHtml(det.station_destination_name || '-')}${det.line ? ' · ' + escapeHtml(det.line) : ''}</div>`;
-            stops.forEach((s) => {
-                const time = new Date(s.departs_at).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'Asia/Jakarta',
-                });
-                html += `<div class="route-stop"><span class="route-stop-time">${time}</span><span class="route-stop-name">${escapeHtml(s.station_name)}</span></div>`;
-            });
-            html += `<div class="item-sub" style="margin-top:6px;">Sumber: api.comuline.com/v1/route/${escapeHtml(det.train_id || '')}</div>`;
-            html += `</div>`;
-            return html;
-        }
-
-        // ============================================================
-        //  2. TINGGI MUKA AIR – dari BPBD DKI Jakarta (data Dinas SDA)
-        //     Sumber lama (poskobanjir.dsdadki.web.id) kini di balik
-        //     login sehingga tidak bisa lagi di-scrape; diganti ke
-        //     halaman publik bpbd.jakarta.go.id/waterlevel yang berisi
-        //     angka TMA per jam untuk 12 pos pantau di Jakarta.
-        // ============================================================
-        async function fetchWaterLevel() {
-            try {
-                const html = await fetchTextResilient(SOURCES.waterPrimary);
-                const stations = parseBpbdWaterLevel(html);
-                if (!stations.length) throw new Error('Tabel TMA tidak ditemukan / tidak valid di halaman sumber');
-
-                renderWaterLevel(stations);
-                clearStaleWarning('waterStaleWarn');
-                waterHasData = true;
-                waterLastSuccessAt = Date.now();
-                setCardTime(waterTime, new Date());
-                setStatus('✅ Air OK');
-            } catch (err) {
-                // CATATAN: sumber cadangan lama (poskobanjir.dsdadki.web.id)
-                // SENGAJA tidak lagi dipakai — situs itu sudah di balik
-                // login sehingga strukturnya berubah/tidak bisa ditebak.
-                // Mencoba scrape situs semacam itu berisiko salah memetakan
-                // kolom (mis. kolom "tanggal update" ikut terbaca sebagai
-                // angka cm), sehingga bisa menampilkan angka yang SALAH
-                // tanpa terlihat seperti error. Untuk data ketinggian air,
-                // lebih aman menampilkan status jujur (data lama / belum
-                // ada data) daripada angka yang berpotensi keliru.
-                if (waterHasData) {
-                    // Sudah pernah berhasil dimuat & TERVALIDASI sebelumnya
-                    // — tabel lama (lengkap dengan angka cm & +/- tiap pos)
-                    // dibiarkan tetap tampil apa adanya, hanya diberi
-                    // catatan kecil. Siklus refresh berikutnya (tiap
-                    // REFRESH_MS, otomatis selama aplikasi terbuka) akan
-                    // mencoba lagi tanpa perlu tindakan pengguna.
-                    renderStaleWarning(waterBody, 'waterStaleWarn', waterLastSuccessAt, err.message);
-                    setStatus('⚠️ Air: pakai data terakhir', true);
-                } else {
-                    // Belum pernah berhasil sama sekali sejak halaman
-                    // dibuka — tegaskan secara eksplisit bahwa datanya
-                    // BELUM ADA (bukan 0 cm / kosong), supaya tidak
-                    // disalahartikan sebagai data asli.
-                    waterBody.innerHTML = `
-                        <div style="color:#f87171; padding:12px;">
-                            ⚠️ Belum ada data — belum berhasil terhubung ke sumber tinggi muka air<br>
-                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                            <br><br>
-                            <span style="font-size:0.8rem; color:#6b7f94;">Dashboard akan mencoba lagi otomatis tiap ${Math.round(REFRESH_MS / 1000)} detik.</span>
-                            <br><br>
-                            💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
-                        </div>
-                    `;
-                    setStatus('❌ Belum ada data air', true);
-                }
-            }
-        }
-
-        // Validasi kewajaran angka cm hasil parsing — pos pantau TMA di
-        // Jakarta berkisar sekitar -300..+700 cm; rentang longgar di bawah
-        // ini dipakai untuk menyaring hasil parsing yang keliru (mis. teks
-        // lain di halaman yang kebetulan cocok pola regex) SEBELUM
-        // ditampilkan ke pengguna, supaya angka yang tampil selalu berupa
-        // ketinggian air sungguhan.
-        function isPlausibleWaterCm(n) {
-            return Number.isFinite(n) && n > -1000 && n < 3000;
-        }
-
-        // Parser halaman bpbd.jakarta.go.id/waterlevel. Halaman ini adalah
-        // HTML biasa (bukan aplikasi JS), berisi 12 pos pantau dengan 20
-        // pembacaan per jam berformat "N cm (KODE_CUACA)". Diparse lewat teks
-        // agar tahan terhadap perubahan kecil pada struktur tag.
-        function parseBpbdWaterLevel(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            let text = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
-
-            const startIdx = text.search(/PEMANTAUAN TINGGI MUKA AIR/i);
-            const legendIdx = text.search(/Siaga I\b/);
-            if (startIdx !== -1) {
-                text = text.slice(startIdx, legendIdx !== -1 && legendIdx > startIdx ? legendIdx : undefined);
-            }
-
-            const hourMatches = [...text.matchAll(/\b([01]\d|2[0-3]):00\b/g)].map((m) => m[0]);
-            const latestHour = hourMatches[0] || '--:--';
-
-            const stationRegex = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-\s]{2,40}?)\s+((?:-?\d+\s*cm\s*\([A-Z]{1,2}\)\s*){2,20})/g;
-            const stations = [];
-            let match;
-            while ((match = stationRegex.exec(text)) !== null) {
-                let name = match[1].trim().replace(/^Pintu Air\s*/i, '').trim();
-                if (!name || /^(Filter|Waktu|Pintu Air)$/i.test(name)) continue;
-
-                const readings = [...match[2].matchAll(/(-?\d+)\s*cm\s*\(([A-Z]{1,2})\)/g)]
-                    .map((r) => ({ cm: parseInt(r[1], 10), code: r[2] }))
-                    .filter((r) => isPlausibleWaterCm(r.cm));
-                if (readings.length === 0) continue;
-
-                stations.push({ name, readings });
-            }
-
-            waterDataCache.clear();
-            stations.forEach((s) => waterDataCache.set(s.name, s.readings));
-
-            return stations.map((s) => ({
-                name: s.name,
-                hourLabel: latestHour,
-                latest: s.readings[0],
-                prev: s.readings[1] || null,
-            }));
-        }
-
-        // Klasifikasi TREN kenaikan/penurunan berdasarkan selisih cm antar
-        // pembacaan (BUKAN status siaga banjir resmi — sumber BPBD ini tidak
-        // menyertakan level siaga per pos, jadi label di sini murni
-        // menggambarkan arah & kecepatan perubahan muka air).
-        function classifyWaterTrend(delta) {
-            if (delta > 10) return { cls: 'rise-fast', text: '⤴ Naik cepat' };
-            if (delta > 0) return { cls: 'rise', text: '↗ Naik' };
-            if (delta === 0) return { cls: 'stable', text: '▬ Stabil' };
-            if (delta >= -10) return { cls: 'fall', text: '↘ Turun' };
-            return { cls: 'fall-fast', text: '⤵ Turun cepat' };
-        }
-
-        function renderWaterLevel(stations) {
-            const weatherMap = { T: 'Cerah', MT: 'Mendung Tipis', M: 'Mendung', G: 'Gerimis', H: 'Hujan' };
-            let html = '';
-
-            stations.forEach((st) => {
-                const delta = st.prev ? st.latest.cm - st.prev.cm : 0;
-                const trend = classifyWaterTrend(delta);
-                const sign = delta > 0 ? '+' : (delta < 0 ? '−' : '±');
-                const deltaCls = delta > 0 ? 'delta-up' : (delta < 0 ? 'delta-down' : 'delta-flat');
-                const deltaLabel = `${sign}${Math.abs(delta)} cm`;
-
-                const weatherText = weatherMap[st.latest.code] || st.latest.code || '';
-
-                const prevDisplayed = waterLevelDisplayed.get(st.name);
-                const isChanged = prevDisplayed === undefined || prevDisplayed !== st.latest.cm;
-                waterLevelDisplayed.set(st.name, st.latest.cm);
-
-                html += `
-                    <div class="item">
-                        <span class="label">
-                            ${escapeHtml(st.name)}
-                            <div class="item-sub">per ${escapeHtml(st.hourLabel)} WIB${weatherText ? ' · ' + escapeHtml(weatherText) : ''}</div>
-                        </span>
-                        <span class="value" style="text-align:right;">
-                            <span>
-                                <span class="water-level${isChanged ? ' flash' : ''}" data-station="${escapeHtml(st.name)}">${st.latest.cm}</span> cm
-                                <span class="delta-badge ${deltaCls}">${deltaLabel}</span>
-                            </span>
-                            <span class="trend-status ${trend.cls}">${trend.text}</span>
-                        </span>
-                    </div>
-                `;
-            });
-
-            html += `
-                <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                    Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · angka diperbarui sumbernya tiap jam, dicek ulang otomatis oleh dashboard ini tiap ${Math.round(REFRESH_MS / 1000)} detik selama halaman terbuka · label tren dihitung dari selisih pembacaan, bukan status siaga resmi
-                </div>
-            `;
-
-            waterBody.innerHTML = html;
-        }
-
-        // ============================================================
-        //  3. GUNUNG API – dari MAGMA Indonesia (PVMBG), halaman
-        //     "Tingkat Aktivitas Gunung Api" yang berisi tabel resmi
-        //     terkelompok per level (Awas/Siaga/Waspada/Normal),
-        //     bukan lagi menebak dari homepage peta yang butuh JS.
-        // ============================================================
-        async function fetchVolcanoes() {
-            try {
-                const html = await fetchTextResilient(SOURCES.volcanoPrimary);
-                const groups = parseMagmaActivityTable(html);
-                const totalCount = Object.values(groups).reduce((a, arr) => a + arr.length, 0);
-                if (totalCount === 0) throw new Error('Tabel tingkat aktivitas tidak ditemukan di halaman sumber');
-
-                renderVolcanoes(groups);
-                volcanoHasData = true;
-                volcanoLastSuccessAt = Date.now();
-                setCardTime(volcanoTime, new Date());
-                setStatus('✅ Gunung OK');
-                return;
-            } catch (err) {
-                // Fallback: heuristik kasar dari homepage peta lama
-                try {
-                    const html2 = await fetchTextResilient(SOURCES.volcanoFallback);
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html2, 'text/html');
-                    const bodyText = doc.body?.innerText || doc.body?.textContent || '';
-                    const lines = bodyText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
-
-                    let volcanoLines = [];
-                    for (let line of lines) {
-                        if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal|aktif|vulkanik/i)) {
-                            if (!volcanoLines.includes(line)) volcanoLines.push(line);
+                function drawLines() {
+                    for (let i = 0; i < particles.length; i++) {
+                        for (let j = i + 1; j < particles.length; j++) {
+                            const dx = particles[i].x - particles[j].x;
+                            const dy = particles[i].y - particles[j].y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < 150) {
+                                ctx.beginPath();
+                                ctx.moveTo(particles[i].x, particles[i].y);
+                                ctx.lineTo(particles[j].x, particles[j].y);
+                                ctx.strokeStyle = `rgba(80, 180, 255, ${0.06 * (1 - dist / 150)})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.stroke();
+                            }
                         }
-                        if (volcanoLines.length >= 15) break;
-                    }
-                    if (volcanoLines.length === 0) throw new Error('Tidak ditemukan data gunung (kemungkinan situs berubah)');
-
-                    let htmlOut = '';
-                    volcanoLines.slice(0, 12).forEach((line) => {
-                        let statusClass = 'status-normal';
-                        let statusText = 'Normal';
-                        const lower = line.toLowerCase();
-                        if (lower.includes('awas')) { statusClass = 'status-awas'; statusText = 'AWAS'; }
-                        else if (lower.includes('siaga')) { statusClass = 'status-siaga'; statusText = 'SIAGA'; }
-                        else if (lower.includes('waspada')) { statusClass = 'status-waspada'; statusText = 'WASPADA'; }
-                        const display = line.length > 80 ? line.slice(0, 80) + '…' : line;
-                        htmlOut += `<div class="item"><span class="label">${escapeHtml(display)}</span><span class="value ${statusClass}">${statusText}</span></div>`;
-                    });
-                    htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: magma.vsi.esdm.go.id (fallback, ringkasan kasar)</div>`;
-                    volcanoBody.innerHTML = htmlOut;
-                    volcanoHasData = true;
-                    volcanoLastSuccessAt = Date.now();
-                    setCardTime(volcanoTime, new Date());
-                    setStatus('✅ Gunung OK (fallback)');
-                } catch (err2) {
-                    if (volcanoHasData) {
-                        renderStaleWarning(volcanoBody, 'volcanoStaleWarn', volcanoLastSuccessAt, err.message);
-                        setStatus('⚠️ Gunung: pakai data terakhir', true);
-                    } else {
-                        volcanoBody.innerHTML = `
-                            <div style="color:#f87171; padding:12px;">
-                                ⚠️ Gagal memuat status gunung<br>
-                                <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                                <br><br>
-                                💡 Cek langsung: <a href="${SOURCES.volcanoPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">magma.esdm.go.id</a>
-                            </div>
-                        `;
-                        setStatus('❌ Gagal gunung', true);
                     }
                 }
+
+                function animate() {
+                    ctx.clearRect(0, 0, w, h);
+                    particles.forEach((p) => { p.update();
+                        p.draw(); });
+                    drawLines();
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            })();
+
+            // ============================================================
+            //  TRAIN SYSTEM (from first HTML, adapted)
+            // ============================================================
+            const LINES = {
+                bogor: {
+                    label: 'Bogor',
+                    color: '#00b894',
+                    stations: {
+                        origin: ['Jakarta Kota', 'Gambir', 'Juanda', 'Gondangdia', 'Manggarai'],
+                        dest: ['Bogor', 'Bojong Gede', 'Citayam', 'Depok', 'UI']
+                    },
+                    prefix: 'B'
+                },
+                tangerang: {
+                    label: 'Tangerang',
+                    color: '#0984e3',
+                    stations: {
+                        origin: ['Duri', 'Tanah Abang', 'Palmerah', 'Kebayoran', 'Pondok Ranji'],
+                        dest: ['Tangerang', 'Serpong', 'Cisauk', 'Rawa Buntu', 'Sudimara']
+                    },
+                    prefix: 'T'
+                },
+                bekasi: {
+                    label: 'Bekasi',
+                    color: '#fd79a8',
+                    stations: {
+                        origin: ['Jakarta Kota', 'Mangga Besar', 'Sawah Besar', 'Jatinegara', 'Matraman'],
+                        dest: ['Bekasi', 'Kranji', 'Cakung', 'Klender', 'Buaran']
+                    },
+                    prefix: 'K'
+                }
+            };
+
+            let allTrains = { bogor: [], tangerang: [], bekasi: [] };
+            let trainUpdateCounter = 0;
+            let activeLine = 'bogor';
+            let trainRefreshTimer = null;
+
+            const trainPanels = {
+                bogor: { board: document.getElementById('board-bogor'), stats: document.getElementById('stats-bogor'),
+                    count: document.getElementById('count-bogor') },
+                tangerang: { board: document.getElementById('board-tangerang'), stats: document.getElementById(
+                        'stats-tangerang'), count: document.getElementById('count-tangerang') },
+                bekasi: { board: document.getElementById('board-bekasi'), stats: document.getElementById('stats-bekasi'),
+                    count: document.getElementById('count-bekasi') }
+            };
+
+            const trainTimeEl = document.getElementById('trainTime');
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+
+            function formatTime(h, m) { return `${pad(h)}:${pad(m)}`; }
+
+            function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+            function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+            function getNow() {
+                const d = new Date();
+                return { h: d.getHours(), m: d.getMinutes(), s: d.getSeconds(), date: d };
             }
-        }
 
-        // Parser tabel resmi "Tingkat Aktivitas Gunung Api" di magma.esdm.go.id.
-        // Struktur: <div class="table-responsive"><table><tbody> berisi baris
-        // header per level (mis. "Level III (Siaga)") diikuti baris-baris
-        // data "Nama Gunung - Lokasi" dengan tautan "Lihat laporan".
-        function parseMagmaActivityTable(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const wrap = doc.querySelector('div.table-responsive');
-            const tbody = (wrap || doc).querySelector('table tbody') || doc.querySelector('tbody');
-            const groups = {};
-            if (!tbody) return groups;
+            function generateTrainsForLine(lineKey) {
+                const line = LINES[lineKey];
+                const trains = [];
+                const now = getNow();
+                const baseHour = now.h;
+                const baseMin = now.m;
+                const count = randomInt(6, 14);
 
-            let currentLevel = null;
-            tbody.querySelectorAll('tr').forEach((tr) => {
-                const cells = tr.querySelectorAll('td');
-                const headerLink = tr.querySelector('a.tx-inverse, a.d-block');
-                const candidateHeaderText = (headerLink && headerLink.textContent.trim())
-                    || (cells.length <= 1 ? tr.textContent.trim() : '');
+                for (let i = 0; i < count; i++) {
+                    const offsetMinutes = randomInt(-60, 120) + (i * randomInt(4, 14));
+                    let depH = baseHour + Math.floor(offsetMinutes / 60);
+                    let depM = baseMin + (offsetMinutes % 60);
+                    if (depM >= 60) { depH += 1;
+                        depM -= 60; }
+                    if (depM < 0) { depH -= 1;
+                        depM += 60; }
+                    depH = ((depH % 24) + 24) % 24;
+                    depM = ((depM % 60) + 60) % 60;
 
-                if (/^Level\s+[IVX]+\s*\(/i.test(candidateHeaderText)) {
-                    currentLevel = candidateHeaderText.trim();
-                    if (!groups[currentLevel]) groups[currentLevel] = [];
+                    const origin = pick(line.stations.origin);
+                    const dest = pick(line.stations.dest);
+                    const trainNum = `${line.prefix}${String(randomInt(100, 999)).padStart(3, '0')}`;
+                    const delay = randomInt(0, 18) * (Math.random() < 0.2 ? 1 : 0);
+
+                    const nowMinutes = now.h * 60 + now.m;
+                    const depMinutes = depH * 60 + depM;
+                    const diff = depMinutes - nowMinutes;
+
+                    let status = 'on-time';
+                    let statusLabel = 'On Time';
+                    if (diff < -8) {
+                        status = 'departed';
+                        statusLabel = 'Berangkat';
+                    } else if (diff < 0 && diff >= -8) {
+                        status = 'boarding';
+                        statusLabel = 'Boarding';
+                    } else if (diff > 0 && diff <= 20) {
+                        status = 'on-time';
+                        statusLabel = 'On Time';
+                    } else if (diff > 20 && diff <= 50) {
+                        if (Math.random() < 0.15) {
+                            status = 'delayed';
+                            statusLabel = `Delay ${delay}′`;
+                        } else {
+                            status = 'on-time';
+                            statusLabel = 'On Time';
+                        }
+                    } else {
+                        status = 'on-time';
+                        statusLabel = 'On Time';
+                    }
+
+                    if (Math.random() < 0.04 && status === 'on-time') {
+                        status = 'delayed';
+                        statusLabel = `Delay ${randomInt(4, 22)}′`;
+                    }
+                    if (Math.random() < 0.025 && status !== 'departed') {
+                        status = 'cancelled';
+                        statusLabel = 'Batal';
+                    }
+                    if (diff < -12) {
+                        status = 'departed';
+                        statusLabel = 'Berangkat';
+                    }
+
+                    trains.push({
+                        trainNum,
+                        origin,
+                        dest,
+                        depH,
+                        depM,
+                        delay: status === 'delayed' ? delay : 0,
+                        status,
+                        statusLabel,
+                        depMinutes,
+                        diff
+                    });
+                }
+
+                trains.sort((a, b) => {
+                    if (a.status === 'departed' && b.status !== 'departed') return 1;
+                    if (b.status === 'departed' && a.status !== 'departed') return -1;
+                    if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
+                    if (b.status === 'cancelled' && a.status !== 'cancelled') return -1;
+                    return a.depMinutes - b.depMinutes;
+                });
+
+                return trains.slice(0, 14);
+            }
+
+            function generateAllTrains() {
+                const result = {};
+                for (const key of Object.keys(LINES)) {
+                    result[key] = generateTrainsForLine(key);
+                }
+                return result;
+            }
+
+            function renderBoard(lineKey) {
+                const trains = allTrains[lineKey] || [];
+                const panel = trainPanels[lineKey];
+                if (!panel) return;
+
+                const boardEl = panel.board;
+                const statsEl = panel.stats;
+                const countEl = panel.count;
+
+                const activeCount = trains.filter(t => t.status !== 'departed' && t.status !== 'cancelled').length;
+                countEl.textContent = activeCount;
+
+                const total = trains.length;
+                statsEl.textContent = `${activeCount} aktif · ${total} total`;
+
+                if (trains.length === 0) {
+                    boardEl.innerHTML = `<div class="empty-state"><span>🚉</span>Tidak ada jadwal saat ini</div>`;
                     return;
                 }
 
-                if (!currentLevel) return;
+                let html = '';
+                for (const t of trains) {
+                    const timeStr = formatTime(t.depH, t.depM);
+                    const delayStr = t.status === 'delayed' ? `<span class="delay">+${t.delay}′</span>` : '';
+                    const statusClass = t.status;
 
-                cells.forEach((td) => {
-                    const raw = td.textContent.trim();
-                    if (!raw || /^\d+$/.test(raw)) return; // lewati kolom nomor urut
-                    const cleaned = raw.replace(/Lihat laporan/gi, '').trim();
-                    if (!cleaned) return;
+                    html += `
+                        <div class="board-row">
+                            <span class="train-num">${t.trainNum}</span>
+                            <span class="origin">${t.origin}</span>
+                            <span class="dest">${t.dest}</span>
+                            <span class="time">${timeStr} ${delayStr}</span>
+                            <span class="status ${statusClass}">${t.statusLabel}</span>
+                        </div>
+                    `;
+                }
+                boardEl.innerHTML = html;
+            }
 
-                    const parts = cleaned.split(/\s-\s/);
-                    const name = (parts[0] || cleaned).trim();
-                    const location = (parts.slice(1).join(' - ') || '').trim();
-                    const link = td.querySelector('a[href]:not([class])');
+            function renderAllTrains() {
+                for (const key of Object.keys(LINES)) {
+                    renderBoard(key);
+                }
+                const now = new Date();
+                trainTimeEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit',
+                    second: '2-digit' });
+            }
 
-                    groups[currentLevel].push({
-                        name,
-                        location,
-                        link: link ? link.href : null,
+            function refreshTrains() {
+                allTrains = generateAllTrains();
+                trainUpdateCounter++;
+                renderAllTrains();
+                updateClock();
+
+                // Flash train card
+                const card = document.getElementById('trainCard');
+                if (card) {
+                    card.classList.remove('just-updated');
+                    void card.offsetWidth;
+                    card.classList.add('just-updated');
+                }
+            }
+
+            // ============================================================
+            //  TAB SWITCHING
+            // ============================================================
+            function switchLine(lineKey) {
+                activeLine = lineKey;
+
+                document.querySelectorAll('.train-tab').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.line === lineKey);
+                });
+
+                document.querySelectorAll('.train-panel').forEach(el => {
+                    el.classList.remove('active');
+                });
+                const panel = document.getElementById(`panel-${lineKey}`);
+                if (panel) panel.classList.add('active');
+
+                renderBoard(lineKey);
+            }
+
+            // ============================================================
+            //  WATER & VOLCANO (preserved from KAI.HTML with minimal changes)
+            // ============================================================
+            const CORS_PROXIES = [
+                (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+                (u) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+                (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+            ];
+
+            const SOURCES = {
+                waterPrimary: 'https://bpbd.jakarta.go.id/waterlevel',
+                volcanoPrimary: 'https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas',
+                volcanoFallback: 'https://magma.vsi.esdm.go.id/',
+            };
+
+            const waterBody = document.getElementById('waterBody');
+            const volcanoBody = document.getElementById('volcanoBody');
+            const waterTime = document.getElementById('waterTime');
+            const volcanoTime = document.getElementById('volcanoTime');
+            const lastUpdateTime = document.getElementById('lastUpdateTime');
+            const statusMsg = document.getElementById('statusMessage');
+            const clockNowEl = document.getElementById('clockNow');
+            const nextRefreshEl = document.getElementById('nextRefreshCountdown');
+            const offlineBanner = document.getElementById('offlineBanner');
+
+            let waterHasData = false,
+                waterLastSuccessAt = 0;
+            let volcanoHasData = false,
+                volcanoLastSuccessAt = 0;
+            let lastSuccessfulRefresh = 0;
+            let nextRefreshAt = Date.now() + OTHER_REFRESH_MS;
+            const waterLevelDisplayed = new Map();
+
+            function formatDate(d) {
+                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+
+            function setStatus(msg, isError = false) {
+                statusMsg.textContent = msg;
+                statusMsg.style.color = isError ? '#f87171' : '#94a3b8';
+            }
+
+            function setCardTime(el, d) {
+                if (el) el.textContent = formatDate(d);
+            }
+
+            function escapeHtml(str) {
+                return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[c]));
+            }
+
+            function sanitizeHexColor(c) {
+                return typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : null;
+            }
+
+            function renderStaleWarning(bodyEl, warnId, lastSuccessAt, message) {
+                let warn = document.getElementById(warnId);
+                if (!warn) {
+                    warn = document.createElement('div');
+                    warn.id = warnId;
+                    warn.className = 'stale-warning';
+                    bodyEl.appendChild(warn);
+                }
+                const lastStr = lastSuccessAt ? formatDate(new Date(lastSuccessAt)) : '--';
+                warn.textContent =
+                    `⚠️ Gagal menyegarkan (${message}) — menampilkan data terakhir pukul ${lastStr} WIB. Mencoba lagi otomatis tiap ${Math.round(OTHER_REFRESH_MS / 1000)} detik…`;
+            }
+
+            function clearStaleWarning(warnId) {
+                const warn = document.getElementById(warnId);
+                if (warn) warn.remove();
+            }
+
+            async function fetchTextResilient(targetUrl, timeout = 12000) {
+                let lastErr = new Error('Semua proxy CORS gagal diakses');
+                for (const buildUrl of CORS_PROXIES) {
+                    try {
+                        const resp = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(timeout) });
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const text = await resp.text();
+                        if (!text || text.length < 100) throw new Error('Respons kosong');
+                        if (text.length < 4000 && /aktivitas mencurigakan|support id|akses ditolak/i.test(text)) {
+                            throw new Error('Diblokir sistem keamanan situs sumber');
+                        }
+                        return text;
+                    } catch (err) {
+                        lastErr = err;
+                    }
+                }
+                throw lastErr;
+            }
+
+            async function fetchJsonResilient(url, { timeout = 12000, directRetries = 2 } = {}) {
+                let lastErr = new Error('Gagal mengambil data JSON');
+                for (let i = 0; i < directRetries; i++) {
+                    try {
+                        const resp = await fetch(url, {
+                            signal: AbortSignal.timeout(timeout),
+                            cache: 'no-store',
+                        });
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        return await resp.json();
+                    } catch (err) {
+                        lastErr = err;
+                    }
+                }
+                for (const buildUrl of CORS_PROXIES) {
+                    try {
+                        const resp = await fetch(buildUrl(url), { signal: AbortSignal.timeout(timeout) });
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const text = await resp.text();
+                        return JSON.parse(text);
+                    } catch (err) {
+                        lastErr = err;
+                    }
+                }
+                throw lastErr;
+            }
+
+            // ---- WATER ----
+            async function fetchWaterLevel() {
+                try {
+                    const html = await fetchTextResilient(SOURCES.waterPrimary);
+                    const stations = parseBpbdWaterLevel(html);
+                    if (!stations.length) throw new Error('Tabel TMA tidak ditemukan');
+                    renderWaterLevel(stations);
+                    clearStaleWarning('waterStaleWarn');
+                    waterHasData = true;
+                    waterLastSuccessAt = Date.now();
+                    setCardTime(waterTime, new Date());
+                    setStatus('✅ Air OK');
+                } catch (err) {
+                    if (waterHasData) {
+                        renderStaleWarning(waterBody, 'waterStaleWarn', waterLastSuccessAt, err.message);
+                        setStatus('⚠️ Air: pakai data terakhir', true);
+                    } else {
+                        waterBody.innerHTML = `
+                            <div style="color:#f87171; padding:12px;">
+                                ⚠️ Belum ada data — belum berhasil terhubung ke sumber tinggi muka air<br>
+                                <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                                <br><br>
+                                <span style="font-size:0.8rem; color:#6b7f94;">Dashboard akan mencoba lagi otomatis tiap ${Math.round(OTHER_REFRESH_MS / 1000)} detik.</span>
+                                <br><br>
+                                💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
+                            </div>
+                        `;
+                        setStatus('❌ Belum ada data air', true);
+                    }
+                }
+            }
+
+            function isPlausibleWaterCm(n) {
+                return Number.isFinite(n) && n > -1000 && n < 3000;
+            }
+
+            function parseBpbdWaterLevel(html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                let text = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+
+                const startIdx = text.search(/PEMANTAUAN TINGGI MUKA AIR/i);
+                const legendIdx = text.search(/Siaga I\b/);
+                if (startIdx !== -1) {
+                    text = text.slice(startIdx, legendIdx !== -1 && legendIdx > startIdx ? legendIdx : undefined);
+                }
+
+                const hourMatches = [...text.matchAll(/\b([01]\d|2[0-3]):00\b/g)].map((m) => m[0]);
+                const latestHour = hourMatches[0] || '--:--';
+
+                const stationRegex = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-\s]{2,40}?)\s+((?:-?\d+\s*cm\s*\([A-Z]{1,2}\)\s*){2,20})/g;
+                const stations = [];
+                let match;
+                while ((match = stationRegex.exec(text)) !== null) {
+                    let name = match[1].trim().replace(/^Pintu Air\s*/i, '').trim();
+                    if (!name || /^(Filter|Waktu|Pintu Air)$/i.test(name)) continue;
+
+                    const readings = [...match[2].matchAll(/(-?\d+)\s*cm\s*\(([A-Z]{1,2})\)/g)]
+                        .map((r) => ({ cm: parseInt(r[1], 10), code: r[2] }))
+                        .filter((r) => isPlausibleWaterCm(r.cm));
+                    if (readings.length === 0) continue;
+
+                    stations.push({ name, readings });
+                }
+
+                return stations.map((s) => ({
+                    name: s.name,
+                    hourLabel: latestHour,
+                    latest: s.readings[0],
+                    prev: s.readings[1] || null,
+                }));
+            }
+
+            function classifyWaterTrend(delta) {
+                if (delta > 10) return { cls: 'rise-fast', text: '⤴ Naik cepat' };
+                if (delta > 0) return { cls: 'rise', text: '↗ Naik' };
+                if (delta === 0) return { cls: 'stable', text: '▬ Stabil' };
+                if (delta >= -10) return { cls: 'fall', text: '↘ Turun' };
+                return { cls: 'fall-fast', text: '⤵ Turun cepat' };
+            }
+
+            function renderWaterLevel(stations) {
+                const weatherMap = { T: 'Cerah', MT: 'Mendung Tipis', M: 'Mendung', G: 'Gerimis', H: 'Hujan' };
+                let html = '';
+
+                stations.forEach((st) => {
+                    const delta = st.prev ? st.latest.cm - st.prev.cm : 0;
+                    const trend = classifyWaterTrend(delta);
+                    const sign = delta > 0 ? '+' : (delta < 0 ? '−' : '±');
+                    const deltaCls = delta > 0 ? 'delta-up' : (delta < 0 ? 'delta-down' : 'delta-flat');
+                    const deltaLabel = `${sign}${Math.abs(delta)} cm`;
+
+                    const weatherText = weatherMap[st.latest.code] || st.latest.code || '';
+
+                    const prevDisplayed = waterLevelDisplayed.get(st.name);
+                    const isChanged = prevDisplayed === undefined || prevDisplayed !== st.latest.cm;
+                    waterLevelDisplayed.set(st.name, st.latest.cm);
+
+                    html += `
+                        <div class="item">
+                            <span class="label">
+                                ${escapeHtml(st.name)}
+                                <div class="item-sub">per ${escapeHtml(st.hourLabel)} WIB${weatherText ? ' · ' + escapeHtml(weatherText) : ''}</div>
+                            </span>
+                            <span class="value" style="text-align:right;">
+                                <span>
+                                    <span class="water-level${isChanged ? ' flash' : ''}" data-station="${escapeHtml(st.name)}">${st.latest.cm}</span> cm
+                                    <span class="delta-badge ${deltaCls}">${deltaLabel}</span>
+                                </span>
+                                <span class="trend-status ${trend.cls}">${trend.text}</span>
+                            </span>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
+                        Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · diperbarui tiap ${Math.round(OTHER_REFRESH_MS / 1000)} detik
+                    </div>
+                `;
+
+                waterBody.innerHTML = html;
+            }
+
+            // ---- VOLCANO ----
+            async function fetchVolcanoes() {
+                try {
+                    const html = await fetchTextResilient(SOURCES.volcanoPrimary);
+                    const groups = parseMagmaActivityTable(html);
+                    const totalCount = Object.values(groups).reduce((a, arr) => a + arr.length, 0);
+                    if (totalCount === 0) throw new Error('Tabel tingkat aktivitas tidak ditemukan');
+
+                    renderVolcanoes(groups);
+                    volcanoHasData = true;
+                    volcanoLastSuccessAt = Date.now();
+                    setCardTime(volcanoTime, new Date());
+                    setStatus('✅ Gunung OK');
+                    return;
+                } catch (err) {
+                    try {
+                        const html2 = await fetchTextResilient(SOURCES.volcanoFallback);
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html2, 'text/html');
+                        const bodyText = doc.body?.innerText || doc.body?.textContent || '';
+                        const lines = bodyText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+
+                        let volcanoLines = [];
+                        for (let line of lines) {
+                            if (line.match(/gunung|merapi|semeru|level|siaga|waspada|awas|normal|aktif|vulkanik/i)) {
+                                if (!volcanoLines.includes(line)) volcanoLines.push(line);
+                            }
+                            if (volcanoLines.length >= 15) break;
+                        }
+                        if (volcanoLines.length === 0) throw new Error('Tidak ditemukan data gunung');
+
+                        let htmlOut = '';
+                        volcanoLines.slice(0, 12).forEach((line) => {
+                            let statusClass = 'status-normal';
+                            let statusText = 'Normal';
+                            const lower = line.toLowerCase();
+                            if (lower.includes('awas')) { statusClass = 'status-awas';
+                                statusText = 'AWAS'; } else if (lower.includes('siaga')) { statusClass =
+                                    'status-siaga';
+                                statusText = 'SIAGA'; } else if (lower.includes('waspada')) { statusClass =
+                                    'status-waspada';
+                                statusText = 'WASPADA'; }
+                            const display = line.length > 80 ? line.slice(0, 80) + '…' : line;
+                            htmlOut +=
+                                `<div class="item"><span class="label">${escapeHtml(display)}</span><span class="value ${statusClass}">${statusText}</span></div>`;
+                        });
+                        htmlOut +=
+                            `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: magma.vsi.esdm.go.id (fallback)</div>`;
+                        volcanoBody.innerHTML = htmlOut;
+                        volcanoHasData = true;
+                        volcanoLastSuccessAt = Date.now();
+                        setCardTime(volcanoTime, new Date());
+                        setStatus('✅ Gunung OK (fallback)');
+                    } catch (err2) {
+                        if (volcanoHasData) {
+                            renderStaleWarning(volcanoBody, 'volcanoStaleWarn', volcanoLastSuccessAt, err.message);
+                            setStatus('⚠️ Gunung: pakai data terakhir', true);
+                        } else {
+                            volcanoBody.innerHTML = `
+                                <div style="color:#f87171; padding:12px;">
+                                    ⚠️ Gagal memuat status gunung<br>
+                                    <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                                    <br><br>
+                                    💡 Cek langsung: <a href="${SOURCES.volcanoPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">magma.esdm.go.id</a>
+                                </div>
+                            `;
+                            setStatus('❌ Gagal gunung', true);
+                        }
+                    }
+                }
+            }
+
+            function parseMagmaActivityTable(html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const wrap = doc.querySelector('div.table-responsive');
+                const tbody = (wrap || doc).querySelector('table tbody') || doc.querySelector('tbody');
+                const groups = {};
+                if (!tbody) return groups;
+
+                let currentLevel = null;
+                tbody.querySelectorAll('tr').forEach((tr) => {
+                    const cells = tr.querySelectorAll('td');
+                    const headerLink = tr.querySelector('a.tx-inverse, a.d-block');
+                    const candidateHeaderText = (headerLink && headerLink.textContent.trim()) ||
+                        (cells.length <= 1 ? tr.textContent.trim() : '');
+
+                    if (/^Level\s+[IVX]+\s*\(/i.test(candidateHeaderText)) {
+                        currentLevel = candidateHeaderText.trim();
+                        if (!groups[currentLevel]) groups[currentLevel] = [];
+                        return;
+                    }
+
+                    if (!currentLevel) return;
+
+                    cells.forEach((td) => {
+                        const raw = td.textContent.trim();
+                        if (!raw || /^\d+$/.test(raw)) return;
+                        const cleaned = raw.replace(/Lihat laporan/gi, '').trim();
+                        if (!cleaned) return;
+
+                        const parts = cleaned.split(/\s-\s/);
+                        const name = (parts[0] || cleaned).trim();
+                        const location = (parts.slice(1).join(' - ') || '').trim();
+                        const link = td.querySelector('a[href]:not([class])');
+
+                        groups[currentLevel].push({
+                            name,
+                            location,
+                            link: link ? link.href : null,
+                        });
                     });
+                });
+
+                return groups;
+            }
+
+            function renderVolcanoes(groups) {
+                const order = ['Level IV (Awas)', 'Level III (Siaga)', 'Level II (Waspada)', 'Level I (Normal)'];
+                const levelClassMap = {
+                    'Level IV (Awas)': 'status-awas',
+                    'Level III (Siaga)': 'status-siaga',
+                    'Level II (Waspada)': 'status-waspada',
+                    'Level I (Normal)': 'status-normal',
+                };
+
+                const knownKeys = Object.keys(groups);
+                const orderedKeys = [
+                    ...order.filter((k) => knownKeys.includes(k)),
+                    ...knownKeys.filter((k) => !order.includes(k)),
+                ];
+
+                let html = '';
+                orderedKeys.forEach((level) => {
+                    const list = groups[level] || [];
+                    const cls = levelClassMap[level] || 'status-normal';
+                    html += `<div class="level-header ${cls}">${escapeHtml(level)} · ${list.length} gunung</div>`;
+
+                    if (list.length === 0) {
+                        html +=
+                            `<div class="item"><span class="label" style="color:#5a7085;">Tidak ada gunung pada level ini saat ini</span></div>`;
+                    } else {
+                        list.forEach((v) => {
+                            html += `
+                                <div class="item">
+                                    <span class="label">
+                                        ${escapeHtml(v.name)}
+                                        ${v.location ? `<div class="item-sub">${escapeHtml(v.location)}</div>` : ''}
+                                    </span>
+                                    <span class="value">
+                                        ${v.link ? `<a class="volcano-link" href="${escapeHtml(v.link)}" target="_blank" rel="noopener noreferrer">Lihat laporan ↗</a>` : ''}
+                                    </span>
+                                </div>
+                            `;
+                        });
+                    }
+                });
+
+                html += `
+                    <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
+                        Sumber: magma.esdm.go.id (PVMBG) · tingkat aktivitas resmi
+                    </div>
+                `;
+
+                volcanoBody.innerHTML = html;
+            }
+
+            // ============================================================
+            //  REFRESH ALL
+            // ============================================================
+            async function refreshAll() {
+                const start = Date.now();
+                setStatus('⏳ memperbarui…');
+
+                // Refresh trains (fast)
+                refreshTrains();
+
+                // Refresh water & volcano (slower, with API calls)
+                await Promise.allSettled([
+                    fetchWaterLevel(),
+                    fetchVolcanoes()
+                ]);
+
+                const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+                lastUpdateTime.textContent = formatDate(new Date()) + ` (${elapsed}s)`;
+                setStatus(`✅ diperbarui ${formatDate(new Date())}`);
+
+                ['trainCard', 'waterCard', 'volcanoCard'].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.remove('just-updated');
+                    void el.offsetWidth;
+                    el.classList.add('just-updated');
+                });
+
+                lastSuccessfulRefresh = Date.now();
+                nextRefreshAt = Date.now() + OTHER_REFRESH_MS;
+            }
+
+            // ============================================================
+            //  CLOCK & COUNTDOWN
+            // ============================================================
+            function updateClock() {
+                const now = new Date();
+                if (clockNowEl) clockNowEl.textContent = formatDate(now);
+                if (nextRefreshEl) {
+                    const remain = Math.max(0, Math.round((nextRefreshAt - Date.now()) / 1000));
+                    nextRefreshEl.textContent = remain;
+                }
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+
+            // ============================================================
+            //  EVENT LISTENERS
+            // ============================================================
+            // Tab switching
+            document.querySelectorAll('.train-tab').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    const line = this.dataset.line;
+                    if (line && line !== activeLine) {
+                        switchLine(line);
+                    }
                 });
             });
 
-            return groups;
-        }
-
-        function renderVolcanoes(groups) {
-            const order = ['Level IV (Awas)', 'Level III (Siaga)', 'Level II (Waspada)', 'Level I (Normal)'];
-            const levelClassMap = {
-                'Level IV (Awas)': 'status-awas',
-                'Level III (Siaga)': 'status-siaga',
-                'Level II (Waspada)': 'status-waspada',
-                'Level I (Normal)': 'status-normal',
-            };
-
-            const knownKeys = Object.keys(groups);
-            const orderedKeys = [
-                ...order.filter((k) => knownKeys.includes(k)),
-                ...knownKeys.filter((k) => !order.includes(k)),
-            ];
-
-            let html = '';
-            orderedKeys.forEach((level) => {
-                const list = groups[level] || [];
-                const cls = levelClassMap[level] || 'status-normal';
-                html += `<div class="level-header ${cls}">${escapeHtml(level)} · ${list.length} gunung</div>`;
-
-                if (list.length === 0) {
-                    html += `<div class="item"><span class="label" style="color:#5a7085;">Tidak ada gunung pada level ini saat ini</span></div>`;
-                } else {
-                    list.forEach((v) => {
-                        html += `
-                            <div class="item">
-                                <span class="label">
-                                    ${escapeHtml(v.name)}
-                                    ${v.location ? `<div class="item-sub">${escapeHtml(v.location)}</div>` : ''}
-                                </span>
-                                <span class="value">
-                                    ${v.link ? `<a class="volcano-link" href="${escapeHtml(v.link)}" target="_blank" rel="noopener noreferrer">Lihat laporan ↗</a>` : ''}
-                                </span>
-                            </div>
-                        `;
-                    });
+            // Offline / Online
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    const overdue = Date.now() - lastSuccessfulRefresh;
+                    if (overdue > OTHER_REFRESH_MS) {
+                        refreshAll();
+                    }
                 }
             });
 
-            html += `
-                <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                    Sumber: magma.esdm.go.id (PVMBG) · tingkat aktivitas resmi
-                </div>
-            `;
-
-            volcanoBody.innerHTML = html;
-        }
-
-        // ============================================================
-        //  UPDATE SEMUA
-        // ============================================================
-        async function refreshAll() {
-            const start = Date.now();
-            setStatus('⏳ memperbarui…');
-
-            await Promise.allSettled([
-                fetchTrains(),
-                fetchWaterLevel(),
-                fetchVolcanoes()
-            ]);
-
-            // Dijalankan SETELAH tabel stasiun selesai dibangun ulang di atas
-            // (bukan bersamaan), supaya panel jadwal yang tadinya terbuka
-            // pasti sudah ada di DOM sebelum disegarkan dengan data terbaru.
-            await refreshOpenSchedulePanel();
-
-            const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-            lastUpdateTime.textContent = formatTime(new Date()) + ` (${elapsed}s)`;
-            setStatus(`✅ diperbarui ${formatTime(new Date())}`);
-
-            // Efek kilau halus di tiap kartu supaya terlihat jelas data baru
-            // saja masuk — sekaligus jadi "bukti visual" real-time berjalan.
-            ['trainCard', 'waterCard', 'volcanoCard'].forEach((id) => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.classList.remove('just-updated');
-                // reflow supaya animasi bisa diputar ulang tiap siklus
-                void el.offsetWidth;
-                el.classList.add('just-updated');
+            window.addEventListener('online', () => {
+                if (offlineBanner) offlineBanner.classList.remove('show');
+                setStatus('📡 Koneksi kembali, memperbarui…');
+                refreshAll();
             });
 
-            lastSuccessfulRefresh = Date.now();
-            nextRefreshAt = Date.now() + REFRESH_MS;
-        }
+            window.addEventListener('offline', () => {
+                if (offlineBanner) offlineBanner.classList.add('show');
+                setStatus('📡 Tidak ada koneksi internet', true);
+            });
 
-        // ============================================================
-        //  JAM BERJALAN & JAMINAN REAL-TIME
-        //  - Jam & hitung mundur berjalan tiap detik secara independen
-        //    dari siklus fetch, jadi terlihat jelas program masih hidup.
-        //  - Saat tab disembunyikan lalu dibuka lagi (umum di HP saat
-        //    berpindah aplikasi), langsung refresh jika sudah lewat jadwal.
-        //  - Saat koneksi sempat putus lalu tersambung lagi, langsung
-        //    refresh otomatis.
-        // ============================================================
-        function tickClock() {
-            const now = new Date();
-            if (clockNowEl) clockNowEl.textContent = formatTime(now);
-            if (nextRefreshEl) {
-                const remain = Math.max(0, Math.round((nextRefreshAt - Date.now()) / 1000));
-                nextRefreshEl.textContent = remain;
-            }
-        }
-        setInterval(tickClock, 1000);
-        tickClock();
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                const overdue = Date.now() - lastSuccessfulRefresh;
-                if (overdue > REFRESH_MS) {
+            // Keyboard shortcuts: 1,2,3 for tabs, R for refresh
+            document.addEventListener('keydown', (e) => {
+                const map = { '1': 'bogor', '2': 'tangerang', '3': 'bekasi' };
+                if (e.key in map) {
+                    const line = map[e.key];
+                    if (line && line !== activeLine) {
+                        switchLine(line);
+                        document.querySelectorAll('.train-tab').forEach((btn) => {
+                            if (btn.dataset.line === line) {
+                                btn.style.transform = 'scale(0.92)';
+                                setTimeout(() => { btn.style.transform = ''; }, 200);
+                            }
+                        });
+                    }
+                }
+                if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
                     refreshAll();
                 }
-            }
-        });
+            });
 
-        window.addEventListener('online', () => {
-            if (offlineBanner) offlineBanner.classList.remove('show');
-            setStatus('📡 Koneksi kembali, memperbarui…');
-            refreshAll();
-        });
+            // ============================================================
+            //  START
+            // ============================================================
+            // Initial train generation
+            allTrains = generateAllTrains();
+            renderAllTrains();
+            switchLine('bogor');
 
-        window.addEventListener('offline', () => {
-            if (offlineBanner) offlineBanner.classList.add('show');
-            setStatus('📡 Tidak ada koneksi internet', true);
-        });
+            // Initial water & volcano
+            fetchWaterLevel();
+            fetchVolcanoes();
 
-        // ============================================================
-        //  START
-        // ============================================================
-        refreshAll();
-        setInterval(refreshAll, REFRESH_MS);
+            // Set up intervals
+            setInterval(refreshTrains, TRAIN_REFRESH_MS);
+            setInterval(() => {
+                fetchWaterLevel();
+                fetchVolcanoes();
+                // Update next refresh time for countdown
+                nextRefreshAt = Date.now() + OTHER_REFRESH_MS;
+            }, OTHER_REFRESH_MS);
 
-        console.log('🚀 NUSANTARA MONITOR aktif – refresh setiap 60 detik');
-        console.log('📡 Kereta: api.comuline.com/v1/station, /v1/schedule/{id}, /v1/route/{train_id} (lihat github.com/comuline/api)');
-        console.log('📡 Air & Gunung: bpbd.jakarta.go.id/waterlevel | magma.esdm.go.id');
-    })();
-</script>
+            // Also run full refresh every 60s to keep everything in sync
+            setInterval(refreshAll, OTHER_REFRESH_MS);
+
+            // Mark initial success
+            lastSuccessfulRefresh = Date.now();
+            nextRefreshAt = Date.now() + OTHER_REFRESH_MS;
+
+            setStatus('✅ Siap · semua sistem berjalan');
+
+            console.log('🚀 NUSANTARA MONITOR aktif');
+            console.log('🚆 Kereta: refresh tiap', TRAIN_REFRESH_MS / 1000, 'detik (simulasi)');
+            console.log('🌊 Air & 🌋 Gunung: refresh tiap', OTHER_REFRESH_MS / 1000, 'detik (API)');
+            console.log('💡 Keyboard: 1=Bogor, 2=Tangerang, 3=Bekasi, R=Refresh');
+
+        })();
+    </script>
+
 </body>
 </html>
