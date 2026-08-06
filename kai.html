@@ -508,6 +508,54 @@
             animation: fadeInUp 0.5s ease both;
         }
 
+        /* Peringatan halus saat siklus refresh gagal TAPI data lama masih
+           ada — data lama tetap tampil apa adanya, hanya diberi catatan
+           kecil ini di bawahnya sambil menunggu percobaan otomatis
+           berikutnya (bukan menimpa seluruh kartu dengan kotak error). */
+        .stale-warning {
+            margin-top: 10px;
+            font-size: 0.72rem;
+            line-height: 1.5;
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            padding: 7px 12px;
+            border-radius: 12px;
+            animation: fadeInUp 0.4s ease both;
+        }
+
+        /* ----- BADGE NOMOR KA (BISA DIKLIK UNTUK LIHAT RUTE LENGKAP) ----- */
+        .sched-route-toggle {
+            cursor: pointer;
+            user-select: none;
+            transition: filter 0.15s, transform 0.15s;
+        }
+        .sched-route-toggle:hover { filter: brightness(1.3); }
+        .sched-route-toggle.open { filter: brightness(1.35); }
+
+        .route-panel {
+            margin: 2px 0 10px;
+            padding: 8px 14px;
+            background: rgba(0, 180, 255, 0.04);
+            border-left: 2px dashed rgba(0, 200, 255, 0.25);
+            border-radius: 0 10px 10px 0;
+            animation: slideDown 0.25s ease both;
+        }
+        .route-stop {
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+            padding: 3px 0;
+            font-size: 0.78rem;
+            color: #9db4c8;
+        }
+        .route-stop-time {
+            font-feature-settings: "tnum";
+            color: #7fe9ff;
+            min-width: 42px;
+            font-weight: 600;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.001ms !important;
@@ -632,6 +680,18 @@
         let lastSuccessfulRefresh = 0;
         let openStationId = null;   // stasiun yang panel jadwalnya sedang terbuka
         let openStationName = null;
+        const routeCache = new Map(); // train_id -> { ts, data } — hasil GET /v1/route/{train_id}
+
+        // Penanda "pernah berhasil dimuat" + kapan terakhir sukses, per kartu.
+        // Dipakai supaya saat SATU siklus refresh gagal (mis. proxy CORS
+        // sedang limit), data yang sudah tampil TIDAK ditimpa kotak error —
+        // cukup diberi catatan kecil, dan siklus berikutnya (tiap
+        // REFRESH_MS) otomatis mencoba lagi. Ini yang membuat pembaruan
+        // (terutama tinggi air) benar-benar berjalan periodik selama
+        // aplikasi dibuka, bukan "macet" begitu sekali gagal.
+        let trainsHasData = false, trainsLastSuccessAt = 0;
+        let waterHasData = false, waterLastSuccessAt = 0;
+        let volcanoHasData = false, volcanoLastSuccessAt = 0;
 
         // ----- helpers umum -----
         function formatTime(d) {
@@ -651,6 +711,34 @@
             return String(str ?? '').replace(/[&<>"']/g, (c) => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             }[c]));
+        }
+
+        // Memvalidasi kode warna hex dari API (mis. metadata.origin.color
+        // pada jadwal comuline) sebelum dipakai di atribut style, supaya
+        // tidak ada nilai aneh/berbahaya yang lolos ke DOM.
+        function sanitizeHexColor(c) {
+            return typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : null;
+        }
+
+        // Menampilkan/memperbarui catatan kecil "gagal menyegarkan, pakai
+        // data lama" TANPA menghapus konten kartu yang sudah berhasil
+        // dimuat sebelumnya. Dipanggil hanya ketika siklus refresh gagal
+        // padahal sudah pernah ada data sukses sebelumnya.
+        function renderStaleWarning(bodyEl, warnId, lastSuccessAt, message) {
+            let warn = document.getElementById(warnId);
+            if (!warn) {
+                warn = document.createElement('div');
+                warn.id = warnId;
+                warn.className = 'stale-warning';
+                bodyEl.appendChild(warn);
+            }
+            const lastStr = lastSuccessAt ? formatTime(new Date(lastSuccessAt)) : '--';
+            warn.textContent = `⚠️ Gagal menyegarkan (${message}) — menampilkan data terakhir pukul ${lastStr} WIB. Mencoba lagi otomatis tiap ${Math.round(REFRESH_MS / 1000)} detik…`;
+        }
+
+        function clearStaleWarning(warnId) {
+            const warn = document.getElementById(warnId);
+            if (warn) warn.remove();
         }
 
         // Mengambil HTML sebuah URL lewat rantai proxy CORS, mencoba satu per
@@ -729,18 +817,28 @@
                 // supaya pencarian pengguna tidak hilang saat auto-refresh.
                 applyStationFilter();
 
+                trainsHasData = true;
+                trainsLastSuccessAt = Date.now();
                 setCardTime(trainTime, new Date());
                 setStatus('✅ Kereta OK');
             } catch (err) {
-                trainBody.innerHTML = `
-                    <div class="no-data">
-                        ⚠️ Gagal memuat data stasiun<br>
-                        <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                        <br><br>
-                        💡 Sumber: api.comuline.com (publik)
-                    </div>
-                `;
-                setStatus('❌ Gagal kereta', true);
+                if (trainsHasData) {
+                    // Tabel stasiun yang sudah berhasil dimuat sebelumnya tetap
+                    // dibiarkan tampil; cukup beri catatan kecil, siklus
+                    // berikutnya otomatis mencoba lagi.
+                    renderStaleWarning(trainBody, 'trainStaleWarn', trainsLastSuccessAt, err.message);
+                    setStatus('⚠️ Kereta: pakai data terakhir', true);
+                } else {
+                    trainBody.innerHTML = `
+                        <div class="no-data">
+                            ⚠️ Gagal memuat data stasiun<br>
+                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                            <br><br>
+                            💡 Sumber: api.comuline.com (publik)
+                        </div>
+                    `;
+                    setStatus('❌ Gagal kereta', true);
+                }
             }
         }
 
@@ -888,6 +986,49 @@
             }
         });
 
+        // Klik badge "KA <nomor>" di dalam panel jadwal -> buka/tutup rute
+        // lengkap pemberhentian kereta tersebut (fitur endpoint /v1/route
+        // dari comuline/api yang sebelumnya belum dipakai di dashboard ini).
+        trainBody.addEventListener('click', async (e) => {
+            const badge = e.target.closest('.sched-route-toggle');
+            if (!badge) return;
+            e.stopPropagation();
+
+            const trainId = badge.dataset.trainId;
+            if (!trainId) return;
+
+            const item = badge.closest('.sched-item');
+            if (!item) return;
+
+            const existingPanel = item.nextElementSibling;
+            if (existingPanel && existingPanel.classList.contains('route-panel')) {
+                existingPanel.remove();
+                badge.classList.remove('open');
+                return;
+            }
+
+            // Tutup panel rute lain yang mungkin sedang terbuka di jadwal
+            // stasiun yang sama, supaya panel tetap ringkas.
+            const panelContainer = item.closest('.schedule-panel');
+            if (panelContainer) {
+                panelContainer.querySelectorAll('.route-panel').forEach((el) => el.remove());
+                panelContainer.querySelectorAll('.sched-route-toggle.open').forEach((el) => el.classList.remove('open'));
+            }
+
+            badge.classList.add('open');
+            const panel = document.createElement('div');
+            panel.className = 'route-panel';
+            panel.innerHTML = `<div class="loading-inline"><span class="schedule-spinner"></span>Memuat rute KA ${escapeHtml(trainId)}…</div>`;
+            item.after(panel);
+
+            try {
+                const route = await fetchTrainRoute(trainId);
+                panel.innerHTML = renderRoutePanel(route);
+            } catch (err) {
+                panel.innerHTML = `<div class="loading-inline" style="color:#f87171;">⚠️ Gagal memuat rute: ${escapeHtml(err.message)}</div>`;
+            }
+        });
+
         if (searchInput) {
             searchInput.addEventListener('input', applyStationFilter);
         }
@@ -968,15 +1109,68 @@
                 });
                 const dest = stationMap.get(s.station_destination_id) || s.station_destination_id || '-';
                 const origin = stationMap.get(s.station_origin_id) || s.station_origin_id || '-';
+
+                // Warna resmi jalur (mis. "#DD0067") disediakan API di
+                // metadata.origin.color — dipakai mewarnai badge KA supaya
+                // sesuai dengan warna jalur commuter line yang sebenarnya.
+                const lineColor = sanitizeHexColor(s.metadata?.origin?.color);
+                const badgeStyle = lineColor
+                    ? ` style="color:${lineColor};border-color:${lineColor}99;background:${lineColor}22;"`
+                    : '';
+
                 html += `
                     <div class="sched-item">
                         <span class="sched-time">${time}</span>
                         <span class="sched-route">${escapeHtml(origin)} → ${escapeHtml(dest)}<br><span class="sched-line">${escapeHtml(s.line || '')}</span></span>
-                        <span class="line-badge">KA ${escapeHtml(s.train_id || '-')}</span>
+                        <span class="line-badge sched-route-toggle" data-train-id="${escapeHtml(s.train_id || '')}"${badgeStyle} title="Klik untuk lihat rute lengkap pemberhentian">KA ${escapeHtml(s.train_id || '-')} ▾</span>
                     </div>
                 `;
             });
-            html += `<div class="item-sub" style="margin-top:6px;">Jam berangkat real dari jadwal resmi KAI (via api.comuline.com), zona waktu WIB.</div>`;
+            html += `<div class="item-sub" style="margin-top:6px;">Jam berangkat real dari jadwal resmi KAI (via api.comuline.com), zona waktu WIB · 💡 klik nomor KA untuk lihat rute lengkap pemberhentian.</div>`;
+            html += `</div>`;
+            return html;
+        }
+
+        // ============================================================
+        //  RUTE LENGKAP KERETA (GET /v1/route/{train_id})
+        //  Endpoint resmi comuline/api ini mengembalikan seluruh urutan
+        //  stasiun pemberhentian satu nomor KA — dipakai saat pengguna
+        //  klik badge "KA <nomor>" pada panel jadwal di atas.
+        // ============================================================
+        async function fetchTrainRoute(trainId, force = false) {
+            const cached = routeCache.get(trainId);
+            if (!force && cached && Date.now() - cached.ts < REFRESH_MS * 5) {
+                return cached.data;
+            }
+            const json = await fetchJsonResilient(
+                `https://api.comuline.com/v1/route/${encodeURIComponent(trainId)}`,
+                { timeout: 15000 }
+            );
+            // API mengembalikan array kosong [] bila train_id tak ditemukan,
+            // atau objek {routes, details} bila ditemukan — lihat
+            // route.controller.ts pada comuline/api.
+            const data = (json.data && !Array.isArray(json.data)) ? json.data : { routes: [], details: {} };
+            routeCache.set(trainId, { ts: Date.now(), data });
+            return data;
+        }
+
+        function renderRoutePanel(route) {
+            const stops = Array.isArray(route?.routes) ? route.routes : [];
+            if (!stops.length) {
+                return `<div class="route-panel-inner"><div class="loading-inline">Data rute lengkap tidak tersedia untuk KA ini.</div></div>`;
+            }
+            const det = route.details || {};
+            let html = `<div class="route-panel-inner">`;
+            html += `<div class="item-sub" style="margin-bottom:6px;">🚉 Rute lengkap: ${escapeHtml(det.station_origin_name || '-')} → ${escapeHtml(det.station_destination_name || '-')}${det.line ? ' · ' + escapeHtml(det.line) : ''}</div>`;
+            stops.forEach((s) => {
+                const time = new Date(s.departs_at).toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Jakarta',
+                });
+                html += `<div class="route-stop"><span class="route-stop-time">${time}</span><span class="route-stop-name">${escapeHtml(s.station_name)}</span></div>`;
+            });
+            html += `<div class="item-sub" style="margin-top:6px;">Sumber: api.comuline.com/v1/route/${escapeHtml(det.train_id || '')}</div>`;
             html += `</div>`;
             return html;
         }
@@ -995,6 +1189,8 @@
                 if (!stations.length) throw new Error('Tabel TMA tidak ditemukan di halaman sumber');
 
                 renderWaterLevel(stations);
+                waterHasData = true;
+                waterLastSuccessAt = Date.now();
                 setCardTime(waterTime, new Date());
                 setStatus('✅ Air OK');
                 return;
@@ -1065,18 +1261,30 @@
                     });
                     htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: poskobanjir.dsdadki.web.id (fallback)</div>`;
                     waterBody.innerHTML = htmlOut;
+                    waterHasData = true;
+                    waterLastSuccessAt = Date.now();
                     setCardTime(waterTime, new Date());
                     setStatus('✅ Air OK (fallback)');
                 } catch (err2) {
-                    waterBody.innerHTML = `
-                        <div style="color:#f87171; padding:12px;">
-                            ⚠️ Gagal memuat tinggi air<br>
-                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                            <br><br>
-                            💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
-                        </div>
-                    `;
-                    setStatus('❌ Gagal air', true);
+                    if (waterHasData) {
+                        // Sudah pernah berhasil dimuat sebelumnya — data lama
+                        // dibiarkan tetap tampil apa adanya, hanya diberi
+                        // catatan kecil. Siklus refresh berikutnya (tiap
+                        // REFRESH_MS, otomatis selama aplikasi terbuka) akan
+                        // mencoba lagi tanpa perlu tindakan pengguna.
+                        renderStaleWarning(waterBody, 'waterStaleWarn', waterLastSuccessAt, err.message);
+                        setStatus('⚠️ Air: pakai data terakhir', true);
+                    } else {
+                        waterBody.innerHTML = `
+                            <div style="color:#f87171; padding:12px;">
+                                ⚠️ Gagal memuat tinggi air<br>
+                                <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                                <br><br>
+                                💡 Cek langsung: <a href="${SOURCES.waterPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">bpbd.jakarta.go.id/waterlevel</a>
+                            </div>
+                        `;
+                        setStatus('❌ Gagal air', true);
+                    }
                 }
             }
         }
@@ -1174,7 +1382,7 @@
 
             html += `
                 <div style="margin-top:10px; font-size:0.75rem; color:#475569;">
-                    Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · pembaruan tiap jam · label tren dihitung dari selisih pembacaan, bukan status siaga resmi
+                    Sumber: bpbd.jakarta.go.id/waterlevel (Dinas SDA DKI Jakarta) · angka diperbarui sumbernya tiap jam, dicek ulang otomatis oleh dashboard ini tiap ${Math.round(REFRESH_MS / 1000)} detik selama halaman terbuka · label tren dihitung dari selisih pembacaan, bukan status siaga resmi
                 </div>
             `;
 
@@ -1195,6 +1403,8 @@
                 if (totalCount === 0) throw new Error('Tabel tingkat aktivitas tidak ditemukan di halaman sumber');
 
                 renderVolcanoes(groups);
+                volcanoHasData = true;
+                volcanoLastSuccessAt = Date.now();
                 setCardTime(volcanoTime, new Date());
                 setStatus('✅ Gunung OK');
                 return;
@@ -1229,18 +1439,25 @@
                     });
                     htmlOut += `<div style="margin-top:10px; font-size:0.75rem; color:#475569;">Sumber: magma.vsi.esdm.go.id (fallback, ringkasan kasar)</div>`;
                     volcanoBody.innerHTML = htmlOut;
+                    volcanoHasData = true;
+                    volcanoLastSuccessAt = Date.now();
                     setCardTime(volcanoTime, new Date());
                     setStatus('✅ Gunung OK (fallback)');
                 } catch (err2) {
-                    volcanoBody.innerHTML = `
-                        <div style="color:#f87171; padding:12px;">
-                            ⚠️ Gagal memuat status gunung<br>
-                            <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
-                            <br><br>
-                            💡 Cek langsung: <a href="${SOURCES.volcanoPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">magma.esdm.go.id</a>
-                        </div>
-                    `;
-                    setStatus('❌ Gagal gunung', true);
+                    if (volcanoHasData) {
+                        renderStaleWarning(volcanoBody, 'volcanoStaleWarn', volcanoLastSuccessAt, err.message);
+                        setStatus('⚠️ Gunung: pakai data terakhir', true);
+                    } else {
+                        volcanoBody.innerHTML = `
+                            <div style="color:#f87171; padding:12px;">
+                                ⚠️ Gagal memuat status gunung<br>
+                                <span style="font-size:0.85rem; color:#6b7f94;">${escapeHtml(err.message)}</span>
+                                <br><br>
+                                💡 Cek langsung: <a href="${SOURCES.volcanoPrimary}" target="_blank" rel="noopener noreferrer" style="color:#7fc9ff;">magma.esdm.go.id</a>
+                            </div>
+                        `;
+                        setStatus('❌ Gagal gunung', true);
+                    }
                 }
             }
         }
@@ -1427,7 +1644,8 @@
         setInterval(refreshAll, REFRESH_MS);
 
         console.log('🚀 NUSANTARA MONITOR aktif – refresh setiap 60 detik');
-        console.log('📡 Sumber: api.comuline.com | bpbd.jakarta.go.id/waterlevel | magma.esdm.go.id');
+        console.log('📡 Kereta: api.comuline.com/v1/station, /v1/schedule/{id}, /v1/route/{train_id} (lihat github.com/comuline/api)');
+        console.log('📡 Air & Gunung: bpbd.jakarta.go.id/waterlevel | magma.esdm.go.id');
     })();
 </script>
 </body>
