@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   TOKENS (tetap sama)
+   TOKENS (tetap sama seperti sebelumnya – tidak diubah)
 ============================================================ */
 :root{
   --bg-void:#070b14;
@@ -148,7 +148,7 @@ header.topbar{
 .status-pill .led{animation:blink 1.6s ease-in-out infinite;}
 .clockbox{white-space:nowrap;}
 
-/* HERO (singkat agar tidak terlalu panjang, struktur sama) */
+/* HERO */
 .hero{
   display:grid; grid-template-columns:minmax(280px,380px) 1fr; gap:22px;
   margin-top:26px;
@@ -239,7 +239,7 @@ header.topbar{
 }
 .hero-note em{color:var(--gold-soft); font-style:normal;}
 
-/* TOOLBAR dan RESULTS (struktur sama, tidak saya ubah) */
+/* TOOLBAR & RESULTS – struktur sama, tidak diubah */
 .toolbar{
   position:sticky; top:69px; z-index:40; margin-top:26px;
   padding:14px 16px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;
@@ -406,7 +406,7 @@ footer a:hover{color:var(--cyan); text-decoration:underline;}
 <body>
 <div class="grain" aria-hidden="true"></div>
 
-<!-- icon defs -->
+<!-- icon defs (sama) -->
 <svg width="0" height="0" style="position:absolute">
 <defs>
 <symbol id="i-flood" viewBox="0 0 24 24"><path d="M2 16c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/><path d="M2 20c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/><path d="M6 12l3-8 3 5 3-5 3 8"/></symbol>
@@ -580,7 +580,7 @@ const KATEGORI_META = {
 function metaKategori(k){ return KATEGORI_META[k] || {warna:'#8b98b5', simbol:'i-alert'}; }
 
 /* ============================================================
-   2. PETA WILAYAH (kabupaten/kota -> provinsi) – tetap sama
+   2. PETA WILAYAH (kabupaten/kota -> provinsi)
 ============================================================ */
 const KODE_PROVINSI = {
   '11':'Aceh','12':'Sumatera Utara','13':'Sumatera Barat','14':'Riau','15':'Jambi','16':'Sumatera Selatan',
@@ -727,7 +727,7 @@ function animateNumber(el, target){
 }
 
 /* ============================================================
-   6. AMBIL DATA – dengan cache
+   6. AMBIL DATA – agresif dengan 3 strategi + cache
 ============================================================ */
 function normalisasiRekaman(a, centroid){
   let tanggal = null;
@@ -784,8 +784,12 @@ function hitungRentangTanggal(){
 function formatTanggalSingkat(d){
   return d.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
 }
+function formatSQLDate(d){
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
 
-// Jalur proxy (sama)
+// Jalur proxy
 const JALUR_PROXY_CORS = [
   null,
   url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
@@ -821,7 +825,8 @@ async function ambilJSONDenganFallback(urlAsli, opsi){
   throw kesalahanTerakhir || new Error('Semua jalur pengambilan data gagal');
 }
 
-async function ambilSemuaFitur(onKemajuan){
+// Ambil data dengan strategi tertentu
+async function ambilDenganStrategi(whereClause, onKemajuan){
   let semua = [];
   let offset = 0;
   const batas = 2000;
@@ -829,7 +834,7 @@ async function ambilSemuaFitur(onKemajuan){
   const batasHalamanPengaman = 100;
   while(true){
     const params = new URLSearchParams({
-      where: '1=1',
+      where: whereClause,
       outFields: OUT_FIELDS,
       returnGeometry: 'false',
       returnCentroid: 'true',
@@ -847,7 +852,6 @@ async function ambilSemuaFitur(onKemajuan){
     offset += batas;
     if(halaman >= batasHalamanPengaman){ console.warn('Batas pengaman halaman tercapai'); break; }
   }
-  console.info('[BNPB] Paginasi selesai — halaman diambil:', halaman, '| total baris:', semua.length);
   return semua;
 }
 
@@ -861,50 +865,76 @@ async function muatData(){
   let dariCache = false;
   let cacheMeta = null;
 
-  // Coba ambil dari server
+  // --- STRATEGI 1: Filter tanggal di server ---
   try {
-    const fitur = await ambilSemuaFitur((halaman, totalSejauhIni) => {
-      setStatus('MEMUAT HALAMAN ' + halaman + ' \u00b7 ' + totalSejauhIni + ' BARIS', false, true);
+    const where = "dt >= DATE '" + formatSQLDate(awal) + "' AND dt <= DATE '" + formatSQLDate(akhir) + "'";
+    console.info('[BNPB] Strategi 1: filter tanggal di server:', where);
+    const fitur = await ambilDenganStrategi(where, (h, total) => {
+      setStatus('FILTER TANGGAL – halaman ' + h + ' \u00b7 ' + total + ' baris', false, true);
     });
     if (fitur && fitur.length) {
       const semuaData = fitur.map(f => normalisasiRekaman(f.attributes, f.centroid));
-      // Filter tanggal di sisi klien
       dataReal = semuaData.filter(r => r.tanggal && r.tanggal >= awal && r.tanggal <= akhir);
       if (dataReal.length === 0) {
-        // Jika tidak ada yang lolos filter, ambil semua data (tanpa filter)
+        // Jika tidak ada yang lolos filter, pakai semua data yang didapat (tanpa filter ketat)
         dataReal = semuaData;
       }
-      // Simpan ke cache
-      const meta = { timestamp: Date.now(), count: dataReal.length, rentang: { awal: awal.toISOString(), akhir: akhir.toISOString() } };
-      simpanCache(dataReal, meta);
-      cacheMeta = meta;
-      dariCache = false;
-      console.info('[BNPB] Data berhasil diambil dari server:', dataReal.length, 'item');
-    } else {
-      throw new Error('Data kosong dari server');
+      console.info('[BNPB] Strategi 1 berhasil, data:', dataReal.length);
     }
-  } catch(err) {
-    console.warn('Gagal mengambil data dari server, mencoba cache:', err);
-    // Coba pakai cache
+  } catch(e) {
+    console.warn('[BNPB] Strategi 1 gagal:', e.message);
+  }
+
+  // --- STRATEGI 2: Tanpa filter (1=1) ---
+  if (!dataReal || dataReal.length === 0) {
+    try {
+      console.info('[BNPB] Strategi 2: tanpa filter (1=1)');
+      const fitur = await ambilDenganStrategi('1=1', (h, total) => {
+        setStatus('TANPA FILTER – halaman ' + h + ' \u00b7 ' + total + ' baris', false, true);
+      });
+      if (fitur && fitur.length) {
+        const semuaData = fitur.map(f => normalisasiRekaman(f.attributes, f.centroid));
+        dataReal = semuaData.filter(r => r.tanggal && r.tanggal >= awal && r.tanggal <= akhir);
+        if (dataReal.length === 0) {
+          dataReal = semuaData;
+        }
+        console.info('[BNPB] Strategi 2 berhasil, data:', dataReal.length);
+      }
+    } catch(e) {
+      console.warn('[BNPB] Strategi 2 gagal:', e.message);
+    }
+  }
+
+  // --- STRATEGI 3: Cache ---
+  if (!dataReal || dataReal.length === 0) {
     const cache = ambilCache();
     if (cache && cache.data && cache.data.length) {
       dataReal = cache.data;
       cacheMeta = cache.meta;
       dariCache = true;
       console.info('[BNPB] Menggunakan cache:', dataReal.length, 'item, dari', new Date(cacheMeta.timestamp).toLocaleString());
-    } else {
-      // Tidak ada cache, pakai data contoh
-      console.warn('Tidak ada cache, menggunakan data contoh');
-      dataReal = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid));
-      modeDemo = true;
-      dariCache = false;
     }
   }
 
-  // Jika data masih kosong, pakai contoh
+  // --- Jika masih kosong, pakai data contoh ---
+  if (!dataReal || dataReal.length === 0) {
+    console.warn('[BNPB] Semua strategi gagal, menggunakan data contoh');
+    dataReal = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid));
+    modeDemo = true;
+    dariCache = false;
+  }
+
+  // Pastikan dataReal tidak kosong
   if (!dataReal || !dataReal.length) {
     dataReal = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid));
     modeDemo = true;
+  }
+
+  // Simpan ke cache jika data real dan tidak dari cache
+  if (!dariCache && dataReal && dataReal.length > 0) {
+    const meta = { timestamp: Date.now(), count: dataReal.length, rentang: { awal: awal.toISOString(), akhir: akhir.toISOString() } };
+    simpanCache(dataReal, meta);
+    cacheMeta = meta;
   }
 
   dataMentah = dataReal;
@@ -940,7 +970,7 @@ function setStatus(teks, demo, spin){
 }
 
 /* ============================================================
-   7. FILTER / URUT / KELOMPOK (sama)
+   7. FILTER / URUT / KELOMPOK (sama seperti sebelumnya)
 ============================================================ */
 function terapkanJarak(){
   dataMentah.forEach(r => {
@@ -980,7 +1010,7 @@ function urutkanData(arr){
 }
 
 /* ============================================================
-   8–14. RENDER, EVENT, DLL – tetap sama (tidak saya ubah)
+   8–14. RENDER, EVENT, DLL – tetap sama (tidak diubah)
 ============================================================ */
 function renderStatistik(list){
   const totalKejadian = list.reduce((s,r)=>s+(r.jumlahKejadian||1),0);
