@@ -797,26 +797,71 @@ function formatTanggalSingkat(d){
   return d.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
 }
 
+// Jalur pengambilan data: percobaan pertama selalu langsung ke gis.bnpb.go.id.
+// Jika browser memblokir permintaan langsung (mis. kebijakan CORS server berubah) atau terjadi kegagalan
+// jaringan sementara, sistem otomatis menempuh jalur cadangan lewat proxy CORS publik secara berurutan
+// sebelum akhirnya menyerah ke data contoh. Ini membuat pengambilan data tahan terhadap gangguan jaringan
+// tanpa mengubah sumber data resmi maupun struktur data yang dihasilkan.
+const JALUR_PROXY_CORS = [
+  null, // langsung, tanpa proxy
+  url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url)
+];
+
+// Ambil satu halaman JSON dengan percobaan ulang per jalur + batas waktu, lalu pindah ke jalur berikutnya bila gagal.
+async function ambilJSONDenganFallback(urlAsli, opsi){
+  opsi = opsi || {};
+  const percobaanPerJalur = opsi.percobaanPerJalur || 2;
+  const batasWaktuMs = opsi.batasWaktuMs || 20000;
+  let kesalahanTerakhir = null;
+  for(const buatProxy of JALUR_PROXY_CORS){
+    const urlAkhir = buatProxy ? buatProxy(urlAsli) : urlAsli;
+    for(let percobaan = 0; percobaan < percobaanPerJalur; percobaan++){
+      const kontrol = new AbortController();
+      const timer = setTimeout(() => kontrol.abort(), batasWaktuMs);
+      try{
+        const res = await fetch(urlAkhir, {signal:kontrol.signal, cache:'no-store'});
+        clearTimeout(timer);
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const json = await res.json();
+        if(json.error) throw new Error(json.error.message || 'Kesalahan API ArcGIS');
+        return json;
+      }catch(err){
+        clearTimeout(timer);
+        kesalahanTerakhir = err;
+        console.warn('Gagal mengambil data ('+(buatProxy?'proxy cadangan':'jalur langsung')+', percobaan '+(percobaan+1)+'/'+percobaanPerJalur+'):', (err && err.message) || err);
+        await new Promise(r => setTimeout(r, 500 * (percobaan+1)));
+      }
+    }
+  }
+  throw kesalahanTerakhir || new Error('Semua jalur pengambilan data gagal');
+}
+
 // Ambil seluruh fitur nasional dalam rentang tanggal, menembus batas 2000 baris per halaman lewat paginasi resultOffset.
-async function ambilSemuaFitur(whereClause){
+// Terus membuka halaman berikutnya SELAMA server masih melaporkan sisa data (exceededTransferLimit) atau halaman
+// penuh, sehingga seluruh kejadian pada rentang 45 hari benar-benar terambil, bukan hanya halaman pertama.
+async function ambilSemuaFitur(whereClause, onKemajuan){
   let semua = [];
   let offset = 0;
   const batas = 2000;
+  let halaman = 0;
+  const batasHalamanPengaman = 100; // pengaman anti-infinite-loop; setara hingga 200.000 baris, jauh di atas volume realistis nasional 45 hari
   while(true){
     const params = new URLSearchParams({
       where:whereClause, outFields:OUT_FIELDS, returnGeometry:'false', returnCentroid:'true',
       orderByFields:'dt DESC', resultRecordCount:String(batas), resultOffset:String(offset), f:'json'
     });
-    const res = await fetch(FEATURE_URL + '?' + params.toString());
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json = await res.json();
-    if(json.error) throw new Error(json.error.message || 'Kesalahan API');
+    const json = await ambilJSONDenganFallback(FEATURE_URL + '?' + params.toString());
     const fitur = json.features || [];
     semua = semua.concat(fitur);
+    halaman++;
+    if(typeof onKemajuan === 'function') onKemajuan(halaman, semua.length);
     if(fitur.length < batas && !json.exceededTransferLimit) break;
     offset += batas;
-    if(offset > 20000) break; // batas pengaman
+    if(halaman >= batasHalamanPengaman){ console.warn('Batas pengaman halaman tercapai pada offset', offset); break; }
   }
+  console.info('[BNPB] Paginasi selesai — halaman diambil:', halaman, '| total baris:', semua.length);
   return semua;
 }
 
@@ -828,7 +873,9 @@ async function muatData(){
   // Query nasional (tanpa filter wilayah apa pun) dibatasi kejadian dari hari ini mundur 45 hari.
   const whereClause = "dt >= DATE '" + formatSQLDate(awal) + "' AND dt <= DATE '" + formatSQLDate(akhir) + "'";
   try{
-    const fitur = await ambilSemuaFitur(whereClause);
+    const fitur = await ambilSemuaFitur(whereClause, (halaman, totalSejauhIni) => {
+      setStatus('MEMUAT HALAMAN ' + halaman + ' \u00b7 ' + totalSejauhIni + ' BARIS', false, true);
+    });
     if(!fitur.length) throw new Error('Data kosong pada rentang 45 hari terakhir');
     dataMentah = fitur.map(f => normalisasiRekaman(f.attributes, f.centroid))
       .filter(r => r.tanggal && r.tanggal >= awal && r.tanggal <= akhir); // jaring pengaman rentang tanggal di sisi klien
