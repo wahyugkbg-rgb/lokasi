@@ -554,9 +554,10 @@ footer a:hover{color:var(--cyan); text-decoration:underline;}
         </div>
       </div>
       <div class="hero-note">
-        Data kejadian bencana mingguan dihimpun langsung dari layanan <em>ArcGIS FeatureServer</em> BNPB
+        Data kejadian bencana <em>secara nasional</em> dihimpun langsung dari layanan <em>ArcGIS FeatureServer</em> BNPB
         (<span style="color:var(--text-dim)">Kejadian_Bencana_Mingguan</span>) &mdash; sumber yang sama dengan
-        yang menggerakkan peta di gis.bnpb.go.id. Kartu di bawah dikelompokkan per provinsi &amp; kabupaten/kota,
+        yang menggerakkan peta di gis.bnpb.go.id, dibatasi pada rentang <span id="hintRentang">45 hari terakhir</span>.
+        Kartu di bawah dikelompokkan per provinsi &amp; kabupaten/kota,
         dan diurutkan berdasarkan jarak dari lokasi Anda bila diizinkan.
       </div>
     </div>
@@ -776,25 +777,67 @@ function normalisasiRekaman(a, centroid){
   };
 }
 
-async function muatData(){
-  document.getElementById('hasil').innerHTML = '<div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>';
-  setStatus('MENYAMBUNGKAN\u2026', false, true);
-  const params = new URLSearchParams({
-    where:'1=1', outFields:OUT_FIELDS, returnGeometry:'false', returnCentroid:'true',
-    orderByFields:'dt DESC', resultRecordCount:'2000', f:'json'
-  });
-  try{
+const RENTANG_HARI = 45;
+let rentangAwal = null;
+let rentangAkhir = null;
+
+function hitungRentangTanggal(){
+  const akhir = new Date();
+  akhir.setHours(23,59,59,999);
+  const awal = new Date();
+  awal.setDate(awal.getDate() - RENTANG_HARI);
+  awal.setHours(0,0,0,0);
+  return {awal, akhir};
+}
+function formatSQLDate(d){
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function formatTanggalSingkat(d){
+  return d.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
+}
+
+// Ambil seluruh fitur nasional dalam rentang tanggal, menembus batas 2000 baris per halaman lewat paginasi resultOffset.
+async function ambilSemuaFitur(whereClause){
+  let semua = [];
+  let offset = 0;
+  const batas = 2000;
+  while(true){
+    const params = new URLSearchParams({
+      where:whereClause, outFields:OUT_FIELDS, returnGeometry:'false', returnCentroid:'true',
+      orderByFields:'dt DESC', resultRecordCount:String(batas), resultOffset:String(offset), f:'json'
+    });
     const res = await fetch(FEATURE_URL + '?' + params.toString());
     if(!res.ok) throw new Error('HTTP '+res.status);
     const json = await res.json();
     if(json.error) throw new Error(json.error.message || 'Kesalahan API');
     const fitur = json.features || [];
-    if(!fitur.length) throw new Error('Data kosong');
-    dataMentah = fitur.map(f => normalisasiRekaman(f.attributes, f.centroid));
+    semua = semua.concat(fitur);
+    if(fitur.length < batas && !json.exceededTransferLimit) break;
+    offset += batas;
+    if(offset > 20000) break; // batas pengaman
+  }
+  return semua;
+}
+
+async function muatData(){
+  document.getElementById('hasil').innerHTML = '<div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>';
+  setStatus('MENYAMBUNGKAN\u2026', false, true);
+  const {awal, akhir} = hitungRentangTanggal();
+  rentangAwal = awal; rentangAkhir = akhir;
+  // Query nasional (tanpa filter wilayah apa pun) dibatasi kejadian dari hari ini mundur 45 hari.
+  const whereClause = "dt >= DATE '" + formatSQLDate(awal) + "' AND dt <= DATE '" + formatSQLDate(akhir) + "'";
+  try{
+    const fitur = await ambilSemuaFitur(whereClause);
+    if(!fitur.length) throw new Error('Data kosong pada rentang 45 hari terakhir');
+    dataMentah = fitur.map(f => normalisasiRekaman(f.attributes, f.centroid))
+      .filter(r => r.tanggal && r.tanggal >= awal && r.tanggal <= akhir); // jaring pengaman rentang tanggal di sisi klien
+    if(!dataMentah.length) throw new Error('Tidak ada kejadian tervalidasi pada rentang tanggal');
     modeDemo = false;
   }catch(err){
     console.warn('Gagal memuat data live BNPB, memakai data contoh:', err);
-    dataMentah = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid));
+    dataMentah = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid))
+      .filter(r => r.tanggal && r.tanggal >= awal && r.tanggal <= akhir);
     modeDemo = true;
   }
   const kategoriSet = new Set(Object.keys(KATEGORI_META));
@@ -803,6 +846,8 @@ async function muatData(){
   if(state.kategoriAktif.size === 0){ state.kategoriTersedia.forEach(k => state.kategoriAktif.add(k)); }
   setStatus(modeDemo ? 'MODE CONTOH' : 'LIVE', modeDemo, false);
   document.getElementById('lastSync').textContent = 'Sinkronisasi terakhir: ' + new Date().toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'}) + ' WIB';
+  const hint = document.getElementById('hintRentang');
+  if(hint) hint.textContent = formatTanggalSingkat(rentangAwal) + ' \u2013 ' + formatTanggalSingkat(rentangAkhir) + ' (45 hari terakhir)';
   bangunChip();
   prosesTampilan();
 }
@@ -954,7 +999,9 @@ function escapeHtml(s){
 function renderDaftar(list){
   const wadah = document.getElementById('hasil');
   const ringkas = document.getElementById('ringkasanHasil');
-  ringkas.textContent = formatAngka(list.length) + ' kejadian ditampilkan' + (lokasiPengguna ? ' \u00b7 diurutkan dari lokasi Anda' : '');
+  ringkas.textContent = formatAngka(list.length) + ' kejadian nasional' +
+    (rentangAwal && rentangAkhir ? ' \u00b7 ' + formatTanggalSingkat(rentangAwal) + ' \u2013 ' + formatTanggalSingkat(rentangAkhir) : '') +
+    (lokasiPengguna ? ' \u00b7 diurutkan dari lokasi Anda' : '');
 
   if(!list.length){
     wadah.innerHTML = '<div class="empty-state"><svg class="icon"><use href="#i-search"/></svg><div>Tidak ada kejadian yang cocok dengan filter saat ini.</div></div>';
