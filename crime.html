@@ -130,7 +130,7 @@
             <span class="logo-icon"><i class="fas fa-shield-halved"></i></span>
             <div>
                 <div class="header-title glow-text">LIVE CRIME MONITOR</div>
-                <div class="header-sub"><i class="fas fa-map-pin"></i> Seluruh Indonesia · <span id="sourceLabel">Google News</span></div>
+                <div class="header-sub"><i class="fas fa-map-pin"></i> Seluruh Indonesia · <span id="sourceLabel">Memuat sumber...</span></div>
             </div>
         </div>
         <div class="header-right">
@@ -181,14 +181,14 @@
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari Google News...</td></tr>
+                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari 12 sumber berita...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
     <div class="footer">
-        <i class="fas fa-shield-alt"></i> Data <strong>real</strong> dari Google News RSS · Update otomatis setiap 60 detik
+        <i class="fas fa-shield-alt"></i> Data <strong>real</strong> dari 12 sumber RSS (Google News, Detik, Antara, CNN Indonesia, Tribunnews) · Update otomatis setiap 60 detik · Jendela 7 hari terakhir
     </div>
 
     <script>
@@ -212,10 +212,30 @@
                 'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan', 'pemukulan']
             };
 
-            // Gunakan proxy untuk menghindari CORS
-            const PROXY_URL = 'https://api.allorigins.win/raw?url=';
-            // Query RSS Google News (berita terkait kriminal di Indonesia)
-            const RSS_URL = 'https://news.google.com/rss/search?q=kejahatan+OR+kriminal+OR+narkoba+OR+pencurian+OR+curanmor+OR+tawuran+OR+pembunuhan+OR+perampokan+OR+judi+OR+obat+terlarang+Indonesia&hl=id&gl=ID&ceid=ID:id';
+            // Beberapa proxy CORS dicoba berurutan agar fetch tidak mudah gagal total
+            const PROXIES = [
+                url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+                url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+                url => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
+            ];
+
+            // Banyak sumber RSS digabung: beberapa query Google News per-kategori (agar hasil
+            // lebih banyak, karena satu query gabungan dibatasi jumlah hasilnya oleh Google)
+            // ditambah RSS langsung dari media nasional yang punya kanal hukum/kriminal.
+            const RSS_SOURCES = [
+                { name: 'Google News – Kriminal Umum', url: 'https://news.google.com/rss/search?q=kriminal+OR+kejahatan+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Narkoba', url: 'https://news.google.com/rss/search?q=narkoba+OR+narkotika+OR+sabu+ditangkap+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Pencurian & Curanmor', url: 'https://news.google.com/rss/search?q=pencurian+OR+curanmor+OR+maling+OR+begal+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Kekerasan & Pembunuhan', url: 'https://news.google.com/rss/search?q=pembunuhan+OR+mutilasi+OR+penganiayaan+OR+pengeroyokan+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Perampokan & Penipuan', url: 'https://news.google.com/rss/search?q=perampokan+OR+penipuan+OR+jambret+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Judi Online', url: 'https://news.google.com/rss/search?q=judi+online+OR+togel+ditangkap+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Jabodetabek', url: 'https://news.google.com/rss/search?q=kriminal+Jakarta+OR+Bogor+OR+Depok+OR+Tangerang+OR+Bekasi+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Google News – Jateng/Jatim/DIY', url: 'https://news.google.com/rss/search?q=kriminal+Surabaya+OR+Semarang+OR+Yogyakarta+OR+Bandung+when:7d&hl=id&gl=ID&ceid=ID:id' },
+                { name: 'Detik – Hukum & Kriminal', url: 'https://rss.detik.com/index.php/hukum' },
+                { name: 'Antara – Hukum', url: 'https://www.antaranews.com/rss/hukum.xml' },
+                { name: 'CNN Indonesia – Nasional', url: 'https://www.cnnindonesia.com/nasional/rss' },
+                { name: 'Tribunnews', url: 'https://www.tribunnews.com/rss' }
+            ];
 
             // ================================================================
             // 2. STATE
@@ -311,32 +331,49 @@
             }
 
             // ================================================================
-            // 4. FETCH DATA DARI RSS (REAL)
+            // 4. FETCH DATA DARI BANYAK SUMBER RSS (REAL, PARALEL)
             // ================================================================
-            async function fetchRSS() {
+
+            // Ambil satu URL lewat beberapa proxy CORS berurutan, berhenti begitu salah satu berhasil
+            async function fetchWithFallback(url) {
+                for (const buildProxyUrl of PROXIES) {
+                    try {
+                        const response = await fetch(buildProxyUrl(url), { cache: 'no-store' });
+                        if (!response.ok) continue;
+                        const text = await response.text();
+                        if (text && text.length > 50) return text;
+                    } catch (e) { /* coba proxy berikutnya */ }
+                }
+                return null;
+            }
+
+            // Ambil & parse satu sumber RSS, kembalikan array event dalam 7 hari terakhir (atau [] jika gagal)
+            async function fetchSingleSource(source) {
                 try {
-                    const response = await fetch(PROXY_URL + encodeURIComponent(RSS_URL));
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    const xmlText = await response.text();
+                    const xmlText = await fetchWithFallback(source.url);
+                    if (!xmlText) return [];
+
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                    if (xmlDoc.querySelector('parsererror')) return [];
                     const items = xmlDoc.querySelectorAll('item');
                     const events = [];
 
-                    // Tentukan rentang tanggal (hari ini - 7 hari)
+                    // Rentang tanggal: hari ini mundur 7 hari (real time, dihitung ulang tiap fetch)
                     const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const sevenDaysAgo = new Date(today);
-                    sevenDaysAgo.setDate(today.getDate() - 7);
+                    today.setHours(23, 59, 59, 999);
+                    const sevenDaysAgo = new Date();
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                    sevenDaysAgo.setHours(0, 0, 0, 0);
 
                     for (let item of items) {
                         const title = item.querySelector('title')?.textContent || '';
                         const pubDate = item.querySelector('pubDate')?.textContent;
-                        if (!pubDate) continue;
+                        if (!title || !pubDate) continue;
 
                         const dateObj = new Date(pubDate);
                         if (isNaN(dateObj.getTime())) continue;
-                        // Filter tanggal: harus dalam 7 hari terakhir
+                        // Filter tanggal: harus dalam jendela hari-ini s/d 7 hari ke belakang
                         if (dateObj < sevenDaysAgo || dateObj > today) continue;
 
                         const tanggal = dateObj.toISOString().split('T')[0];
@@ -345,18 +382,49 @@
 
                         events.push({
                             tanggal: tanggal,
+                            ts: dateObj.getTime(),
                             provinsi: location.provinsi,
                             kota: location.kota,
                             peristiwa: title.trim(),
-                            kategori: kategori
+                            kategori: kategori,
+                            sumber: source.name
                         });
                     }
 
                     return events;
                 } catch (err) {
-                    console.warn('Gagal fetch RSS:', err);
-                    return null;
+                    console.warn('Gagal fetch sumber:', source.name, err);
+                    return [];
                 }
+            }
+
+            // Buang berita duplikat yang muncul di beberapa sumber sekaligus (judul mirip)
+            function dedupeEvents(events) {
+                const seen = new Set();
+                const result = [];
+                for (const ev of events) {
+                    const key = ev.peristiwa.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70);
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    result.push(ev);
+                }
+                return result;
+            }
+
+            // Ambil semua sumber secara paralel, gabungkan, dedup, urutkan terbaru dulu
+            async function fetchAllSources() {
+                const settled = await Promise.allSettled(RSS_SOURCES.map(src => fetchSingleSource(src)));
+                let merged = [];
+                let sourcesOk = 0;
+                settled.forEach(r => {
+                    if (r.status === 'fulfilled' && r.value.length > 0) {
+                        sourcesOk++;
+                        merged = merged.concat(r.value);
+                    }
+                });
+                merged = dedupeEvents(merged);
+                merged.sort((a, b) => b.ts - a.ts);
+                return { events: merged, sourcesOk, sourcesTotal: RSS_SOURCES.length };
             }
 
             // ================================================================
@@ -387,8 +455,8 @@
                     let va = a[sortKey] || '';
                     let vb = b[sortKey] || '';
                     if (sortKey === 'tanggal') {
-                        va = new Date(va + 'T00:00:00').getTime();
-                        vb = new Date(vb + 'T00:00:00').getTime();
+                        va = a.ts || new Date(va + 'T00:00:00').getTime();
+                        vb = b.ts || new Date(vb + 'T00:00:00').getTime();
                     }
                     if (typeof va === 'string') va = va.toLowerCase();
                     if (typeof vb === 'string') vb = vb.toLowerCase();
@@ -408,7 +476,7 @@
                             <td class="td-tanggal">${formatTanggal(item.tanggal)}</td>
                             <td class="td-provinsi">${item.provinsi}</td>
                             <td class="td-kota">${item.kota}</td>
-                            <td class="td-peristiwa">${item.peristiwa}</td>
+                            <td class="td-peristiwa" title="Sumber: ${item.sumber || 'Google News'}">${item.peristiwa}</td>
                             <td><span class="${badgeClass}">${getKategoriLabel(item.kategori)}</span></td>
                         </tr>`;
                     });
@@ -468,16 +536,17 @@
 
                 if (showLoading) {
                     dataStatusEl.textContent = ' Mengambil data...';
-                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari Google News...</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari 12 sumber berita...</td></tr>`;
                 }
 
-                let newData = await fetchRSS();
+                const result = await fetchAllSources();
+                const newData = result.events;
 
                 if (newData && newData.length > 0) {
                     currentData = newData;
                     // Simpan di localStorage untuk cadangan jika nanti gagal
                     try { localStorage.setItem('crimeData', JSON.stringify(currentData)); } catch (e) {}
-                    sourceLabel.textContent = 'Google News (real-time)';
+                    sourceLabel.textContent = `${result.sourcesOk}/${result.sourcesTotal} sumber aktif (real-time)`;
                     fetchError = false;
                 } else {
                     // Gagal atau tidak ada data: gunakan data dari localStorage jika ada
