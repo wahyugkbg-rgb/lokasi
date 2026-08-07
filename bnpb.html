@@ -555,8 +555,9 @@ footer a:hover{color:var(--cyan); text-decoration:underline;}
       </div>
       <div class="hero-note">
         Data kejadian bencana <em>secara nasional</em> dihimpun langsung dari layanan <em>ArcGIS FeatureServer</em> BNPB
-        (<span style="color:var(--text-dim)">Kejadian_Bencana_Mingguan</span>) &mdash; sumber yang sama dengan
-        yang menggerakkan peta di gis.bnpb.go.id, dibatasi pada rentang <span id="hintRentang">45 hari terakhir</span>.
+        (<span style="color:var(--text-dim)">Kejadian_Bencana_Mingguan</span>) — sumber yang sama dengan
+        yang menggerakkan peta di <a href="https://gis.bnpb.go.id/arcgis/apps/sites/?fromEdit=true#/public/pages/data-bencana" target="_blank" rel="noopener" style="color:var(--gold-soft);text-decoration:underline;">portal data bencana BNPB</a>,
+        dibatasi pada rentang <span id="hintRentang">45 hari terakhir</span>.
         Kartu di bawah dikelompokkan per provinsi &amp; kabupaten/kota,
         dan diurutkan berdasarkan jarak dari lokasi Anda bila diizinkan.
       </div>
@@ -593,7 +594,7 @@ footer a:hover{color:var(--cyan); text-decoration:underline;}
   </div>
 
   <footer>
-    <span>Sumber: <a href="https://gis.bnpb.go.id" target="_blank" rel="noopener">gis.bnpb.go.id</a> &middot; layanan Kejadian_Bencana_Mingguan (ArcGIS FeatureServer), Pusdatinkom BNPB.</span>
+    <span>Sumber: <a href="https://gis.bnpb.go.id/arcgis/apps/sites/?fromEdit=true#/public/pages/data-bencana" target="_blank" rel="noopener">gis.bnpb.go.id</a> &middot; layanan Kejadian_Bencana_Mingguan (ArcGIS FeatureServer), Pusdatinkom BNPB.</span>
     <span id="lastSync">Sinkronisasi terakhir: &mdash;</span>
   </footer>
 </div>
@@ -604,6 +605,10 @@ footer a:hover{color:var(--cyan); text-decoration:underline;}
 
 /* ============================================================
    1. KONFIGURASI SUMBER DATA
+   Endpoint ini adalah sumber data resmi yang sama dengan portal
+   data bencana BNPB (https://gis.bnpb.go.id/arcgis/apps/sites/...).
+   Data diambil langsung dari FeatureServer dengan filter tanggal
+   untuk rentang 45 hari terakhir.
 ============================================================ */
 const FEATURE_URL = 'https://gis.bnpb.go.id/server/rest/services/Kejadian_Bencana_Mingguan/FeatureServer/25/query';
 const OUT_FIELDS = ['dt','kabupaten','kategori_bencana','jumlah_kejadian','meninggal','hilang','luka_sakit',
