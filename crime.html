@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🚨 LIVE CRIME MONITOR – Real RSS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
             background: #0a0e1a;
             color: #e0e8f0;
-            font-family: 'Rajdhani', sans-serif;
+            font-family: 'Inter', 'Rajdhani', sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
             padding: 12px;
             min-height: 100vh;
             background-image: radial-gradient(ellipse at 10% 20%, rgba(0,255,200,0.03) 0%, transparent 50%),
@@ -32,7 +34,7 @@
         @keyframes pulse { 0%{opacity:1;text-shadow:0 0 10px #00f5d4;} 50%{opacity:0.6;text-shadow:0 0 30px #00f5d4;} 100%{opacity:1;text-shadow:0 0 10px #00f5d4;} }
         .header-title { font-family:'Orbitron',monospace; font-size:clamp(14px,3.5vw,24px); font-weight:900;
             background:linear-gradient(135deg,#00f5d4,#00b8ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:2px; }
-        .header-sub { font-size:clamp(9px,1.8vw,13px); color:#7a8ba8; letter-spacing:1px; }
+        .header-sub { font-size:clamp(11px,1.8vw,13px); color:#8fa4c4; letter-spacing:0.3px; font-family:'Inter',sans-serif; }
         .header-right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
         .live-badge { display:flex; align-items:center; gap:6px; background:rgba(255,0,80,0.15); border:1px solid rgba(255,0,80,0.3);
             padding:4px 14px 4px 10px; border-radius:50px; font-size:11px; font-weight:700; color:#ff4477; font-family:'Orbitron',monospace; }
@@ -54,11 +56,11 @@
         .filter-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:12px 16px;
             background:rgba(12,20,35,0.7); backdrop-filter:blur(8px); border-radius:12px; border:1px solid rgba(0,245,212,0.06);
             align-items:center; }
-        .filter-bar label { font-size:11px; font-weight:600; color:#7a8ba8; letter-spacing:1px; text-transform:uppercase;
+        .filter-bar label { font-size:12px; font-weight:600; color:#9fb4d4; letter-spacing:0.5px; text-transform:uppercase;
             display:flex; align-items:center; gap:6px; }
         .filter-bar select, .filter-bar input { background:rgba(0,0,0,0.4); border:1px solid rgba(0,245,212,0.15);
-            color:#e0e8f0; padding:6px 12px; border-radius:8px; font-family:'Rajdhani',sans-serif; font-size:13px;
-            font-weight:600; outline:none; transition:all 0.3s; min-width:100px; flex:1; }
+            color:#e0e8f0; padding:7px 12px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px;
+            font-weight:500; outline:none; transition:all 0.3s; min-width:100px; flex:1; }
         .filter-bar select:focus, .filter-bar input:focus { border-color:#00f5d4; box-shadow:0 0 20px rgba(0,245,212,0.1); }
         .filter-bar select option { background:#0a0e1a; color:#e0e8f0; }
         .filter-bar .search-wrapper { flex:2; min-width:150px; position:relative; }
@@ -71,23 +73,23 @@
         .table-container { background:rgba(12,20,35,0.7); backdrop-filter:blur(8px); border-radius:12px;
             border:1px solid rgba(0,245,212,0.06); overflow:hidden; margin-bottom:16px; }
         .table-scroll { overflow-x:auto; padding:0 4px 4px 4px; -webkit-overflow-scrolling:touch; }
-        table { width:100%; border-collapse:collapse; font-size:clamp(11px,1.4vw,14px); min-width:700px; }
+        table { width:100%; border-collapse:collapse; font-size:clamp(13px,1.7vw,15px); min-width:700px; font-family:'Inter',sans-serif; }
         thead { background:rgba(0,245,212,0.04); border-bottom:2px solid rgba(0,245,212,0.1); }
-        thead th { padding:12px 12px; text-align:left; font-family:'Orbitron',monospace; font-size:clamp(8px,1.1vw,11px);
-            font-weight:700; color:#7a8ba8; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+        thead th { padding:14px 12px; text-align:left; font-family:'Inter',sans-serif; font-size:clamp(11px,1.3vw,13px);
+            font-weight:700; color:#9fb4d4; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer;
             user-select:none; transition:color 0.3s; white-space:nowrap; }
         thead th:hover { color:#00f5d4; }
-        thead th i { margin-left:4px; font-size:10px; opacity:0.5; }
+        thead th i { margin-left:4px; font-size:11px; opacity:0.5; }
         tbody tr { border-bottom:1px solid rgba(255,255,255,0.03); transition:all 0.3s; }
         tbody tr:hover { background:rgba(0,245,212,0.04); }
-        tbody td { padding:10px 12px; vertical-align:middle; }
-        .td-provinsi { font-weight:700; color:#4fc3ff; }
-        .td-kota { color:#b0c4de; }
-        .td-peristiwa { color:#e0e8f0; }
-        .td-tanggal { font-family:'Orbitron',monospace; font-size:clamp(9px,1vw,12px); color:#7a8ba8; white-space:nowrap; }
-        .badge-kategori { display:inline-block; padding:2px 12px; border-radius:50px; font-size:clamp(9px,1vw,12px);
-            font-weight:700; letter-spacing:0.5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
-            color:#b0c4de; }
+        tbody td { padding:13px 12px; vertical-align:middle; line-height:1.45; }
+        .td-provinsi { font-weight:700; color:#4fc3ff; font-size:clamp(12px,1.5vw,14px); }
+        .td-kota { color:#c3d4ea; font-size:clamp(12px,1.5vw,14px); }
+        .td-peristiwa { color:#eef3f9; font-size:clamp(13px,1.7vw,15px); font-weight:500; }
+        .td-tanggal { font-family:'Inter',sans-serif; font-weight:600; font-size:clamp(12px,1.3vw,14px); color:#8fa4c4; white-space:nowrap; }
+        .badge-kategori { display:inline-block; padding:4px 14px; border-radius:50px; font-size:clamp(11px,1.2vw,13px);
+            font-weight:700; letter-spacing:0.3px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+            color:#c3d4ea; }
         .badge-kategori.narkoba { background:rgba(255,0,80,0.12); border-color:rgba(255,0,80,0.2); color:#ff4477; }
         .badge-kategori.pencurian { background:rgba(255,180,0,0.12); border-color:rgba(255,180,0,0.2); color:#ffb347; }
         .badge-kategori.kekerasan { background:rgba(255,50,50,0.12); border-color:rgba(255,50,50,0.2); color:#ff5555; }
@@ -99,26 +101,27 @@
         .badge-kategori.judi { background:rgba(100,50,255,0.12); border-color:rgba(100,50,255,0.2); color:#aa88ff; }
         .badge-kategori.obat-keras { background:rgba(0,200,255,0.12); border-color:rgba(0,200,255,0.2); color:#4fc3ff; }
         .badge-kategori.umum { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.08); color:#b0c4de; }
-        .footer { text-align:center; font-size:10px; color:#3a4a6a; padding:12px; letter-spacing:1px;
+        .footer { text-align:center; font-size:12px; color:#5a6f95; padding:12px; letter-spacing:0.3px;
             border-top:1px solid rgba(255,255,255,0.02); }
         .footer a { color:#00f5d4; text-decoration:none; }
         .footer a:hover { text-decoration:underline; }
-        .no-data { text-align:center; padding:40px 20px; color:#4a5a7a; font-size:16px; }
+        .no-data { text-align:center; padding:40px 20px; color:#5a6f95; font-size:15px; }
         .no-data i { font-size:40px; display:block; margin-bottom:12px; color:#2a3a5a; }
-        .status-bar { font-size:11px; color:#6a8aaa; margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+        .status-bar { font-size:13px; color:#8fa4c4; margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
         .status-bar .source { color:#00f5d4; font-weight:600; }
         .status-bar .error { color:#ff4477; }
         @media (max-width:600px) {
-            body { padding:6px; }
+            body { padding:6px; font-size:14px; }
             .header { padding:10px 12px; flex-direction:column; align-items:stretch; }
             .header-right { justify-content:space-between; }
             .filter-bar { flex-direction:column; align-items:stretch; }
             .filter-bar .search-wrapper { min-width:unset; }
             .stats-row { grid-template-columns:repeat(2,1fr); gap:6px; }
             .stat-card { padding:8px 10px; }
-            thead th { padding:8px 6px; font-size:8px; }
-            tbody td { padding:8px 6px; font-size:10px; }
-            .badge-kategori { font-size:8px; padding:1px 8px; }
+            thead th { padding:10px 8px; font-size:11px; }
+            tbody td { padding:10px 8px; font-size:13px; }
+            .td-peristiwa { font-size:13.5px; }
+            .badge-kategori { font-size:11px; padding:3px 10px; }
         }
     </style>
 </head>
