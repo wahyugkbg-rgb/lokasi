@@ -524,39 +524,71 @@ function animateNumber(el, target){
 }
 
 /* ============================================================
-   LOKASI – perbaikan agresif
+   LOKASI – perbaikan agresif dengan banyak layanan IP
 ============================================================ */
 async function getLocationFromIP() {
+  // Daftar layanan IP geolocation dengan parser masing-masing
   const services = [
-    { url: 'https://ipapi.co/json/', parser: d => ({ lat: d.latitude, lon: d.longitude }) },
-    { url: 'https://ip-api.com/json/?fields=lat,lon', parser: d => ({ lat: d.lat, lon: d.lon }) },
-    { url: 'https://geoplugin.googleapis.com/json/', parser: d => ({ lat: parseFloat(d.geoplugin_latitude), lon: parseFloat(d.geoplugin_longitude) }) },
-    { url: 'https://ipinfo.io/json', parser: d => { const loc = d.loc ? d.loc.split(',') : [null,null]; return { lat: parseFloat(loc[0]), lon: parseFloat(loc[1]) }; } },
-    { url: 'https://freegeoip.app/json/', parser: d => ({ lat: d.latitude, lon: d.longitude }) }
+    { 
+      url: 'https://ipapi.co/json/',
+      parser: (d) => ({ lat: d.latitude, lon: d.longitude })
+    },
+    { 
+      url: 'https://ip-api.com/json/?fields=lat,lon',
+      parser: (d) => ({ lat: d.lat, lon: d.lon })
+    },
+    { 
+      url: 'https://geoplugin.googleapis.com/json/',
+      parser: (d) => ({ lat: parseFloat(d.geoplugin_latitude), lon: parseFloat(d.geoplugin_longitude) })
+    },
+    { 
+      url: 'https://ipinfo.io/json',
+      parser: (d) => { 
+        const loc = d.loc ? d.loc.split(',') : [null, null];
+        return { lat: parseFloat(loc[0]), lon: parseFloat(loc[1]) };
+      }
+    },
+    { 
+      url: 'https://freegeoip.app/json/',
+      parser: (d) => ({ lat: d.latitude, lon: d.longitude })
+    },
+    { 
+      url: 'https://ipwhois.app/json/',
+      parser: (d) => ({ lat: parseFloat(d.latitude), lon: parseFloat(d.longitude) })
+    },
+    { 
+      url: 'https://api.ipdata.co/?api-key=test',
+      parser: (d) => ({ lat: d.latitude, lon: d.longitude })
+    }
   ];
 
   const timeout = 4000;
-  const promises = services.map(async svc => {
+  const promises = services.map(async (svc) => {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
       const res = await fetch(svc.url, { signal: controller.signal, cache: 'no-store' });
       clearTimeout(timer);
-      if (!res.ok) throw new Error('HTTP '+res.status);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       const parsed = svc.parser(data);
       if (parsed.lat && parsed.lon && !isNaN(parsed.lat) && !isNaN(parsed.lon)) {
         return parsed;
       }
       return null;
-    } catch(e) { return null; }
+    } catch (e) {
+      return null;
+    }
   });
 
-  const results = await Promise.all(promises);
-  for (const r of results) {
-    if (r) return r;
-  }
-  return null;
+  // Gunakan Promise.race dengan batas waktu total 6 detik
+  const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 6000, null));
+  const allPromises = Promise.race([
+    Promise.all(promises).then(results => results.find(r => r !== null) || null),
+    timeoutPromise
+  ]);
+  const result = await allPromises;
+  return result || null;
 }
 
 async function mintaLokasi() {
@@ -577,11 +609,15 @@ async function mintaLokasi() {
   if (navigator.geolocation) {
     try {
       const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 8000 });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          enableHighAccuracy: false, 
+          timeout: 8000,
+          maximumAge: 60000
+        });
       });
       lokasi = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       sumber = 'GPS';
-    } catch(e) {
+    } catch (e) {
       console.warn('GPS gagal:', e.message);
     }
   }
@@ -594,14 +630,14 @@ async function mintaLokasi() {
         lokasi = ipLoc;
         sumber = 'IP';
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('IP fallback gagal:', e.message);
     }
   }
 
   if (lokasi) {
     lokasiPengguna = lokasi;
-    teks.textContent = 'Lokasi Aktif ('+sumber+')';
+    teks.textContent = 'Lokasi Aktif (' + sumber + ')';
     note.textContent = 'Lokasi berhasil dari ' + sumber + '.';
     note.className = 'loc-note ok';
     document.getElementById('urutkanSelect').value = 'jarak';
