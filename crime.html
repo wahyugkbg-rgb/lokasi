@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🚨 LIVE CRIME MONITOR – Dinamis Real‑Time</title>
+    <title>🚨 LIVE CRIME MONITOR – Real RSS</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -107,6 +107,7 @@
         .no-data i { font-size:40px; display:block; margin-bottom:12px; color:#2a3a5a; }
         .status-bar { font-size:11px; color:#6a8aaa; margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
         .status-bar .source { color:#00f5d4; font-weight:600; }
+        .status-bar .error { color:#ff4477; }
         @media (max-width:600px) {
             body { padding:6px; }
             .header { padding:10px 12px; flex-direction:column; align-items:stretch; }
@@ -180,7 +181,7 @@
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data terbaru...</td></tr>
+                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari Google News...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -197,28 +198,24 @@
             // ================================================================
             // 1. KONFIGURASI
             // ================================================================
-            const TARGET_PROVINSI = ['DKI Jakarta', 'Jawa Barat', 'Banten', 'Jawa Timur'];
-            const TARGET_KOTA = ['Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung', 'Surabaya', 'Tangerang Selatan'];
+            const TARGET_PROVINSI = ['DKI Jakarta', 'Jawa Barat', 'Banten', 'Jawa Timur', 'Jawa Tengah', 'Yogyakarta'];
+            const TARGET_KOTA = ['Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung', 'Surabaya', 'Tangerang Selatan', 'Semarang', 'Yogyakarta'];
             const CATEGORY_KEYWORDS = {
-                'narkoba': ['narkoba', 'narkotika', 'ganja', 'sabu', 'ekstasi', 'metamfetamin'],
-                'pencurian': ['curi', 'mencuri', 'pencurian', 'maling'],
-                'curanmor': ['curanmor', 'motor', 'kendaraan', 'mobil'],
-                'tawuran': ['tawuran', 'gangster', 'klithih', 'bentrok'],
-                'pembunuhan': ['bunuh', 'pembunuhan', 'mutilasi', 'mayat'],
-                'perampokan': ['rampok', 'perampokan', 'begal', 'merampok'],
-                'judi': ['judi', 'slot', 'online', 'togel'],
-                'obat-keras': ['obat', 'tramadol', 'hexymer', 'psikotropika'],
-                'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan']
+                'narkoba': ['narkoba', 'narkotika', 'ganja', 'sabu', 'ekstasi', 'metamfetamin', 'psikotropika'],
+                'pencurian': ['curi', 'mencuri', 'pencurian', 'maling', 'curat'],
+                'curanmor': ['curanmor', 'motor', 'kendaraan', 'mobil', 'sepeda motor'],
+                'tawuran': ['tawuran', 'gangster', 'klithih', 'bentrok', 'perkelahian'],
+                'pembunuhan': ['bunuh', 'pembunuhan', 'mutilasi', 'mayat', 'tewas'],
+                'perampokan': ['rampok', 'perampokan', 'begal', 'merampok', 'jambret'],
+                'judi': ['judi', 'slot', 'online', 'togel', 'casino'],
+                'obat-keras': ['obat', 'tramadol', 'hexymer', 'psikotropika', 'ilegal'],
+                'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan', 'pemukulan']
             };
 
+            // Gunakan proxy untuk menghindari CORS
             const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+            // Query RSS Google News (berita terkait kriminal di Indonesia)
             const RSS_URL = 'https://news.google.com/rss/search?q=kejahatan+OR+kriminal+OR+narkoba+OR+pencurian+OR+curanmor+OR+tawuran+OR+pembunuhan+OR+perampokan+OR+judi+OR+obat+terlarang+Indonesia&hl=id&gl=ID&ceid=ID:id';
-
-            // Fallback data (akan digunakan jika fetch gagal)
-            // Data ini juga akan diperbarui dari hasil fetch sebelumnya yang disimpan di localStorage
-            let FALLBACK_DATA = [
-                // Contoh data statis, tapi akan ditimpa oleh localStorage jika ada
-            ];
 
             // ================================================================
             // 2. STATE
@@ -227,6 +224,7 @@
             let sortKey = 'tanggal';
             let sortAsc = false;
             let isFetching = false;
+            let fetchError = false;
 
             // DOM refs
             const tbody = document.getElementById('tableBody');
@@ -284,8 +282,8 @@
                         break;
                     }
                 }
-                // Jika kota ketemu, coba petakan ke provinsi
-                if (kota !== 'Umum') {
+                // Jika kota ketemu, coba petakan ke provinsi (jika belum ketemu)
+                if (kota !== 'Umum' && provinsi === 'Umum') {
                     if (kota === 'Jakarta' || kota === 'Jakarta Selatan' || kota === 'Jakarta Timur' || kota === 'Jakarta Barat' || kota === 'Jakarta Pusat' || kota === 'Jakarta Utara')
                         provinsi = 'DKI Jakarta';
                     else if (kota === 'Bogor' || kota === 'Depok' || kota === 'Bekasi' || kota === 'Bandung')
@@ -294,6 +292,10 @@
                         provinsi = 'Banten';
                     else if (kota === 'Surabaya')
                         provinsi = 'Jawa Timur';
+                    else if (kota === 'Semarang')
+                        provinsi = 'Jawa Tengah';
+                    else if (kota === 'Yogyakarta')
+                        provinsi = 'DI Yogyakarta';
                 }
                 return { provinsi, kota };
             }
@@ -309,7 +311,7 @@
             }
 
             // ================================================================
-            // 4. FETCH DATA DARI RSS
+            // 4. FETCH DATA DARI RSS (REAL)
             // ================================================================
             async function fetchRSS() {
                 try {
@@ -350,9 +352,6 @@
                         });
                     }
 
-                    // Jika tidak ada event, lempar error agar fallback dipakai
-                    if (events.length === 0) throw new Error('Tidak ada berita dalam rentang tanggal');
-
                     return events;
                 } catch (err) {
                     console.warn('Gagal fetch RSS:', err);
@@ -361,24 +360,7 @@
             }
 
             // ================================================================
-            // 5. LOAD / SAVE ke localStorage (untuk fallback)
-            // ================================================================
-            function saveToLocalStorage(data) {
-                try {
-                    localStorage.setItem('crimeData', JSON.stringify(data));
-                } catch (e) { /* ignore */ }
-            }
-
-            function loadFromLocalStorage() {
-                try {
-                    const raw = localStorage.getItem('crimeData');
-                    if (raw) return JSON.parse(raw);
-                } catch (e) { /* ignore */ }
-                return null;
-            }
-
-            // ================================================================
-            // 6. MAIN RENDER
+            // 5. MAIN RENDER
             // ================================================================
             function render() {
                 // Filter
@@ -469,41 +451,56 @@
                 // Update last update time
                 const now = new Date();
                 lastUpdateEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                dataStatusEl.textContent = ` ${currentData.length} berita`;
+                if (fetchError) {
+                    dataStatusEl.innerHTML = `<span class="error"><i class="fas fa-exclamation-triangle"></i> Gagal mengambil data</span>`;
+                } else {
+                    dataStatusEl.textContent = ` ${currentData.length} berita (RSS)`;
+                }
             }
 
             // ================================================================
-            // 7. UPDATE DATA (fetch & render)
+            // 6. UPDATE DATA (fetch & render)
             // ================================================================
             async function updateData(showLoading = true) {
                 if (isFetching) return;
                 isFetching = true;
+                fetchError = false;
+
                 if (showLoading) {
                     dataStatusEl.textContent = ' Mengambil data...';
-                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Memuat data terbaru...</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari Google News...</td></tr>`;
                 }
 
                 let newData = await fetchRSS();
 
-                if (newData) {
-                    // Sukses
+                if (newData && newData.length > 0) {
                     currentData = newData;
-                    saveToLocalStorage(currentData);
+                    // Simpan di localStorage untuk cadangan jika nanti gagal
+                    try { localStorage.setItem('crimeData', JSON.stringify(currentData)); } catch (e) {}
                     sourceLabel.textContent = 'Google News (real-time)';
-                    dataStatusEl.textContent = ` ${currentData.length} berita (RSS)`;
+                    fetchError = false;
                 } else {
-                    // Gagal fetch, gunakan fallback dari localStorage atau data statis
-                    const stored = loadFromLocalStorage();
-                    if (stored && stored.length > 0) {
-                        currentData = stored;
-                        sourceLabel.textContent = 'Data tersimpan (fallback)';
-                        dataStatusEl.textContent = ` ${currentData.length} berita (cache)`;
+                    // Gagal atau tidak ada data: gunakan data dari localStorage jika ada
+                    fetchError = true;
+                    const stored = localStorage.getItem('crimeData');
+                    if (stored) {
+                        try {
+                            const parsed = JSON.parse(stored);
+                            if (parsed && parsed.length > 0) {
+                                currentData = parsed;
+                                sourceLabel.textContent = 'Cache (terakhir berhasil)';
+                                dataStatusEl.innerHTML = `<span class="error"><i class="fas fa-exclamation-triangle"></i> Gagal mengambil data terbaru, menampilkan cache</span>`;
+                            } else {
+                                currentData = [];
+                                sourceLabel.textContent = 'Tidak ada data';
+                            }
+                        } catch (e) {
+                            currentData = [];
+                            sourceLabel.textContent = 'Tidak ada data';
+                        }
                     } else {
-                        // Jika tidak ada cache, gunakan data statis yang kita buat dengan tanggal dinamis
-                        currentData = generateFallbackData();
-                        saveToLocalStorage(currentData);
-                        sourceLabel.textContent = 'Data simulasi (fallback)';
-                        dataStatusEl.textContent = ` ${currentData.length} berita (simulasi)`;
+                        currentData = [];
+                        sourceLabel.textContent = 'Tidak ada data';
                     }
                 }
 
@@ -512,46 +509,7 @@
             }
 
             // ================================================================
-            // 8. GENERATE FALLBACK DATA DINAMIS (jika semua gagal)
-            // ================================================================
-            function generateFallbackData() {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const data = [];
-                const titles = [
-                    'Polisi gagalkan peredaran narkoba di Jakarta', 'Pencurian motor di Bogor', 'Tawuran antar pelajar di Depok',
-                    'Pembunuhan di Tangerang', 'Perampokan di Bekasi', 'Judi online dibongkar di Bandung',
-                    'Narkotika 5 kg ditemukan di Surabaya', 'Curanmor marak di Jakarta Timur',
-                    'Obat keras ilegal di Tangerang Selatan', 'Kekerasan di Jakarta Pusat'
-                ];
-                const locations = [
-                    { prov: 'DKI Jakarta', kota: 'Jakarta' },
-                    { prov: 'Jawa Barat', kota: 'Bogor' },
-                    { prov: 'Jawa Barat', kota: 'Depok' },
-                    { prov: 'Banten', kota: 'Tangerang' },
-                    { prov: 'Jawa Barat', kota: 'Bekasi' },
-                    { prov: 'Jawa Barat', kota: 'Bandung' },
-                    { prov: 'Jawa Timur', kota: 'Surabaya' }
-                ];
-                for (let i = 0; i < 20; i++) {
-                    const d = new Date(today);
-                    d.setDate(d.getDate() - Math.floor(Math.random() * 8));
-                    const loc = locations[Math.floor(Math.random() * locations.length)];
-                    const title = titles[Math.floor(Math.random() * titles.length)];
-                    const kategori = detectCategory(title);
-                    data.push({
-                        tanggal: d.toISOString().split('T')[0],
-                        provinsi: loc.prov,
-                        kota: loc.kota,
-                        peristiwa: title + ' (simulasi)',
-                        kategori: kategori
-                    });
-                }
-                return data;
-            }
-
-            // ================================================================
-            // 9. CLOCK & DATE RANGE
+            // 7. CLOCK & DATE RANGE
             // ================================================================
             function updateClock() {
                 const now = new Date();
@@ -567,7 +525,7 @@
             }
 
             // ================================================================
-            // 10. EVENTS
+            // 8. EVENTS
             // ================================================================
             filterProvinsi.addEventListener('change', () => { filterKota.value = 'all'; render(); });
             filterKota.addEventListener('change', render);
@@ -599,27 +557,31 @@
             });
 
             // ================================================================
-            // 11. AUTO UPDATE (setiap 60 detik)
+            // 9. AUTO UPDATE (setiap 60 detik)
             // ================================================================
             setInterval(() => {
                 updateClock();
-                // Update data tanpa mengganggu tampilan terlalu sering
                 updateData(false);
             }, 60000);
 
             // ================================================================
-            // 12. INIT
+            // 10. INIT
             // ================================================================
             (async function init() {
                 updateClock();
                 updateDateRange();
-                // Pertama coba muat dari localStorage dulu agar cepat tampil
-                const stored = loadFromLocalStorage();
-                if (stored && stored.length > 0) {
-                    currentData = stored;
-                    render();
-                    dataStatusEl.textContent = ` ${currentData.length} berita (cache)`;
-                    sourceLabel.textContent = 'Cache';
+                // Coba muat dari localStorage dulu agar cepat
+                const stored = localStorage.getItem('crimeData');
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored);
+                        if (parsed && parsed.length > 0) {
+                            currentData = parsed;
+                            render();
+                            dataStatusEl.textContent = ` ${currentData.length} berita (cache)`;
+                            sourceLabel.textContent = 'Cache';
+                        }
+                    } catch (e) {}
                 }
                 // Lalu fetch data terbaru
                 await updateData(true);
