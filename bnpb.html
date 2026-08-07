@@ -524,7 +524,100 @@ function animateNumber(el, target){
 }
 
 /* ============================================================
-   AMBIL DATA – agresif dengan banyak proxy paralel
+   LOKASI – perbaikan agresif
+============================================================ */
+async function getLocationFromIP() {
+  const services = [
+    { url: 'https://ipapi.co/json/', parser: d => ({ lat: d.latitude, lon: d.longitude }) },
+    { url: 'https://ip-api.com/json/?fields=lat,lon', parser: d => ({ lat: d.lat, lon: d.lon }) },
+    { url: 'https://geoplugin.googleapis.com/json/', parser: d => ({ lat: parseFloat(d.geoplugin_latitude), lon: parseFloat(d.geoplugin_longitude) }) },
+    { url: 'https://ipinfo.io/json', parser: d => { const loc = d.loc ? d.loc.split(',') : [null,null]; return { lat: parseFloat(loc[0]), lon: parseFloat(loc[1]) }; } },
+    { url: 'https://freegeoip.app/json/', parser: d => ({ lat: d.latitude, lon: d.longitude }) }
+  ];
+
+  const timeout = 4000;
+  const promises = services.map(async svc => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      const res = await fetch(svc.url, { signal: controller.signal, cache: 'no-store' });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      const parsed = svc.parser(data);
+      if (parsed.lat && parsed.lon && !isNaN(parsed.lat) && !isNaN(parsed.lon)) {
+        return parsed;
+      }
+      return null;
+    } catch(e) { return null; }
+  });
+
+  const results = await Promise.all(promises);
+  for (const r of results) {
+    if (r) return r;
+  }
+  return null;
+}
+
+async function mintaLokasi() {
+  const btn = document.getElementById('btnLokasi');
+  const teks = document.getElementById('btnLokasiTeks');
+  const note = document.getElementById('lokasiNote');
+
+  // Disable tombol sementara
+  btn.disabled = true;
+  teks.textContent = 'Mencari lokasi...';
+  note.textContent = 'Menggunakan GPS atau IP...';
+  note.className = 'loc-note';
+
+  let lokasi = null;
+  let sumber = '';
+
+  // 1. Coba GPS
+  if (navigator.geolocation) {
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 8000 });
+      });
+      lokasi = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      sumber = 'GPS';
+    } catch(e) {
+      console.warn('GPS gagal:', e.message);
+    }
+  }
+
+  // 2. Jika GPS gagal, coba IP
+  if (!lokasi) {
+    try {
+      const ipLoc = await getLocationFromIP();
+      if (ipLoc) {
+        lokasi = ipLoc;
+        sumber = 'IP';
+      }
+    } catch(e) {
+      console.warn('IP fallback gagal:', e.message);
+    }
+  }
+
+  if (lokasi) {
+    lokasiPengguna = lokasi;
+    teks.textContent = 'Lokasi Aktif ('+sumber+')';
+    note.textContent = 'Lokasi berhasil dari ' + sumber + '.';
+    note.className = 'loc-note ok';
+    document.getElementById('urutkanSelect').value = 'jarak';
+    state.urutkan = 'jarak';
+    prosesTampilan();
+  } else {
+    teks.textContent = 'Aktifkan Lokasi Saya';
+    note.textContent = 'Tidak dapat memperoleh lokasi. Coba lagi nanti.';
+    note.className = 'loc-note err';
+  }
+
+  btn.disabled = false;
+}
+
+/* ============================================================
+   AMBIL DATA – dengan proxy paralel
 ============================================================ */
 function normalisasiRekaman(a, centroid){
   let tanggal = null;
@@ -575,7 +668,6 @@ function hitungRentangTanggal(){
 function formatTanggalSingkat(d){ return d.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}); }
 function formatSQLDate(d){ const pad=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 
-// Daftar proxy
 const PROXY_LIST = [
   null,
   url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
@@ -585,7 +677,6 @@ const PROXY_LIST = [
   url => 'https://thingproxy.freeboard.io/fetch/' + url,
 ];
 
-// Ambil satu halaman dengan satu proxy tertentu
 async function ambilSatuHalaman(url, proxyFn, timeoutMs=20000){
   const urlAkhir = proxyFn ? proxyFn(url) : url;
   const kontrol = new AbortController();
@@ -603,7 +694,6 @@ async function ambilSatuHalaman(url, proxyFn, timeoutMs=20000){
   }
 }
 
-// Ambil semua halaman dengan mencoba semua proxy secara paralel per halaman
 async function ambilSemuaData(whereClause, onProgress){
   let semuaFitur = [];
   let offset = 0;
@@ -625,7 +715,6 @@ async function ambilSemuaData(whereClause, onProgress){
     let json = null;
     let errorTerakhir = null;
 
-    // Coba semua proxy secara paralel, ambil yang pertama berhasil
     const promises = PROXY_LIST.map(proxyFn =>
       ambilSatuHalaman(fullUrl, proxyFn, 20000).catch(err => { errorTerakhir = err; return null; })
     );
@@ -633,7 +722,7 @@ async function ambilSemuaData(whereClause, onProgress){
     json = results.find(r => r !== null);
     if (!json) {
       console.warn('Halaman', halaman+1, 'gagal dengan semua proxy:', errorTerakhir);
-      break; // jika satu halaman gagal total, hentikan
+      break;
     }
 
     const fitur = json.features || [];
@@ -657,7 +746,7 @@ async function muatData(){
   let dariCache = false;
   let cacheMeta = null;
 
-  // --- STRATEGI 1: Filter tanggal di server ---
+  // Strategi 1: filter tanggal di server
   try {
     const where = "dt >= DATE '" + formatSQLDate(awal) + "' AND dt <= DATE '" + formatSQLDate(akhir) + "'";
     console.info('[BNPB] Strategi 1: filter tanggal');
@@ -672,7 +761,7 @@ async function muatData(){
     }
   } catch(e) { console.warn('[BNPB] Strategi 1 gagal:', e.message); }
 
-  // --- STRATEGI 2: Tanpa filter (1=1) ---
+  // Strategi 2: tanpa filter
   if (!dataReal || dataReal.length === 0) {
     try {
       console.info('[BNPB] Strategi 2: tanpa filter');
@@ -688,7 +777,7 @@ async function muatData(){
     } catch(e) { console.warn('[BNPB] Strategi 2 gagal:', e.message); }
   }
 
-  // --- STRATEGI 3: Cache ---
+  // Strategi 3: cache
   if (!dataReal || dataReal.length === 0) {
     const cache = ambilCache();
     if (cache && cache.data && cache.data.length) {
@@ -699,7 +788,7 @@ async function muatData(){
     }
   }
 
-  // --- Jika masih kosong, pakai data contoh ---
+  // Terakhir: contoh
   if (!dataReal || dataReal.length === 0) {
     console.warn('[BNPB] Semua strategi gagal, menggunakan data contoh');
     dataReal = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid));
@@ -707,13 +796,12 @@ async function muatData(){
     dariCache = false;
   }
 
-  // Pastikan dataReal tidak kosong
   if (!dataReal || !dataReal.length) {
     dataReal = DATA_CONTOH.map(a => normalisasiRekaman(a, a.centroid));
     modeDemo = true;
   }
 
-  // Simpan ke cache jika data real dan tidak dari cache
+  // Simpan cache jika real
   if (!dariCache && dataReal && dataReal.length > 0 && !modeDemo) {
     const meta = { timestamp: Date.now(), count: dataReal.length };
     simpanCache(dataReal, meta);
@@ -724,13 +812,11 @@ async function muatData(){
   cacheDigunakan = dariCache;
   if (cacheMeta) cacheTimestamp = cacheMeta.timestamp;
 
-  // Update kategori
   const kategoriSet = new Set(Object.keys(KATEGORI_META));
   dataMentah.forEach(r => kategoriSet.add(r.kategori));
   state.kategoriTersedia = Array.from(kategoriSet);
   if(state.kategoriAktif.size === 0){ state.kategoriTersedia.forEach(k => state.kategoriAktif.add(k)); }
 
-  // Tampilkan status
   let statusText = '';
   if (modeDemo) statusText = 'MODE CONTOH';
   else if (dariCache && cacheTimestamp) statusText = 'CACHE ('+new Date(cacheTimestamp).toLocaleDateString('id-ID')+' '+new Date(cacheTimestamp).toLocaleTimeString('id-ID')+')';
@@ -750,70 +836,6 @@ function setStatus(teks, demo, spin){
   const pill = document.getElementById('statusSumber');
   document.getElementById('statusSumberTeks').textContent = teks;
   pill.classList.toggle('demo', !!demo);
-}
-
-/* ============================================================
-   LOKASI – dengan fallback IP
-============================================================ */
-async function dapatkanLokasiViaIP(){
-  try {
-    const res = await fetch('https://ipapi.co/json/', { timeout: 8000 });
-    if (!res.ok) throw new Error('IP API error');
-    const data = await res.json();
-    if (data.latitude && data.longitude) {
-      return { lat: data.latitude, lon: data.longitude };
-    }
-  } catch(e) {}
-  try {
-    const res = await fetch('https://ip-api.com/json/?fields=lat,lon', { timeout: 8000 });
-    if (!res.ok) throw new Error('IP API error');
-    const data = await res.json();
-    if (data.lat && data.lon) {
-      return { lat: data.lat, lon: data.lon };
-    }
-  } catch(e) {}
-  return null;
-}
-
-async function mintaLokasi(){
-  const btnTeks = document.getElementById('btnLokasiTeks');
-  const note = document.getElementById('lokasiNote');
-  btnTeks.textContent = 'Mencari lokasi\u2026';
-
-  // Coba GPS dulu
-  if (navigator.geolocation) {
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000 });
-      });
-      lokasiPengguna = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-      btnTeks.textContent = 'Lokasi Aktif (GPS)';
-      note.textContent = 'Lokasi berhasil diambil via GPS.';
-      note.className = 'loc-note ok';
-      document.getElementById('urutkanSelect').value = 'jarak';
-      state.urutkan = 'jarak';
-      prosesTampilan();
-      return;
-    } catch(e) {
-      console.warn('GPS gagal, mencoba IP fallback:', e.message);
-    }
-  }
-
-  // Fallback IP
-  const ipLoc = await dapatkanLokasiViaIP();
-  if (ipLoc) {
-    lokasiPengguna = ipLoc;
-    btnTeks.textContent = 'Lokasi Aktif (IP)';
-    note.textContent = 'Lokasi diperkirakan dari alamat IP (izin GPS ditolak).';
-    note.className = 'loc-note ok';
-    document.getElementById('urutkanSelect').value = 'jarak';
-    state.urutkan = 'jarak';
-    prosesTampilan();
-  } else {
-    btnTeks.textContent = 'Aktifkan Lokasi Saya';
-    note.textContent = 'Tidak dapat memperoleh lokasi. Radar tidak tersedia.';
-    note.className = 'loc-note err';
-  }
 }
 
 /* ============================================================
