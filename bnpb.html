@@ -924,8 +924,8 @@ function renderRadar(list){
     note.className = 'loc-note';
     return;
   }
-  const terdekat = list.filter(r=>r.jarak!=null).sort((a,b)=>a.jarak-b.jarak).slice(0,10);
-  note.textContent = terdekat.length ? ('Menampilkan ' + terdekat.length + ' kejadian terdekat pada radar.') : 'Tidak ada kejadian dengan koordinat pada filter saat ini.';
+  const terdekat = list.filter(r=>r.jarak!=null).sort((a,b)=>a.jarak-b.jarak);
+  note.textContent = terdekat.length ? ('Menampilkan seluruh ' + terdekat.length + ' kejadian nasional pada radar (45 hari terakhir).') : 'Tidak ada kejadian dengan koordinat pada filter saat ini.';
   note.className = 'loc-note ok';
   const skala = 600; // km, radius luar radar
   terdekat.forEach(r => {
