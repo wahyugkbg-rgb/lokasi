@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🚨 LIVE CRIME MONITOR – Dinamis Real‑Time</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: #0a0e1a;
+            color: #e0e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            padding: 12px;
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 10% 20%, rgba(0,255,200,0.03) 0%, transparent 50%),
+                              radial-gradient(ellipse at 90% 80%, rgba(255,0,100,0.03) 0%, transparent 50%);
+        }
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:#141c2b; border-radius:10px; }
+        ::-webkit-scrollbar-thumb { background:#00f5d4; border-radius:10px; }
+        .glow-text { text-shadow:0 0 20px rgba(0,245,212,0.3), 0 0 60px rgba(0,245,212,0.1); }
+        .glow-border { box-shadow:0 0 30px rgba(0,245,212,0.05), inset 0 0 30px rgba(0,245,212,0.02); }
+        .header {
+            display:flex; justify-content:space-between; align-items:center; padding:12px 16px;
+            background:rgba(12,20,35,0.85); backdrop-filter:blur(12px); border-radius:16px;
+            border:1px solid rgba(0,245,212,0.15); margin-bottom:16px; flex-wrap:wrap; gap:8px;
+        }
+        .header-left { display:flex; align-items:center; gap:12px; }
+        .logo-icon { font-size:28px; color:#00f5d4; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%{opacity:1;text-shadow:0 0 10px #00f5d4;} 50%{opacity:0.6;text-shadow:0 0 30px #00f5d4;} 100%{opacity:1;text-shadow:0 0 10px #00f5d4;} }
+        .header-title { font-family:'Orbitron',monospace; font-size:clamp(14px,3.5vw,24px); font-weight:900;
+            background:linear-gradient(135deg,#00f5d4,#00b8ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:2px; }
+        .header-sub { font-size:clamp(9px,1.8vw,13px); color:#7a8ba8; letter-spacing:1px; }
+        .header-right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+        .live-badge { display:flex; align-items:center; gap:6px; background:rgba(255,0,80,0.15); border:1px solid rgba(255,0,80,0.3);
+            padding:4px 14px 4px 10px; border-radius:50px; font-size:11px; font-weight:700; color:#ff4477; font-family:'Orbitron',monospace; }
+        .live-dot { width:8px; height:8px; border-radius:50%; background:#ff0044; animation:blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.2;transform:scale(0.7);} }
+        .clock { font-family:'Orbitron',monospace; font-size:clamp(12px,2.2vw,18px); color:#00f5d4; letter-spacing:2px;
+            background:rgba(0,245,212,0.06); padding:4px 14px; border-radius:8px; border:1px solid rgba(0,245,212,0.1); }
+        .date-range { font-size:clamp(10px,1.6vw,13px); color:#7a8ba8; background:rgba(255,255,255,0.03); padding:4px 12px;
+            border-radius:8px; border:1px solid rgba(255,255,255,0.05); }
+        .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:10px; margin-bottom:16px; }
+        .stat-card { background:rgba(12,20,35,0.8); backdrop-filter:blur(8px); border-radius:12px; padding:12px 14px;
+            border:1px solid rgba(0,245,212,0.08); text-align:center; transition:all 0.3s; }
+        .stat-card:hover { border-color:rgba(0,245,212,0.25); transform:translateY(-2px); }
+        .stat-number { font-family:'Orbitron',monospace; font-size:clamp(20px,4vw,34px); font-weight:900; color:#00f5d4; line-height:1.2; }
+        .stat-label { font-size:clamp(9px,1.4vw,12px); color:#7a8ba8; letter-spacing:1px; text-transform:uppercase; }
+        .stat-card.danger .stat-number { color:#ff4477; }
+        .stat-card.warning .stat-number { color:#ffb347; }
+        .stat-card.info .stat-number { color:#4fc3ff; }
+        .filter-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:12px 16px;
+            background:rgba(12,20,35,0.7); backdrop-filter:blur(8px); border-radius:12px; border:1px solid rgba(0,245,212,0.06);
+            align-items:center; }
+        .filter-bar label { font-size:11px; font-weight:600; color:#7a8ba8; letter-spacing:1px; text-transform:uppercase;
+            display:flex; align-items:center; gap:6px; }
+        .filter-bar select, .filter-bar input { background:rgba(0,0,0,0.4); border:1px solid rgba(0,245,212,0.15);
+            color:#e0e8f0; padding:6px 12px; border-radius:8px; font-family:'Rajdhani',sans-serif; font-size:13px;
+            font-weight:600; outline:none; transition:all 0.3s; min-width:100px; flex:1; }
+        .filter-bar select:focus, .filter-bar input:focus { border-color:#00f5d4; box-shadow:0 0 20px rgba(0,245,212,0.1); }
+        .filter-bar select option { background:#0a0e1a; color:#e0e8f0; }
+        .filter-bar .search-wrapper { flex:2; min-width:150px; position:relative; }
+        .filter-bar .search-wrapper i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#4a5a7a; }
+        .filter-bar .search-wrapper input { padding-left:32px; width:100%; }
+        .filter-reset { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#7a8ba8;
+            padding:6px 16px; border-radius:8px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-weight:600;
+            font-size:12px; transition:all 0.3s; white-space:nowrap; }
+        .filter-reset:hover { background:rgba(255,255,255,0.1); color:#e0e8f0; }
+        .table-container { background:rgba(12,20,35,0.7); backdrop-filter:blur(8px); border-radius:12px;
+            border:1px solid rgba(0,245,212,0.06); overflow:hidden; margin-bottom:16px; }
+        .table-scroll { overflow-x:auto; padding:0 4px 4px 4px; -webkit-overflow-scrolling:touch; }
+        table { width:100%; border-collapse:collapse; font-size:clamp(11px,1.4vw,14px); min-width:700px; }
+        thead { background:rgba(0,245,212,0.04); border-bottom:2px solid rgba(0,245,212,0.1); }
+        thead th { padding:12px 12px; text-align:left; font-family:'Orbitron',monospace; font-size:clamp(8px,1.1vw,11px);
+            font-weight:700; color:#7a8ba8; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+            user-select:none; transition:color 0.3s; white-space:nowrap; }
+        thead th:hover { color:#00f5d4; }
+        thead th i { margin-left:4px; font-size:10px; opacity:0.5; }
+        tbody tr { border-bottom:1px solid rgba(255,255,255,0.03); transition:all 0.3s; }
+        tbody tr:hover { background:rgba(0,245,212,0.04); }
+        tbody td { padding:10px 12px; vertical-align:middle; }
+        .td-provinsi { font-weight:700; color:#4fc3ff; }
+        .td-kota { color:#b0c4de; }
+        .td-peristiwa { color:#e0e8f0; }
+        .td-tanggal { font-family:'Orbitron',monospace; font-size:clamp(9px,1vw,12px); color:#7a8ba8; white-space:nowrap; }
+        .badge-kategori { display:inline-block; padding:2px 12px; border-radius:50px; font-size:clamp(9px,1vw,12px);
+            font-weight:700; letter-spacing:0.5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+            color:#b0c4de; }
+        .badge-kategori.narkoba { background:rgba(255,0,80,0.12); border-color:rgba(255,0,80,0.2); color:#ff4477; }
+        .badge-kategori.pencurian { background:rgba(255,180,0,0.12); border-color:rgba(255,180,0,0.2); color:#ffb347; }
+        .badge-kategori.kekerasan { background:rgba(255,50,50,0.12); border-color:rgba(255,50,50,0.2); color:#ff5555; }
+        .badge-kategori.narkotika { background:rgba(255,0,80,0.12); border-color:rgba(255,0,80,0.2); color:#ff4477; }
+        .badge-kategori.curanmor { background:rgba(255,180,0,0.12); border-color:rgba(255,180,0,0.2); color:#ffb347; }
+        .badge-kategori.tawuran { background:rgba(255,50,50,0.12); border-color:rgba(255,50,50,0.2); color:#ff5555; }
+        .badge-kategori.pembunuhan { background:rgba(200,0,0,0.15); border-color:rgba(200,0,0,0.25); color:#ff3333; }
+        .badge-kategori.perampokan { background:rgba(255,100,0,0.12); border-color:rgba(255,100,0,0.2); color:#ff8844; }
+        .badge-kategori.judi { background:rgba(100,50,255,0.12); border-color:rgba(100,50,255,0.2); color:#aa88ff; }
+        .badge-kategori.obat-keras { background:rgba(0,200,255,0.12); border-color:rgba(0,200,255,0.2); color:#4fc3ff; }
+        .badge-kategori.umum { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.08); color:#b0c4de; }
+        .footer { text-align:center; font-size:10px; color:#3a4a6a; padding:12px; letter-spacing:1px;
+            border-top:1px solid rgba(255,255,255,0.02); }
+        .footer a { color:#00f5d4; text-decoration:none; }
+        .footer a:hover { text-decoration:underline; }
+        .no-data { text-align:center; padding:40px 20px; color:#4a5a7a; font-size:16px; }
+        .no-data i { font-size:40px; display:block; margin-bottom:12px; color:#2a3a5a; }
+        .status-bar { font-size:11px; color:#6a8aaa; margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+        .status-bar .source { color:#00f5d4; font-weight:600; }
+        @media (max-width:600px) {
+            body { padding:6px; }
+            .header { padding:10px 12px; flex-direction:column; align-items:stretch; }
+            .header-right { justify-content:space-between; }
+            .filter-bar { flex-direction:column; align-items:stretch; }
+            .filter-bar .search-wrapper { min-width:unset; }
+            .stats-row { grid-template-columns:repeat(2,1fr); gap:6px; }
+            .stat-card { padding:8px 10px; }
+            thead th { padding:8px 6px; font-size:8px; }
+            tbody td { padding:8px 6px; font-size:10px; }
+            .badge-kategori { font-size:8px; padding:1px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header glow-border">
+        <div class="header-left">
+            <span class="logo-icon"><i class="fas fa-shield-halved"></i></span>
+            <div>
+                <div class="header-title glow-text">LIVE CRIME MONITOR</div>
+                <div class="header-sub"><i class="fas fa-map-pin"></i> Seluruh Indonesia · <span id="sourceLabel">Google News</span></div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+            <div class="clock" id="clock">--:--:--</div>
+            <div class="date-range" id="dateRange">-</div>
+        </div>
+    </header>
+
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card danger"><div class="stat-number" id="totalKejadian">0</div><div class="stat-label"><i class="fas fa-bolt"></i> Total</div></div>
+        <div class="stat-card warning"><div class="stat-number" id="totalProvinsi">0</div><div class="stat-label"><i class="fas fa-landmark"></i> Provinsi</div></div>
+        <div class="stat-card info"><div class="stat-number" id="totalKota">0</div><div class="stat-label"><i class="fas fa-city"></i> Kota/Kab</div></div>
+        <div class="stat-card"><div class="stat-number" id="totalKategori">0</div><div class="stat-label"><i class="fas fa-tags"></i> Kategori</div></div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="filter-bar">
+        <label><i class="fas fa-filter"></i> Provinsi</label>
+        <select id="filterProvinsi"><option value="all">Semua</option></select>
+        <label><i class="fas fa-map-marker-alt"></i> Kota</label>
+        <select id="filterKota"><option value="all">Semua</select>
+        <label><i class="fas fa-tag"></i> Kategori</label>
+        <select id="filterKategori"><option value="all">Semua</select>
+        <div class="search-wrapper"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Cari peristiwa..."></div>
+        <button class="filter-reset" id="resetFilter"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+
+    <!-- STATUS -->
+    <div class="status-bar">
+        <span><i class="fas fa-database"></i> Data: <span id="dataStatus">Memuat...</span></span>
+        <span><i class="fas fa-sync-alt fa-fw"></i> <span id="lastUpdate">-</span></span>
+        <span><a href="#" id="refreshBtn" style="color:#00f5d4;"><i class="fas fa-rotate-right"></i> Refresh</a></span>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-container">
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th data-sort="tanggal">Tanggal <i class="fas fa-sort"></i></th>
+                        <th data-sort="provinsi">Provinsi <i class="fas fa-sort"></i></th>
+                        <th data-sort="kota">Kota/Kab <i class="fas fa-sort"></i></th>
+                        <th data-sort="peristiwa">Peristiwa <i class="fas fa-sort"></i></th>
+                        <th data-sort="kategori">Kategori <i class="fas fa-sort"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data terbaru...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">
+        <i class="fas fa-shield-alt"></i> Data <strong>real</strong> dari Google News RSS · Update otomatis setiap 60 detik
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ================================================================
+            // 1. KONFIGURASI
+            // ================================================================
+            const TARGET_PROVINSI = ['DKI Jakarta', 'Jawa Barat', 'Banten', 'Jawa Timur'];
+            const TARGET_KOTA = ['Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung', 'Surabaya', 'Tangerang Selatan'];
+            const CATEGORY_KEYWORDS = {
+                'narkoba': ['narkoba', 'narkotika', 'ganja', 'sabu', 'ekstasi', 'metamfetamin'],
+                'pencurian': ['curi', 'mencuri', 'pencurian', 'maling'],
+                'curanmor': ['curanmor', 'motor', 'kendaraan', 'mobil'],
+                'tawuran': ['tawuran', 'gangster', 'klithih', 'bentrok'],
+                'pembunuhan': ['bunuh', 'pembunuhan', 'mutilasi', 'mayat'],
+                'perampokan': ['rampok', 'perampokan', 'begal', 'merampok'],
+                'judi': ['judi', 'slot', 'online', 'togel'],
+                'obat-keras': ['obat', 'tramadol', 'hexymer', 'psikotropika'],
+                'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan']
+            };
+
+            const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+            const RSS_URL = 'https://news.google.com/rss/search?q=kejahatan+OR+kriminal+OR+narkoba+OR+pencurian+OR+curanmor+OR+tawuran+OR+pembunuhan+OR+perampokan+OR+judi+OR+obat+terlarang+Indonesia&hl=id&gl=ID&ceid=ID:id';
+
+            // Fallback data (akan digunakan jika fetch gagal)
+            // Data ini juga akan diperbarui dari hasil fetch sebelumnya yang disimpan di localStorage
+            let FALLBACK_DATA = [
+                // Contoh data statis, tapi akan ditimpa oleh localStorage jika ada
+            ];
+
+            // ================================================================
+            // 2. STATE
+            // ================================================================
+            let currentData = [];
+            let sortKey = 'tanggal';
+            let sortAsc = false;
+            let isFetching = false;
+
+            // DOM refs
+            const tbody = document.getElementById('tableBody');
+            const filterProvinsi = document.getElementById('filterProvinsi');
+            const filterKota = document.getElementById('filterKota');
+            const filterKategori = document.getElementById('filterKategori');
+            const searchInput = document.getElementById('searchInput');
+            const resetBtn = document.getElementById('resetFilter');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const clockEl = document.getElementById('clock');
+            const dateRangeEl = document.getElementById('dateRange');
+            const lastUpdateEl = document.getElementById('lastUpdate');
+            const dataStatusEl = document.getElementById('dataStatus');
+            const sourceLabel = document.getElementById('sourceLabel');
+
+            // ================================================================
+            // 3. HELPERS
+            // ================================================================
+            function formatTanggal(iso) {
+                const d = new Date(iso + 'T00:00:00');
+                return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+
+            function getUnique(arr, key) {
+                const vals = new Set();
+                arr.forEach(item => { if (item[key]) vals.add(item[key]); });
+                return Array.from(vals).sort();
+            }
+
+            function getKategoriLabel(kat) {
+                const map = {
+                    'narkoba': 'Narkoba', 'narkotika': 'Narkotika', 'pencurian': 'Pencurian',
+                    'kekerasan': 'Kekerasan', 'curanmor': 'Curanmor', 'tawuran': 'Tawuran',
+                    'pembunuhan': 'Pembunuhan', 'perampokan': 'Perampokan', 'judi': 'Judi',
+                    'obat-keras': 'Obat Keras', 'umum': 'Umum'
+                };
+                return map[kat] || kat;
+            }
+
+            // Ekstrak provinsi dan kota dari judul
+            function extractLocation(text) {
+                let provinsi = 'Umum';
+                let kota = 'Umum';
+                // Cari kota
+                for (let k of TARGET_KOTA) {
+                    if (text.includes(k)) {
+                        kota = k;
+                        break;
+                    }
+                }
+                // Cari provinsi
+                for (let p of TARGET_PROVINSI) {
+                    if (text.includes(p)) {
+                        provinsi = p;
+                        break;
+                    }
+                }
+                // Jika kota ketemu, coba petakan ke provinsi
+                if (kota !== 'Umum') {
+                    if (kota === 'Jakarta' || kota === 'Jakarta Selatan' || kota === 'Jakarta Timur' || kota === 'Jakarta Barat' || kota === 'Jakarta Pusat' || kota === 'Jakarta Utara')
+                        provinsi = 'DKI Jakarta';
+                    else if (kota === 'Bogor' || kota === 'Depok' || kota === 'Bekasi' || kota === 'Bandung')
+                        provinsi = 'Jawa Barat';
+                    else if (kota === 'Tangerang' || kota === 'Tangerang Selatan')
+                        provinsi = 'Banten';
+                    else if (kota === 'Surabaya')
+                        provinsi = 'Jawa Timur';
+                }
+                return { provinsi, kota };
+            }
+
+            function detectCategory(text) {
+                text = text.toLowerCase();
+                for (let [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+                    for (let kw of keywords) {
+                        if (text.includes(kw)) return cat;
+                    }
+                }
+                return 'umum';
+            }
+
+            // ================================================================
+            // 4. FETCH DATA DARI RSS
+            // ================================================================
+            async function fetchRSS() {
+                try {
+                    const response = await fetch(PROXY_URL + encodeURIComponent(RSS_URL));
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const xmlText = await response.text();
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                    const items = xmlDoc.querySelectorAll('item');
+                    const events = [];
+
+                    // Tentukan rentang tanggal (hari ini - 7 hari)
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(today.getDate() - 7);
+
+                    for (let item of items) {
+                        const title = item.querySelector('title')?.textContent || '';
+                        const pubDate = item.querySelector('pubDate')?.textContent;
+                        if (!pubDate) continue;
+
+                        const dateObj = new Date(pubDate);
+                        if (isNaN(dateObj.getTime())) continue;
+                        // Filter tanggal: harus dalam 7 hari terakhir
+                        if (dateObj < sevenDaysAgo || dateObj > today) continue;
+
+                        const tanggal = dateObj.toISOString().split('T')[0];
+                        const location = extractLocation(title);
+                        const kategori = detectCategory(title);
+
+                        events.push({
+                            tanggal: tanggal,
+                            provinsi: location.provinsi,
+                            kota: location.kota,
+                            peristiwa: title.trim(),
+                            kategori: kategori
+                        });
+                    }
+
+                    // Jika tidak ada event, lempar error agar fallback dipakai
+                    if (events.length === 0) throw new Error('Tidak ada berita dalam rentang tanggal');
+
+                    return events;
+                } catch (err) {
+                    console.warn('Gagal fetch RSS:', err);
+                    return null;
+                }
+            }
+
+            // ================================================================
+            // 5. LOAD / SAVE ke localStorage (untuk fallback)
+            // ================================================================
+            function saveToLocalStorage(data) {
+                try {
+                    localStorage.setItem('crimeData', JSON.stringify(data));
+                } catch (e) { /* ignore */ }
+            }
+
+            function loadFromLocalStorage() {
+                try {
+                    const raw = localStorage.getItem('crimeData');
+                    if (raw) return JSON.parse(raw);
+                } catch (e) { /* ignore */ }
+                return null;
+            }
+
+            // ================================================================
+            // 6. MAIN RENDER
+            // ================================================================
+            function render() {
+                // Filter
+                const provFilter = filterProvinsi.value;
+                const kotaFilter = filterKota.value;
+                const katFilter = filterKategori.value;
+                const search = searchInput.value.toLowerCase().trim();
+
+                let filtered = currentData.filter(item => {
+                    if (provFilter !== 'all' && item.provinsi !== provFilter) return false;
+                    if (kotaFilter !== 'all' && item.kota !== kotaFilter) return false;
+                    if (katFilter !== 'all' && item.kategori !== katFilter) return false;
+                    if (search) {
+                        const match = item.peristiwa.toLowerCase().includes(search) ||
+                            item.kota.toLowerCase().includes(search) ||
+                            item.provinsi.toLowerCase().includes(search);
+                        if (!match) return false;
+                    }
+                    return true;
+                });
+
+                // Sort
+                filtered.sort((a, b) => {
+                    let va = a[sortKey] || '';
+                    let vb = b[sortKey] || '';
+                    if (sortKey === 'tanggal') {
+                        va = new Date(va + 'T00:00:00').getTime();
+                        vb = new Date(vb + 'T00:00:00').getTime();
+                    }
+                    if (typeof va === 'string') va = va.toLowerCase();
+                    if (typeof vb === 'string') vb = vb.toLowerCase();
+                    if (va < vb) return sortAsc ? -1 : 1;
+                    if (va > vb) return sortAsc ? 1 : -1;
+                    return 0;
+                });
+
+                // Render rows
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-inbox"></i> Tidak ada data</td></tr>`;
+                } else {
+                    let html = '';
+                    filtered.forEach(item => {
+                        const badgeClass = 'badge-kategori ' + (item.kategori || 'umum');
+                        html += `<tr>
+                            <td class="td-tanggal">${formatTanggal(item.tanggal)}</td>
+                            <td class="td-provinsi">${item.provinsi}</td>
+                            <td class="td-kota">${item.kota}</td>
+                            <td class="td-peristiwa">${item.peristiwa}</td>
+                            <td><span class="${badgeClass}">${getKategoriLabel(item.kategori)}</span></td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                }
+
+                // Update stats
+                const provSet = new Set(currentData.map(d => d.provinsi));
+                const kotaSet = new Set(currentData.map(d => d.kota));
+                const katSet = new Set(currentData.map(d => d.kategori));
+                document.getElementById('totalKejadian').textContent = currentData.length;
+                document.getElementById('totalProvinsi').textContent = provSet.size;
+                document.getElementById('totalKota').textContent = kotaSet.size;
+                document.getElementById('totalKategori').textContent = katSet.size;
+
+                // Update filter dropdowns (preserve selection)
+                const currentProv = filterProvinsi.value;
+                const currentKota = filterKota.value;
+                const currentKat = filterKategori.value;
+
+                const provs = getUnique(currentData, 'provinsi');
+                filterProvinsi.innerHTML = '<option value="all">Semua</option>' +
+                    provs.map(p => `<option value="${p}">${p}</option>`).join('');
+                filterProvinsi.value = currentProv;
+
+                let kotaData = currentData;
+                if (filterProvinsi.value !== 'all') {
+                    kotaData = currentData.filter(d => d.provinsi === filterProvinsi.value);
+                }
+                const kotas = getUnique(kotaData, 'kota');
+                filterKota.innerHTML = '<option value="all">Semua</option>' +
+                    kotas.map(k => `<option value="${k}">${k}</option>`).join('');
+                filterKota.value = currentKota;
+
+                const kats = getUnique(currentData, 'kategori');
+                filterKategori.innerHTML = '<option value="all">Semua</option>' +
+                    kats.map(k => `<option value="${k}">${getKategoriLabel(k)}</option>`).join('');
+                filterKategori.value = currentKat;
+
+                // Update last update time
+                const now = new Date();
+                lastUpdateEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                dataStatusEl.textContent = ` ${currentData.length} berita`;
+            }
+
+            // ================================================================
+            // 7. UPDATE DATA (fetch & render)
+            // ================================================================
+            async function updateData(showLoading = true) {
+                if (isFetching) return;
+                isFetching = true;
+                if (showLoading) {
+                    dataStatusEl.textContent = ' Mengambil data...';
+                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Memuat data terbaru...</td></tr>`;
+                }
+
+                let newData = await fetchRSS();
+
+                if (newData) {
+                    // Sukses
+                    currentData = newData;
+                    saveToLocalStorage(currentData);
+                    sourceLabel.textContent = 'Google News (real-time)';
+                    dataStatusEl.textContent = ` ${currentData.length} berita (RSS)`;
+                } else {
+                    // Gagal fetch, gunakan fallback dari localStorage atau data statis
+                    const stored = loadFromLocalStorage();
+                    if (stored && stored.length > 0) {
+                        currentData = stored;
+                        sourceLabel.textContent = 'Data tersimpan (fallback)';
+                        dataStatusEl.textContent = ` ${currentData.length} berita (cache)`;
+                    } else {
+                        // Jika tidak ada cache, gunakan data statis yang kita buat dengan tanggal dinamis
+                        currentData = generateFallbackData();
+                        saveToLocalStorage(currentData);
+                        sourceLabel.textContent = 'Data simulasi (fallback)';
+                        dataStatusEl.textContent = ` ${currentData.length} berita (simulasi)`;
+                    }
+                }
+
+                render();
+                isFetching = false;
+            }
+
+            // ================================================================
+            // 8. GENERATE FALLBACK DATA DINAMIS (jika semua gagal)
+            // ================================================================
+            function generateFallbackData() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const data = [];
+                const titles = [
+                    'Polisi gagalkan peredaran narkoba di Jakarta', 'Pencurian motor di Bogor', 'Tawuran antar pelajar di Depok',
+                    'Pembunuhan di Tangerang', 'Perampokan di Bekasi', 'Judi online dibongkar di Bandung',
+                    'Narkotika 5 kg ditemukan di Surabaya', 'Curanmor marak di Jakarta Timur',
+                    'Obat keras ilegal di Tangerang Selatan', 'Kekerasan di Jakarta Pusat'
+                ];
+                const locations = [
+                    { prov: 'DKI Jakarta', kota: 'Jakarta' },
+                    { prov: 'Jawa Barat', kota: 'Bogor' },
+                    { prov: 'Jawa Barat', kota: 'Depok' },
+                    { prov: 'Banten', kota: 'Tangerang' },
+                    { prov: 'Jawa Barat', kota: 'Bekasi' },
+                    { prov: 'Jawa Barat', kota: 'Bandung' },
+                    { prov: 'Jawa Timur', kota: 'Surabaya' }
+                ];
+                for (let i = 0; i < 20; i++) {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - Math.floor(Math.random() * 8));
+                    const loc = locations[Math.floor(Math.random() * locations.length)];
+                    const title = titles[Math.floor(Math.random() * titles.length)];
+                    const kategori = detectCategory(title);
+                    data.push({
+                        tanggal: d.toISOString().split('T')[0],
+                        provinsi: loc.prov,
+                        kota: loc.kota,
+                        peristiwa: title + ' (simulasi)',
+                        kategori: kategori
+                    });
+                }
+                return data;
+            }
+
+            // ================================================================
+            // 9. CLOCK & DATE RANGE
+            // ================================================================
+            function updateClock() {
+                const now = new Date();
+                clockEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+
+            function updateDateRange() {
+                const today = new Date();
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(today.getDate() - 7);
+                const fmt = (d) => d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                dateRangeEl.textContent = `${fmt(sevenDaysAgo)} – ${fmt(today)}`;
+            }
+
+            // ================================================================
+            // 10. EVENTS
+            // ================================================================
+            filterProvinsi.addEventListener('change', () => { filterKota.value = 'all'; render(); });
+            filterKota.addEventListener('change', render);
+            filterKategori.addEventListener('change', render);
+            searchInput.addEventListener('input', render);
+
+            document.querySelectorAll('thead th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.sort;
+                    if (sortKey === key) { sortAsc = !sortAsc; } else { sortKey = key;
+                        sortAsc = false; }
+                    render();
+                });
+            });
+
+            resetBtn.addEventListener('click', () => {
+                filterProvinsi.value = 'all';
+                filterKota.value = 'all';
+                filterKategori.value = 'all';
+                searchInput.value = '';
+                sortKey = 'tanggal';
+                sortAsc = false;
+                render();
+            });
+
+            refreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                updateData(true);
+            });
+
+            // ================================================================
+            // 11. AUTO UPDATE (setiap 60 detik)
+            // ================================================================
+            setInterval(() => {
+                updateClock();
+                // Update data tanpa mengganggu tampilan terlalu sering
+                updateData(false);
+            }, 60000);
+
+            // ================================================================
+            // 12. INIT
+            // ================================================================
+            (async function init() {
+                updateClock();
+                updateDateRange();
+                // Pertama coba muat dari localStorage dulu agar cepat tampil
+                const stored = loadFromLocalStorage();
+                if (stored && stored.length > 0) {
+                    currentData = stored;
+                    render();
+                    dataStatusEl.textContent = ` ${currentData.length} berita (cache)`;
+                    sourceLabel.textContent = 'Cache';
+                }
+                // Lalu fetch data terbaru
+                await updateData(true);
+            })();
+
+            // Re-render on visibility change
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    updateClock();
+                    updateDateRange();
+                    updateData(false);
+                }
+            });
+
+        })();
+    </script>
+</body>
+</html>
