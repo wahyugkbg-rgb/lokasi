@@ -2,10 +2,9 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Live Data Bencana BNPB - One Data API</title>
+    <title>Live Data Bencana BNPB - Multi-API Smart Parser</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f0f4f7; }
-        h2 { margin-top: 0; }
         .info-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; }
         button:hover { background: #c0392b; }
@@ -13,17 +12,16 @@
         th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; }
         th { background: #2c3e50; color: white; }
         #status { color: green; font-weight: bold; }
-        #lastUpdate { font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="info-bar">
-        <h2>🌊 Data Bencana Indonesia (Live dari BNPB One Data)</h2>
+        <h2>🌊 Data Bencana Indonesia (Live)</h2>
         <button onclick="fetchData()">🔄 Refresh Manual</button>
     </div>
     <p>
-        <strong>Total Kejadian:</strong> <span id="total">0</span> | 
-        <strong>Update Terakhir:</strong> <span id="lastUpdate">-</span> | 
+        <strong>Total:</strong> <span id="total">0</span> | 
+        <strong>Update:</strong> <span id="lastUpdate">-</span> | 
         <span id="status">Memuat data...</span>
     </p>
     <table id="tabelBencana">
@@ -32,14 +30,45 @@
     </table>
 
     <script>
-        // API terbuka BNPB – ganti dengan endpoint yang sesuai jika berbeda
-        const API_URL = "https://onedata.bnpb.go.id/api/v1/bencana";
+        // === GUNAKAN API YANG ANDA DAPATKAN (ganti jika berbeda) ===
+        const API_URL = "https://data.bnpb.go.id/api/kejadian"; // akan diganti setelah kita temukan
 
-        // Proxy CORS sebagai fallback (biasanya API BNPB tidak butuh ini)
         const CORS_PROXIES = [
             url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
             url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
         ];
+
+        /**
+         * Ekstrak array data dari berbagai struktur JSON
+         */
+        function extractData(json) {
+            // 1. Array langsung
+            if (Array.isArray(json)) return json;
+            
+            // 2. ArcGIS FeatureSet
+            if (json.features && Array.isArray(json.features)) {
+                return json.features.map(f => f.attributes || f.properties || f);
+            }
+            
+            // 3. GeoJSON FeatureCollection
+            if (json.type === 'FeatureCollection' && Array.isArray(json.features)) {
+                return json.features.map(f => f.properties || f);
+            }
+            
+            // 4. Wrapper umum: result, data, records, dll.
+            const possibleKeys = ['data', 'result', 'records', 'items', 'features'];
+            for (let key of possibleKeys) {
+                if (json[key] && Array.isArray(json[key])) {
+                    // Jika item memiliki attributes, ekstrak
+                    return json[key].map(item => item.attributes || item.properties || item);
+                }
+            }
+            
+            // 5. Object tunggal -> bungkus jadi array
+            if (typeof json === 'object' && json !== null) return [json];
+            
+            return [];
+        }
 
         async function fetchData() {
             const statusEl = document.getElementById("status");
@@ -50,7 +79,7 @@
 
             try {
                 let json;
-                // Coba fetch langsung (umumnya berhasil)
+                // Coba direct fetch dulu
                 try {
                     const resp = await fetch(API_URL, { signal: controller.signal, mode: 'cors' });
                     if (resp.ok) json = await resp.json();
@@ -63,7 +92,7 @@
                             if (resp.ok) { json = await resp.json(); break; }
                         } catch (_) {}
                     }
-                    if (!json) throw new Error("Gagal mengambil data (semua metode).");
+                    if (!json) throw new Error("Semua metode fetch gagal");
                 }
 
                 clearTimeout(timeout);
@@ -76,35 +105,25 @@
         }
 
         function renderData(json) {
-            // Struktur API BNPB One Data biasanya berupa array langsung, atau { data: [...] }
-            let records = [];
-            if (Array.isArray(json)) {
-                records = json;
-            } else if (json.data && Array.isArray(json.data)) {
-                records = json.data;
-            } else if (json.result && Array.isArray(json.result)) {
-                records = json.result;
-            } else {
-                // Coba ambil array pertama yang ditemukan
-                const arrayKey = Object.keys(json).find(k => Array.isArray(json[k]));
-                if (arrayKey) records = json[arrayKey];
-                else records = [json]; // fallback
-            }
-
+            const records = extractData(json);
             const head = document.getElementById("headerRow");
             const body = document.getElementById("dataBody");
             head.innerHTML = "";
             body.innerHTML = "";
 
             if (!records.length) {
-                document.getElementById("status").textContent = "Tidak ada data.";
+                document.getElementById("status").textContent = "Data kosong atau struktur tidak dikenali.";
                 document.getElementById("total").textContent = 0;
                 return;
             }
 
-            // Ambil kolom dari record pertama
-            const cols = Object.keys(records[0]);
-            cols.forEach(col => {
+            // Ambil semua kunci dari record pertama (flat)
+            const cols = Object.keys(records[0]).filter(k => typeof records[0][k] !== 'object' || records[0][k] === null);
+            
+            // Jika tidak ada kolom flat, tampilkan semua kolom (termasuk objek) dengan stringify
+            const displayCols = cols.length > 0 ? cols : Object.keys(records[0]);
+            
+            displayCols.forEach(col => {
                 const th = document.createElement("th");
                 th.textContent = col;
                 head.appendChild(th);
@@ -112,10 +131,10 @@
 
             records.forEach(row => {
                 const tr = document.createElement("tr");
-                cols.forEach(col => {
+                displayCols.forEach(col => {
                     const td = document.createElement("td");
                     let val = row[col];
-                    if (val !== null && typeof val === 'object') val = JSON.stringify(val);
+                    if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
                     td.textContent = val ?? "";
                     tr.appendChild(td);
                 });
@@ -124,10 +143,9 @@
 
             document.getElementById("total").textContent = records.length;
             document.getElementById("lastUpdate").textContent = new Date().toLocaleTimeString("id-ID");
-            document.getElementById("status").textContent = `Berhasil memuat ${records.length} kejadian bencana.`;
+            document.getElementById("status").textContent = `Berhasil menampilkan ${records.length} kejadian.`;
         }
 
-        // Jalankan saat halaman dibuka, lalu setiap 5 menit
         window.onload = () => {
             fetchData();
             setInterval(fetchData, 300000);
