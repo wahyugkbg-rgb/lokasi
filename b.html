@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Data Bencana BNPB</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #c0392b;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .status-update {
+            font-size: 14px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            text-transform: uppercase;
+            font-size: 13px;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .loader {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+        .error-msg {
+            color: #c0392b;
+            background: #fadbd8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Dashboard Real-Time Kejadian Bencana</h1>
+        <div class="status-update">
+            Update Otomatis: <span id="last-update">Menunggu data...</span>
+        </div>
+    </div>
+
+    <div id="error-box" class="error-msg">
+        Gagal mengambil data. Pastikan link API benar dan server mengizinkan CORS.
+    </div>
+
+    <div class="table-container">
+        <table id="data-table">
+            <thead>
+                <tr id="table-head">
+                    <!-- Header akan dibuat otomatis oleh JavaScript -->
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <tr>
+                    <td colspan="5" class="loader">Memuat data dari server BNPB...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // ==========================================
+        // KONFIGURASI API
+        // ==========================================
+        
+        // GANTI URL DI BAWAH INI dengan link REST API yang Anda temukan (FeatureServer / MapServer)
+        // Contoh: "https://gis.bnpb.go.id/arcgis/rest/services/nama_layer/FeatureServer/0"
+        const BNPB_API_URL = "MASUKKAN_LINK_API_ANDA_DISINI"; 
+        
+        // Interval waktu auto-update (dalam milidetik). 60000 = 1 menit.
+        const REFRESH_INTERVAL = 60000; 
+        
+        // ==========================================
+
+        let allRecords = [];
+        let offset = 0;
+        const limit = 1000; // Mengambil 1000 data per request untuk bypass limit 110
+
+        // Fungsi utama untuk mengambil data
+        async function fetchData() {
+            const tableBody = document.getElementById('table-body');
+            const tableHead = document.getElementById('table-head');
+            
+            try {
+                document.getElementById('error-box").style.display = 'none';
+                
+                // Format query ArcGIS REST API
+                // where=1=1 (ambil semua), outFields=* (semua kolom), f=json (format json)
+                // resultRecordCount & resultOffset untuk pagination melebihi batas 110
+                const queryUrl = `${BNPB_API_URL}/query?where=1%3D1&outFields=*&orderByFields=OBJECTID+DESC&resultRecordCount=${limit}&resultOffset=${offset}&f=json`;
+                
+                const response = await fetch(queryUrl);
+                if (!response.ok) throw new Error("HTTP Error " + response.status);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error("API Error: " + data.error.message);
+                }
+
+                // Jika data masih ada (bisa diambil lebih dari 110)
+                if (data.features && data.features.length > 0) {
+                    if (offset === 0) {
+                        allRecords = []; // Reset data lama jika ini request pertama
+                        generateTableHeader(data.features[0].attributes);
+                    }
+                    
+                    // Masukkan data baru ke array
+                    data.features.forEach(feature => {
+                        allRecords.push(feature.attributes);
+                    });
+
+                    // Jika data yang dikembalikan sama dengan limit, berarti ada data lagi di server (pagination)
+                    if (data.features.length === limit) {
+                        offset += limit;
+                        await fetchData(); // Rekursif: panggil lagi untuk ambil halaman berikutnya
+                    } else {
+                        offset = 0; // Reset offset untuk update berikutnya
+                        renderTableData();
+                    }
+                } else {
+                    if (offset === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="loader">Tidak ada data kejadian ditemukan.</td></tr>';
+                    }
+                }
+                
+                // Update waktu terakhir
+                document.getElementById('last-update').innerText = new Date().toLocaleTimeString('id-ID');
+                
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+                document.getElementById('error-box').style.display = 'block';
+                document.getElementById('error-box').innerText = "Error: " + error.message + ". Pastikan URL API benar.";
+                tableBody.innerHTML = '<tr><td colspan="5" class="loader">Gagal memuat data.</td></tr>';
+            }
+        }
+
+        // Membuat judul kolom tabel berdasarkan data JSON pertama
+        function generateTableHeader(attributes) {
+            const tableHead = document.getElementById('table-head');
+            tableHead.innerHTML = '';
+            
+            const keys = Object.keys(attributes);
+            keys.forEach(key => {
+                const th = document.createElement('th');
+                th.innerText = key.toUpperCase().replace(/_/g, ' ');
+                tableHead.appendChild(th);
+            });
+        }
+
+        // Menampilkan data ke tabel HTML
+        function renderTableData() {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            
+            allRecords.forEach(record => {
+                const tr = document.createElement('tr');
+                
+                const keys = Object.keys(record);
+                keys.forEach(key => {
+                    const td = document.createElement('td');
+                    let value = record[key];
+                    
+                    // Format tanggal jika terlihat seperti timestamp ArcGIS (milidetik)
+                    if (typeof value === 'number' && value > 1000000000000) {
+                        value = new Date(value).toLocaleString('id-ID');
+                    }
+                    
+                    td.innerText = value !== null ? value : '-';
+                    tr.appendChild(td);
+                });
+                
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Jalankan saat halaman pertama kali dibuka
+        fetchData();
+
+        // Set interval untuk auto-update real-time
+        setInterval(() => {
+            console.log("Memperbarui data secara otomatis...");
+            fetchData();
+        }, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>
