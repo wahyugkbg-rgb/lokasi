@@ -641,6 +641,18 @@ const KATEGORI_META = {
 };
 function metaKategori(k){ return KATEGORI_META[k] || {warna:'#8b98b5', simbol:'i-alert'}; }
 
+// Cocokkan nama kategori dari API ke kunci KATEGORI_META tanpa peduli besar/kecil huruf
+// (mis. API bisa mengembalikan "BANJIR" atau "banjir", bukan cuma "Banjir"), supaya warna &
+// ikon kategori tetap tepat. Kategori yang belum dikenal tetap ditampilkan rapi (Title Case)
+// alih-alih apa adanya.
+function normalisasiKategori(v){
+  if(!v) return 'Lainnya';
+  const s = String(v).trim();
+  const cocok = Object.keys(KATEGORI_META).find(k => k.toLowerCase() === s.toLowerCase());
+  if(cocok) return cocok;
+  return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 /* ============================================================
    2. PETA WILAYAH (kabupaten/kota -> provinsi)
 ============================================================ */
@@ -775,7 +787,7 @@ function normalisasiRekaman(a, centroid){
     id: a.objectid ?? a.no ?? Math.random(),
     kabupaten: a.kabupaten || 'Wilayah tidak diketahui',
     provinsi: resolveProvinsi(a),
-    kategori: a.kategori_bencana || 'Lainnya',
+    kategori: normalisasiKategori(a.kategori_bencana),
     tanggal: a.dt ? new Date(a.dt) : null,
     jumlahKejadian: a.jumlah_kejadian || 0,
     meninggal: a.meninggal || 0,
