@@ -1,35 +1,125 @@
-import requests
-import pandas as pd
-from datetime import datetime
-import time
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Data Bencana BNPB - Portal Item</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #e74c3c; color: white; }
+        #status { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>Data Bencana BNPB (Live)</h2>
+    <p><strong>Total:</strong> <span id="total">0</span> | <strong>Update:</strong> <span id="lastUpdate">-</span></p>
+    <button onclick="fetchData()">🔄 Refresh Manual</button>
+    <p id="status">Memuat data...</p>
+    <table id="tabelBencana"><thead><tr id="headerRow"></tr></thead><tbody id="dataBody"></tbody></table>
 
-SERVICE_URL = "https://gis.bnpb.go.id/arcgis/rest/services/BNPB_Web/Kejadian_Bencana/FeatureServer/0/query"
+    <script>
+        // URL yang Anda temukan
+        const DATA_URL = "https://gis.bnpb.go.id/arcgis//sharing/rest/content/items/d4ac7dd9718143a4a7a00c25c2235171/data?f=json";
 
-def get_all_data():
-    all_features = []
-    offset = 0
-    while True:
-        params = {
-            "where": "1=1",
-            "outFields": "*",
-            "returnGeometry": "false",
-            "resultOffset": offset,
-            "resultRecordCount": 1000,
-            "f": "json"
+        const CORS_PROXIES = [
+            url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            url => `https://cors-anywhere.herokuapp.com/${url}`
+        ];
+
+        async function fetchData() {
+            const statusEl = document.getElementById("status");
+            statusEl.textContent = "Mengambil data...";
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000);
+
+            try {
+                let json;
+                // Coba direct
+                try {
+                    const resp = await fetch(DATA_URL, { signal: controller.signal, mode: 'cors' });
+                    if (resp.ok) json = await resp.json();
+                    else throw new Error("Direct failed");
+                } catch (e) {
+                    // Fallback proxy
+                    for (let proxy of CORS_PROXIES) {
+                        try {
+                            const resp = await fetch(proxy(DATA_URL), { signal: controller.signal });
+                            if (resp.ok) { json = await resp.json(); break; }
+                        } catch (_) {}
+                    }
+                    if (!json) throw new Error("Semua proxy gagal");
+                }
+
+                clearTimeout(timeout);
+                renderData(json);
+            } catch (err) {
+                clearTimeout(timeout);
+                statusEl.textContent = `Error: ${err.message}`;
+                console.error(err);
+            }
         }
-        resp = requests.get(SERVICE_URL, params=params)
-        data = resp.json()
-        if "features" in data:
-            all_features.extend(data["features"])
-        if not data.get("exceededTransferLimit"):
-            break
-        offset += 1000
-    return all_features
 
-while True:
-    print(f"[{datetime.now()}] Mengambil data...")
-    features = get_all_data()
-    df = pd.DataFrame([f["attributes"] for f in features])
-    df.to_csv("bencana_live.csv", index=False)
-    print(f"Tersimpan {len(df)} rekaman. Menunggu 5 menit...")
-    time.sleep(300)  # 5 menit
+        function renderData(json) {
+            let features = [];
+
+            // Coba berbagai struktur yang mungkin
+            if (json.features) {
+                features = json.features;  // ArcGIS FeatureSet
+            } else if (json.layers && json.layers[0]?.featureSet?.features) {
+                features = json.layers[0].featureSet.features;
+            } else if (Array.isArray(json)) {
+                features = json;  // Array langsung
+            } else if (json.data && Array.isArray(json.data)) {
+                features = json.data;  // DataTables style
+            } else {
+                // Object tunggal? bungkus jadi array
+                features = [json];
+            }
+
+            const data = features.map(f => f.attributes || f); // ambil attributes jika ada
+
+            const head = document.getElementById("headerRow");
+            const body = document.getElementById("dataBody");
+            head.innerHTML = "";
+            body.innerHTML = "";
+
+            if (!data.length) {
+                document.getElementById("status").textContent = "Data kosong.";
+                document.getElementById("total").textContent = 0;
+                return;
+            }
+
+            const cols = Object.keys(data[0]);
+            cols.forEach(c => {
+                const th = document.createElement("th");
+                th.textContent = c;
+                head.appendChild(th);
+            });
+
+            data.forEach(row => {
+                const tr = document.createElement("tr");
+                cols.forEach(c => {
+                    const td = document.createElement("td");
+                    td.textContent = row[c] ?? "";
+                    tr.appendChild(td);
+                });
+                body.appendChild(tr);
+            });
+
+            document.getElementById("total").textContent = data.length;
+            document.getElementById("lastUpdate").textContent = new Date().toLocaleTimeString("id-ID");
+            document.getElementById("status").textContent = "Data berhasil dimuat (real-time).";
+        }
+
+        // Panggil pertama kali, lalu setiap 5 menit
+        window.onload = () => {
+            fetchData();
+            setInterval(fetchData, 300000);
+        };
+    </script>
+</body>
+</html>
