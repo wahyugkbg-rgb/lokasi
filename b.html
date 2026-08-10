@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Bencana BNPB - Search API Aggressive</title>
+    <title>Dashboard Bencana BNPB - Hub Extractor v4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -18,8 +18,8 @@
         <!-- Header -->
         <div class="bg-gradient-to-r from-red-800 to-red-600 text-white p-6 rounded-xl shadow-lg mb-6 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold">🚨 Dashboard Bencana BNPB (Target 2026)</h1>
-                <p class="opacity-90 text-sm mt-1">Sumber: ArcGIS Search API | Mode: Agresif Multi-Proxy</p>
+                <h1 class="text-2xl md:text-3xl font-bold">🚨 Dashboard Bencana BNPB (Hub Extractor)</h1>
+                <p class="opacity-90 text-sm mt-1">Ekstraksi Data Mendalam dari Konfigurasi ArcGIS Hub</p>
             </div>
             <div id="headerStatus" class="bg-red-950 bg-opacity-50 px-4 py-2 rounded-lg text-sm font-bold">
                 Sistem Siap
@@ -31,7 +31,7 @@
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-xs font-bold text-gray-400 uppercase">System Console Log</h3>
             </div>
-            <div id="consoleLog" class="log-box h-40 overflow-y-auto text-xs leading-relaxed">
+            <div id="consoleLog" class="log-box h-48 overflow-y-auto text-xs leading-relaxed">
                 <span class="text-green-400">> Sistem menunggu perintah...</span><br>
             </div>
         </div>
@@ -39,10 +39,10 @@
         <!-- Control Panel -->
         <div class="bg-white p-4 rounded-xl shadow-md mb-6 flex flex-col md:flex-row gap-4 items-center">
             <button id="startFetchBtn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-colors">
-                🚀 Cari Data Bencana via Search API
+                🚀 Ekstrak Dataset dari Halaman Bencana
             </button>
             <div id="loadingSpinner" class="hidden spinner"></div>
-            <div class="text-sm text-gray-500" id="statusText">Klik untuk memindai server BNPB.</div>
+            <div class="text-sm text-gray-500" id="statusText">Klik untuk memulai ekstraksi ID dataset asli.</div>
         </div>
 
         <!-- Error Display -->
@@ -80,11 +80,11 @@
     </div>
 
     <script>
-        // Target UTAMA: Search API BNPB
-        // Kita cari item bertipe "Feature Service", "Web Map", atau "CSV" yang mengandung kata "bencana"
-        const searchUrl = 'https://gis.bnpb.go.id/arcgis/sharing/rest/search?f=json&q=(bencana)%20AND%20(type:%20Feature%20Service%20OR%20type:%20Web%20Map%20OR%20type:%20CSV%20OR%20type:%20GeoJSON)&num=100';
+        // Target: Halaman Konfigurasi ArcGIS Hub (Layout Page)
+        const hubConfigUrl = 'https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/d4ac7dd9718143a4a7a00c25c2235171/data?f=json';
+        const pageId = 'd4ac7dd9718143a4a7a00c25c2235171';
 
-        // Daftar Proxy Agresif untuk menembus CORS
+        // Daftar Proxy Agresif
         const proxies = [
             { name: "Direct", url: (u) => u },
             { name: "AllOrigins", url: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
@@ -105,98 +105,92 @@
         }
 
         // Fungsi penetrasi Multi-Proxy
-        async function aggressiveFetch(url) {
+        async function fetchJsonAggressive(url) {
             for (let proxy of proxies) {
                 const proxyUrl = proxy.url(url);
                 try {
-                    log(`Mencoba [${proxy.name}]...`, 'info');
                     const response = await fetch(proxyUrl);
-                    
-                    if (!response.ok) {
-                        log(`HTTP ${response.status} di [${proxy.name}]`, 'warn');
-                        continue;
-                    }
-
+                    if (!response.ok) continue;
                     const text = await response.text();
-                    
-                    // Validasi JSON
-                    if (text.trim().startsWith('<') || !text.trim().startsWith('{')) {
-                        log(`[${proxy.name}] merespons HTML, bukan JSON.`, 'warn');
-                        continue;
+                    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+                        return { json: JSON.parse(text), proxyName: proxy.name };
                     }
-
-                    const json = JSON.parse(text);
-                    log(`SUKSES di [${proxy.name}]! Data JSON diterima.`, 'success');
-                    return { data: json, method: proxy.name };
-
-                } catch (err) {
-                    log(`Gagal [${proxy.name}]: ${err.message}`, 'error');
-                }
+                } catch (err) {}
             }
-            throw new Error("Semua proxy gagal menembus endpoint.");
+            throw new Error(`Gagal menembus endpoint: ${url}`);
         }
 
         async function startExtraction() {
             consoleLog.innerHTML = '';
-            log('🚀 MEMULAI EKSTRAKSI MELALUI SEARCH API BNPB', 'success');
-            log('Target URL: ' + searchUrl, 'info');
+            log('🚀 MEMULAI EKSTRAKSI HUB CONFIG', 'success');
             
             startBtn.disabled = true;
             spinner.classList.remove('hidden');
-            headerStatus.textContent = 'Memindai Server...';
+            headerStatus.textContent = 'Menganalisis Halaman...';
             headerStatus.classList.add('bg-yellow-500', 'animate-pulse');
 
             document.getElementById('errorBox').classList.add('hidden');
             document.getElementById('dataSection').classList.add('hidden');
             
-            let allData = [];
-            let successfulProxy = null;
-
             try {
-                // Langkah 1: Fetch Search API
-                const result = await aggressiveFetch(searchUrl);
-                successfulProxy = result.method;
+                // LANGKAH 1: Ambil Konfigurasi Halaman
+                log('Langkah 1: Mengambil JSON Konfigurasi Halaman...', 'info');
+                const configRes = await fetchJsonAggressive(hubConfigUrl);
+                log(`Konfigurasi berhasil diambil via [${configRes.proxyName}]`, 'success');
+
+                // LANGKAH 2: Cari semua Item ID dataset (32 karakter hex) di dalam teks JSON
+                log('Langkah 2: Menyisir JSON untuk menemukan ID Dataset tersembunyi...', 'info');
+                const configString = JSON.stringify(configRes.json);
+                const idMatches = configString.match(/"[0-9a-f]{32}"/g) || [];
+                const uniqueIds = [...new Set(idMatches.map(id => id.replace(/"/g, '')))];
                 
-                // Langkah 2: Cek apakah ada hasil pencarian
-                if (!result.data.results || result.data.results.length === 0) {
-                    throw new Error("Server BNPB merespons, tetapi tidak ada dataset yang cocok dengan pencarian.");
+                log(`Ditemukan ${uniqueIds.length} ID Unik di dalam layout halaman.`, 'success');
+
+                // LANGKAH 3: Ambil Metadata untuk setiap ID yang ditemukan
+                log('Langkah 3: Mengambil metadata dan link data asli untuk setiap ID...', 'info');
+                const datasets = [];
+                let successfulProxy = configRes.proxyName;
+
+                for (let i = 0; i < uniqueIds.length; i++) {
+                    let id = uniqueIds[i];
+                    if (id === pageId) continue; // Skip ID layout halaman itu sendiri
+
+                    const metaUrl = `https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/${id}?f=json`;
+                    try {
+                        const metaRes = await fetchJsonAggressive(metaUrl);
+                        const item = metaRes.json;
+                        
+                        if (item && item.title) {
+                            const title = item.title;
+                            const snippet = item.snippet || 'Tidak ada deskripsi';
+                            const type = item.type || 'Unknown';
+                            const textContent = (title + ' ' + snippet).toLowerCase();
+                            
+                            // Filter Tahun 2026
+                            const is2026 = textContent.includes('2026') || (item.created && new Date(item.created).getFullYear() === 2026);
+                            
+                            // Bangun URL Akses Data
+                            let accessUrl = item.url || `https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/${id}/data?f=json`;
+                            
+                            // Jika Feature Service, modifikasi ke Query GeoJSON
+                            if (accessUrl.includes('FeatureServer') || accessUrl.includes('MapServer')) {
+                                accessUrl += '/0/query?where=1%3D1&outFields=*&f=geojson';
+                            }
+
+                            datasets.push({
+                                title, type, snippet, url: accessUrl, is2026,
+                                created: item.created ? new Date(item.created).toLocaleDateString('id-ID') : 'N/A'
+                            });
+                            log(` -> [${i+1}/${uniqueIds.length}] Ditemukan Dataset: ${title}`, 'success');
+                        }
+                    } catch(e) {
+                        log(` -> Gagal ambil metadata untuk ID: ${id}`, 'warn');
+                    }
                 }
 
-                log(`Ditemukan ${result.data.results.length} item di server BNPB. Memfilter untuk tahun 2026...`, 'success');
+                if (datasets.length === 0) throw new Error("Tidak ada dataset bencana yang bisa diekstrak dari layout halaman ini.");
 
-                // Langkah 3: Ekstrak data dari Array Results
-                result.data.results.forEach(item => {
-                    const title = item.title || 'Tanpa Judul';
-                    const snippet = item.snippet || 'Tidak ada deskripsi';
-                    const type = item.type || 'Unknown';
-                    const textContent = (title + ' ' + snippet).toLowerCase();
-                    
-                    // Cek apakah ini data 2026
-                    const is2026 = textContent.includes('2026') || (item.created && new Date(item.created).getFullYear() === 2026);
-                    
-                    // Buat URL Akses Data
-                    let accessUrl = item.url || '';
-                    
-                    // Jika ini Feature/Map Service, ubah ke endpoint Query GeoJSON langsung
-                    if (accessUrl && (accessUrl.includes('FeatureServer') || accessUrl.includes('MapServer'))) {
-                        accessUrl += '/0/query?where=1%3D1&outFields=*&f=geojson';
-                    } 
-                    // Jika tidak ada URL tapi ada ID, ambil data dari endpoint item
-                    else if (item.id) {
-                        accessUrl = `https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/${item.id}/data?f=json`;
-                    }
-
-                    allData.push({
-                        title: title,
-                        type: type,
-                        snippet: snippet,
-                        url: accessUrl,
-                        is2026: is2026,
-                        created: item.created ? new Date(item.created).toLocaleDateString('id-ID') : 'N/A'
-                    });
-                });
-
-                renderData(allData, successfulProxy);
+                renderData(datasets, successfulProxy);
                 headerStatus.textContent = 'Sistem Aktif';
                 headerStatus.classList.remove('bg-yellow-500', 'animate-pulse');
                 headerStatus.classList.add('bg-green-600');
@@ -244,7 +238,7 @@
                         </div>
 
                         <a href="${item.url}" target="_blank" class="block text-center text-white text-sm py-2 rounded-lg font-medium ${isGeo ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}">
-                            ${isGeo ? '🗺️ Buka Data GeoJSON' : '📄 Buka Metadata JSON'}
+                            ${isGeo ? '🗺️ Buka Data GeoJSON' : '📄 Buka Metadata/Data'}
                         </a>
                     </div>
                 `;
