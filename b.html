@@ -2,154 +2,118 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Live Data Bencana BNPB - Multi-API Smart Parser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch All Data BNPB</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f0f4f7; }
-        .info-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; }
-        button:hover { background: #c0392b; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; }
-        th { background: #2c3e50; color: white; }
-        #status { color: green; font-weight: bold; }
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #007bff; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        #output { margin-top: 20px; max-height: 500px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #fafafa; border-radius: 4px; white-space: pre-wrap; font-size: 13px; }
+        .info { background: #e7f3ff; padding: 10px; border-left: 4px solid #007bff; margin: 10px 0; }
+        .warning { background: #fff3cd; border-color: #ffc107; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <div class="info-bar">
-        <h2>🌊 Data Bencana Indonesia (Live)</h2>
-        <button onclick="fetchData()">🔄 Refresh Manual</button>
+    <div class="container">
+        <h2>Pengambil Data ArcGIS (Feature Server)</h2>
+        
+        <div class="warning">
+            <strong>⛔ Peringatan:</strong> Browser memblokir fetch dari domain berbeda (CORS). File ini <strong>tidak akan berhasil</strong> jika dibuka di browser biasa. Untuk mencobanya, buka <strong>DevTools (F12) > Console</strong> pada halaman BNPB yang sudah Anda login, lalu copy-paste logika JavaScript di dalamnya.
+        </div>
+
+        <div class="info">
+            <strong>Cara menemukan Endpoint:</strong><br>
+            1. Buka halaman Data Bencana di BNPB.<br>
+            2. Tekan F12, buka tab <b>Network</b>, filter dengan kata "query" atau "FeatureServer".<br>
+            3. Klik permintaan REST API tersebut, dan salin URL-nya (yang biasanya berakhir dengan <code>/FeatureServer/0/query</code>).<br>
+            4. Masukkan URL tersebut di kotak di bawah, lalu klik "Ambil Data".
+        </div>
+
+        <label for="endpointInput">Masukkan URL Endpoint REST (FeatureServer):</label>
+        <input type="text" id="endpointInput" placeholder="Contoh: https://gis.bnpb.go.id/arcgis/rest/services/.../FeatureServer/0/query">
+        <button onclick="startFetch()">Ambil Semua Data</button>
+
+        <div id="loading" style="display:none; margin-top: 10px; color: #007bff;">Sedang mengambil data...</div>
+        
+        <h3>Hasil Data:</h3>
+        <div id="totalCount">Total Data: 0</div>
+        <div id="output">Belum ada data...</div>
     </div>
-    <p>
-        <strong>Total:</strong> <span id="total">0</span> | 
-        <strong>Update:</strong> <span id="lastUpdate">-</span> | 
-        <span id="status">Memuat data...</span>
-    </p>
-    <table id="tabelBencana">
-        <thead><tr id="headerRow"></tr></thead>
-        <tbody id="dataBody"></tbody>
-    </table>
 
     <script>
-        // === GUNAKAN API YANG ANDA DAPATKAN (ganti jika berbeda) ===
-        const API_URL = "https://data.bnpb.go.id/api/kejadian"; // akan diganti setelah kita temukan
+        async function fetchAllData(baseUrl) {
+            let allFeatures = [];
+            let offset = 0;
+            const limit = 1000; // ArcGIS umumnya membatasi max 1000/2000 per request
+            let hasMore = true;
 
-        const CORS_PROXIES = [
-            url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-        ];
+            // Hapus parameter bawaan jika ada dari hasil copy URL
+            let cleanUrl = baseUrl.split('?')[0]; 
 
-        /**
-         * Ekstrak array data dari berbagai struktur JSON
-         */
-        function extractData(json) {
-            // 1. Array langsung
-            if (Array.isArray(json)) return json;
-            
-            // 2. ArcGIS FeatureSet
-            if (json.features && Array.isArray(json.features)) {
-                return json.features.map(f => f.attributes || f.properties || f);
-            }
-            
-            // 3. GeoJSON FeatureCollection
-            if (json.type === 'FeatureCollection' && Array.isArray(json.features)) {
-                return json.features.map(f => f.properties || f);
-            }
-            
-            // 4. Wrapper umum: result, data, records, dll.
-            const possibleKeys = ['data', 'result', 'records', 'items', 'features'];
-            for (let key of possibleKeys) {
-                if (json[key] && Array.isArray(json[key])) {
-                    // Jika item memiliki attributes, ekstrak
-                    return json[key].map(item => item.attributes || item.properties || item);
-                }
-            }
-            
-            // 5. Object tunggal -> bungkus jadi array
-            if (typeof json === 'object' && json !== null) return [json];
-            
-            return [];
-        }
-
-        async function fetchData() {
-            const statusEl = document.getElementById("status");
-            statusEl.textContent = "Mengambil data...";
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 30000);
-
-            try {
-                let json;
-                // Coba direct fetch dulu
+            while (hasMore) {
+                // URL paginasi
+                const fetchUrl = `${cleanUrl}?where=1%3D1&outFields=*&returnGeometry=false&f=json&resultRecordCount=${limit}&resultOffset=${offset}`;
+                
                 try {
-                    const resp = await fetch(API_URL, { signal: controller.signal, mode: 'cors' });
-                    if (resp.ok) json = await resp.json();
-                    else throw new Error("Direct failed");
-                } catch (e) {
-                    // Fallback proxy
-                    for (let proxy of CORS_PROXIES) {
-                        try {
-                            const resp = await fetch(proxy(API_URL), { signal: controller.signal });
-                            if (resp.ok) { json = await resp.json(); break; }
-                        } catch (_) {}
-                    }
-                    if (!json) throw new Error("Semua metode fetch gagal");
-                }
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                    const data = await response.json();
 
-                clearTimeout(timeout);
-                renderData(json);
-            } catch (err) {
-                clearTimeout(timeout);
-                statusEl.textContent = `Error: ${err.message}`;
-                console.error(err);
+                    // ArcGIS FeatureServer response
+                    if (data.features && data.features.length > 0) {
+                        allFeatures = allFeatures.concat(data.features);
+                        console.log(`Mengambil data ${offset} - ${offset + data.features.length}`);
+                        offset += data.features.length;
+
+                        // Jika total data yang didapat kurang dari limit, berarti data sudah habis
+                        if (data.features.length < limit) {
+                            hasMore = false;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+
+                    // Tangani batasan Server BNPB (misal kena rate limit)
+                    await new Promise(r => setTimeout(r, 200)); // Delay 200ms agar tidak membebani server
+
+                } catch (error) {
+                    console.error("Terjadi kesalahan saat fetch:", error);
+                    document.getElementById('output').innerText = "Error: " + error.message;
+                    return [];
+                }
             }
+            return allFeatures;
         }
 
-        function renderData(json) {
-            const records = extractData(json);
-            const head = document.getElementById("headerRow");
-            const body = document.getElementById("dataBody");
-            head.innerHTML = "";
-            body.innerHTML = "";
+        async function startFetch() {
+            const urlInput = document.getElementById('endpointInput').value;
+            const outputDiv = document.getElementById('output');
+            const totalDiv = document.getElementById('totalCount');
+            const loadingDiv = document.getElementById('loading');
 
-            if (!records.length) {
-                document.getElementById("status").textContent = "Data kosong atau struktur tidak dikenali.";
-                document.getElementById("total").textContent = 0;
+            if (!urlInput) {
+                alert("Masukkan URL endpoint terlebih dahulu!");
                 return;
             }
 
-            // Ambil semua kunci dari record pertama (flat)
-            const cols = Object.keys(records[0]).filter(k => typeof records[0][k] !== 'object' || records[0][k] === null);
-            
-            // Jika tidak ada kolom flat, tampilkan semua kolom (termasuk objek) dengan stringify
-            const displayCols = cols.length > 0 ? cols : Object.keys(records[0]);
-            
-            displayCols.forEach(col => {
-                const th = document.createElement("th");
-                th.textContent = col;
-                head.appendChild(th);
-            });
+            loadingDiv.style.display = 'block';
+            outputDiv.innerText = "Memproses data...";
+            totalDiv.innerText = "Total Data: Sedang dihitung...";
 
-            records.forEach(row => {
-                const tr = document.createElement("tr");
-                displayCols.forEach(col => {
-                    const td = document.createElement("td");
-                    let val = row[col];
-                    if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
-                    td.textContent = val ?? "";
-                    tr.appendChild(td);
-                });
-                body.appendChild(tr);
-            });
+            const results = await fetchAllData(urlInput);
 
-            document.getElementById("total").textContent = records.length;
-            document.getElementById("lastUpdate").textContent = new Date().toLocaleTimeString("id-ID");
-            document.getElementById("status").textContent = `Berhasil menampilkan ${records.length} kejadian.`;
+            loadingDiv.style.display = 'none';
+            totalDiv.innerText = `Total Data: ${results.length}`;
+
+            if (results.length > 0) {
+                outputDiv.innerText = JSON.stringify(results, null, 2);
+                console.log(`✅ Berhasil mengambil ${results.length} data.`);
+            } else {
+                outputDiv.innerText = "Tidak ada data yang ditemukan atau terjadi error.";
+            }
         }
-
-        window.onload = () => {
-            fetchData();
-            setInterval(fetchData, 300000);
-        };
     </script>
 </body>
 </html>
