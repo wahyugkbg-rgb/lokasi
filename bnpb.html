@@ -217,6 +217,63 @@
   }
   .note b{color:var(--gold2);}
   footer{color:var(--muted); font-size:12px; text-align:center; padding:34px 20px 14px; font-weight:600; letter-spacing:.02em;}
+
+  /* ---- collapsible panels (info/log) — keeps them from eating screen space by default ---- */
+  details.tech-details, details.diag-details{margin-top:14px;}
+  details.diag-details{margin-top:0; margin-bottom:16px;}
+  details summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px;
+    font-size:12.5px; font-weight:700; color:var(--muted); letter-spacing:.02em;
+    padding:9px 14px; border:1px solid var(--line-soft); border-radius:10px;
+    background:var(--panel2); backdrop-filter:blur(8px); transition:.2s; user-select:none;
+  }
+  details summary::-webkit-details-marker{display:none;}
+  details summary::before{
+    content:'▸'; font-size:11px; color:var(--gold); transition:transform .2s; flex:0 0 auto;
+  }
+  details[open] summary::before{transform:rotate(90deg);}
+  details summary:hover{border-color:var(--gold); color:var(--gold2);}
+  details[open] summary{border-radius:10px 10px 0 0; color:var(--gold2); border-color:rgba(244,183,82,.3);}
+  details .diag-inner{
+    border:1px solid rgba(244,183,82,.3); border-top:none; border-radius:0 0 10px 10px;
+    padding:16px; background:rgba(8,13,20,.5);
+  }
+  details.tech-details .sub{margin-top:12px; padding:14px 16px; border:1px solid var(--line-soft); border-radius:10px; background:var(--panel2);}
+  details .note{margin-bottom:16px;}
+  details .log-wrap{margin-bottom:0;}
+
+  /* ---- compact rhythm so the data table sits high on screen ---- */
+  header{padding:20px 24px 16px;}
+  .controls{margin-top:14px;}
+  main{padding:16px 20px 60px;}
+  .stats{margin-bottom:14px;}
+  .card{padding:14px 16px;}
+  .card .n{font-size:26px;}
+  .filterbar{margin-bottom:12px;}
+
+  @media (max-width:720px){
+    header{padding:16px 16px 14px;}
+    h1{font-size:19px;}
+    .eyebrow{font-size:10.5px;}
+    .controls{gap:8px;}
+    button{padding:10px 14px; font-size:12.5px;}
+    main{padding:12px 12px 50px;}
+    .stats{grid-template-columns:repeat(2,1fr); gap:8px;}
+    .card{padding:11px 12px;}
+    .card .n{font-size:21px;}
+    .card .l{font-size:10px;}
+    .filterbar{gap:8px;}
+    .filterbar .grow{min-width:auto;}
+    table{font-size:13px;}
+    thead th{padding:9px 8px; font-size:10px;}
+    tbody td{padding:8px 8px;}
+    .loc{max-width:180px; font-size:12px;}
+    /* Prioritas utama: tabel data mendapat tinggi layar sebanyak mungkin */
+    .tablewrap-scroll{max-height:78vh;}
+  }
+  @media (min-width:721px){
+    .tablewrap-scroll{max-height:calc(100vh - 260px); min-height:400px;}
+  }
 </style>
 </head>
 <body>
@@ -224,35 +281,43 @@
 <header>
   <div class="eyebrow"><span class="dot"></span>BNPB GIS · GEOPORTAL KEBENCANAAN</div>
   <h1>Probe Multi-Koneksi — Data Bencana 2026</h1>
-  <div class="sub">
-    Sumber asli: <code>gis.bnpb.go.id/databencana/tabel/pencarian.php</code> (di-embed via item ArcGIS
-    <code>9cf0d732…</code> di halaman <code>/arcgis/apps/sites/…/data-bencana</code>). Alat ini mencoba
-    beberapa jalur koneksi (langsung, beberapa proxy CORS publik) satu per satu sampai salah satu berhasil,
-    lalu mem-parsing tabel HTML-nya secara langsung di browser Anda.
-  </div>
   <div class="controls">
     <button class="primary" id="btnRun">▶ Jalankan Probe &amp; Ambil Data</button>
     <button id="btnRetry" disabled>↻ Coba Ulang Metode Lain</button>
     <button id="btnCsv" disabled>⤓ Unduh CSV</button>
     <button id="btnJson" disabled>⤓ Unduh JSON</button>
   </div>
+  <details class="tech-details">
+    <summary>Detail sumber &amp; metode koneksi</summary>
+    <div class="sub">
+      Sumber asli: <code>gis.bnpb.go.id/databencana/tabel/pencarian.php</code> (di-embed via item ArcGIS
+      <code>9cf0d732…</code> di halaman <code>/arcgis/apps/sites/…/data-bencana</code>). Alat ini mencoba
+      beberapa jalur koneksi (langsung, beberapa proxy CORS publik) satu per satu sampai salah satu berhasil,
+      lalu mem-parsing tabel HTML-nya secara langsung di browser Anda.
+    </div>
+  </details>
 </header>
 
 <main>
 
-  <div class="note" id="noteBox">
-    <b>Catatan jujur soal cakupan data:</b> endpoint sumber ini <u>mengabaikan parameter tanggal/jenis pada URL</u> —
-    ia selalu mengembalikan ~120 kejadian terbaru (jendela bergulir), difilter oleh JavaScript sisi-klien di situs
-    aslinya, bukan API tanggal penuh. Karena tanggal hari ini masih dalam 2026, seluruh baris yang tampil praktis
-    otomatis "tahun 2026" — tapi ini <b>bukan arsip penuh Januari–Desember 2026</b>, hanya kejadian ~30–40 hari
-    terakhir yang sedang ditampilkan situs BNPB. Untuk arsip historis penuh, gunakan tombol "Isi Formulir
-    Permohonan Data" yang muncul di halaman sumber.
-  </div>
+  <details class="diag-details">
+    <summary>ℹ️ Catatan cakupan data &amp; log percobaan koneksi</summary>
+    <div class="diag-inner">
+      <div class="note" id="noteBox">
+        <b>Catatan jujur soal cakupan data:</b> endpoint sumber ini <u>mengabaikan parameter tanggal/jenis pada URL</u> —
+        ia selalu mengembalikan ~120 kejadian terbaru (jendela bergulir), difilter oleh JavaScript sisi-klien di situs
+        aslinya, bukan API tanggal penuh. Karena tanggal hari ini masih dalam 2026, seluruh baris yang tampil praktis
+        otomatis "tahun 2026" — tapi ini <b>bukan arsip penuh Januari–Desember 2026</b>, hanya kejadian ~30–40 hari
+        terakhir yang sedang ditampilkan situs BNPB. Untuk arsip historis penuh, gunakan tombol "Isi Formulir
+        Permohonan Data" yang muncul di halaman sumber.
+      </div>
 
-  <div class="log-wrap">
-    <div class="log-head"><h2>Log Percobaan Koneksi</h2></div>
-    <div class="log" id="log"><div class="log-empty">Belum dijalankan. Klik "Jalankan Probe &amp; Ambil Data" di atas.</div></div>
-  </div>
+      <div class="log-wrap">
+        <div class="log-head"><h2>Log Percobaan Koneksi</h2></div>
+        <div class="log" id="log"><div class="log-empty">Belum dijalankan. Klik "Jalankan Probe &amp; Ambil Data" di atas.</div></div>
+      </div>
+    </div>
+  </details>
 
   <div class="stats" id="stats" style="display:none;">
     <div class="card"><div class="n" id="statTotal">0</div><div class="l">Total Kejadian (2026)</div></div>
@@ -260,6 +325,7 @@
     <div class="card"><div class="n" id="statProv">0</div><div class="l">Provinsi Terdampak</div></div>
     <div class="card"><div class="n" id="statJenis">0</div><div class="l">Jenis Bencana Terdata</div></div>
   </div>
+
 
   <div class="filterbar" id="filterbar" style="display:none;">
     <select id="fJenis" class="grow"><option value="">Semua Jenis Kejadian</option></select>
