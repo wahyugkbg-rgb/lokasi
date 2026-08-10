@@ -3,256 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Bencana BNPB 2026 - Direct Data Access</title>
+    <title>Dashboard Bencana BNPB - Aggressive Fetch Mode</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .log-box { font-family: 'Fira Code', monospace; }
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .log-entry { font-family: monospace; font-size: 12px; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="text-gray-800">
 
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto p-4 md:p-8">
         <!-- Header -->
-        <div class="bg-red-700 text-white p-6 rounded-lg shadow-md mb-6">
-            <h1 class="text-3xl font-bold">Dashboard Data Bencana BNPB</h1>
-            <p class="opacity-90">Target Data Tahun: <span class="font-bold text-yellow-300">2026</span> | Sumber: ArcGIS REST API BNPB</p>
+        <div class="bg-gradient-to-r from-red-800 to-red-600 text-white p-6 rounded-xl shadow-lg mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold">🚨 Dashboard Agresif Data Bencana BNPB</h1>
+                <p class="opacity-90 text-sm md:text-base mt-1">Mode Penetrasi: Multi-Proxy CORS Bypass | Target: 2026 & Data Terkini</p>
+            </div>
+            <div id="headerStatus" class="bg-red-950 bg-opacity-50 px-4 py-2 rounded-lg text-sm font-bold">
+                Sistem Siap
+            </div>
         </div>
 
         <!-- Console Log -->
-        <div class="bg-gray-900 text-green-400 p-4 rounded-lg mb-6 h-40 overflow-y-auto shadow-inner">
-            <div id="consoleLog" class="log-entry">
-                > Memulai sistem koneksi data...<br>
+        <div class="bg-gray-900 text-gray-200 p-4 rounded-xl mb-6 shadow-inner">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">System Console Log</h3>
+                <button id="clearLog" class="text-xs text-gray-500 hover:text-gray-300">Clear</button>
+            </div>
+            <div id="consoleLog" class="log-box h-40 overflow-y-auto text-xs leading-relaxed">
+                <span class="text-green-400">> Menunggu perintah inisialisasi...</span><br>
             </div>
         </div>
 
-        <!-- Loading Indicator -->
-        <div id="loadingSection" class="flex justify-center items-center p-10">
-            <div class="loader mr-3"></div>
-            <span>Menyingkapung data dari endpoint BNPB...</span>
+        <!-- Control Panel -->
+        <div class="bg-white p-4 rounded-xl shadow-md mb-6 flex flex-col md:flex-row gap-4 items-center">
+            <button id="startFetchBtn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-colors">
+                <span id="btnText">🚀 Mulai Ekstraksi Data Agresif</span>
+            </button>
+            <div id="loadingSpinner" class="hidden spinner"></div>
+            <div class="text-sm text-gray-500" id="statusText">Klik tombol untuk memulai penetrasi endpoint.</div>
         </div>
 
-        <!-- Error Message -->
-        <div id="errorSection" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
-            <strong class="font-bold">Koneksi Gagal!</strong>
-            <span class="block sm:inline" id="errorMessage"></span>
+        <!-- Error Display -->
+        <div id="errorBox" class="hidden bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6">
+            <p class="font-bold">⚠️ Semua Metode Gagal!</p>
+            <p id="errorText" class="text-sm mt-1"></p>
         </div>
 
-        <!-- Data Containers -->
+        <!-- Data Results -->
         <div id="dataSection" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white p-4 rounded shadow text-center border-t-4 border-blue-500">
-                    <h3 class="text-xl font-bold text-blue-600" id="totalData">0</h3>
-                    <p class="text-gray-500">Total Data Ditemukan</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl shadow text-center border-b-4 border-blue-500">
+                    <h3 class="text-3xl font-extrabold text-blue-600" id="statTotal">0</h3>
+                    <p class="text-xs text-gray-500 mt-1">Total Item Ditemukan</p>
                 </div>
-                <div class="bg-white p-4 rounded shadow text-center border-t-4 border-green-500">
-                    <h3 class="text-xl font-bold text-green-600" id="total2026">0</h3>
-                    <p class="text-gray-500">Data Terfilter 2026</p>
+                <div class="bg-white p-4 rounded-xl shadow text-center border-b-4 border-green-500">
+                    <h3 class="text-3xl font-extrabold text-green-600" id="stat2026">0</h3>
+                    <p class="text-xs text-gray-500 mt-1">Konten Tahun 2026</p>
                 </div>
-                <div class="bg-white p-4 rounded shadow text-center border-t-4 border-purple-500">
-                    <h3 class="text-xl font-bold text-purple-600" id="methodUsed">-</h3>
-                    <p class="text-gray-500">Metode Koneksi Berhasil</p>
+                <div class="bg-white p-4 rounded-xl shadow text-center border-b-4 border-purple-500">
+                    <h3 class="text-3xl font-extrabold text-purple-600" id="statLayers">0</h3>
+                    <p class="text-xs text-gray-500 mt-1">Endpoint Data Spasial</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow text-center border-b-4 border-yellow-500">
+                    <h3 class="text-xl font-extrabold text-yellow-600" id="statProxy">-</h3>
+                    <p class="text-xs text-gray-500 mt-1">Metode Penetrasi</p>
                 </div>
             </div>
 
-            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Daftar Data & Metadata (Tahun 2026 / Terbaru)</h2>
-            <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                <!-- Data Cards Injected Here -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-700">Hasil Ekstraksi Endpoint Langsung</h2>
             </div>
-
-            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Tabel Akses Endpoint Langsung</h2>
-            <div class="bg-white rounded shadow overflow-x-auto">
-                <table class="min-w-full bg-white">
-                    <thead class="bg-gray-800 text-white">
-                        <tr>
-                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Judul / Nama Item</th>
-                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Tipe Data</th>
-                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Tanggal Dibuat</th>
-                            <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dataTableBody" class="text-gray-700">
-                        <!-- Table Rows Injected Here -->
-                    </tbody>
-                </table>
+            <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Cards injected here -->
             </div>
         </div>
     </div>
 
     <script>
-        // Daftar endpoint potensial dari analisis sebelumnya
-        const potentialEndpoints = [
+        // Daftar endpoint BNPB yang dievaluasi memiliki potensi data
+        const targetEndpoints = [
             'https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/d4ac7dd9718143a4a7a00c25c2235171/data?f=json',
             'https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/9cf0d7320f3c43ddac4a37b02cef1e18/data?f=json',
             'https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/d4ac7dd9718143a4a7a00c25c2235171?f=json',
             'https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/9cf0d7320f3c43ddac4a37b02cef1e18?f=json'
         ];
 
-        // Strategi Koneksi CORS
-        const connectionStrategies = [
-            { name: "Direct Connection", build: (url) => url },
-            { name: "AllOrigins Proxy", build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-            { name: "CorsProxy.io", build: (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}` }
+        // Strategi Proxy Agresif (5 Lapis)
+        const proxies = [
+            { name: "Direct", url: (u) => u },
+            { name: "AllOrigins", url: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+            { name: "CorsProxy.io", url: (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
+            { name: "CodeTabs", url: (u) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}` },
+            { name: "ThingProxy", url: (u) => `https://thingproxy.freeboard.io/fetch/${u}` }
         ];
 
         const consoleLog = document.getElementById('consoleLog');
-        function log(message, isError = false) {
-            const color = isError ? 'text-red-500' : 'text-green-400';
-            consoleLog.innerHTML += `<span class="${color}">> ${message}</span><br>`;
+        const startBtn = document.getElementById('startFetchBtn');
+        const spinner = document.getElementById('loadingSpinner');
+        const statusText = document.getElementById('statusText');
+        const headerStatus = document.getElementById('headerStatus');
+
+        function log(msg, type = 'info') {
+            const colors = { info: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', warn: 'text-yellow-400' };
+            consoleLog.innerHTML += `<span class="${colors[type]}">> ${msg}</span><br>`;
             consoleLog.scrollTop = consoleLog.scrollHeight;
         }
 
-        // Fungsi untuk mencoba fetch dengan berbagai strategi
-        async function fetchWithCorsBypass(url) {
-            for (let strategy of connectionStrategies) {
-                const targetUrl = strategy.build(url);
-                try {
-                    log(`Mencoba [${strategy.name}]: ${url.substring(0, 50)}...`);
-                    const response = await fetch(targetUrl, { headers: { 'Accept': 'application/json' } });
-                    
-                    if (!response.ok) throw new Error(`HTTP Status ${response.status}`);
-                    
-                    const text = await response.text();
-                    // Validasi apakah response adalah JSON valid
-                    try {
-                        const json = JSON.parse(text);
-                        log(`SUCCESS [${strategy.name}]! Data diterima.`, false);
-                        return { data: json, method: strategy.name };
-                    } catch (e) {
-                        throw new Error("Response bukan JSON valid (kemungkinan HTML/CSS/JS)");
-                    }
-                } catch (error) {
-                    log(`Gagal [${strategy.name}]: ${error.message}`, true);
-                }
-            }
-            throw new Error("Semua metode koneksi gagal untuk URL ini.");
+        function toggleLoading(state) {
+            spinner.classList.toggle('hidden', !state);
+            startBtn.disabled = state;
+            startBtn.classList.toggle('opacity-50', state);
+            startBtn.classList.toggle('cursor-not-allowed', state);
         }
 
-        // Recursive Search untuk mencari data 2026 atau daftar dataset di dalam JSON
-        function extractDisasterData(obj, results = []) {
-            if (!obj || typeof obj !== 'object') return results;
-
-            // Cek jika objek ini adalah metadata item ArcGIS (memiliki title dan type)
-            if (obj.title && obj.type && (obj.id || obj.url)) {
-                // Cek tahun 2026 di title, snippet, atau created date
-                const createdDate = obj.created ? new Date(obj.created).getFullYear() : null;
-                const modifiedDate = obj.modified ? new Date(obj.modified).getFullYear() : null;
-                const textContent = (obj.title + ' ' + (obj.description || '') + ' ' + (obj.snippet || ''));
-                
-                const is2026 = textContent.includes('2026') || createdDate === 2026 || modifiedDate === 2026;
-                
-                // Karena target spesifik 2026, tapi data mungkin belum ada, kita ambil semua data bencana
-                if (obj.type.toLowerCase().includes('feature') || 
-                    obj.type.toLowerCase().includes('map') || 
-                    obj.type.toLowerCase().includes('service') ||
-                    textContent.toLowerCase().includes('bencana') ||
-                    textContent.toLowerCase().includes('disaster')) {
+        // Fungsi penetrasi Single Endpoint dengan Multi-Proxy
+        async function aggressiveFetch(url) {
+            for (let proxy of proxies) {
+                const proxyUrl = proxy.url(url);
+                try {
+                    log(`Mencoba [${proxy.name}] -> ${url.substring(0, 60)}...`, 'info');
+                    const response = await fetch(proxyUrl, { redirect: 'follow' });
                     
+                    if (!response.ok) {
+                        log(`HTTP ${response.status} di [${proxy.name}]`, 'warn');
+                        continue;
+                    }
+
+                    const text = await response.text();
+                    
+                    // Cek apakah HTML (error page) atau JSON
+                    if (text.trim().startsWith('<') || !text.trim().startsWith('{') && !text.trim().startsWith('[')) {
+                        log(`[${proxy.name}] merespons HTML, bukan JSON.`, 'warn');
+                        continue;
+                    }
+
+                    const json = JSON.parse(text);
+                    log(`SUKSES di [${proxy.name}]! Data JSON diterima.`, 'success');
+                    return { data: json, method: proxy.name };
+
+                } catch (err) {
+                    log(`Gagal [${proxy.name}]: ${err.message}`, 'error');
+                }
+            }
+            throw new Error("Semua proxy gagal menembus endpoint ini.");
+        }
+
+        // Fungsi rekursif untuk menggali data ArcGIS Hub yang sangat dalam
+        function deepExtractData(obj, results = [], visited = new Set()) {
+            if (!obj || typeof obj !== 'object' || visited.has(obj)) return results;
+            visited.add(obj);
+
+            // Deteksi Item ArcGIS
+            if (obj.id && obj.title && obj.type) {
+                const titleLower = obj.title.toLowerCase();
+                const snippetLower = (obj.snippet || '').toLowerCase();
+                const textContent = titleLower + ' ' + snippetLower;
+                
+                // Filter konteks Bencana & 2026
+                const isDisaster = ['bencana', 'disaster', 'banjir', 'gempa', 'gunung api', 'tsunami', 'kebakaran', 'tanah longsor'].some(k => textContent.includes(k));
+                const is2026 = textContent.includes('2026') || (obj.created && new Date(obj.created).getFullYear() === 2026);
+                
+                // Ambil semua layer/feature service/web map
+                const isDataLayer = ['Feature Service', 'Map Service', 'Web Map', 'Web Scene', 'CSV', 'GeoJSON'].includes(obj.type);
+
+                if (isDisaster || isDataLayer) {
+                    let accessUrl = obj.url || '';
+                    if (accessUrl && (accessUrl.includes('FeatureServer') || accessUrl.includes('MapServer'))) {
+                        // Modifikasi ke Query GeoJSON Langsung
+                        accessUrl += accessUrl.includes('?') ? '&f=geojson' : '?f=geojson';
+                    } else if (obj.id) {
+                        accessUrl = `https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/${obj.id}/data?f=json`;
+                    }
+
                     results.push({
                         title: obj.title,
                         type: obj.type,
                         snippet: obj.snippet || 'Tidak ada deskripsi',
-                        url: obj.url || `https://gis.bnpb.go.id/arcgis/sharing/rest/content/items/${obj.id}/data?f=json`,
+                        url: accessUrl,
                         is2026: is2026,
-                        created: createdDate ? `${createdDate}` : 'N/A'
+                        created: obj.created ? new Date(obj.created).toLocaleDateString('id-ID') : 'N/A'
                     });
                 }
             }
 
-            // Telusuri array dan object secara rekursif
+            // Lanjutkan rekursi ke dalam
             for (let key in obj) {
                 if (typeof obj[key] === 'object') {
-                    extractDisasterData(obj[key], results);
+                    deepExtractData(obj[key], results, visited);
                 }
             }
             return results;
         }
 
-        // Proses Utama
-        async function initDashboard() {
-            let allData = [];
-            let successfulMethod = null;
-            let endpointHit = false;
+        async function startExtraction() {
+            consoleLog.innerHTML = '';
+            log('🚀 MEMULAI EKSTRAKSI AGRESIF DASHBOARD BNPB', 'success');
+            toggleLoading(true);
+            headerStatus.textContent = 'Penetrasi Berjalan...';
+            headerStatus.classList.remove('bg-red-950');
+            headerStatus.classList.add('bg-yellow-500', 'animate-pulse');
 
-            for (let url of potentialEndpoints) {
+            document.getElementById('errorBox').classList.add('hidden');
+            document.getElementById('dataSection').classList.add('hidden');
+            document.getElementById('cardsContainer').innerHTML = '';
+            
+            let allData = [];
+            let successfulProxy = null;
+
+            for (let i = 0; i < targetEndpoints.length; i++) {
+                let url = targetEndpoints[i];
+                log(`--- Target ${i+1}: ${url} ---`, 'warn');
+                
                 try {
-                    const result = await fetchWithCorsBypass(url);
-                    if (!successfulMethod) successfulMethod = result.method;
+                    const result = await aggressiveFetch(url);
+                    if (!successfulProxy) successfulProxy = result.method;
                     
-                    const extracted = extractDisasterData(result.data);
+                    log('Menganalisis struktur JSON secara mendalam (Deep Traversal)...', 'info');
+                    const extracted = deepExtractData(result.data);
+                    
                     if (extracted.length > 0) {
                         allData.push(...extracted);
-                        endpointHit = true;
-                        break; // Berhenti jika endpoint pertama sudah memberikan data valid
+                        log(`Ditemukan ${extracted.length} entitas data pada target ini.`, 'success');
+                    } else {
+                        log('Tidak ditemukan entitas data spesifik pada JSON ini.', 'warn');
                     }
-                } catch (e) {
-                    // Lanjut ke endpoint berikutnya
+                    
+                    // Break setelah endpoint pertama yang sukses menghasilkan data, 
+                    // karena endpoint lain mungkin hanya duplikat metadata page.
+                    if (allData.length > 0) break; 
+                    
+                } catch (error) {
+                    log(`Target ${i+1} GAGAL TOTAL: ${error.message}`, 'error');
                 }
             }
 
-            document.getElementById('loadingSection').classList.add('hidden');
-
-            if (!endpointHit || allData.length === 0) {
-                document.getElementById('errorSection').classList.remove('hidden');
-                document.getElementById('errorMessage').innerText = "Tidak ada data yang bisa diekstrak. Kemungkinan besar CORS memblokir semua proxy atau data 2026 belum tersedia/dipublikasikan via public API.";
-                log("ERROR: Semua endpoint gagal dieksekusi atau tidak mengembalikan data yang relevan.", true);
-                return;
+            // Render Hasil
+            if (allData.length === 0) {
+                document.getElementById('errorBox').classList.remove('hidden');
+                document.getElementById('errorText').textContent = 'Semua 5 lapis proxy dan koneksi langsung diblokir oleh BNPB atau jaringan. Coba buka melalui Jaringan VPN atau jalankan via Node.js backend.';
+                headerStatus.textContent = 'Sistem Gagal';
+                headerStatus.classList.remove('bg-yellow-500', 'animate-pulse');
+                headerStatus.classList.add('bg-red-950');
+            } else {
+                renderData(allData, successfulProxy);
+                headerStatus.textContent = 'Sistem Aktif';
+                headerStatus.classList.remove('bg-yellow-500', 'animate-pulse', 'bg-red-950');
+                headerStatus.classList.add('bg-green-600');
             }
 
-            // Render Data
+            toggleLoading(false);
+        }
+
+        function renderData(data, proxyName) {
             document.getElementById('dataSection').classList.remove('hidden');
             
-            const total2026 = allData.filter(d => d.is2026).length;
-            
-            document.getElementById('totalData').innerText = allData.length;
-            document.getElementById('total2026').innerText = total2026;
-            document.getElementById('methodUsed').innerText = successfulMethod;
+            const total2026 = data.filter(d => d.is2026).length;
+            const totalLayers = data.filter(d => d.url.includes('Server') || d.url.includes('Feature') || d.url.includes('Map')).length;
 
-            const cardsContainer = document.getElementById('cardsContainer');
-            const tableBody = document.getElementById('dataTableBody');
+            document.getElementById('statTotal').innerText = data.length;
+            document.getElementById('stat2026').innerText = total2026;
+            document.getElementById('statLayers').innerText = totalLayers;
+            document.getElementById('statProxy').innerText = proxyName;
 
-            allData.forEach(item => {
-                // Render Card
-                const card = `
-                    <div class="bg-white rounded-lg shadow-md p-5 border-l-4 ${item.is2026 ? 'border-green-500' : 'border-gray-300'}">
+            const cards = document.getElementById('cardsContainer');
+            cards.innerHTML = '';
+
+            data.forEach(item => {
+                const isGeo = item.url.includes('Server') || item.url.includes('geojson');
+                const cardHTML = `
+                    <div class="card-hover bg-white p-5 rounded-xl shadow-md border ${item.is2026 ? 'border-green-400 border-t-4' : 'border-gray-200 border-t-4 border-t-gray-300'}">
                         <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-lg text-gray-800">${item.title}</h3>
-                            ${item.is2026 ? '<span class="bg-green-200 text-green-800 text-xs px-2 py-1 rounded">2026</span>' : ''}
+                            <h3 class="font-bold text-md text-gray-800 flex-1">${item.title}</h3>
+                            ${item.is2026 ? '<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ml-2">2026</span>' : ''}
                         </div>
-                        <p class="text-sm text-gray-600 mb-4">${item.snippet}</p>
-                        <div class="text-xs text-gray-500 mb-2">
-                            <span class="font-bold">Tipe:</span> ${item.type} | <span class="font-bold">Dibuat:</span> ${item.created}
+                        <p class="text-xs text-gray-500 mb-3 h-16 overflow-hidden text-ellipsis">${item.snippet}</p>
+                        
+                        <div class="flex justify-between text-xs text-gray-600 mb-3 border-t border-b py-2">
+                            <span><b>Tipe:</b> ${item.type}</span>
+                            <span><b>Dibuat:</b> ${item.created}</span>
                         </div>
-                        <a href="${item.url}" target="_blank" class="block text-center bg-blue-600 text-white text-sm py-2 rounded hover:bg-blue-700 transition-colors">
-                            Akses Endpoint Data
+
+                        <a href="${item.url}" target="_blank" class="block text-center text-white text-sm py-2 rounded-lg font-medium ${isGeo ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}">
+                            ${isGeo ? '🗺️ Buka Peta/Data GeoJSON' : '📄 Buka Metadata JSON'}
                         </a>
                     </div>
                 `;
-                cardsContainer.innerHTML += card;
-
-                // Render Table Row
-                const row = `
-                    <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="py-3 px-4 text-sm">${item.title}</td>
-                        <td class="py-3 px-4 text-sm">${item.type}</td>
-                        <td class="py-3 px-4 text-sm">${item.created} ${item.is2026 ? '✅' : ''}</td>
-                        <td class="py-3 px-4 text-sm">
-                            <a href="${item.url}" target="_blank" class="text-blue-600 hover:underline font-medium">Buka Data JSON</a>
-                        </td>
-                    </tr>
-                `;
-                tableBody.innerHTML += row;
+                cards.innerHTML += cardHTML;
             });
-
-            if(allData.length === 0) {
-                 cardsContainer.innerHTML = '<p class="text-gray-500 col-span-3 text-center">Tidak ada data valid yang ditemukan di payload JSON.</p>';
-            }
         }
 
-        // Jalankan aplikasi
-        initDashboard();
+        startBtn.addEventListener('click', startExtraction);
+        document.getElementById('clearLog').addEventListener('click', () => consoleLog.innerHTML = '');
     </script>
 </body>
 </html>
