@@ -11,7 +11,7 @@
     </script>
 
     <style>
-        /* ===== SAME STYLE AS BEFORE (tidak diubah) ===== */
+        /* === SAME STYLE AS BEFORE (tidak diubah) === */
         * {
             margin: 0;
             padding: 0;
@@ -378,6 +378,8 @@
             let allEvents = [];
             let currentTab = 'list';
             let isRefreshing = false;
+            // Cache untuk reverse geocoding (provinsi)
+            const provinceCache = new Map();
 
             // ---------- helpers ----------
             function logMessage(msg, type = 'info') {
@@ -412,7 +414,73 @@
                 return div.innerHTML;
             }
 
-            // ---------- render functions ----------
+            // ---------- Reverse geocoding untuk mendapatkan provinsi dari koordinat ----------
+            async function getProvinceFromCoords(lat, lng) {
+                const key = `${lat},${lng}`;
+                if (provinceCache.has(key)) return provinceCache.get(key);
+                try {
+                    const url =
+                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=5&accept-language=id`;
+                    // Gunakan proxy untuk menghindari CORS
+                    const proxy = 'https://corsproxy.io/?';
+                    const resp = await fetchWithTimeout(proxy + encodeURIComponent(url), {}, 8000, 1);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const address = data.address || {};
+                        const prov = address.state || address.province || address.region || '';
+                        if (prov) {
+                            provinceCache.set(key, prov);
+                            return prov;
+                        }
+                    }
+                } catch (e) {
+                    // gagal, ignore
+                }
+                provinceCache.set(key, '');
+                return '';
+            }
+
+            // ---------- Utility: fetch with timeout and retry ----------
+            async function fetchWithTimeout(url, options = {}, timeout = 15000, retries = 2) {
+                let lastError;
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), timeout);
+                        const response = await fetch(url, { ...options, signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response;
+                    } catch (err) {
+                        lastError = err;
+                        if (attempt < retries) {
+                            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                        }
+                    }
+                }
+                throw lastError;
+            }
+
+            // ---------- List of CORS proxies ----------
+            const PROXIES = [
+                'https://corsproxy.io/?',
+                'https://api.allorigins.win/raw?url=',
+                'https://thingproxy.freeboard.io/fetch/',
+                'https://cors-anywhere.herokuapp.com/'
+            ];
+
+            async function fetchWithProxy(url, options = {}) {
+                for (const proxy of PROXIES) {
+                    try {
+                        const proxiedUrl = proxy + encodeURIComponent(url);
+                        const resp = await fetchWithTimeout(proxiedUrl, options, 12000, 1);
+                        if (resp.ok) return resp;
+                    } catch (e) { /* continue */ }
+                }
+                return await fetchWithTimeout(url, options, 10000, 1);
+            }
+
+            // ---------- RENDER FUNCTIONS ----------
             function renderList(events) {
                 if (!events || events.length === 0) {
                     sidebarContent.innerHTML =
@@ -445,26 +513,40 @@
                         `<div class="empty-state"><span class="emoji">📊</span><p>Belum ada data untuk ditampilkan.</p></div>`;
                     return;
                 }
+
+                // Hitung provinsi
                 const provCount = {};
                 let total = 0;
+                let unknown = 0;
                 for (const ev of events) {
                     total++;
-                    const p = ev.province || 'Lainnya';
+                    let p = ev.province ? ev.province.trim() : '';
+                    if (!p) {
+                        // Jika tidak ada provinsi, coba ambil dari lokasi (kabupaten/kota) jika ada
+                        // Kita bisa mapping sederhana: cari kata "Provinsi" atau akhiran "Provinsi"? Tidak mudah.
+                        // Kita gunakan "Tidak diketahui"
+                        p = 'Tidak diketahui';
+                        unknown++;
+                    }
                     provCount[p] = (provCount[p] || 0) + 1;
                 }
+
                 const sortedProv = Object.entries(provCount).sort((a, b) => b[1] - a[1]);
+
                 let html = `
                     <div style="margin-bottom:16px;">
                         <div style="font-size:20px;font-weight:700;color:#f1f5f9;">${total}</div>
                         <div style="color:#94a3b8;font-size:13px;">Total kejadian terpantau</div>
+                        ${unknown > 0 ? `<div style="color:#facc15;font-size:12px;margin-top:4px;">⚠️ ${unknown} data tanpa provinsi (dikategorikan "Tidak diketahui")</div>` : ''}
                     </div>
                     <div style="font-weight:600;margin-bottom:10px;font-size:14px;">📍 Berdasarkan Provinsi</div>
                 `;
+
                 for (const [prov, count] of sortedProv) {
                     const pct = Math.round((count / total) * 100);
                     html += `
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                            <span style="width:100px;font-size:13px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(prov)}</span>
+                            <span style="width:120px;font-size:13px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(prov)}">${escHtml(prov)}</span>
                             <div style="flex:1;background:#1e2635;height:8px;border-radius:4px;overflow:hidden;">
                                 <div style="background:#e25822;height:100%;width:${pct}%;border-radius:4px;"></div>
                             </div>
@@ -472,6 +554,8 @@
                         </div>
                     `;
                 }
+
+                // Breakdown sumber data
                 const srcCount = {};
                 for (const ev of events) {
                     const s = ev.source || 'tidak diketahui';
@@ -487,6 +571,7 @@
                         </div>
                     `;
                 }
+
                 sidebarContent.innerHTML = html;
             }
 
@@ -527,50 +612,6 @@
                 else renderStats(allEvents);
             }
 
-            // ---------- Utility: fetch with timeout and retry ----------
-            async function fetchWithTimeout(url, options = {}, timeout = 15000, retries = 2) {
-                let lastError;
-                for (let attempt = 0; attempt <= retries; attempt++) {
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), timeout);
-                        const response = await fetch(url, { ...options, signal: controller.signal });
-                        clearTimeout(timeoutId);
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        return response;
-                    } catch (err) {
-                        lastError = err;
-                        if (attempt < retries) {
-                            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-                        }
-                    }
-                }
-                throw lastError;
-            }
-
-            // ---------- List of CORS proxies (aggressive) ----------
-            const PROXIES = [
-                'https://corsproxy.io/?',
-                'https://api.allorigins.win/raw?url=',
-                'https://thingproxy.freeboard.io/fetch/',
-                'https://cors-anywhere.herokuapp.com/'
-            ];
-
-            async function fetchWithProxy(url, options = {}) {
-                // Try each proxy until one works
-                for (const proxy of PROXIES) {
-                    try {
-                        const proxiedUrl = proxy + encodeURIComponent(url);
-                        const resp = await fetchWithTimeout(proxiedUrl, options, 12000, 1);
-                        if (resp.ok) return resp;
-                    } catch (e) {
-                        // continue to next proxy
-                    }
-                }
-                // Fallback: direct fetch (might fail due to CORS)
-                return await fetchWithTimeout(url, options, 10000, 1);
-            }
-
             // ---------- MAIN DATA FETCHING (murni online, tanpa hardcoded) ----------
             async function fetchAllData() {
                 if (isRefreshing) return;
@@ -582,9 +623,9 @@
                 const combined = [];
                 const errors = [];
 
-                // ---------- 1. BNPB Open Data (API resmi) ----------
+                // ---------- 1. BNPB Open Data (Karhutla) ----------
                 try {
-                    logMessage('📡 Mencoba BNPB API (data.bnpb.go.id)...', 'info');
+                    logMessage('📡 Mencoba BNPB API (karhutla)...', 'info');
                     const url =
                         'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=353da3aa-9ada-42aa-a5c2-e653d52ffd9c&limit=200';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
@@ -592,7 +633,7 @@
                         const json = await resp.json();
                         if (json.success && json.result && json.result.records) {
                             const records = json.result.records;
-                            logMessage(`✅ BNPB API: ${records.length} record ditemukan.`, 'ok');
+                            logMessage(`✅ BNPB Karhutla: ${records.length} record ditemukan.`, 'ok');
                             for (const rec of records) {
                                 const kab = rec['Nama Kabupaten/Kota'] || '';
                                 const prov = rec['Provinsi'] || '';
@@ -613,20 +654,19 @@
                                 }
                             }
                         } else {
-                            logMessage('⚠️ BNPB API: response sukses tapi tidak ada records.', 'err');
+                            logMessage('⚠️ BNPB Karhutla: tidak ada records.', 'err');
                         }
                     } else {
-                        logMessage(`⚠️ BNPB API: HTTP ${resp.status}`, 'err');
+                        logMessage(`⚠️ BNPB Karhutla: HTTP ${resp.status}`, 'err');
                     }
                 } catch (e) {
-                    logMessage(`❌ BNPB API error: ${e.message}`, 'err');
-                    errors.push('BNPB');
+                    logMessage(`❌ BNPB Karhutla error: ${e.message}`, 'err');
+                    errors.push('BNPB-Karhutla');
                 }
 
-                // ---------- 2. BMKG Hotspot JSON (data terbaru) ----------
+                // ---------- 2. BMKG Hotspot JSON ----------
                 try {
-                    logMessage('📡 Mencoba BMKG Hotspot (data.bmkg.go.id)...', 'info');
-                    // BMKG menyediakan JSON hotspot terbaru
+                    logMessage('📡 Mencoba BMKG Hotspot...', 'info');
                     const url = 'https://data.bmkg.go.id/DataMKG/MEWS/hotspot/hotspot.json';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
@@ -637,10 +677,11 @@
                                 const lat = parseFloat(item.lat);
                                 const lng = parseFloat(item.lon);
                                 if (isNaN(lat) || isNaN(lng)) continue;
+                                const prov = item.provinsi || '';
                                 combined.push({
                                     title: `Hotspot (BMKG) - ${item.kecamatan || ''}`,
                                     location: `${item.kabupaten || ''}, ${item.provinsi || ''}`,
-                                    province: item.provinsi || '',
+                                    province: prov,
                                     lat: lat,
                                     lng: lng,
                                     timestamp: item.tanggal ? new Date(item.tanggal).toISOString() : new Date()
@@ -660,11 +701,9 @@
                     errors.push('BMKG');
                 }
 
-                // ---------- 3. NASA FIRMS (VIIRS) via proxy (tanpa API key, gunakan endpoint CSV) ----------
+                // ---------- 3. NASA FIRMS (MODIS) via CSV ----------
                 try {
-                    logMessage('📡 Mencoba NASA FIRMS (hotspot) via proxy...', 'info');
-                    // FIRMS API membutuhkan API key, tapi kita coba endpoint CSV tanpa key (terbatas)
-                    // Menggunakan endpoint MODIS_NRT untuk Indonesia
+                    logMessage('📡 Mencoba NASA FIRMS (MODIS)...', 'info');
                     const url =
                         'https://firms.modaps.eosdis.nasa.gov/api/country/csv/7daea73d6a1e3eba1f1089e3018b1c0e/MODIS_NRT/IDN/1';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'text/csv' } });
@@ -688,10 +727,15 @@
                                 const time = cols[timeIdx] || '';
                                 const conf = cols[confIdx] || '';
                                 const timestamp = date ? new Date(date).toISOString() : new Date().toISOString();
+                                // Coba dapatkan provinsi dari koordinat (gunakan cache)
+                                let prov = '';
+                                try {
+                                    prov = await getProvinceFromCoords(lat, lng);
+                                } catch (e) { /* ignore */ }
                                 combined.push({
                                     title: `Hotspot (NASA MODIS) - ${conf} confidence`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                                    province: '',
+                                    province: prov,
                                     lat: lat,
                                     lng: lng,
                                     timestamp: timestamp,
@@ -705,39 +749,34 @@
                             logMessage('⚠️ NASA FIRMS: data kosong atau format tidak sesuai.', 'err');
                         }
                     } else {
-                        logMessage(`⚠️ NASA FIRMS: HTTP ${resp.status} (mungkin butuh API key)`, 'err');
+                        logMessage(`⚠️ NASA FIRMS: HTTP ${resp.status}`, 'err');
                     }
                 } catch (e) {
                     logMessage(`❌ NASA FIRMS error: ${e.message}`, 'err');
-                    errors.push('NASA FIRMS');
+                    errors.push('NASA-FIRMS');
                 }
 
-                // ---------- 4. LAPAN (BRIN) - Hotspot via InaSafe? Tidak ada API publik, coba scraping? ----------
-                // Tidak ada API langsung, tapi kita bisa coba ambil dari portal InaRisk? tidak.
-
-                // ---------- 5. Global Forest Watch (GFW) API (api.globalforestwatch.org) ----------
+                // ---------- 4. Global Forest Watch (GFW) GLAD alerts ----------
                 try {
-                    logMessage('📡 Mencoba Global Forest Watch API (glad alerts)...', 'info');
-                    // GFW API untuk alert kebakaran (GLAD) - butuh parameter bbox, kita ambil untuk seluruh Indonesia
-                    const bbox = '95, -11, 141, 6'; // perkiraan
-                    const url =
-                        `https://api.globalforestwatch.org/v1/glad-alerts/geostore?geostore=...`; // Tidak mudah tanpa geostore
-                    // Coba endpoint sederhana: https://api.globalforestwatch.org/v1/glad-alerts/latest
-                    const altUrl = 'https://api.globalforestwatch.org/v1/glad-alerts/latest?limit=100';
-                    const resp = await fetchWithProxy(altUrl, { headers: { 'Accept': 'application/json' } });
+                    logMessage('📡 Mencoba Global Forest Watch (GLAD)...', 'info');
+                    const url = 'https://api.globalforestwatch.org/v1/glad-alerts/latest?limit=100';
+                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
                         if (json.data && Array.isArray(json.data)) {
                             logMessage(`✅ GFW: ${json.data.length} alert ditemukan.`, 'ok');
                             for (const item of json.data) {
-                                // GFW data memiliki lat/lng
                                 const lat = parseFloat(item.latitude);
                                 const lng = parseFloat(item.longitude);
                                 if (isNaN(lat) || isNaN(lng)) continue;
+                                let prov = '';
+                                try {
+                                    prov = await getProvinceFromCoords(lat, lng);
+                                } catch (e) { /* ignore */ }
                                 combined.push({
                                     title: `GLAD Alert (GFW) - ${item.confidence || ''}`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                                    province: '',
+                                    province: prov,
                                     lat: lat,
                                     lng: lng,
                                     timestamp: item.alert_date ? new Date(item.alert_date).toISOString() : new Date()
@@ -757,55 +796,9 @@
                     errors.push('GFW');
                 }
 
-                // ---------- 6. EUMETSAT? tidak relevan untuk Indonesia ----------
-
-                // ---------- 7. Media berita (scraping) - coba API berita umum seperti NewsAPI ----------
+                // ---------- 5. BNPB Data Kejadian (bencana) ----------
                 try {
-                    logMessage('📡 Mencoba NewsAPI (berita kebakaran)...', 'info');
-                    // NewsAPI butuh API key, kita coba tanpa key (terbatas)
-                    const url =
-                        'https://newsapi.org/v2/everything?q=kebakaran%20OR%20api%20OR%20karhutla&language=id&sortBy=publishedAt&pageSize=50';
-                    // Karena butuh API key, kita coba dengan proxy dan key dummy (hanya untuk demo)
-                    const resp = await fetchWithProxy(url, {
-                        headers: { 'X-Api-Key': 'dummy' }
-                    });
-                    if (resp.ok) {
-                        const json = await resp.json();
-                        if (json.articles && json.articles.length > 0) {
-                            logMessage(`✅ NewsAPI: ${json.articles.length} artikel ditemukan.`, 'ok');
-                            // Coba ekstrak lokasi dari judul/deskripsi (sederhana)
-                            for (const art of json.articles) {
-                                const title = art.title || '';
-                                const desc = art.description || '';
-                                // Cari kata lokasi (provinsi/kota) secara sederhana
-                                const locMatch = title.match(/(di|di|)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/);
-                                const location = locMatch ? locMatch[2] : 'Indonesia';
-                                // Geo-lokasi tidak tersedia, kita skip
-                                // Tidak bisa menambahkan tanpa koordinat, karena tidak ada lat/lng
-                                // Kita hanya log bahwa ada berita, tapi tidak ditampilkan di peta
-                                // Karena kita tidak punya koordinat, kita skip
-                                // Tapi kita bisa tambahkan ke daftar dengan koordinat 0,0? Tidak baik.
-                                // Jadi kita lewati.
-                            }
-                            logMessage('ℹ️ NewsAPI: tidak ada koordinat, data berita tidak ditampilkan di peta.', 'info');
-                        } else {
-                            logMessage('⚠️ NewsAPI: tidak ada artikel.', 'err');
-                        }
-                    } else {
-                        logMessage(`⚠️ NewsAPI: HTTP ${resp.status} (butuh API key)`, 'err');
-                    }
-                } catch (e) {
-                    logMessage(`❌ NewsAPI error: ${e.message}`, 'err');
-                    errors.push('NewsAPI');
-                }
-
-                // ---------- 8. Twitter? Tidak ada API publik tanpa auth ----------
-
-                // ---------- 9. Coba scraping dari situs BPBD? Tidak etis dan sulit ----------
-
-                // ---------- 10. Tambahan: BNPB lain: data kejadian bencana ----------
-                try {
-                    logMessage('📡 Mencoba BNPB Data Kejadian (data.bnpb.go.id)...', 'info');
+                    logMessage('📡 Mencoba BNPB Data Kejadian...', 'info');
                     const url =
                         'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=3c76f12f-30e6-465c-b7e7-81b13a5f2950&limit=100';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
@@ -846,13 +839,14 @@
                     errors.push('BNPB-Kejadian');
                 }
 
-                // ---------- 11. Coba juga dari sumber lain: inarisk.bnpb.go.id? Tidak ada API ----------
+                // ---------- 6. (Opsional) Coba tambahan lain? ----------
 
-                // ---------- Final: gabungan ----------
-                // Hapus duplikat berdasarkan koordinat dan timestamp
+                // ---------- Final: gabungan dan deduplikasi ----------
                 const unique = [];
                 const seen = new Set();
                 for (const ev of combined) {
+                    // Pastikan province selalu string
+                    if (!ev.province) ev.province = '';
                     const key = `${ev.lat},${ev.lng},${ev.timestamp}`;
                     if (!seen.has(key)) {
                         seen.add(key);
@@ -871,6 +865,7 @@
                 allEvents = unique;
                 updateMap(allEvents);
                 updateTimestamp();
+                // Render sesuai tab aktif
                 if (currentTab === 'list') renderList(allEvents);
                 else renderStats(allEvents);
 
