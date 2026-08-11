@@ -616,6 +616,143 @@
                 return '';
             }
 
+            // ---------- Provinsi berdasarkan Kabupaten/Kota (API wilayah-indonesia) ----------
+            // Sumber: https://github.com/ihsaninh/wilayah-indonesia (static JSON, hosted di GitHub Pages)
+            // Tujuan: provinsi setiap kejadian ditentukan berdasarkan NAMA KABUPATEN/KOTA tempat
+            // peristiwa terjadi (bukan hanya field provinsi mentah dari sumber data, yang kadang
+            // kosong / tidak konsisten formatnya). Bounding-box (estimateProvinceFromCoords) dan
+            // field provinsi mentah dari sumber tetap dipertahankan sebagai CADANGAN jika kab/kota
+            // tidak tersedia atau API wilayah gagal dimuat, sehingga aplikasi tidak pernah gagal
+            // total hanya karena masalah jaringan pada API tambahan ini.
+            const WILAYAH_API_BASE = 'https://ihsaninh.github.io/wilayah-indonesia';
+            let regencyProvinceMap = {};
+            let regencyMapReady = false;
+            let regencyMapPromise = null;
+
+            function normalizeRegencyName(str) {
+                if (!str) return '';
+                return String(str)
+                    .toUpperCase()
+                    .replace(/^KABUPATEN\s+ADM\.?\s+/, '')
+                    .replace(/^KAB\.?\s+ADM\.?\s+/, '')
+                    .replace(/^KOTA\s+ADM\.?\s+/, '')
+                    .replace(/^KABUPATEN\s+/, '')
+                    .replace(/^KAB\.?\s+/, '')
+                    .replace(/^KOTA\s+/, '')
+                    .replace(/^ADMINISTRASI\s+/, '')
+                    .replace(/[^A-Z\s]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            async function loadRegencyProvinceMap() {
+                if (regencyMapPromise) return regencyMapPromise;
+                regencyMapPromise = (async () => {
+                    try {
+                        logMessage('📡 Memuat basis data wilayah (ihsaninh/wilayah-indonesia)...', 'info');
+                        const provResp = await fetchWithProxy(`${WILAYAH_API_BASE}/provinces.json`, { headers: { 'Accept': 'application/json' } });
+                        if (!provResp.ok) throw new Error(`HTTP ${provResp.status}`);
+                        const provinces = await provResp.json();
+                        if (!Array.isArray(provinces) || provinces.length === 0) throw new Error('Format provinces.json tidak sesuai / kosong');
+
+                        const regencyResults = await Promise.allSettled(
+                            provinces.map(async (p) => {
+                                const pid = p.id;
+                                const pname = (p.value || p.name || '').toString().trim();
+                                const url = `${WILAYAH_API_BASE}/${pid}/regencies.json`;
+                                const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
+                                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                                const regs = await resp.json();
+                                return { pname, regs: Array.isArray(regs) ? regs : [] };
+                            })
+                        );
+
+                        const newMap = {};
+                        let totalRegency = 0;
+                        let provinceOk = 0;
+                        for (const r of regencyResults) {
+                            if (r.status === 'fulfilled') {
+                                provinceOk++;
+                                const { pname, regs } = r.value;
+                                if (!pname) continue;
+                                for (const reg of regs) {
+                                    const rawName = (reg.value || reg.name || '').toString().trim();
+                                    if (!rawName) continue;
+                                    const type = (reg.type || '').toString().trim();
+                                    const keyBare = normalizeRegencyName(rawName);
+                                    const keyWithType = normalizeRegencyName(`${type} ${rawName}`);
+                                    if (keyBare) newMap[keyBare] = pname;
+                                    if (keyWithType) newMap[keyWithType] = pname;
+                                    totalRegency++;
+                                }
+                            }
+                        }
+
+                        if (totalRegency > 0) {
+                            regencyProvinceMap = newMap;
+                            regencyMapReady = true;
+                            logMessage(`✅ Basis data wilayah dimuat: ${provinceOk}/${provinces.length} provinsi, ${totalRegency} kab/kota.`, 'ok');
+                        } else {
+                            throw new Error('Tidak ada data kab/kota yang berhasil dimuat');
+                        }
+                    } catch (e) {
+                        regencyMapReady = false;
+                        logMessage(`⚠️ Gagal memuat API wilayah-indonesia (${e.message}). Provinsi akan memakai data sumber asli / estimasi koordinat sebagai cadangan.`, 'err');
+                    }
+                })();
+                return regencyMapPromise;
+            }
+
+            // Cocokkan nama kab/kota dari sumber data (mis. "Kab. Bogor", "KOTA BOGOR", "Bogor")
+            // terhadap basis data wilayah, lalu kembalikan nama provinsi resminya.
+            function resolveProvinceFromKabkota(kabkota) {
+                if (!kabkota || !regencyMapReady) return '';
+                const key = normalizeRegencyName(kabkota);
+                if (!key) return '';
+                if (regencyProvinceMap[key]) return regencyProvinceMap[key];
+                // Pencocokan longgar (mis. sumber menyertakan imbuhan/kependekan berbeda)
+                let best = '';
+                let bestLen = 0;
+                for (const k in regencyProvinceMap) {
+                    if (k.length < 4) continue;
+                    if (key.includes(k) && k.length > bestLen) { best = regencyProvinceMap[k]; bestLen = k.length; }
+                    else if (k.includes(key) && key.length > bestLen) { best = regencyProvinceMap[k]; bestLen = key.length; }
+                }
+                return best;
+            }
+
+            // ---------- Deskripsi peristiwa DINAMIS (bukan hardcode) ----------
+            // Membangun teks deskripsi langsung dari field-field mentah yang benar-benar
+            // dikirim oleh masing-masing API sumber, apa pun nama/isinya, alih-alih hanya
+            // menampilkan 1-2 field tetap yang sudah ditentukan sebelumnya. Field teknis
+            // (id, koordinat) dan field yang sudah ditampilkan lewat badge lain dikecualikan
+            // lewat parameter excludeKeys agar tidak duplikat.
+            function isMeaningfulValue(v) {
+                if (v === null || v === undefined) return false;
+                const s = String(v).trim();
+                if (s === '' || s === '-' || s === '0' || s.toLowerCase() === 'null' || s.toLowerCase() === 'nan' || s.toLowerCase() === 'undefined') return false;
+                return true;
+            }
+            function prettifyKey(key) {
+                return String(key)
+                    .replace(/_/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .replace(/\b\w/g, c => c.toUpperCase());
+            }
+            function buildDynamicDescription(rec, excludeKeys = []) {
+                if (!rec || typeof rec !== 'object') return '';
+                const excl = new Set(['_id', 'id', 'latitude', 'longitude', 'lat', 'lon', 'lng']
+                    .concat(excludeKeys.map(k => k.toLowerCase())));
+                const parts = [];
+                for (const [k, v] of Object.entries(rec)) {
+                    if (excl.has(String(k).toLowerCase())) continue;
+                    if (!isMeaningfulValue(v)) continue;
+                    parts.push(`${prettifyKey(k)}: ${v}`);
+                }
+                return parts.join(' | ');
+            }
+
             // ---------- Penjelasan tingkat keyakinan (confidence) ----------
             function getConfidenceInfo(conf) {
                 if (conf === undefined || conf === null || conf === '' || conf === '-') return null;
@@ -913,6 +1050,7 @@
                                 const lng = rec['Longitude'];
                                 const fire = rec['KEBAKARAN HUTAN DAN LAHAN'];
                                 if (fire && fire !== '0' && fire !== '-' && fire !== '') {
+                                    const dynamicDesc = buildDynamicDescription(rec, ['nama kabupaten/kota', 'provinsi']);
                                     out.push({
                                         title: `Karhutla - ${kab}`,
                                         location: kab || 'Indonesia',
@@ -921,8 +1059,8 @@
                                         lat: lat, lng: lng,
                                         timestamp: new Date().toISOString(),
                                         source: 'BNPB Open Data',
-                                        description: `Data BNPB: ${fire}`,
-                                        detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Luas: ${fire}`
+                                        description: dynamicDesc || `Data BNPB: ${fire}`,
+                                        detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Luas: ${fire}` + (dynamicDesc ? ` | ${dynamicDesc}` : '')
                                     });
                                 }
                             }
@@ -953,6 +1091,7 @@
                                 const lng = parseFloat(item.lon);
                                 if (isNaN(lat) || isNaN(lng)) continue;
                                 const prov = item.provinsi || estimateProvinceFromCoords(lat, lng);
+                                const dynamicDesc = buildDynamicDescription(item, ['provinsi', 'kabupaten']);
                                 out.push({
                                     title: `Hotspot (BMKG) - ${item.kecamatan || ''}`,
                                     location: `${item.kabupaten || ''}, ${item.provinsi || ''}`,
@@ -961,8 +1100,8 @@
                                     lat: lat, lng: lng,
                                     timestamp: item.tanggal ? new Date(item.tanggal).toISOString() : new Date().toISOString(),
                                     source: 'BMKG Hotspot',
-                                    description: `Confidence: ${item.confidence || '-'} | Kecamatan: ${item.kecamatan || ''}`,
-                                    detail: `Kabupaten: ${item.kabupaten || ''} | Provinsi: ${item.provinsi || ''} | Confidence: ${item.confidence || '-'}`,
+                                    description: dynamicDesc || `Confidence: ${item.confidence || '-'} | Kecamatan: ${item.kecamatan || ''}`,
+                                    detail: `Kabupaten: ${item.kabupaten || ''} | Provinsi: ${item.provinsi || ''} | Confidence: ${item.confidence || '-'}` + (dynamicDesc ? ` | ${dynamicDesc}` : ''),
                                     confidence: item.confidence
                                 });
                             }
@@ -1006,6 +1145,12 @@
                                 const conf = cols[confIdx] || '';
                                 const timestamp = date ? new Date(date).toISOString() : new Date().toISOString();
                                 const prov = estimateProvinceFromCoords(lat, lng);
+                                // Bangun objek baris secara dinamis dari SELURUH kolom CSV (bukan hanya
+                                // kolom yang dipilih manual), sehingga field seperti brightness, frp,
+                                // satellite, instrument, daynight, dll ikut tersaji jika tersedia.
+                                const rowObj = {};
+                                header.forEach((h, idx) => { if (h) rowObj[h] = cols[idx]; });
+                                const dynamicDesc = buildDynamicDescription(rowObj, ['latitude', 'longitude']);
                                 out.push({
                                     title: `Hotspot (NASA MODIS) - ${conf} confidence`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -1014,8 +1159,8 @@
                                     lat: lat, lng: lng,
                                     timestamp: timestamp,
                                     source: 'NASA FIRMS (MODIS)',
-                                    description: `Confidence: ${conf} | Waktu: ${time} | Tanggal: ${date}`,
-                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${conf}`,
+                                    description: dynamicDesc || `Confidence: ${conf} | Waktu: ${time} | Tanggal: ${date}`,
+                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${conf}` + (dynamicDesc ? ` | ${dynamicDesc}` : ''),
                                     confidence: conf
                                 });
                                 count++;
@@ -1047,6 +1192,7 @@
                                 const lng = parseFloat(item.longitude);
                                 if (isNaN(lat) || isNaN(lng)) continue;
                                 const prov = estimateProvinceFromCoords(lat, lng);
+                                const dynamicDesc = buildDynamicDescription(item, ['latitude', 'longitude']);
                                 out.push({
                                     title: `GLAD Alert (GFW) - ${item.confidence || ''}`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -1055,8 +1201,8 @@
                                     lat: lat, lng: lng,
                                     timestamp: item.alert_date ? new Date(item.alert_date).toISOString() : new Date().toISOString(),
                                     source: 'Global Forest Watch',
-                                    description: `Confidence: ${item.confidence || '-'}`,
-                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${item.confidence || '-'}`,
+                                    description: dynamicDesc || `Confidence: ${item.confidence || '-'}`,
+                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${item.confidence || '-'}` + (dynamicDesc ? ` | ${dynamicDesc}` : ''),
                                     confidence: item.confidence
                                 });
                             }
@@ -1091,6 +1237,7 @@
                                     const lat = rec['Latitude'];
                                     const lng = rec['Longitude'];
                                     if (lat && lng) {
+                                        const dynamicDesc = buildDynamicDescription(rec, ['kabupaten/kota', 'provinsi', 'jenis bencana', 'tanggal']);
                                         out.push({
                                             title: `Kejadian: ${jenis}`,
                                             location: kab || 'Indonesia',
@@ -1099,8 +1246,8 @@
                                             lat: lat, lng: lng,
                                             timestamp: rec['Tanggal'] || new Date().toISOString(),
                                             source: 'BNPB Data Kejadian',
-                                            description: `Keterangan: ${rec['Keterangan'] || ''}`,
-                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${rec['Tanggal'] || ''}`
+                                            description: dynamicDesc || `Keterangan: ${rec['Keterangan'] || ''}`,
+                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${rec['Tanggal'] || ''}` + (dynamicDesc ? ` | ${dynamicDesc}` : '')
                                         });
                                     }
                                 }
@@ -1132,12 +1279,29 @@
                     fetchBMKGHotspot(),
                     fetchNASAFirms(),
                     fetchGFW(),
-                    fetchBNPBKejadian()
+                    fetchBNPBKejadian(),
+                    loadRegencyProvinceMap()
                 ]);
 
                 let combined = [];
                 for (const r of results) {
                     if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
+                }
+
+                // ---------- Koreksi Provinsi berdasarkan Kabupaten/Kota ----------
+                // Setelah basis data wilayah (ihsaninh/wilayah-indonesia) siap, provinsi setiap
+                // kejadian yang memiliki kab/kota DITENTUKAN ULANG berdasarkan pemetaan resmi ini
+                // (lebih akurat & konsisten dibanding field provinsi mentah dari sumber, yang kadang
+                // kosong/typo). Jika tidak ditemukan kecocokan, provinsi asli dari sumber / estimasi
+                // koordinat tetap dipakai sebagai cadangan -> tidak ada data yang hilang.
+                if (regencyMapReady) {
+                    for (const ev of combined) {
+                        if (ev.kabkota) {
+                            const resolved = resolveProvinceFromKabkota(ev.kabkota);
+                            if (resolved) ev.province = resolved;
+                        }
+                    }
+                    logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.', 'ok');
                 }
 
                 // ---------- Deduplikasi ----------
