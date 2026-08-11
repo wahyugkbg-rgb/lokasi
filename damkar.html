@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🔥 Dashboard Pemantauan Kebakaran Nasional - Real Time (Murni Online)</title>
-
-    <!-- Leaflet CSS -->
+    <title>🔥 Dashboard Pemantauan Kebakaran Nasional - Real Time</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
-
     <style>
-        /* === SAME STYLE AS BEFORE (tidak diubah) === */
+        /* ===== SAME STYLE (tidak diubah banyak) ===== */
         * {
             margin: 0;
             padding: 0;
@@ -210,14 +207,18 @@
             margin-top: 6px;
             line-height: 1.4;
         }
+        /* Badge provinsi yang lebih menonjol */
         .event-item .badge-provinsi {
             display: inline-block;
-            background: #2d3748;
-            padding: 1px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            color: #e2e8f0;
+            background: #e25822;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
             margin-right: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .empty-state {
             text-align: center;
@@ -313,6 +314,10 @@
         .leaflet-popup-content strong {
             color: #b91c1c;
         }
+        .leaflet-popup-content .provinsi-popup {
+            font-weight: 700;
+            color: #1a56db;
+        }
     </style>
 </head>
 <body>
@@ -378,7 +383,6 @@
             let allEvents = [];
             let currentTab = 'list';
             let isRefreshing = false;
-            // Cache untuk reverse geocoding (provinsi)
             const provinceCache = new Map();
 
             // ---------- helpers ----------
@@ -414,14 +418,13 @@
                 return div.innerHTML;
             }
 
-            // ---------- Reverse geocoding untuk mendapatkan provinsi dari koordinat ----------
+            // ---------- Reverse geocoding ----------
             async function getProvinceFromCoords(lat, lng) {
                 const key = `${lat},${lng}`;
                 if (provinceCache.has(key)) return provinceCache.get(key);
                 try {
                     const url =
                         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=5&accept-language=id`;
-                    // Gunakan proxy untuk menghindari CORS
                     const proxy = 'https://corsproxy.io/?';
                     const resp = await fetchWithTimeout(proxy + encodeURIComponent(url), {}, 8000, 1);
                     if (resp.ok) {
@@ -433,9 +436,7 @@
                             return prov;
                         }
                     }
-                } catch (e) {
-                    // gagal, ignore
-                }
+                } catch (e) { /* ignore */ }
                 provinceCache.set(key, '');
                 return '';
             }
@@ -461,7 +462,6 @@
                 throw lastError;
             }
 
-            // ---------- List of CORS proxies ----------
             const PROXIES = [
                 'https://corsproxy.io/?',
                 'https://api.allorigins.win/raw?url=',
@@ -480,7 +480,7 @@
                 return await fetchWithTimeout(url, options, 10000, 1);
             }
 
-            // ---------- RENDER FUNCTIONS ----------
+            // ---------- RENDER FUNGSI (dengan provinsi grafis & deskripsi maksimal) ----------
             function renderList(events) {
                 if (!events || events.length === 0) {
                     sidebarContent.innerHTML =
@@ -491,6 +491,18 @@
                     .timestamp ? new Date(a.timestamp).getTime() : 0));
                 let html = '';
                 for (const ev of sorted) {
+                    // Buat deskripsi maksimal dari semua field yang ada
+                    let descParts = [];
+                    if (ev.description) descParts.push(ev.description);
+                    if (ev.detail) descParts.push(ev.detail);
+                    if (ev.confidence) descParts.push(`Confidence: ${ev.confidence}`);
+                    if (ev.kecamatan) descParts.push(`Kecamatan: ${ev.kecamatan}`);
+                    if (ev.kabupaten) descParts.push(`Kabupaten: ${ev.kabupaten}`);
+                    if (ev.province && !descParts.some(p => p.includes(ev.province))) {
+                        descParts.push(`Provinsi: ${ev.province}`);
+                    }
+                    const fullDesc = descParts.join(' | ');
+
                     html += `
                         <div class="event-item">
                             <div class="title">${escHtml(ev.title || 'Kejadian kebakaran')}</div>
@@ -500,7 +512,7 @@
                                 <span class="time">🕒 ${ev.timestamp ? new Date(ev.timestamp).toLocaleString('id-ID') : '--'}</span>
                                 <span class="source">📡 ${escHtml(ev.source || 'tidak diketahui')}</span>
                             </div>
-                            ${ev.description ? `<div class="desc">${escHtml(ev.description)}</div>` : ''}
+                            ${fullDesc ? `<div class="desc">${escHtml(fullDesc)}</div>` : ''}
                         </div>
                     `;
                 }
@@ -513,24 +525,16 @@
                         `<div class="empty-state"><span class="emoji">📊</span><p>Belum ada data untuk ditampilkan.</p></div>`;
                     return;
                 }
-
-                // Hitung provinsi
                 const provCount = {};
                 let total = 0;
                 let unknown = 0;
                 for (const ev of events) {
                     total++;
                     let p = ev.province ? ev.province.trim() : '';
-                    if (!p) {
-                        // Jika tidak ada provinsi, coba ambil dari lokasi (kabupaten/kota) jika ada
-                        // Kita bisa mapping sederhana: cari kata "Provinsi" atau akhiran "Provinsi"? Tidak mudah.
-                        // Kita gunakan "Tidak diketahui"
-                        p = 'Tidak diketahui';
-                        unknown++;
-                    }
+                    if (!p) p = 'Tidak diketahui';
+                    if (p === 'Tidak diketahui') unknown++;
                     provCount[p] = (provCount[p] || 0) + 1;
                 }
-
                 const sortedProv = Object.entries(provCount).sort((a, b) => b[1] - a[1]);
 
                 let html = `
@@ -541,7 +545,6 @@
                     </div>
                     <div style="font-weight:600;margin-bottom:10px;font-size:14px;">📍 Berdasarkan Provinsi</div>
                 `;
-
                 for (const [prov, count] of sortedProv) {
                     const pct = Math.round((count / total) * 100);
                     html += `
@@ -554,8 +557,6 @@
                         </div>
                     `;
                 }
-
-                // Breakdown sumber data
                 const srcCount = {};
                 for (const ev of events) {
                     const s = ev.source || 'tidak diketahui';
@@ -571,7 +572,6 @@
                         </div>
                     `;
                 }
-
                 sidebarContent.innerHTML = html;
             }
 
@@ -583,10 +583,11 @@
                     const lat = parseFloat(ev.lat);
                     const lng = parseFloat(ev.lng);
                     if (isNaN(lat) || isNaN(lng)) continue;
+                    // Popup dengan provinsi yang jelas
                     const popupContent = `
                         <strong>${escHtml(ev.title || 'Kebakaran')}</strong><br>
                         📍 ${escHtml(ev.location || '')}<br>
-                        ${ev.province ? `🏛️ ${escHtml(ev.province)}<br>` : ''}
+                        ${ev.province ? `<span class="provinsi-popup">🏛️ ${escHtml(ev.province)}</span><br>` : ''}
                         🕒 ${ev.timestamp ? new Date(ev.timestamp).toLocaleString('id-ID') : '--'}<br>
                         📡 ${escHtml(ev.source || '')}
                         ${ev.description ? `<br><span style="font-size:12px;">${escHtml(ev.description)}</span>` : ''}
@@ -612,7 +613,7 @@
                 else renderStats(allEvents);
             }
 
-            // ---------- MAIN DATA FETCHING (murni online, tanpa hardcoded) ----------
+            // ---------- FETCH DATA (tetap agresif, tanpa hardcoded) ----------
             async function fetchAllData() {
                 if (isRefreshing) return;
                 isRefreshing = true;
@@ -623,9 +624,9 @@
                 const combined = [];
                 const errors = [];
 
-                // ---------- 1. BNPB Open Data (Karhutla) ----------
+                // 1. BNPB Karhutla
                 try {
-                    logMessage('📡 Mencoba BNPB API (karhutla)...', 'info');
+                    logMessage('📡 BNPB Karhutla...', 'info');
                     const url =
                         'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=353da3aa-9ada-42aa-a5c2-e653d52ffd9c&limit=200';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
@@ -633,7 +634,7 @@
                         const json = await resp.json();
                         if (json.success && json.result && json.result.records) {
                             const records = json.result.records;
-                            logMessage(`✅ BNPB Karhutla: ${records.length} record ditemukan.`, 'ok');
+                            logMessage(`✅ BNPB Karhutla: ${records.length} record.`, 'ok');
                             for (const rec of records) {
                                 const kab = rec['Nama Kabupaten/Kota'] || '';
                                 const prov = rec['Provinsi'] || '';
@@ -649,7 +650,8 @@
                                         lng: lng,
                                         timestamp: new Date().toISOString(),
                                         source: 'BNPB Open Data',
-                                        description: `Data BNPB: ${fire}`
+                                        description: `Data BNPB: ${fire}`,
+                                        detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Luas: ${fire}`
                                     });
                                 }
                             }
@@ -664,15 +666,15 @@
                     errors.push('BNPB-Karhutla');
                 }
 
-                // ---------- 2. BMKG Hotspot JSON ----------
+                // 2. BMKG Hotspot
                 try {
-                    logMessage('📡 Mencoba BMKG Hotspot...', 'info');
+                    logMessage('📡 BMKG Hotspot...', 'info');
                     const url = 'https://data.bmkg.go.id/DataMKG/MEWS/hotspot/hotspot.json';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
                         if (json.data && Array.isArray(json.data)) {
-                            logMessage(`✅ BMKG Hotspot: ${json.data.length} titik hotspot.`, 'ok');
+                            logMessage(`✅ BMKG Hotspot: ${json.data.length} titik.`, 'ok');
                             for (const item of json.data) {
                                 const lat = parseFloat(item.lat);
                                 const lng = parseFloat(item.lon);
@@ -687,7 +689,11 @@
                                     timestamp: item.tanggal ? new Date(item.tanggal).toISOString() : new Date()
                                         .toISOString(),
                                     source: 'BMKG Hotspot',
-                                    description: `Confidence: ${item.confidence || '-'}, Kecamatan: ${item.kecamatan || ''}`
+                                    description: `Confidence: ${item.confidence || '-'} | Kecamatan: ${item.kecamatan || ''}`,
+                                    detail: `Kabupaten: ${item.kabupaten || ''} | Provinsi: ${item.provinsi || ''} | Confidence: ${item.confidence || '-'}`,
+                                    confidence: item.confidence,
+                                    kecamatan: item.kecamatan,
+                                    kabupaten: item.kabupaten
                                 });
                             }
                         } else {
@@ -701,9 +707,9 @@
                     errors.push('BMKG');
                 }
 
-                // ---------- 3. NASA FIRMS (MODIS) via CSV ----------
+                // 3. NASA FIRMS (MODIS)
                 try {
-                    logMessage('📡 Mencoba NASA FIRMS (MODIS)...', 'info');
+                    logMessage('📡 NASA FIRMS (MODIS)...', 'info');
                     const url =
                         'https://firms.modaps.eosdis.nasa.gov/api/country/csv/7daea73d6a1e3eba1f1089e3018b1c0e/MODIS_NRT/IDN/1';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'text/csv' } });
@@ -727,11 +733,8 @@
                                 const time = cols[timeIdx] || '';
                                 const conf = cols[confIdx] || '';
                                 const timestamp = date ? new Date(date).toISOString() : new Date().toISOString();
-                                // Coba dapatkan provinsi dari koordinat (gunakan cache)
                                 let prov = '';
-                                try {
-                                    prov = await getProvinceFromCoords(lat, lng);
-                                } catch (e) { /* ignore */ }
+                                try { prov = await getProvinceFromCoords(lat, lng); } catch (e) { /* ignore */ }
                                 combined.push({
                                     title: `Hotspot (NASA MODIS) - ${conf} confidence`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -740,13 +743,15 @@
                                     lng: lng,
                                     timestamp: timestamp,
                                     source: 'NASA FIRMS (MODIS)',
-                                    description: `Confidence: ${conf} | Time: ${time}`
+                                    description: `Confidence: ${conf} | Waktu: ${time} | Tanggal: ${date}`,
+                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${conf}`,
+                                    confidence: conf
                                 });
                                 count++;
                             }
                             logMessage(`✅ NASA FIRMS: ${count} hotspot.`, 'ok');
                         } else {
-                            logMessage('⚠️ NASA FIRMS: data kosong atau format tidak sesuai.', 'err');
+                            logMessage('⚠️ NASA FIRMS: data kosong.', 'err');
                         }
                     } else {
                         logMessage(`⚠️ NASA FIRMS: HTTP ${resp.status}`, 'err');
@@ -756,23 +761,21 @@
                     errors.push('NASA-FIRMS');
                 }
 
-                // ---------- 4. Global Forest Watch (GFW) GLAD alerts ----------
+                // 4. Global Forest Watch (GLAD)
                 try {
-                    logMessage('📡 Mencoba Global Forest Watch (GLAD)...', 'info');
+                    logMessage('📡 Global Forest Watch (GLAD)...', 'info');
                     const url = 'https://api.globalforestwatch.org/v1/glad-alerts/latest?limit=100';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
                         if (json.data && Array.isArray(json.data)) {
-                            logMessage(`✅ GFW: ${json.data.length} alert ditemukan.`, 'ok');
+                            logMessage(`✅ GFW: ${json.data.length} alert.`, 'ok');
                             for (const item of json.data) {
                                 const lat = parseFloat(item.latitude);
                                 const lng = parseFloat(item.longitude);
                                 if (isNaN(lat) || isNaN(lng)) continue;
                                 let prov = '';
-                                try {
-                                    prov = await getProvinceFromCoords(lat, lng);
-                                } catch (e) { /* ignore */ }
+                                try { prov = await getProvinceFromCoords(lat, lng); } catch (e) { /* ignore */ }
                                 combined.push({
                                     title: `GLAD Alert (GFW) - ${item.confidence || ''}`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -782,7 +785,9 @@
                                     timestamp: item.alert_date ? new Date(item.alert_date).toISOString() : new Date()
                                         .toISOString(),
                                     source: 'Global Forest Watch',
-                                    description: `Confidence: ${item.confidence || '-'}`
+                                    description: `Confidence: ${item.confidence || '-'}`,
+                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${item.confidence || '-'}`,
+                                    confidence: item.confidence
                                 });
                             }
                         } else {
@@ -796,9 +801,9 @@
                     errors.push('GFW');
                 }
 
-                // ---------- 5. BNPB Data Kejadian (bencana) ----------
+                // 5. BNPB Data Kejadian
                 try {
-                    logMessage('📡 Mencoba BNPB Data Kejadian...', 'info');
+                    logMessage('📡 BNPB Data Kejadian...', 'info');
                     const url =
                         'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=3c76f12f-30e6-465c-b7e7-81b13a5f2950&limit=100';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
@@ -823,7 +828,8 @@
                                             lng: lng,
                                             timestamp: rec['Tanggal'] || new Date().toISOString(),
                                             source: 'BNPB Data Kejadian',
-                                            description: `Keterangan: ${rec['Keterangan'] || ''}`
+                                            description: `Keterangan: ${rec['Keterangan'] || ''}`,
+                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${rec['Tanggal'] || ''}`
                                         });
                                     }
                                 }
@@ -839,13 +845,10 @@
                     errors.push('BNPB-Kejadian');
                 }
 
-                // ---------- 6. (Opsional) Coba tambahan lain? ----------
-
-                // ---------- Final: gabungan dan deduplikasi ----------
+                // ---------- Deduplikasi ----------
                 const unique = [];
                 const seen = new Set();
                 for (const ev of combined) {
-                    // Pastikan province selalu string
                     if (!ev.province) ev.province = '';
                     const key = `${ev.lat},${ev.lng},${ev.timestamp}`;
                     if (!seen.has(key)) {
@@ -855,17 +858,16 @@
                 }
 
                 if (unique.length === 0) {
-                    logMessage('⚠️ Tidak ada data dari semua sumber. Coba periksa koneksi atau API key.', 'err');
+                    logMessage('⚠️ Tidak ada data dari semua sumber.', 'err');
                     setStatus(false, 'Tidak ada data');
                 } else {
-                    logMessage(`✅ Total ${unique.length} kejadian berhasil dikumpulkan dari sumber online.`, 'ok');
+                    logMessage(`✅ Total ${unique.length} kejadian berhasil dikumpulkan.`, 'ok');
                     setStatus(true, `${unique.length} kejadian`);
                 }
 
                 allEvents = unique;
                 updateMap(allEvents);
                 updateTimestamp();
-                // Render sesuai tab aktif
                 if (currentTab === 'list') renderList(allEvents);
                 else renderStats(allEvents);
 
@@ -883,7 +885,7 @@
                 refreshBtn.addEventListener('click', function() {
                     fetchAllData();
                 });
-                setInterval(fetchAllData, 60000); // refresh setiap 60 detik
+                setInterval(fetchAllData, 60000);
                 fetchAllData();
             }
 
