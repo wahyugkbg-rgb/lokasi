@@ -201,6 +201,8 @@
   .badge.b-kebakaran{background:linear-gradient(135deg, rgba(255,122,69,.3), rgba(255,84,104,.12)); color:#ffb08a; border-color:rgba(255,122,69,.5);}
   .badge.b-tsunami{background:linear-gradient(135deg, rgba(60,130,255,.28), rgba(60,130,255,.1)); color:#a3c4ff; border-color:rgba(60,130,255,.5);}
   .loc{color:var(--muted); font-size:13px; max-width:300px; font-weight:500; line-height:1.5;}
+  .loc-list{margin:0; padding-left:16px;}
+  .loc-list li{margin:2px 0;}
   .num{font-family:var(--mono); text-align:right; font-weight:700; color:var(--text);}
   .prov{color:#dfe8f7; font-weight:600;}
   .docl{font-size:13px;}
@@ -633,6 +635,24 @@ function badgeClass(jenis){
   return '';
 }
 
+function formatLokasiParts(raw){
+  // Data lokasi kadang berisi penanda "\n" (literal 2 karakter atau newline asli)
+  // sebagai pemisah antar sub-lokasi (Kel/Kec/Desa). Penanda ini bukan bagian nama lokasi,
+  // jadi dihilangkan, dan tiap bagian dipecah jadi baris terpisah.
+  return String(raw||'')
+    .split(/\\n|\n/g)
+    .map(p => p.replace(/^Kecamatan:\s*/,'').trim())
+    .filter(Boolean);
+}
+
+function renderLokasiCell(raw){
+  const parts = formatLokasiParts(raw);
+  if(parts.length <= 1){
+    return parts[0] || '';
+  }
+  return `<ul class="loc-list">${parts.map(p => `<li>${p}</li>`).join('')}</ul>`;
+}
+
 function renderTable(){
   const tbody = document.getElementById('tbody');
   document.getElementById('resultCount').textContent = `${filteredRows.length.toLocaleString('id-ID')} dari ${allRows.length.toLocaleString('id-ID')} kejadian`;
@@ -647,7 +667,7 @@ function renderTable(){
       <td><span class="badge ${badgeClass(r.jenis)}">${r.jenis}</span></td>
       <td class="prov">${r.kab}</td>
       <td class="prov">${r.prov}</td>
-      <td class="loc">${(r.lokasi||'').replace(/^Kecamatan:\s*/,'')}</td>
+      <td class="loc">${renderLokasiCell(r.lokasi)}</td>
       <td class="num">${r.meninggal||''}</td>
       <td class="num">${r.hilang||''}</td>
       <td class="num">${r.terluka||''}</td>
@@ -672,7 +692,7 @@ function toCsv(rows){
   const esc = (v)=> `"${String(v??'').replace(/"/g,'""')}"`;
   const lines = [headers.map(esc).join(',')];
   rows.forEach(r=>{
-    lines.push([r.no,r.tanggal,r.jenis,r.kab,r.prov,(r.lokasi||'').replace(/\n/g,' '),r.meninggal,r.hilang,r.terluka,r.rusak,r.terendam,r.fasum,r.dokUrl].map(esc).join(','));
+    lines.push([r.no,r.tanggal,r.jenis,r.kab,r.prov,formatLokasiParts(r.lokasi).join(' | '),r.meninggal,r.hilang,r.terluka,r.rusak,r.terendam,r.fasum,r.dokUrl].map(esc).join(','));
   });
   return lines.join('\n');
 }
