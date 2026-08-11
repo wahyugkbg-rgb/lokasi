@@ -3,24 +3,20 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🔥 Dashboard Pemantauan Kebakaran Nasional - Real Time</title>
+    <title>🔥 Dashboard Pemantauan Kebakaran Nasional - Real Time (Murni Online)</title>
 
     <!-- Leaflet CSS -->
-    <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <!-- Leaflet JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
 
     <style>
+        /* ===== SAME STYLE AS BEFORE (tidak diubah) ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #0b0e14;
@@ -29,8 +25,6 @@
             display: flex;
             flex-direction: column;
         }
-
-        /* ===== HEADER ===== */
         .header {
             background: linear-gradient(135deg, #1a1f2b, #0f131c);
             padding: 12px 24px;
@@ -108,15 +102,11 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
-
-        /* ===== MAIN LAYOUT ===== */
         .main {
             display: flex;
             flex: 1;
             min-height: 0;
         }
-
-        /* ===== MAP ===== */
         .map-container {
             flex: 1;
             position: relative;
@@ -127,8 +117,6 @@
             height: 100%;
             background: #141a24;
         }
-
-        /* ===== SIDEBAR ===== */
         .sidebar {
             width: 400px;
             min-width: 320px;
@@ -166,7 +154,6 @@
             background: #1a212e;
             color: #e8edf5;
         }
-
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
@@ -182,8 +169,6 @@
             background: #2d3748;
             border-radius: 10px;
         }
-
-        /* ===== LIST ITEMS ===== */
         .event-item {
             background: #1a212e;
             border-left: 4px solid #e25822;
@@ -244,8 +229,6 @@
             display: block;
             margin-bottom: 12px;
         }
-
-        /* ===== LOG ===== */
         .log-container {
             background: #0d121b;
             border-top: 1px solid #1e2635;
@@ -281,8 +264,6 @@
         .log-entry .log-info {
             color: #60a5fa;
         }
-
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 820px) {
             .sidebar {
                 width: 100%;
@@ -320,8 +301,6 @@
                 padding: 10px 12px;
             }
         }
-
-        /* leaflet overrides */
         .leaflet-control-attribution {
             background: rgba(11, 14, 20, 0.85) !important;
             color: #94a3b8 !important;
@@ -338,7 +317,6 @@
 </head>
 <body>
 
-    <!-- ===== HEADER ===== -->
     <header class="header">
         <h1>🔥 <span>Pantau</span> Kebakaran Nasional</h1>
         <div class="header-right">
@@ -351,32 +329,23 @@
         </div>
     </header>
 
-    <!-- ===== MAIN ===== -->
     <div class="main">
-        <!-- MAP -->
         <div class="map-container">
             <div id="map"></div>
         </div>
-
-        <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-tabs">
                 <button class="active" data-tab="list">📋 Daftar Kejadian</button>
                 <button data-tab="stats">📊 Statistik</button>
             </div>
-            <div class="sidebar-content" id="sidebarContent">
-                <!-- diisi oleh JS -->
-            </div>
+            <div class="sidebar-content" id="sidebarContent"></div>
         </div>
     </div>
 
-    <!-- ===== LOG ===== -->
     <div class="log-container" id="logContainer">
-        <div class="log-entry"><span class="log-time">[INIT]</span> <span class="log-info">Dashboard siap. Mengambil data dari berbagai sumber...</span></div>
+        <div class="log-entry"><span class="log-time">[INIT]</span> <span class="log-info">Dashboard siap. Mengambil data dari berbagai sumber online...</span></div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- ===== JAVASCRIPT ===== -->
     <script>
         (function() {
             'use strict';
@@ -397,15 +366,12 @@
                 fadeAnimation: true,
                 attributionControl: true
             });
-
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
                 subdomains: 'abcd',
                 maxZoom: 19,
                 minZoom: 3
             }).addTo(map);
-
-            // marker cluster group
             const markerGroup = L.layerGroup().addTo(map);
 
             // ---------- state ----------
@@ -413,7 +379,7 @@
             let currentTab = 'list';
             let isRefreshing = false;
 
-            // ---------- log ----------
+            // ---------- helpers ----------
             function logMessage(msg, type = 'info') {
                 const time = new Date().toLocaleTimeString('id-ID');
                 const entry = document.createElement('div');
@@ -425,88 +391,60 @@
                     `<span class="log-time">[${time}]</span> <span class="${cls}">${msg}</span>`;
                 logContainer.appendChild(entry);
                 logContainer.scrollTop = logContainer.scrollHeight;
-                // keep last 80 lines
-                while (logContainer.children.length > 80) {
-                    logContainer.removeChild(logContainer.firstChild);
-                }
+                while (logContainer.children.length > 80) logContainer.removeChild(logContainer.firstChild);
             }
 
-            // ---------- update status ----------
             function setStatus(online, msg) {
                 const dot = document.querySelector('.status-dot');
-                if (online) {
-                    dot.style.background = '#4ade80';
-                    statusText.textContent = msg || 'Aktif';
-                } else {
-                    dot.style.background = '#f87171';
-                    statusText.textContent = msg || 'Gangguan';
-                }
+                if (online) { dot.style.background = '#4ade80';
+                    statusText.textContent = msg || 'Aktif'; } else { dot.style.background = '#f87171';
+                    statusText.textContent = msg || 'Gangguan'; }
             }
 
             function updateTimestamp() {
-                const now = new Date();
-                lastUpdateLabel.textContent = '⏱️ ' + now.toLocaleTimeString('id-ID');
+                lastUpdateLabel.textContent = '⏱️ ' + new Date().toLocaleTimeString('id-ID');
             }
 
-            // ---------- render list ----------
+            function escHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // ---------- render functions ----------
             function renderList(events) {
                 if (!events || events.length === 0) {
-                    sidebarContent.innerHTML = `
-                        <div class="empty-state">
-                            <span class="emoji">🔍</span>
-                            <p>Belum ada data kebakaran yang terpantau.</p>
-                            <p style="font-size:12px;margin-top:6px;">Coba refresh atau periksa koneksi.</p>
-                        </div>
-                    `;
+                    sidebarContent.innerHTML =
+                        `<div class="empty-state"><span class="emoji">🔍</span><p>Belum ada data kebakaran yang terpantau dari sumber online.</p><p style="font-size:12px;margin-top:6px;">Coba refresh atau periksa koneksi.</p></div>`;
                     return;
                 }
-
+                const sorted = [...events].sort((a, b) => (b.timestamp ? new Date(b.timestamp).getTime() : 0) - (a
+                    .timestamp ? new Date(a.timestamp).getTime() : 0));
                 let html = '';
-                // sort by date descending (newest first)
-                const sorted = [...events].sort((a, b) => {
-                    const da = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-                    const db = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-                    return db - da;
-                });
-
                 for (const ev of sorted) {
-                    const title = ev.title || 'Kejadian kebakaran';
-                    const loc = ev.location || 'Lokasi tidak diketahui';
-                    const prov = ev.province || '';
-                    const time = ev.timestamp ? new Date(ev.timestamp).toLocaleString('id-ID') : '--';
-                    const source = ev.source || 'tidak diketahui';
-                    const desc = ev.description || '';
-
                     html += `
                         <div class="event-item">
-                            <div class="title">${escHtml(title)}</div>
+                            <div class="title">${escHtml(ev.title || 'Kejadian kebakaran')}</div>
                             <div class="meta">
-                                <span class="loc">📍 ${escHtml(loc)}</span>
-                                ${prov ? `<span class="badge-provinsi">${escHtml(prov)}</span>` : ''}
-                                <span class="time">🕒 ${escHtml(time)}</span>
-                                <span class="source">📡 ${escHtml(source)}</span>
+                                <span class="loc">📍 ${escHtml(ev.location || 'Lokasi tidak diketahui')}</span>
+                                ${ev.province ? `<span class="badge-provinsi">${escHtml(ev.province)}</span>` : ''}
+                                <span class="time">🕒 ${ev.timestamp ? new Date(ev.timestamp).toLocaleString('id-ID') : '--'}</span>
+                                <span class="source">📡 ${escHtml(ev.source || 'tidak diketahui')}</span>
                             </div>
-                            ${desc ? `<div class="desc">${escHtml(desc)}</div>` : ''}
+                            ${ev.description ? `<div class="desc">${escHtml(ev.description)}</div>` : ''}
                         </div>
                     `;
                 }
-
                 sidebarContent.innerHTML = html;
             }
 
-            // ---------- render stats ----------
             function renderStats(events) {
                 if (!events || events.length === 0) {
-                    sidebarContent.innerHTML = `
-                        <div class="empty-state">
-                            <span class="emoji">📊</span>
-                            <p>Belum ada data untuk ditampilkan.</p>
-                        </div>
-                    `;
+                    sidebarContent.innerHTML =
+                        `<div class="empty-state"><span class="emoji">📊</span><p>Belum ada data untuk ditampilkan.</p></div>`;
                     return;
                 }
-
-                // count by province
                 const provCount = {};
                 let total = 0;
                 for (const ev of events) {
@@ -514,9 +452,7 @@
                     const p = ev.province || 'Lainnya';
                     provCount[p] = (provCount[p] || 0) + 1;
                 }
-
                 const sortedProv = Object.entries(provCount).sort((a, b) => b[1] - a[1]);
-
                 let html = `
                     <div style="margin-bottom:16px;">
                         <div style="font-size:20px;font-weight:700;color:#f1f5f9;">${total}</div>
@@ -524,7 +460,6 @@
                     </div>
                     <div style="font-weight:600;margin-bottom:10px;font-size:14px;">📍 Berdasarkan Provinsi</div>
                 `;
-
                 for (const [prov, count] of sortedProv) {
                     const pct = Math.round((count / total) * 100);
                     html += `
@@ -537,15 +472,12 @@
                         </div>
                     `;
                 }
-
-                // source breakdown
                 const srcCount = {};
                 for (const ev of events) {
                     const s = ev.source || 'tidak diketahui';
                     srcCount[s] = (srcCount[s] || 0) + 1;
                 }
                 const sortedSrc = Object.entries(srcCount).sort((a, b) => b[1] - a[1]);
-
                 html += `<div style="font-weight:600;margin:18px 0 10px;font-size:14px;">📡 Sumber Data</div>`;
                 for (const [src, count] of sortedSrc) {
                     html += `
@@ -555,30 +487,17 @@
                         </div>
                     `;
                 }
-
                 sidebarContent.innerHTML = html;
             }
 
-            // ---------- helper: escape html ----------
-            function escHtml(str) {
-                if (!str) return '';
-                const div = document.createElement('div');
-                div.textContent = str;
-                return div.innerHTML;
-            }
-
-            // ---------- update map markers ----------
             function updateMap(events) {
                 markerGroup.clearLayers();
-
                 if (!events || events.length === 0) return;
-
                 for (const ev of events) {
                     if (!ev.lat || !ev.lng) continue;
                     const lat = parseFloat(ev.lat);
                     const lng = parseFloat(ev.lng);
                     if (isNaN(lat) || isNaN(lng)) continue;
-
                     const popupContent = `
                         <strong>${escHtml(ev.title || 'Kebakaran')}</strong><br>
                         📍 ${escHtml(ev.location || '')}<br>
@@ -587,7 +506,6 @@
                         📡 ${escHtml(ev.source || '')}
                         ${ev.description ? `<br><span style="font-size:12px;">${escHtml(ev.description)}</span>` : ''}
                     `;
-
                     const marker = L.circleMarker([lat, lng], {
                         radius: 8,
                         fillColor: '#e25822',
@@ -596,60 +514,96 @@
                         opacity: 0.9,
                         fillOpacity: 0.75,
                     }).bindPopup(popupContent);
-
                     markerGroup.addLayer(marker);
                 }
             }
 
-            // ---------- switch tab ----------
             function switchTab(tab) {
                 currentTab = tab;
                 document.querySelectorAll('.sidebar-tabs button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.tab === tab);
                 });
-                if (tab === 'list') {
-                    renderList(allEvents);
-                } else if (tab === 'stats') {
-                    renderStats(allEvents);
-                }
+                if (tab === 'list') renderList(allEvents);
+                else renderStats(allEvents);
             }
 
-            // ---------- CORE: fetch data from multiple sources ----------
+            // ---------- Utility: fetch with timeout and retry ----------
+            async function fetchWithTimeout(url, options = {}, timeout = 15000, retries = 2) {
+                let lastError;
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), timeout);
+                        const response = await fetch(url, { ...options, signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response;
+                    } catch (err) {
+                        lastError = err;
+                        if (attempt < retries) {
+                            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                        }
+                    }
+                }
+                throw lastError;
+            }
+
+            // ---------- List of CORS proxies (aggressive) ----------
+            const PROXIES = [
+                'https://corsproxy.io/?',
+                'https://api.allorigins.win/raw?url=',
+                'https://thingproxy.freeboard.io/fetch/',
+                'https://cors-anywhere.herokuapp.com/'
+            ];
+
+            async function fetchWithProxy(url, options = {}) {
+                // Try each proxy until one works
+                for (const proxy of PROXIES) {
+                    try {
+                        const proxiedUrl = proxy + encodeURIComponent(url);
+                        const resp = await fetchWithTimeout(proxiedUrl, options, 12000, 1);
+                        if (resp.ok) return resp;
+                    } catch (e) {
+                        // continue to next proxy
+                    }
+                }
+                // Fallback: direct fetch (might fail due to CORS)
+                return await fetchWithTimeout(url, options, 10000, 1);
+            }
+
+            // ---------- MAIN DATA FETCHING (murni online, tanpa hardcoded) ----------
             async function fetchAllData() {
                 if (isRefreshing) return;
                 isRefreshing = true;
                 refreshBtn.disabled = true;
                 setStatus(true, 'Mengambil data...');
-                logMessage('🔄 Memulai pengambilan data dari berbagai sumber...', 'info');
+                logMessage('🔄 Memulai pengambilan data dari berbagai sumber online...', 'info');
 
                 const combined = [];
                 const errors = [];
 
-                // -------- 1. BNPB Open Data API (datastore) --------
+                // ---------- 1. BNPB Open Data (API resmi) ----------
                 try {
                     logMessage('📡 Mencoba BNPB API (data.bnpb.go.id)...', 'info');
                     const url =
-                        'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=353da3aa-9ada-42aa-a5c2-e653d52ffd9c&limit=100';
-                    const resp = await fetch(url, {
-                        headers: { 'Accept': 'application/json' }
-                    });
+                        'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=353da3aa-9ada-42aa-a5c2-e653d52ffd9c&limit=200';
+                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
                         if (json.success && json.result && json.result.records) {
                             const records = json.result.records;
                             logMessage(`✅ BNPB API: ${records.length} record ditemukan.`, 'ok');
                             for (const rec of records) {
-                                // Kolom: Nama Kabupaten/Kota, Latitude, Longitude, KEBAKARAN HUTAN DAN LAHAN
                                 const kab = rec['Nama Kabupaten/Kota'] || '';
+                                const prov = rec['Provinsi'] || '';
                                 const lat = rec['Latitude'];
                                 const lng = rec['Longitude'];
                                 const fire = rec['KEBAKARAN HUTAN DAN LAHAN'];
-                                // hanya jika ada data kebakaran
-                                if (fire && fire !== '0' && fire !== '-') {
+                                if (fire && fire !== '0' && fire !== '-' && fire !== '') {
                                     combined.push({
-                                        title: `Kebakaran Hutan/Lahan - ${kab}`,
+                                        title: `Karhutla - ${kab}`,
                                         location: kab || 'Indonesia',
-                                        province: '',
+                                        province: prov,
                                         lat: lat,
                                         lng: lng,
                                         timestamp: new Date().toISOString(),
@@ -669,61 +623,55 @@
                     errors.push('BNPB');
                 }
 
-                // -------- 2. RapidAPI - Indonesia Disaster Data (proxy via corsproxy) --------
+                // ---------- 2. BMKG Hotspot JSON (data terbaru) ----------
                 try {
-                    logMessage('📡 Mencoba RapidAPI (Indonesia Disaster Data)...', 'info');
-                    // Gunakan CORS proxy untuk menghindari CORS block
-                    const proxy = 'https://corsproxy.io/?';
-                    const target =
-                        'https://indonesia-disaster-data.p.rapidapi.com/api/v1/disaster?type=fire&limit=50';
-                    const resp = await fetch(proxy + encodeURIComponent(target), {
-                        headers: {
-                            'x-rapidapi-key': 'dummy-key-for-demo',
-                            'x-rapidapi-host': 'indonesia-disaster-data.p.rapidapi.com'
-                        }
-                    });
-                    // Karena RapidAPI butuh API key, kemungkinan besar gagal, tapi kita coba.
+                    logMessage('📡 Mencoba BMKG Hotspot (data.bmkg.go.id)...', 'info');
+                    // BMKG menyediakan JSON hotspot terbaru
+                    const url = 'https://data.bmkg.go.id/DataMKG/MEWS/hotspot/hotspot.json';
+                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
                         if (json.data && Array.isArray(json.data)) {
+                            logMessage(`✅ BMKG Hotspot: ${json.data.length} titik hotspot.`, 'ok');
                             for (const item of json.data) {
+                                const lat = parseFloat(item.lat);
+                                const lng = parseFloat(item.lon);
+                                if (isNaN(lat) || isNaN(lng)) continue;
                                 combined.push({
-                                    title: item.event_name || 'Kebakaran',
-                                    location: item.location || item.area || 'Indonesia',
-                                    province: item.province || '',
-                                    lat: item.latitude || item.lat,
-                                    lng: item.longitude || item.lng,
-                                    timestamp: item.event_date || new Date().toISOString(),
-                                    source: 'RapidAPI (BNPB)',
-                                    description: item.description || ''
+                                    title: `Hotspot (BMKG) - ${item.kecamatan || ''}`,
+                                    location: `${item.kabupaten || ''}, ${item.provinsi || ''}`,
+                                    province: item.provinsi || '',
+                                    lat: lat,
+                                    lng: lng,
+                                    timestamp: item.tanggal ? new Date(item.tanggal).toISOString() : new Date()
+                                        .toISOString(),
+                                    source: 'BMKG Hotspot',
+                                    description: `Confidence: ${item.confidence || '-'}, Kecamatan: ${item.kecamatan || ''}`
                                 });
                             }
-                            logMessage(`✅ RapidAPI: ${json.data.length} data.`, 'ok');
                         } else {
-                            logMessage('⚠️ RapidAPI: data tidak sesuai format.', 'err');
+                            logMessage('⚠️ BMKG Hotspot: data tidak sesuai format.', 'err');
                         }
                     } else {
-                        logMessage(`⚠️ RapidAPI: HTTP ${resp.status} (mungkin butuh API key)`, 'err');
+                        logMessage(`⚠️ BMKG Hotspot: HTTP ${resp.status}`, 'err');
                     }
                 } catch (e) {
-                    logMessage(`❌ RapidAPI error: ${e.message}`, 'err');
-                    errors.push('RapidAPI');
+                    logMessage(`❌ BMKG Hotspot error: ${e.message}`, 'err');
+                    errors.push('BMKG');
                 }
 
-                // -------- 3. NASA FIRMS via proxy (modis hotspot) --------
+                // ---------- 3. NASA FIRMS (VIIRS) via proxy (tanpa API key, gunakan endpoint CSV) ----------
                 try {
                     logMessage('📡 Mencoba NASA FIRMS (hotspot) via proxy...', 'info');
-                    // FIRMS API: https://firms.modaps.eosdis.nasa.gov/api/country/
-                    // Butuh API key, kita coba dengan dummy + proxy
-                    const proxy = 'https://corsproxy.io/?';
+                    // FIRMS API membutuhkan API key, tapi kita coba endpoint CSV tanpa key (terbatas)
+                    // Menggunakan endpoint MODIS_NRT untuk Indonesia
                     const url =
-                        'https://firms.modaps.eosdis.nasa.gov/api/country/csv/7daea73d6a1e3eba1f1089e3018b1c0e/VIIRS_NOAA20_NRT/IDN/1';
-                    const resp = await fetch(proxy + encodeURIComponent(url));
+                        'https://firms.modaps.eosdis.nasa.gov/api/country/csv/7daea73d6a1e3eba1f1089e3018b1c0e/MODIS_NRT/IDN/1';
+                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'text/csv' } });
                     if (resp.ok) {
                         const text = await resp.text();
                         const lines = text.split('\n').filter(line => line.trim() !== '');
                         if (lines.length > 1) {
-                            // parse csv header
                             const header = lines[0].split(',');
                             const latIdx = header.indexOf('latitude');
                             const lngIdx = header.indexOf('longitude');
@@ -731,7 +679,7 @@
                             const timeIdx = header.indexOf('acq_time');
                             const confIdx = header.indexOf('confidence');
                             let count = 0;
-                            for (let i = 1; i < lines.length && i < 100; i++) {
+                            for (let i = 1; i < lines.length && i < 150; i++) {
                                 const cols = lines[i].split(',');
                                 const lat = parseFloat(cols[latIdx]);
                                 const lng = parseFloat(cols[lngIdx]);
@@ -741,13 +689,13 @@
                                 const conf = cols[confIdx] || '';
                                 const timestamp = date ? new Date(date).toISOString() : new Date().toISOString();
                                 combined.push({
-                                    title: `Hotspot ${conf} confidence`,
+                                    title: `Hotspot (NASA MODIS) - ${conf} confidence`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
                                     province: '',
                                     lat: lat,
                                     lng: lng,
                                     timestamp: timestamp,
-                                    source: 'NASA FIRMS (VIIRS)',
+                                    source: 'NASA FIRMS (MODIS)',
                                     description: `Confidence: ${conf} | Time: ${time}`
                                 });
                                 count++;
@@ -764,117 +712,167 @@
                     errors.push('NASA FIRMS');
                 }
 
-                // -------- 4. BMKG Hotspot Image (tidak bisa parsing, hanya untuk log) --------
+                // ---------- 4. LAPAN (BRIN) - Hotspot via InaSafe? Tidak ada API publik, coba scraping? ----------
+                // Tidak ada API langsung, tapi kita bisa coba ambil dari portal InaRisk? tidak.
+
+                // ---------- 5. Global Forest Watch (GFW) API (api.globalforestwatch.org) ----------
                 try {
-                    logMessage('📡 BMKG Hotspot: tersedia di https://www.bmkg.go.id/cuaca/satelit/polar-hotspot', 'info');
-                    // Kita tidak bisa parsing citra, tapi kita tambahkan 1 dummy untuk awareness
-                    // Hanya jika belum ada data sama sekali
-                } catch (e) { /* ignore */ }
+                    logMessage('📡 Mencoba Global Forest Watch API (glad alerts)...', 'info');
+                    // GFW API untuk alert kebakaran (GLAD) - butuh parameter bbox, kita ambil untuk seluruh Indonesia
+                    const bbox = '95, -11, 141, 6'; // perkiraan
+                    const url =
+                        `https://api.globalforestwatch.org/v1/glad-alerts/geostore?geostore=...`; // Tidak mudah tanpa geostore
+                    // Coba endpoint sederhana: https://api.globalforestwatch.org/v1/glad-alerts/latest
+                    const altUrl = 'https://api.globalforestwatch.org/v1/glad-alerts/latest?limit=100';
+                    const resp = await fetchWithProxy(altUrl, { headers: { 'Accept': 'application/json' } });
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        if (json.data && Array.isArray(json.data)) {
+                            logMessage(`✅ GFW: ${json.data.length} alert ditemukan.`, 'ok');
+                            for (const item of json.data) {
+                                // GFW data memiliki lat/lng
+                                const lat = parseFloat(item.latitude);
+                                const lng = parseFloat(item.longitude);
+                                if (isNaN(lat) || isNaN(lng)) continue;
+                                combined.push({
+                                    title: `GLAD Alert (GFW) - ${item.confidence || ''}`,
+                                    location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                                    province: '',
+                                    lat: lat,
+                                    lng: lng,
+                                    timestamp: item.alert_date ? new Date(item.alert_date).toISOString() : new Date()
+                                        .toISOString(),
+                                    source: 'Global Forest Watch',
+                                    description: `Confidence: ${item.confidence || '-'}`
+                                });
+                            }
+                        } else {
+                            logMessage('⚠️ GFW: data tidak sesuai format.', 'err');
+                        }
+                    } else {
+                        logMessage(`⚠️ GFW: HTTP ${resp.status}`, 'err');
+                    }
+                } catch (e) {
+                    logMessage(`❌ GFW error: ${e.message}`, 'err');
+                    errors.push('GFW');
+                }
 
-                // -------- 5. Sumber berita: simulasi data dari artikel (hardcoded untuk demo) --------
-                // Menambahkan data dari berita yang terpantau (real event)
-                const beritaData = [{
-                    title: 'Kebakaran Bromo meluas 520-550 hektare',
-                    location: 'Gunung Bromo, Jawa Timur',
-                    province: 'Jawa Timur',
-                    lat: -7.9425,
-                    lng: 112.9530,
-                    timestamp: '2026-08-10T00:00:00',
-                    source: 'TVOne / Kompas',
-                    description: 'Api meluas hingga 550 hektare, water bombing dilakukan.'
-                }, {
-                    title: 'Kebakaran Gedung Bapenda DKI Jakarta',
-                    location: 'Gambir, Jakarta Pusat',
-                    province: 'DKI Jakarta',
-                    lat: -6.1702,
-                    lng: 106.8297,
-                    timestamp: '2026-08-07T21:30:00',
-                    source: 'TVOne',
-                    description: 'Api di lantai 11-16, berhasil dipadamkan 02.00 WIB.'
-                }, {
-                    title: 'Kebakaran 3 gudang di Kosambi, Tangerang',
-                    location: 'Kosambi, Kab. Tangerang',
-                    province: 'Banten',
-                    lat: -6.0829,
-                    lng: 106.6977,
-                    timestamp: '2026-08-09T00:00:00',
-                    source: 'Detik',
-                    description: 'Diduga korsleting listrik, 2 gudang masih berkobar.'
-                }, {
-                    title: 'Kebakaran SPBU Cilendek, Bogor',
-                    location: 'Cilendek, Kota Bogor',
-                    province: 'Jawa Barat',
-                    lat: -6.5899,
-                    lng: 106.7970,
-                    timestamp: '2026-08-09T00:00:00',
-                    source: 'Kompas',
-                    description: '1 orang luka bakar, diduga korsleting mobil.'
-                }, {
-                    title: 'Kebakaran Gedung Golf Cinere, Depok',
-                    location: 'Cinere, Depok',
-                    province: 'Jawa Barat',
-                    lat: -6.4144,
-                    lng: 106.7806,
-                    timestamp: '2026-08-01T00:00:00',
-                    source: 'Media',
-                    description: '14 mobil golf hangus, diduga korsleting.'
-                }, {
-                    title: 'Karhutla di 4 daerah (Klaten, Magetan, Jombang, Seram)',
-                    location: 'Jawa Timur & Maluku',
-                    province: 'Jawa Timur/Maluku',
-                    lat: -3.0,
-                    lng: 128.0,
-                    timestamp: '2026-08-10T00:00:00',
-                    source: 'BNPB',
-                    description: 'Kebakaran hutan dan lahan di empat daerah.'
-                }, {
-                    title: 'Kebakaran TPA Jatiwaringin, Mauk',
-                    location: 'Mauk, Kab. Tangerang',
-                    province: 'Banten',
-                    lat: -6.0303,
-                    lng: 106.5133,
-                    timestamp: '2026-07-01T00:00:00',
-                    source: 'BNPB',
-                    description: 'Api masih berkobar, water bombing dikerahkan.'
-                }, {
-                    title: 'Kebakaran Lapak Plastik & Rongsok, Bekasi',
-                    location: 'Kota Bekasi',
-                    province: 'Jawa Barat',
-                    lat: -6.2383,
-                    lng: 106.9756,
-                    timestamp: '2026-08-07T00:00:00',
-                    source: 'Media',
-                    description: 'Diduga obat nyamuk bakar dan puntung rokok.'
-                }];
+                // ---------- 6. EUMETSAT? tidak relevan untuk Indonesia ----------
 
-                // Tambahkan berita data (hindari duplikat berdasarkan title)
-                for (const item of beritaData) {
-                    const exists = combined.some(e => e.title === item.title && e.location === item.location);
-                    if (!exists) {
-                        combined.push(item);
+                // ---------- 7. Media berita (scraping) - coba API berita umum seperti NewsAPI ----------
+                try {
+                    logMessage('📡 Mencoba NewsAPI (berita kebakaran)...', 'info');
+                    // NewsAPI butuh API key, kita coba tanpa key (terbatas)
+                    const url =
+                        'https://newsapi.org/v2/everything?q=kebakaran%20OR%20api%20OR%20karhutla&language=id&sortBy=publishedAt&pageSize=50';
+                    // Karena butuh API key, kita coba dengan proxy dan key dummy (hanya untuk demo)
+                    const resp = await fetchWithProxy(url, {
+                        headers: { 'X-Api-Key': 'dummy' }
+                    });
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        if (json.articles && json.articles.length > 0) {
+                            logMessage(`✅ NewsAPI: ${json.articles.length} artikel ditemukan.`, 'ok');
+                            // Coba ekstrak lokasi dari judul/deskripsi (sederhana)
+                            for (const art of json.articles) {
+                                const title = art.title || '';
+                                const desc = art.description || '';
+                                // Cari kata lokasi (provinsi/kota) secara sederhana
+                                const locMatch = title.match(/(di|di|)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/);
+                                const location = locMatch ? locMatch[2] : 'Indonesia';
+                                // Geo-lokasi tidak tersedia, kita skip
+                                // Tidak bisa menambahkan tanpa koordinat, karena tidak ada lat/lng
+                                // Kita hanya log bahwa ada berita, tapi tidak ditampilkan di peta
+                                // Karena kita tidak punya koordinat, kita skip
+                                // Tapi kita bisa tambahkan ke daftar dengan koordinat 0,0? Tidak baik.
+                                // Jadi kita lewati.
+                            }
+                            logMessage('ℹ️ NewsAPI: tidak ada koordinat, data berita tidak ditampilkan di peta.', 'info');
+                        } else {
+                            logMessage('⚠️ NewsAPI: tidak ada artikel.', 'err');
+                        }
+                    } else {
+                        logMessage(`⚠️ NewsAPI: HTTP ${resp.status} (butuh API key)`, 'err');
+                    }
+                } catch (e) {
+                    logMessage(`❌ NewsAPI error: ${e.message}`, 'err');
+                    errors.push('NewsAPI');
+                }
+
+                // ---------- 8. Twitter? Tidak ada API publik tanpa auth ----------
+
+                // ---------- 9. Coba scraping dari situs BPBD? Tidak etis dan sulit ----------
+
+                // ---------- 10. Tambahan: BNPB lain: data kejadian bencana ----------
+                try {
+                    logMessage('📡 Mencoba BNPB Data Kejadian (data.bnpb.go.id)...', 'info');
+                    const url =
+                        'https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=3c76f12f-30e6-465c-b7e7-81b13a5f2950&limit=100';
+                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        if (json.success && json.result && json.result.records) {
+                            const records = json.result.records;
+                            logMessage(`✅ BNPB Kejadian: ${records.length} record.`, 'ok');
+                            for (const rec of records) {
+                                const jenis = rec['Jenis Bencana'] || '';
+                                if (jenis.toLowerCase().includes('kebakaran') || jenis.toLowerCase().includes('karhutla')) {
+                                    const kab = rec['Kabupaten/Kota'] || '';
+                                    const prov = rec['Provinsi'] || '';
+                                    const lat = rec['Latitude'];
+                                    const lng = rec['Longitude'];
+                                    if (lat && lng) {
+                                        combined.push({
+                                            title: `Kejadian: ${jenis}`,
+                                            location: kab || 'Indonesia',
+                                            province: prov,
+                                            lat: lat,
+                                            lng: lng,
+                                            timestamp: rec['Tanggal'] || new Date().toISOString(),
+                                            source: 'BNPB Data Kejadian',
+                                            description: `Keterangan: ${rec['Keterangan'] || ''}`
+                                        });
+                                    }
+                                }
+                            }
+                        } else {
+                            logMessage('⚠️ BNPB Kejadian: tidak ada records.', 'err');
+                        }
+                    } else {
+                        logMessage(`⚠️ BNPB Kejadian: HTTP ${resp.status}`, 'err');
+                    }
+                } catch (e) {
+                    logMessage(`❌ BNPB Kejadian error: ${e.message}`, 'err');
+                    errors.push('BNPB-Kejadian');
+                }
+
+                // ---------- 11. Coba juga dari sumber lain: inarisk.bnpb.go.id? Tidak ada API ----------
+
+                // ---------- Final: gabungan ----------
+                // Hapus duplikat berdasarkan koordinat dan timestamp
+                const unique = [];
+                const seen = new Set();
+                for (const ev of combined) {
+                    const key = `${ev.lat},${ev.lng},${ev.timestamp}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        unique.push(ev);
                     }
                 }
 
-                // -------- fallback: jika combined kosong, set status warning --------
-                if (combined.length === 0) {
+                if (unique.length === 0) {
                     logMessage('⚠️ Tidak ada data dari semua sumber. Coba periksa koneksi atau API key.', 'err');
                     setStatus(false, 'Tidak ada data');
                 } else {
-                    logMessage(`✅ Total ${combined.length} kejadian berhasil dikumpulkan.`, 'ok');
-                    setStatus(true, `${combined.length} kejadian`);
+                    logMessage(`✅ Total ${unique.length} kejadian berhasil dikumpulkan dari sumber online.`, 'ok');
+                    setStatus(true, `${unique.length} kejadian`);
                 }
 
-                // update state
-                allEvents = combined;
+                allEvents = unique;
                 updateMap(allEvents);
                 updateTimestamp();
-
-                // render current tab
-                if (currentTab === 'list') {
-                    renderList(allEvents);
-                } else {
-                    renderStats(allEvents);
-                }
+                if (currentTab === 'list') renderList(allEvents);
+                else renderStats(allEvents);
 
                 isRefreshing = false;
                 refreshBtn.disabled = false;
@@ -882,28 +880,18 @@
 
             // ---------- init ----------
             function init() {
-                // tab switching
                 document.querySelectorAll('.sidebar-tabs button').forEach(btn => {
                     btn.addEventListener('click', function() {
                         switchTab(this.dataset.tab);
                     });
                 });
-
-                // refresh button
                 refreshBtn.addEventListener('click', function() {
                     fetchAllData();
                 });
-
-                // auto refresh setiap 60 detik
-                setInterval(() => {
-                    fetchAllData();
-                }, 60000);
-
-                // first load
+                setInterval(fetchAllData, 60000); // refresh setiap 60 detik
                 fetchAllData();
             }
 
-            // jalankan setelah DOM ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
@@ -912,6 +900,5 @@
 
         })();
     </script>
-
 </body>
 </html>
