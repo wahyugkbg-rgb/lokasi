@@ -12,7 +12,7 @@
         body { display:flex; height:100vh; overflow:hidden; background:#f0f2f5; }
 
         #sidebar {
-            width: 380px; min-width:380px; background:#fff;
+            width: 420px; min-width:420px; background:#fff;
             box-shadow:2px 0 12px rgba(0,0,0,0.1);
             display:flex; flex-direction:column; z-index:1000;
         }
@@ -42,7 +42,7 @@
             border-bottom:1px solid #ddd; background:#fafafa;
         }
         #sidebar-filters select, #sidebar-filters input {
-            padding:5px 8px; border-radius:20px; border:1px solid #ccc;
+            padding:5px 10px; border-radius:20px; border:1px solid #ccc;
             background:white; flex:1; min-width:80px; font-size:0.85rem;
         }
         #sidebar-filters button {
@@ -50,16 +50,42 @@
             border-radius:20px; cursor:pointer; font-weight:600;
         }
         #sidebar-filters button:hover { background:#8b1a1a; }
+        #sidebar-filters .search-wrapper {
+            width:100%; display:flex; gap:6px; margin-top:4px;
+        }
+        #sidebar-filters .search-wrapper input {
+            flex:3; min-width:150px;
+        }
+        #sidebar-filters .search-wrapper button {
+            flex:1;
+        }
+        #searchResults {
+            width:100%; max-height:150px; overflow-y:auto;
+            background:white; border:1px solid #ccc; border-radius:8px;
+            display:none; position:absolute; z-index:1001; margin-top:2px;
+        }
+        #searchResults .result-item {
+            padding:8px 12px; cursor:pointer; border-bottom:1px solid #eee;
+            font-size:0.85rem;
+        }
+        #searchResults .result-item:hover {
+            background:#eef3ff;
+        }
+        #searchResults .result-item .detail {
+            font-size:0.7rem; color:#666;
+        }
 
         #status-bar {
             font-size:0.75rem; padding:4px 16px 8px;
             background:#fafafa; border-bottom:1px solid #eee;
             display:flex; justify-content:space-between; align-items:center;
+            flex-wrap:wrap;
         }
         #status-bar .cached { color:#f57c00; }
         #status-bar .live { color:#388e3c; }
         #status-bar .error { color:#d32f2f; }
         #status-bar .gps { color:#1a73e8; }
+        #status-bar span { margin-right:10px; }
 
         #report-list {
             flex:1; overflow-y:auto; padding:10px 16px;
@@ -82,10 +108,10 @@
 
         #sidebar-footer {
             padding:12px 16px; border-top:1px solid #ddd;
-            background:#fafafa; display:flex; gap:10px;
+            background:#fafafa; display:flex; gap:10px; flex-wrap:wrap;
         }
         #sidebar-footer button {
-            flex:1; padding:8px; border:none; border-radius:30px;
+            flex:1; min-width:60px; padding:8px; border:none; border-radius:30px;
             font-weight:bold; cursor:pointer; background:#b22222; color:white;
             transition:0.2s;
         }
@@ -100,7 +126,6 @@
             color:#856404;
         }
 
-        /* Tombol Lokasi Saya kustom */
         .leaflet-control-locate {
             background: white;
             border-radius: 4px;
@@ -126,6 +151,7 @@
             #sidebar { width:100%; min-width:unset; height:45vh; }
             body { flex-direction:column; }
             #map { height:55vh; }
+            #sidebar-filters .search-wrapper { flex-wrap:wrap; }
         }
     </style>
 </head>
@@ -144,7 +170,7 @@
     </div>
     <div id="status-bar">
         <span><i class="fas fa-clock"></i> <span id="updateTime">-</span></span>
-        <span id="statusIndicator" class="live"><i class="fas fa-check-circle"></i> Live</span>
+        <span id="statusIndicator" class="live"><i class="fas fa-satellite-dish"></i> Live</span>
         <span id="gpsStatus" class="gps"><i class="fas fa-satellite"></i> GPS: -</span>
     </div>
     <div id="sidebar-filters">
@@ -155,13 +181,19 @@
         </select>
         <select id="filterArea">
             <option value="jakarta">Jakarta</option>
+            <option value="bekasi">Bekasi</option>
+            <option value="depok">Depok</option>
+            <option value="bogor">Bogor</option>
+            <option value="tangerang">Tangerang</option>
+            <option value="tangerang_selatan">Tangerang Selatan</option>
+            <option value="cibubur">Cibubur</option>
+            <option value="cikarang">Cikarang</option>
             <option value="surabaya">Surabaya</option>
             <option value="medan">Medan</option>
             <option value="bandung">Bandung</option>
             <option value="makassar">Makassar</option>
-            <option value="custom">Kustom</option>
+            <option value="custom">Kustom (Cari Lokasi)</option>
         </select>
-        <input type="text" id="customBbox" placeholder="minLon,minLat,maxLon,maxLat" style="display:none; width:100%;">
         <select id="filterDays">
             <option value="1">1 hari</option>
             <option value="2">2 hari</option>
@@ -170,14 +202,22 @@
             <option value="7">7 hari</option>
         </select>
         <button id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+        
+        <!-- Search Custom -->
+        <div class="search-wrapper" id="searchWrapper" style="display:none;">
+            <input type="text" id="searchLocation" placeholder="Cari desa/kecamatan/kota/provinsi..." />
+            <button id="searchBtn"><i class="fas fa-search"></i> Cari</button>
+        </div>
+        <div id="searchResults"></div>
     </div>
     <div id="report-list">
         <div class="loading">Memuat data titik api...</div>
     </div>
     <div id="sidebar-footer">
         <button id="zoomJakarta"><i class="fas fa-map-pin"></i> Jakarta</button>
-        <button id="zoomSurabaya"><i class="fas fa-map-pin"></i> Surabaya</button>
-        <button id="zoomMedan"><i class="fas fa-map-pin"></i> Medan</button>
+        <button id="zoomBekasi"><i class="fas fa-map-pin"></i> Bekasi</button>
+        <button id="zoomDepok"><i class="fas fa-map-pin"></i> Depok</button>
+        <button id="zoomBogor"><i class="fas fa-map-pin"></i> Bogor</button>
     </div>
 </div>
 
@@ -189,6 +229,13 @@
 
     const AREAS = {
         jakarta: [106.7, -6.4, 107.0, -6.0],
+        bekasi: [106.95, -6.35, 107.15, -6.15],
+        depok: [106.75, -6.45, 106.9, -6.35],
+        bogor: [106.7, -6.7, 106.9, -6.5],
+        tangerang: [106.55, -6.25, 106.75, -6.1],
+        tangerang_selatan: [106.7, -6.35, 106.8, -6.25],
+        cibubur: [106.85, -6.4, 106.95, -6.3],
+        cikarang: [107.1, -6.35, 107.2, -6.25],
         surabaya: [112.6, -7.4, 112.9, -7.2],
         medan: [98.6, 3.5, 98.8, 3.7],
         bandung: [107.5, -6.95, 107.7, -6.8],
@@ -201,6 +248,7 @@
     let isCached = false;
     let locationMarker = null;
     let locationCircle = null;
+    let searchTimeout = null;
 
     // ===================== INISIALISASI PETA =====================
     function initMap() {
@@ -210,7 +258,6 @@
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
 
-        // Tambahkan tombol Lokasi Saya
         const locateBtn = L.control({ position: 'topleft' });
         locateBtn.onAdd = function() {
             const div = L.DomUtil.create('div', 'leaflet-control-locate');
@@ -218,9 +265,7 @@
             div.title = 'Lokasi Saya';
             div.style.fontSize = '20px';
             div.style.padding = '4px 6px';
-            L.DomEvent.on(div, 'click', function() {
-                locateUser();
-            });
+            L.DomEvent.on(div, 'click', locateUser);
             return div;
         };
         locateBtn.addTo(map);
@@ -240,11 +285,9 @@
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 const acc = position.coords.accuracy;
-                // Hapus marker lama
                 if (locationMarker) map.removeLayer(locationMarker);
                 if (locationCircle) map.removeLayer(locationCircle);
 
-                // Marker lokasi
                 const icon = L.divIcon({
                     className: 'location-marker',
                     html: `<div style="background:#1a73e8; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 0 2px #1a73e8;"></div>`,
@@ -252,7 +295,6 @@
                     iconAnchor: [8, 8]
                 });
                 locationMarker = L.marker([lat, lng], { icon }).addTo(map);
-                // Circle akurasi
                 locationCircle = L.circle([lat, lng], {
                     radius: acc,
                     color: '#1a73e8',
@@ -274,6 +316,59 @@
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
+    }
+
+    // ===================== SEARCH LOKASI (Nominatim) =====================
+    async function searchLocation(query) {
+        if (!query || query.length < 3) {
+            document.getElementById('searchResults').style.display = 'none';
+            return;
+        }
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)},Indonesia&format=json&limit=10&addressdetails=1&accept-language=id`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const resultsDiv = document.getElementById('searchResults');
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<div class="result-item" style="color:#999;">Tidak ditemukan</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            resultsDiv.innerHTML = data.map(item => {
+                const displayName = item.display_name;
+                const detail = item.class + ' | ' + (item.address?.city || item.address?.town || item.address?.village || '');
+                return `
+                    <div class="result-item" data-lat="${item.lat}" data-lon="${item.lon}" data-bbox="${item.boundingbox.join(',')}">
+                        <div>${displayName}</div>
+                        <div class="detail">${detail}</div>
+                    </div>
+                `;
+            }).join('');
+            resultsDiv.style.display = 'block';
+
+            // Event click pada hasil
+            resultsDiv.querySelectorAll('.result-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const lat = parseFloat(this.dataset.lat);
+                    const lon = parseFloat(this.dataset.lon);
+                    const bbox = this.dataset.bbox.split(',').map(Number);
+                    // Zoom ke lokasi
+                    map.setView([lat, lon], 13);
+                    // Update bounding box untuk API
+                    const customBbox = [bbox[2], bbox[0], bbox[3], bbox[1]]; // minLon, minLat, maxLon, maxLat
+                    const areaSelect = document.getElementById('filterArea');
+                    areaSelect.value = 'custom';
+                    // Simpan bbox ke hidden atau gunakan untuk fetch
+                    window._customBbox = customBbox;
+                    document.getElementById('searchWrapper').style.display = 'flex';
+                    document.getElementById('searchResults').style.display = 'none';
+                    // Refresh data dengan bbox kustom
+                    loadData(true);
+                });
+            });
+        } catch (error) {
+            console.error('Search error:', error);
+        }
     }
 
     // ===================== CACHE =====================
@@ -438,11 +533,19 @@
     function getArea() {
         const areaKey = document.getElementById('filterArea').value;
         if (areaKey === 'custom') {
-            const bbox = document.getElementById('customBbox').value.trim();
-            if (!bbox) return AREAS.jakarta;
-            const parts = bbox.split(',').map(Number);
-            if (parts.length === 4 && parts.every(v => !isNaN(v))) return parts;
-            alert('Format bounding box salah. Gunakan: minLon,minLat,maxLon,maxLat');
+            // Gunakan custom bbox dari search atau default
+            if (window._customBbox && window._customBbox.length === 4) {
+                return window._customBbox;
+            }
+            // Jika belum ada, coba parse dari input (legacy)
+            const bboxInput = document.getElementById('customBboxInput');
+            if (bboxInput && bboxInput.value) {
+                const parts = bboxInput.value.split(',').map(Number);
+                if (parts.length === 4 && parts.every(v => !isNaN(v))) return parts;
+            }
+            // Fallback ke Jakarta
+            alert('Silakan cari lokasi terlebih dahulu menggunakan fitur pencarian.');
+            document.getElementById('filterArea').value = 'jakarta';
             return AREAS.jakarta;
         }
         return AREAS[areaKey] || AREAS.jakarta;
@@ -511,19 +614,80 @@
     document.addEventListener('DOMContentLoaded', function() {
         initMap();
 
+        // Toggle search wrapper
         document.getElementById('filterArea').addEventListener('change', function() {
-            const customInput = document.getElementById('customBbox');
-            customInput.style.display = (this.value === 'custom') ? 'inline-block' : 'none';
+            const wrapper = document.getElementById('searchWrapper');
+            if (this.value === 'custom') {
+                wrapper.style.display = 'flex';
+                document.getElementById('searchLocation').focus();
+            } else {
+                wrapper.style.display = 'none';
+                document.getElementById('searchResults').style.display = 'none';
+                window._customBbox = null;
+                loadData(false);
+            }
+        });
+
+        // Search with debounce
+        document.getElementById('searchLocation').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value;
+            searchTimeout = setTimeout(() => {
+                searchLocation(query);
+            }, 500);
+        });
+
+        // Search button
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const query = document.getElementById('searchLocation').value;
+            searchLocation(query);
+        });
+
+        // Enter key on search
+        document.getElementById('searchLocation').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = this.value;
+                searchLocation(query);
+            }
+        });
+
+        // Close search results on outside click
+        document.addEventListener('click', function(e) {
+            const results = document.getElementById('searchResults');
+            const searchInput = document.getElementById('searchLocation');
+            if (!results.contains(e.target) && e.target !== searchInput) {
+                results.style.display = 'none';
+            }
         });
 
         document.getElementById('refreshBtn').addEventListener('click', function() {
             loadData(true);
         });
 
-        document.getElementById('zoomJakarta').addEventListener('click', () => map.setView([-6.2, 106.8], 11));
-        document.getElementById('zoomSurabaya').addEventListener('click', () => map.setView([-7.25, 112.75], 11));
-        document.getElementById('zoomMedan').addEventListener('click', () => map.setView([3.6, 98.7], 11));
+        // Zoom buttons
+        document.getElementById('zoomJakarta').addEventListener('click', () => {
+            map.setView([-6.2, 106.8], 11);
+            document.getElementById('filterArea').value = 'jakarta';
+            loadData(false);
+        });
+        document.getElementById('zoomBekasi').addEventListener('click', () => {
+            map.setView([-6.25, 107.0], 12);
+            document.getElementById('filterArea').value = 'bekasi';
+            loadData(false);
+        });
+        document.getElementById('zoomDepok').addEventListener('click', () => {
+            map.setView([-6.4, 106.82], 12);
+            document.getElementById('filterArea').value = 'depok';
+            loadData(false);
+        });
+        document.getElementById('zoomBogor').addEventListener('click', () => {
+            map.setView([-6.6, 106.8], 12);
+            document.getElementById('filterArea').value = 'bogor';
+            loadData(false);
+        });
 
+        // Initial load
         loadData(false);
         setInterval(() => loadData(false), 600000);
     });
