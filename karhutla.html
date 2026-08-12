@@ -1418,6 +1418,7 @@
                                     // pengganti (itu data semu) -> biarkan null, UI menyembunyikannya.
                                     const realDate = findDateField(rec);
                                     out.push({
+                                        uid: 'karhutla:' + (rec['_id'] !== undefined ? rec['_id'] : `${kab}|${prov}|${descText}`),
                                         title: 'Karhutla (Hutan dan Lahan)',
                                         location: kab || '',
                                         province: prov,
@@ -1461,6 +1462,7 @@
                                 const prov = provOfficial || estimateProvinceFromCoords(lat, lng);
                                 const dynamicDesc = buildDynamicDescription(item, ['provinsi', 'kabupaten']);
                                 out.push({
+                                    uid: `bmkg:${lat}|${lng}|${item.kecamatan || ''}|${item.kabupaten || ''}|${item.tanggal || ''}|${item.confidence || ''}`,
                                     title: `Hotspot (BMKG) - ${item.kecamatan || ''}`,
                                     location: `${item.kabupaten || ''}, ${item.provinsi || ''}`,
                                     province: prov,
@@ -1522,6 +1524,7 @@
                                 header.forEach((h, idx) => { if (h) rowObj[h] = cols[idx]; });
                                 const dynamicDesc = buildDynamicDescription(rowObj, ['latitude', 'longitude']);
                                 out.push({
+                                    uid: `nasa:${lat}|${lng}|${date}|${time}|${conf}`,
                                     title: `Hotspot (NASA MODIS) - ${conf} confidence`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
                                     province: prov,
@@ -1565,6 +1568,7 @@
                                 const prov = estimateProvinceFromCoords(lat, lng);
                                 const dynamicDesc = buildDynamicDescription(item, ['latitude', 'longitude']);
                                 out.push({
+                                    uid: `gfw:${lat}|${lng}|${item.alert_date || ''}|${item.confidence || ''}`,
                                     title: `GLAD Alert (GFW) - ${item.confidence || ''}`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
                                     province: prov,
@@ -1611,6 +1615,7 @@
                                     if (lat && lng) {
                                         const dynamicDesc = buildDynamicDescription(rec, ['kabupaten/kota', 'provinsi', 'jenis bencana', 'tanggal']);
                                         out.push({
+                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${rec['Tanggal'] || ''}`),
                                             title: `Kejadian: ${jenis}`,
                                             location: kab || '',
                                             province: prov,
@@ -1683,12 +1688,21 @@
                 }
 
                 // ---------- Deduplikasi ----------
+                // PENTING: kunci deduplikasi TIDAK BOLEH hanya mengandalkan lat/lng/timestamp,
+                // karena banyak record valid (terutama BNPB Karhutla) tidak selalu punya
+                // koordinat, dan timestamp kini bisa null (tidak lagi dipalsukan dengan waktu
+                // "sekarang" - lihat toISOOrNull). Jika lat/lng/timestamp kosong di banyak
+                // record sekaligus, kunci lama akan SAMA untuk semuanya -> record-record nyata
+                // yang berbeda saling menimpa dan "hilang" dari daftar walau sudah tercatat di
+                // log. Maka: pakai uid unik dari sumber (mis. _id resmi CKAN) jika tersedia,
+                // dan fallback ke kombinasi field yang jauh lebih spesifik (sumber+judul+lokasi+
+                // deskripsi) supaya kemungkinan tabrakan antar record berbeda sangat kecil.
                 const unique = [];
                 const seen = new Set();
                 for (const ev of combined) {
                     if (!ev.province) ev.province = '';
                     if (!ev.kabkota) ev.kabkota = '';
-                    const key = `${ev.lat},${ev.lng},${ev.timestamp}`;
+                    const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
                     if (!seen.has(key)) {
                         seen.add(key);
                         unique.push(ev);
