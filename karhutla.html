@@ -74,14 +74,14 @@
             background: linear-gradient(120deg, #2a1608 0%, #4a2210 35%, #7a3510 70%, #a8480f 100%);
             background-size: 220% 220%;
             animation: headerShimmer 12s ease infinite;
-            padding: 12px 22px;
+            padding: 10px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 3px solid var(--gold-light);
             flex-shrink: 0;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
             box-shadow: var(--shadow-lg);
             position: relative;
             z-index: 20;
@@ -97,12 +97,12 @@
         }
         .header h1 {
             font-family: 'Poppins', sans-serif;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
             letter-spacing: 0.3px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             color: #fff8ec;
         }
         .header h1 .flame {
@@ -134,25 +134,25 @@
         .header-right {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             flex-wrap: wrap;
-            font-size: 13px;
+            font-size: 12px;
         }
         .status-badge {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(6px);
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.18);
             color: #fff3e0;
             font-weight: 600;
         }
         .status-dot {
-            width: 10px;
-            height: 10px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             background: #4ade80;
             box-shadow: 0 0 8px #4ade80;
@@ -172,29 +172,30 @@
         .last-update {
             color: #f1dcbf;
             font-weight: 500;
+            font-size: 11px;
         }
         .limit-control {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             background: rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            padding: 3px 10px 3px 14px;
+            border-radius: 6px;
+            padding: 2px 8px 2px 10px;
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .limit-control label {
             color: #f1dcbf;
             font-weight: 500;
-            font-size: 12px;
+            font-size: 11px;
         }
         .limit-control select {
             background: rgba(255, 255, 255, 0.15);
             border: none;
             color: #fff;
-            padding: 4px 6px;
-            border-radius: 6px;
+            padding: 3px 4px;
+            border-radius: 4px;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             outline: none;
             font-family: 'Inter', sans-serif;
@@ -207,11 +208,11 @@
             background: linear-gradient(120deg, var(--fire-2), var(--gold));
             border: none;
             color: #fff;
-            padding: 7px 18px;
-            border-radius: 8px;
+            padding: 5px 14px;
+            border-radius: 6px;
             font-weight: 700;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             letter-spacing: 0.2px;
             box-shadow: 0 4px 12px rgba(180, 80, 10, 0.35);
             transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
@@ -276,48 +277,48 @@
             backdrop-filter: blur(6px);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 12px 14px;
+            padding: 10px 12px;
             box-shadow: var(--shadow-md);
             z-index: 10;
-            font-size: 12px;
-            min-width: 170px;
+            font-size: 11px;
+            min-width: 150px;
             pointer-events: none;
         }
         .map-legend .legend-title {
             font-weight: 700;
             color: var(--ink);
-            margin-bottom: 6px;
-            font-size: 12px;
+            margin-bottom: 4px;
+            font-size: 11px;
             letter-spacing: 0.3px;
         }
         .map-legend .legend-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 3px 0;
+            gap: 6px;
+            padding: 2px 0;
             color: var(--ink-soft);
         }
         .map-legend .legend-dot {
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.7);
             flex-shrink: 0;
         }
         .map-legend .legend-dot.square {
             border-radius: 3px;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
         }
         .map-legend .legend-label {
             font-weight: 500;
-            font-size: 11.5px;
+            font-size: 10.5px;
         }
 
         /* ===== SIDEBAR ===== */
         .sidebar {
             width: 420px;
-            min-width: 340px;
+            min-width: 320px;
             max-width: 45vw;
             background: var(--surface);
             border-left: 1px solid var(--border);
@@ -337,9 +338,9 @@
             background: transparent;
             border: none;
             color: var(--ink-muted);
-            padding: 10px 6px;
+            padding: 8px 4px;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 11.5px;
             cursor: pointer;
             border-bottom: 3px solid transparent;
             transition: all 0.2s ease;
@@ -354,13 +355,59 @@
             background: #fff2da;
             color: var(--gold-deep);
         }
+
+        /* ===== FILTER ===== */
+        .filter-bar {
+            padding: 6px 10px;
+            background: var(--surface-alt);
+            border-bottom: 1px solid var(--border-soft);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .filter-bar input,
+        .filter-bar select {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            background: var(--surface);
+            color: var(--ink);
+            outline: none;
+            flex: 1 1 100px;
+            min-width: 80px;
+        }
+        .filter-bar input::placeholder {
+            color: var(--ink-muted);
+        }
+        .filter-bar .filter-label {
+            font-weight: 600;
+            color: var(--ink-muted);
+            font-size: 11px;
+        }
+        .filter-bar .btn-clear-filter {
+            background: none;
+            border: none;
+            color: var(--fire);
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 2px 6px;
+        }
+        .filter-bar .btn-clear-filter:hover {
+            text-decoration: underline;
+        }
+
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
-            padding: 12px 14px;
+            padding: 8px 10px;
         }
         .sidebar-content::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
         .sidebar-content::-webkit-scrollbar-track {
             background: var(--surface-alt);
@@ -388,9 +435,9 @@
             background: var(--surface);
             border: 1px solid var(--border-soft);
             border-left-width: 5px;
-            border-radius: 10px;
-            padding: 12px 14px;
-            margin-bottom: 10px;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
             cursor: default;
             box-shadow: var(--shadow-sm);
@@ -402,19 +449,19 @@
         }
         .event-item .title {
             font-weight: 700;
-            font-size: 14px;
-            margin-bottom: 4px;
+            font-size: 13px;
+            margin-bottom: 3px;
             color: var(--ink);
             font-family: 'Poppins', sans-serif;
         }
         .event-item .meta {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--ink-muted);
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 6px;
-            margin-top: 3px;
+            gap: 4px;
+            margin-top: 2px;
         }
         .event-item .meta .loc {
             color: var(--info);
@@ -426,9 +473,9 @@
         }
         .event-item .meta .source {
             font-weight: 600;
-            padding: 1px 8px;
-            border-radius: 10px;
-            font-size: 10.5px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 10px;
         }
         .event-item .meta .source-bnpb {
             color: #b45309;
@@ -457,11 +504,11 @@
         .event-item .badge-provinsi {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             background: linear-gradient(120deg, var(--fire), var(--fire-2));
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 10.5px;
+            padding: 1px 8px;
+            border-radius: 16px;
+            font-size: 10px;
             font-weight: 700;
             color: #fff;
             text-transform: uppercase;
@@ -471,21 +518,21 @@
         .event-item .badge-kabkota {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             background: var(--info-bg);
             color: var(--info);
-            padding: 2px 9px;
-            border-radius: 20px;
-            font-size: 10.5px;
+            padding: 1px 7px;
+            border-radius: 16px;
+            font-size: 10px;
             font-weight: 700;
         }
         .event-item .badge-conf {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 2px 9px;
-            border-radius: 20px;
-            font-size: 10.5px;
+            gap: 3px;
+            padding: 1px 7px;
+            border-radius: 16px;
+            font-size: 10px;
             font-weight: 700;
         }
         .event-item .badge-unknown {
@@ -493,77 +540,99 @@
             align-items: center;
             font-style: italic;
             color: var(--ink-muted);
-            font-size: 10.5px;
+            font-size: 10px;
         }
         .event-item .desc {
-            font-size: 12px;
+            font-size: 11.5px;
             color: var(--ink-soft);
-            margin-top: 6px;
+            margin-top: 4px;
             line-height: 1.5;
             background: var(--surface-alt);
-            padding: 6px 10px;
-            border-radius: 8px;
+            padding: 4px 8px;
+            border-radius: 6px;
             border: 1px solid var(--border-soft);
         }
         .event-item .catatan {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--ink-soft);
-            margin-top: 6px;
+            margin-top: 4px;
             line-height: 1.5;
         }
         .event-item .catatan b {
             color: var(--gold-deep);
         }
         .event-item .detail-bnpb {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--ink-soft);
             margin-top: 4px;
             background: #fef9ee;
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 6px;
             border: 1px solid #f4e8d0;
             display: flex;
             flex-wrap: wrap;
-            gap: 4px 14px;
+            gap: 3px 12px;
         }
         .event-item .detail-bnpb .bnpb-item {
             display: flex;
             align-items: baseline;
-            gap: 3px;
+            gap: 2px;
         }
         .event-item .detail-bnpb .bnpb-item .bnpb-label {
             font-weight: 600;
             color: var(--ink-muted);
-            font-size: 11px;
+            font-size: 10px;
         }
         .event-item .detail-bnpb .bnpb-item .bnpb-value {
             font-weight: 700;
             color: var(--ink);
-            font-size: 12px;
+            font-size: 11px;
+        }
+        /* toggle detail */
+        .event-item .toggle-detail {
+            cursor: pointer;
+            color: var(--info);
+            font-weight: 600;
+            font-size: 11px;
+            margin-top: 4px;
+            display: inline-block;
+            user-select: none;
+        }
+        .event-item .toggle-detail:hover {
+            text-decoration: underline;
+        }
+        .event-item .detail-collapsible {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease;
+        }
+        .event-item .detail-collapsible.open {
+            max-height: 600px;
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 16px;
+            padding: 30px 12px;
             color: var(--ink-muted);
         }
         .empty-state .emoji {
-            font-size: 38px;
+            font-size: 32px;
             display: block;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             animation: flameFlicker 2.4s ease-in-out infinite;
         }
         .empty-state p {
             font-weight: 500;
+            font-size: 13px;
         }
 
         /* ===== REKAP ===== */
         .rekap-card {
             background: var(--surface);
             border: 1px solid var(--border-soft);
-            border-radius: 12px;
-            padding: 12px 14px;
-            margin-bottom: 10px;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
             box-shadow: var(--shadow-sm);
             animation: fadeInUp 0.4s ease both;
             transition: box-shadow 0.18s ease, transform 0.18s ease;
@@ -576,36 +645,36 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .rekap-card .rekap-prov {
             font-family: 'Poppins', sans-serif;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
             color: var(--ink);
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .rekap-card .rekap-total {
             font-weight: 800;
-            font-size: 14px;
+            font-size: 13px;
             color: #fff;
             background: linear-gradient(120deg, var(--fire), var(--gold));
-            padding: 2px 10px;
-            border-radius: 14px;
+            padding: 1px 10px;
+            border-radius: 12px;
         }
         .rekap-bar-track {
             background: var(--surface-alt);
-            height: 8px;
-            border-radius: 5px;
+            height: 7px;
+            border-radius: 4px;
             overflow: hidden;
             border: 1px solid var(--border-soft);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .rekap-bar-fill {
             height: 100%;
-            border-radius: 5px;
+            border-radius: 4px;
             background: linear-gradient(90deg, var(--gold-light), var(--fire-2));
             width: 0%;
             transition: width 0.9s cubic-bezier(.22, .9, .3, 1.4);
@@ -613,42 +682,42 @@
         .rekap-chips {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 4px;
+            gap: 4px;
+            margin-top: 3px;
         }
         .rekap-chip {
             background: var(--surface-alt);
             border: 1px solid var(--border-soft);
             color: var(--ink-soft);
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 8px;
+            padding: 1px 6px;
+            border-radius: 6px;
         }
         .rekap-src-row {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
+            font-size: 10.5px;
             color: var(--ink-muted);
-            padding: 2px 0;
+            padding: 1px 0;
         }
         .rekap-label {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 700;
             color: var(--ink-muted);
             text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin: 8px 0 3px;
+            letter-spacing: 0.3px;
+            margin: 6px 0 2px;
         }
 
         /* ===== LOG ===== */
         .log-container {
             background: #221709;
             border-top: 2px solid var(--gold-light);
-            max-height: 110px;
+            max-height: 90px;
             overflow-y: auto;
-            padding: 6px 14px;
-            font-size: 11px;
+            padding: 4px 12px;
+            font-size: 10.5px;
             font-family: 'Courier New', monospace;
             color: #d8c9a8;
             flex-shrink: 0;
@@ -661,13 +730,13 @@
             border-radius: 10px;
         }
         .log-entry {
-            padding: 2px 0;
+            padding: 1px 0;
             border-bottom: 1px solid #33240e;
             animation: fadeInUp 0.25s ease both;
         }
         .log-entry .log-time {
             color: #a08757;
-            margin-right: 10px;
+            margin-right: 8px;
         }
         .log-entry .log-ok {
             color: #6ee79a;
@@ -684,14 +753,14 @@
             border-radius: 12px !important;
             box-shadow: var(--shadow-lg) !important;
             max-width: 360px !important;
-            min-width: 260px !important;
+            min-width: 240px !important;
         }
         .leaflet-popup-content {
             color: var(--ink);
-            font-size: 13px;
+            font-size: 12.5px;
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
-            min-width: 220px;
+            min-width: 200px;
             max-width: 340px;
             word-wrap: break-word;
             overflow-wrap: break-word;
@@ -707,11 +776,11 @@
         }
         .leaflet-popup-content .catatan-popup {
             display: block;
-            margin-top: 6px;
-            padding-top: 6px;
+            margin-top: 5px;
+            padding-top: 5px;
             border-top: 1px dashed var(--border);
             color: var(--ink-soft);
-            font-size: 12px;
+            font-size: 11px;
         }
         .leaflet-popup-content .src-badge-popup {
             display: inline-block;
@@ -721,14 +790,13 @@
             font-weight: 700;
         }
         .leaflet-popup-content .popup-detail {
-            font-size: 12px;
+            font-size: 11.5px;
             color: var(--ink-soft);
             background: var(--surface-alt);
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 6px;
-            margin-top: 6px;
+            margin-top: 5px;
             border: 1px solid var(--border-soft);
-            /* Hilangkan batasan tinggi agar semua detail terlihat */
             max-height: none;
             overflow-y: visible;
         }
@@ -764,24 +832,24 @@
                 flex-direction: column-reverse;
             }
             .header h1 {
-                font-size: 17px;
+                font-size: 15px;
             }
             .header-right {
-                font-size: 12px;
+                font-size: 11px;
             }
             .limit-control {
-                padding: 2px 8px 2px 10px;
+                padding: 2px 6px 2px 8px;
             }
             .limit-control select {
-                font-size: 12px;
-                padding: 2px 4px;
+                font-size: 11px;
+                padding: 2px 3px;
             }
             .map-legend {
                 bottom: 14px;
                 right: 8px;
-                padding: 8px 10px;
-                font-size: 10.5px;
-                min-width: 140px;
+                padding: 6px 8px;
+                font-size: 10px;
+                min-width: 120px;
             }
             .leaflet-popup-content-wrapper {
                 max-width: 280px !important;
@@ -792,20 +860,20 @@
         }
         @media (max-width: 480px) {
             .header {
-                padding: 8px 10px;
+                padding: 6px 8px;
             }
             .header h1 {
-                font-size: 14px;
+                font-size: 13px;
             }
             .btn-refresh {
-                padding: 4px 11px;
-                font-size: 11px;
+                padding: 3px 10px;
+                font-size: 10px;
             }
             .sidebar-content {
-                padding: 8px 8px;
+                padding: 6px 6px;
             }
             .event-item {
-                padding: 10px 10px;
+                padding: 8px 8px;
             }
             .map-legend {
                 display: none;
@@ -813,18 +881,23 @@
             .header-right .limit-control label {
                 display: none;
             }
+            .filter-bar input,
+            .filter-bar select {
+                font-size: 10px;
+                padding: 2px 4px;
+            }
             .leaflet-popup-content-wrapper {
-                max-width: 240px !important;
+                max-width: 220px !important;
             }
             .leaflet-popup-content {
-                max-width: 220px !important;
+                max-width: 200px !important;
             }
         }
 
         .leaflet-control-attribution {
             background: rgba(255, 251, 240, 0.9) !important;
             color: var(--ink-muted) !important;
-            font-size: 10px !important;
+            font-size: 9px !important;
         }
     </style>
 </head>
@@ -856,7 +929,6 @@
     <div class="main">
         <div class="map-container">
             <div id="map"></div>
-            <!-- Legend -->
             <div class="map-legend" id="mapLegend">
                 <div class="legend-title">📌 Sumber Data</div>
                 <div class="legend-row"><span class="legend-dot" style="background:#b45309;"></span><span class="legend-label">BNPB Karhutla</span></div>
@@ -871,6 +943,20 @@
                 <button class="active" data-tab="list">📋 Daftar Kejadian</button>
                 <button data-tab="rekap">🗂️ Rekap Wilayah</button>
                 <button data-tab="stats">📊 Statistik</button>
+            </div>
+            <!-- Filter Bar -->
+            <div class="filter-bar" id="filterBar">
+                <span class="filter-label">🔍</span>
+                <input type="text" id="filterInput" placeholder="Cari lokasi, provinsi, sumber..." />
+                <select id="filterSource">
+                    <option value="">Semua Sumber</option>
+                    <option value="BNPB Open Data">BNPB Karhutla</option>
+                    <option value="BMKG Hotspot">BMKG Hotspot</option>
+                    <option value="NASA FIRMS (MODIS)">NASA FIRMS</option>
+                    <option value="Global Forest Watch">GFW GLAD</option>
+                    <option value="BNPB Data Kejadian">BNPB Kejadian</option>
+                </select>
+                <button class="btn-clear-filter" id="clearFilter">✕</button>
             </div>
             <div class="sidebar-content" id="sidebarContent"></div>
         </div>
@@ -892,6 +978,9 @@
             const lastUpdateLabel = document.getElementById('lastUpdateLabel');
             const refreshBtn = document.getElementById('refreshBtn');
             const limitSelect = document.getElementById('limitSelect');
+            const filterInput = document.getElementById('filterInput');
+            const filterSource = document.getElementById('filterSource');
+            const clearFilter = document.getElementById('clearFilter');
 
             // ---------- Leaflet map ----------
             const map = L.map(mapElement, {
@@ -911,6 +1000,7 @@
 
             // ---------- state ----------
             let allEvents = [];
+            let filteredEvents = [];
             let currentTab = 'list';
             let isRefreshing = false;
 
@@ -1112,7 +1202,6 @@
                     .replace(/\b\w/g, c => c.toUpperCase());
             }
 
-            // Tambahkan exclude keys untuk "No" dan "Kode Wilayah Kabupaten/Kota"
             function buildDynamicDescription(rec, excludeKeys = []) {
                 if (!rec || typeof rec !== 'object') return '';
                 const defaultExclude = ['_id', 'id', 'latitude', 'longitude', 'lat', 'lon', 'lng', 'no', 'kode wilayah kabupaten/kota'];
@@ -1170,8 +1259,8 @@
                 return 'Kejadian kebakaran terpantau dari sumber data terbuka.';
             }
 
-            // ---------- Fetch with timeout ----------
-            async function fetchWithTimeout(url, options = {}, timeout = 9000, retries = 0) {
+            // ---------- Fetch with aggressive proxy and retry ----------
+            async function fetchWithTimeout(url, options = {}, timeout = 10000, retries = 2) {
                 let lastError;
                 for (let attempt = 0; attempt <= retries; attempt++) {
                     try {
@@ -1183,7 +1272,10 @@
                         return response;
                     } catch (err) {
                         lastError = err;
-                        if (attempt < retries) await new Promise(r => setTimeout(r, 500));
+                        if (attempt < retries) {
+                            const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+                            await new Promise(r => setTimeout(r, delay));
+                        }
                     }
                 }
                 throw lastError;
@@ -1192,18 +1284,31 @@
             const PROXIES = [
                 'https://corsproxy.io/?',
                 'https://api.allorigins.win/raw?url=',
-                'https://api.codetabs.com/v1/proxy?quest='
+                'https://api.codetabs.com/v1/proxy?quest=',
+                'https://thingproxy.freeboard.io/fetch/',
+                'https://cors-anywhere.herokuapp.com/'
             ];
 
             async function fetchWithProxy(url, options = {}) {
+                // Try direct first (works for some endpoints)
+                try {
+                    const resp = await fetchWithTimeout(url, options, 6000, 1);
+                    if (resp.ok) return resp;
+                } catch (e) { /* continue to proxies */ }
+
                 for (const proxy of PROXIES) {
                     try {
                         const proxiedUrl = proxy + encodeURIComponent(url);
-                        const resp = await fetchWithTimeout(proxiedUrl, options, 8000, 0);
+                        const resp = await fetchWithTimeout(proxiedUrl, options, 8000, 1);
                         if (resp.ok) return resp;
                     } catch (e) { /* lanjut */ }
                 }
-                return await fetchWithTimeout(url, options, 8000, 0);
+                // Last attempt with longer timeout
+                try {
+                    const resp = await fetchWithTimeout(url, options, 12000, 2);
+                    if (resp.ok) return resp;
+                } catch (e) { /* ignore */ }
+                throw new Error('All fetch attempts failed');
             }
 
             // ---------- SOURCE MARKER COLORS ----------
@@ -1237,7 +1342,7 @@
                 return `source-${label}`;
             }
 
-            // ---------- Format BNPB detail dengan angka bulat ----------
+            // ---------- Format BNPB detail with rounded numbers ----------
             function formatBnpbDetail(rec) {
                 if (!rec || typeof rec !== 'object') return null;
                 const fields = [
@@ -1263,10 +1368,36 @@
                 return parts;
             }
 
-            // ---------- RENDER: List ----------
+            // ---------- FILTER LOGIC ----------
+            function applyFilters() {
+                const search = filterInput.value.toLowerCase().trim();
+                const srcFilter = filterSource.value;
+                filteredEvents = allEvents.filter(ev => {
+                    if (srcFilter && !ev.source.includes(srcFilter)) return false;
+                    if (search) {
+                        const match = (ev.location || '').toLowerCase().includes(search) ||
+                            (ev.province || '').toLowerCase().includes(search) ||
+                            (ev.kabkota || '').toLowerCase().includes(search) ||
+                            (ev.source || '').toLowerCase().includes(search) ||
+                            (ev.title || '').toLowerCase().includes(search);
+                        if (!match) return false;
+                    }
+                    return true;
+                });
+                renderCurrentTab();
+                updateMap(filteredEvents);
+            }
+
+            function renderCurrentTab() {
+                if (currentTab === 'list') renderList(filteredEvents);
+                else if (currentTab === 'rekap') renderRekap(filteredEvents);
+                else renderStats(filteredEvents);
+            }
+
+            // ---------- RENDER: List with toggle detail ----------
             function renderList(events) {
                 if (!events || events.length === 0) {
-                    sidebarContent.innerHTML = `<div class="empty-state"><span class="emoji">🔍</span><p>Belum ada data kebakaran yang terpantau dari sumber online.</p><p style="font-size:12px;margin-top:6px;">Coba refresh atau periksa koneksi.</p></div>`;
+                    sidebarContent.innerHTML = `<div class="empty-state"><span class="emoji">🔍</span><p>Tidak ada data yang cocok dengan filter.</p><p style="font-size:12px;margin-top:4px;">Coba ubah kata kunci atau sumber.</p></div>`;
                     return;
                 }
                 const sorted = [...events].sort((a, b) => (b.timestamp ? new Date(b.timestamp).getTime() : 0) - (a.timestamp ?
@@ -1282,11 +1413,12 @@
                     const srcBadge = getSourceBadgeClass(ev.source);
                     const sourceLabel = ev.source || 'tidak diketahui';
 
-                    // BNPB detail
                     let bnpbHtml = '';
+                    let bnpbDetailData = [];
                     if (ev._bnpbRaw) {
                         const parts = formatBnpbDetail(ev._bnpbRaw);
                         if (parts && parts.length > 0) {
+                            bnpbDetailData = parts;
                             bnpbHtml = `<div class="detail-bnpb">` +
                                 parts.map(p =>
                                     `<span class="bnpb-item"><span class="bnpb-label">${escHtml(p.label)}</span> <span class="bnpb-value">${escHtml(p.value)}</span></span>`
@@ -1295,8 +1427,9 @@
                         }
                     }
 
-                    // Lokasi: hanya sekali
                     const locationDisplay = ev.location || ev.kabkota || 'Lokasi tidak diketahui';
+                    // ID unik untuk toggle
+                    const uid = 'detail-' + i + '-' + Date.now();
 
                     html += `
                         <div class="event-item" style="animation-delay:${delay}s;border-left-color:${srcColor};">
@@ -1314,17 +1447,38 @@
                             ${bnpbHtml}
                             <div class="catatan"><b>Catatan:</b> ${escHtml(catatan)}${confInfo && confInfo.desc ? ' ' + escHtml(confInfo.desc) : ''}</div>
                             ${ev.description ? `<div class="desc">${escHtml(ev.description)}</div>` : ''}
+                            ${bnpbDetailData.length > 0 ? `
+                                <span class="toggle-detail" data-target="${uid}">📋 Lihat detail BNPB</span>
+                                <div class="detail-collapsible" id="${uid}">
+                                    <div class="detail-bnpb" style="margin-top:4px;">
+                                        ${bnpbDetailData.map(p => `<span class="bnpb-item"><span class="bnpb-label">${escHtml(p.label)}</span> <span class="bnpb-value">${escHtml(p.value)}</span></span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                     i++;
                 }
                 sidebarContent.innerHTML = html;
+
+                // Event listener untuk toggle detail
+                document.querySelectorAll('.toggle-detail').forEach(el => {
+                    el.addEventListener('click', function(e) {
+                        const targetId = this.dataset.target;
+                        const target = document.getElementById(targetId);
+                        if (target) {
+                            target.classList.toggle('open');
+                            this.textContent = target.classList.contains('open') ? '📋 Sembunyikan detail BNPB' :
+                                '📋 Lihat detail BNPB';
+                        }
+                    });
+                });
             }
 
             // ---------- RENDER: Rekap ----------
             function renderRekap(events) {
                 if (!events || events.length === 0) {
-                    sidebarContent.innerHTML = `<div class="empty-state"><span class="emoji">🗂️</span><p>Belum ada data rekapitulasi wilayah.</p></div>`;
+                    sidebarContent.innerHTML = `<div class="empty-state"><span class="emoji">🗂️</span><p>Tidak ada data untuk rekapitulasi.</p></div>`;
                     return;
                 }
                 const grouped = {};
@@ -1341,9 +1495,9 @@
                 const entries = Object.entries(grouped).sort((a, b) => b[1].total - a[1].total);
                 const maxTotal = entries.length ? entries[0][1].total : 1;
 
-                let html = `<div style="margin-bottom:12px;">
+                let html = `<div style="margin-bottom:10px;">
                     <div style="font-family:'Poppins',sans-serif;font-size:20px;font-weight:800;color:var(--ink);">${entries.length}</div>
-                    <div style="color:var(--ink-muted);font-size:12px;font-weight:600;">Provinsi/wilayah terdampak kejadian kebakaran</div>
+                    <div style="color:var(--ink-muted);font-size:11.5px;font-weight:600;">Provinsi/wilayah terdampak kejadian kebakaran</div>
                 </div>`;
 
                 for (const [prov, data] of entries) {
@@ -1382,7 +1536,7 @@
             // ---------- RENDER: Stats ----------
             function renderStats(events) {
                 if (!events || events.length === 0) {
-                    sidebarContent.innerHTML = `<div class="empty-state"><span class="emoji">📊</span><p>Belum ada data untuk ditampilkan.</p></div>`;
+                    sidebarContent.innerHTML = `<div class="empty-state"><span class="emoji">📊</span><p>Tidak ada data untuk statistik.</p></div>`;
                     return;
                 }
                 const provCount = {};
@@ -1398,20 +1552,20 @@
                 const sortedProv = Object.entries(provCount).sort((a, b) => b[1] - a[1]);
 
                 let html = `
-                    <div style="margin-bottom:14px;">
+                    <div style="margin-bottom:12px;">
                         <div style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;color:var(--ink);">${total}</div>
-                        <div style="color:var(--ink-muted);font-size:13px;font-weight:600;">Total kejadian terpantau</div>
-                        ${unknown > 0 ? `<div style="color:var(--gold-deep);font-size:12px;margin-top:6px;background:#fff3d6;padding:4px 10px;border-radius:8px;display:inline-block;">⚠️ ${unknown} data belum teridentifikasi provinsinya</div>` : ''}
+                        <div style="color:var(--ink-muted);font-size:12px;font-weight:600;">Total kejadian terpantau</div>
+                        ${unknown > 0 ? `<div style="color:var(--gold-deep);font-size:11px;margin-top:4px;background:#fff3d6;padding:3px 8px;border-radius:6px;display:inline-block;">⚠️ ${unknown} data belum teridentifikasi provinsinya</div>` : ''}
                     </div>
                     <div class="rekap-label" style="margin-top:0;">📍 Berdasarkan Provinsi</div>
                 `;
                 for (const [prov, count] of sortedProv) {
                     const pct = Math.round((count / total) * 100);
                     html += `
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                            <span style="width:120px;font-size:12px;color:var(--ink-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(prov)}">${escHtml(prov)}</span>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                            <span style="width:110px;font-size:11.5px;color:var(--ink-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(prov)}">${escHtml(prov)}</span>
                             <div class="rekap-bar-track" style="flex:1;margin-bottom:0;"><div class="rekap-bar-fill" data-pct="${pct}" style="width:0%;"></div></div>
-                            <span style="font-size:12px;color:var(--ink-muted);min-width:28px;text-align:right;font-weight:600;">${count}</span>
+                            <span style="font-size:11.5px;color:var(--ink-muted);min-width:26px;text-align:right;font-weight:600;">${count}</span>
                         </div>
                     `;
                 }
@@ -1427,7 +1581,7 @@
                 html += `<div class="rekap-label">📡 Sumber Data</div>`;
                 for (const [src, count] of sortedSrc) {
                     html +=
-                        `<div class="rekap-src-row" style="border-bottom:1px solid var(--border-soft);padding:4px 0;"><span style="color:var(--ink-soft);font-weight:600;">${escHtml(src)}</span><span style="color:var(--ink-muted);">${count}</span></div>`;
+                        `<div class="rekap-src-row" style="border-bottom:1px solid var(--border-soft);padding:3px 0;"><span style="color:var(--ink-soft);font-weight:600;">${escHtml(src)}</span><span style="color:var(--ink-muted);">${count}</span></div>`;
                 }
                 if (confCount.Tinggi + confCount.Sedang + confCount.Rendah > 0) {
                     html += `<div class="rekap-label">🎯 Tingkat Keyakinan Deteksi</div>`;
@@ -1441,12 +1595,11 @@
                 });
             }
 
-            // ---------- UPDATE MAP with source-specific markers ----------
+            // ---------- UPDATE MAP ----------
             function updateMap(events) {
                 markerGroup.clearLayers();
                 if (!events || events.length === 0) return;
 
-                // Ikon SVG untuk setiap sumber
                 function makeIcon(color, shape = 'circle') {
                     const svg = shape === 'square' ?
                         `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><rect x="1" y="1" width="16" height="16" rx="3" fill="${color}" stroke="#fff" stroke-width="2"/></svg>` :
@@ -1467,13 +1620,10 @@
 
                     const src = ev.source || '';
                     const color = getSourceColor(src);
-                    // BNPB Karhutla pakai kotak, sisanya lingkaran
                     const shape = (src && src.includes('BNPB Open Data')) ? 'square' : 'circle';
                     const icon = makeIcon(color, shape);
 
                     const catatan = buildCatatan(ev);
-
-                    // Bangun konten popup yang lebih kaya dan tidak terpotong
                     let popupHtml = `
                         <strong>${escHtml(ev.title || 'Kebakaran')}</strong><br>
                         📍 ${escHtml(ev.location || ev.kabkota || 'Lokasi tidak diketahui')}<br>
@@ -1483,7 +1633,6 @@
                         <span class="src-badge-popup" style="background:${color}20;color:${color};border:1px solid ${color}40;">📡 ${escHtml(src || 'tidak diketahui')}</span>
                     `;
 
-                    // Tampilkan detail BNPB jika ada (dengan angka bulat)
                     if (ev._bnpbRaw) {
                         const parts = formatBnpbDetail(ev._bnpbRaw);
                         if (parts && parts.length > 0) {
@@ -1496,17 +1645,14 @@
                         }
                     }
 
-                    // Tampilkan deskripsi jika ada
                     if (ev.description) {
                         popupHtml += `<div class="catatan-popup">${escHtml(ev.description)}</div>`;
                     }
-
-                    // Catatan
                     popupHtml += `<span class="catatan-popup">${escHtml(catatan)}</span>`;
 
                     const marker = L.marker([lat, lng], { icon }).bindPopup(popupHtml, {
                         maxWidth: 360,
-                        minWidth: 260,
+                        minWidth: 240,
                     });
                     markerGroup.addLayer(marker);
                 }
@@ -1518,9 +1664,7 @@
                 document.querySelectorAll('.sidebar-tabs button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.tab === tab);
                 });
-                if (tab === 'list') renderList(allEvents);
-                else if (tab === 'rekap') renderRekap(allEvents);
-                else renderStats(allEvents);
+                renderCurrentTab();
             }
 
             // ---------- DATA SOURCES ----------
@@ -1793,7 +1937,6 @@
                     if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
                 }
 
-                // Koreksi provinsi dari kab/kota
                 if (regencyMapReady) {
                     for (const ev of combined) {
                         if (ev.kabkota) {
@@ -1804,7 +1947,6 @@
                     logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.', 'ok');
                 }
 
-                // Deduplikasi
                 const unique = [];
                 const seen = new Set();
                 for (const ev of combined) {
@@ -1826,11 +1968,8 @@
                 }
 
                 allEvents = unique;
-                updateMap(allEvents);
+                applyFilters(); // this will update filteredEvents and render
                 updateTimestamp();
-                if (currentTab === 'list') renderList(allEvents);
-                else if (currentTab === 'rekap') renderRekap(allEvents);
-                else renderStats(allEvents);
 
                 isRefreshing = false;
                 refreshBtn.disabled = false;
@@ -1850,7 +1989,13 @@
                 limitSelect.addEventListener('change', function() {
                     fetchAllData();
                 });
-                // Auto-refresh setiap 60 detik
+                filterInput.addEventListener('input', applyFilters);
+                filterSource.addEventListener('change', applyFilters);
+                clearFilter.addEventListener('click', function() {
+                    filterInput.value = '';
+                    filterSource.value = '';
+                    applyFilters();
+                });
                 setInterval(fetchAllData, 60000);
                 fetchAllData();
             }
