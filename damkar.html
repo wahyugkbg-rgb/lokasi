@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantau Titik Api Perkotaan - Damkar</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+        body { display:flex; height:100vh; overflow:hidden; background:#f0f2f5; }
+
+        #sidebar {
+            width: 380px; min-width:380px; background:#fff;
+            box-shadow:2px 0 12px rgba(0,0,0,0.1);
+            display:flex; flex-direction:column; z-index:1000;
+        }
+        #sidebar-header {
+            padding:18px 20px; background:#b22222; color:white;
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        #sidebar-header h2 { font-weight:300; font-size:1.4rem; }
+        #sidebar-header i { font-size:1.6rem; }
+
+        #sidebar-stats {
+            display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px;
+            background:#fafafa; border-bottom:1px solid #ddd;
+        }
+        .stat-box {
+            flex:1; min-width:60px; background:white; border-radius:8px;
+            padding:6px 8px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.05);
+        }
+        .stat-box .num { font-weight:700; font-size:1.2rem; }
+        .stat-box .label { font-size:0.7rem; color:#555; }
+        .stat-box.high .num { color:#d32f2f; }
+        .stat-box.nominal .num { color:#f57c00; }
+        .stat-box.low .num { color:#388e3c; }
+
+        #sidebar-filters {
+            padding:10px 16px; display:flex; gap:6px; flex-wrap:wrap;
+            border-bottom:1px solid #ddd; background:#fafafa;
+        }
+        #sidebar-filters select, #sidebar-filters input {
+            padding:5px 8px; border-radius:20px; border:1px solid #ccc;
+            background:white; flex:1; min-width:80px; font-size:0.85rem;
+        }
+        #sidebar-filters button {
+            padding:5px 16px; border:none; background:#b22222; color:white;
+            border-radius:20px; cursor:pointer; font-weight:600;
+        }
+        #sidebar-filters button:hover { background:#8b1a1a; }
+
+        #status-bar {
+            font-size:0.75rem; padding:4px 16px 8px;
+            background:#fafafa; border-bottom:1px solid #eee;
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        #status-bar .cached { color:#f57c00; }
+        #status-bar .live { color:#388e3c; }
+        #status-bar .error { color:#d32f2f; }
+        #status-bar .gps { color:#1a73e8; }
+
+        #report-list {
+            flex:1; overflow-y:auto; padding:10px 16px;
+        }
+        .report-item {
+            display:flex; flex-direction:column; padding:8px 12px;
+            margin-bottom:6px; background:#f9f9f9; border-radius:6px;
+            border-left:4px solid #f57c00; cursor:pointer; transition:0.15s;
+        }
+        .report-item:hover { background:#eef3ff; }
+        .report-item .title { font-weight:600; font-size:0.9rem; }
+        .report-item .sub { font-size:0.75rem; color:#555; margin-top:2px; }
+        .report-item .confidence {
+            font-size:0.7rem; padding:2px 8px; border-radius:12px;
+            background:#ddd; display:inline-block; margin-top:4px; align-self:flex-start;
+        }
+        .conf-high { background:#d32f2f; color:white; }
+        .conf-nominal { background:#f57c00; color:white; }
+        .conf-low { background:#388e3c; color:white; }
+
+        #sidebar-footer {
+            padding:12px 16px; border-top:1px solid #ddd;
+            background:#fafafa; display:flex; gap:10px;
+        }
+        #sidebar-footer button {
+            flex:1; padding:8px; border:none; border-radius:30px;
+            font-weight:bold; cursor:pointer; background:#b22222; color:white;
+            transition:0.2s;
+        }
+        #sidebar-footer button:hover { background:#8b1a1a; }
+
+        #map { flex:1; height:100vh; }
+
+        .loading { text-align:center; padding:30px; color:#666; }
+        .cache-warning {
+            background:#fff3cd; border:1px solid #ffc107; border-radius:8px;
+            padding:12px 16px; margin:10px 0; font-size:0.85rem;
+            color:#856404;
+        }
+
+        /* Tombol Lokasi Saya kustom */
+        .leaflet-control-locate {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+            cursor: pointer;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #333;
+            transition: 0.2s;
+        }
+        .leaflet-control-locate:hover {
+            background: #f0f0f0;
+        }
+        .leaflet-control-locate.active {
+            color: #1a73e8;
+        }
+
+        @media (max-width:768px) {
+            #sidebar { width:100%; min-width:unset; height:45vh; }
+            body { flex-direction:column; }
+            #map { height:55vh; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div id="sidebar-header">
+        <h2><i class="fas fa-fire-extinguisher"></i> Damkar – Titik Api</h2>
+        <i class="fas fa-satellite"></i>
+    </div>
+    <div id="sidebar-stats">
+        <div class="stat-box"><span class="num" id="totalPoints">0</span><div class="label">Total</div></div>
+        <div class="stat-box high"><span class="num" id="highCount">0</span><div class="label">Tinggi</div></div>
+        <div class="stat-box nominal"><span class="num" id="nominalCount">0</span><div class="label">Sedang</div></div>
+        <div class="stat-box low"><span class="num" id="lowCount">0</span><div class="label">Rendah</div></div>
+    </div>
+    <div id="status-bar">
+        <span><i class="fas fa-clock"></i> <span id="updateTime">-</span></span>
+        <span id="statusIndicator" class="live"><i class="fas fa-check-circle"></i> Live</span>
+        <span id="gpsStatus" class="gps"><i class="fas fa-satellite"></i> GPS: -</span>
+    </div>
+    <div id="sidebar-filters">
+        <select id="filterSource">
+            <option value="MODIS_NRT">MODIS</option>
+            <option value="VIIRS_SNPP_NRT">VIIRS (SNPP)</option>
+            <option value="VIIRS_NOAA20_NRT">VIIRS (NOAA20)</option>
+        </select>
+        <select id="filterArea">
+            <option value="jakarta">Jakarta</option>
+            <option value="surabaya">Surabaya</option>
+            <option value="medan">Medan</option>
+            <option value="bandung">Bandung</option>
+            <option value="makassar">Makassar</option>
+            <option value="custom">Kustom</option>
+        </select>
+        <input type="text" id="customBbox" placeholder="minLon,minLat,maxLon,maxLat" style="display:none; width:100%;">
+        <select id="filterDays">
+            <option value="1">1 hari</option>
+            <option value="2">2 hari</option>
+            <option value="3" selected>3 hari</option>
+            <option value="5">5 hari</option>
+            <option value="7">7 hari</option>
+        </select>
+        <button id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+    <div id="report-list">
+        <div class="loading">Memuat data titik api...</div>
+    </div>
+    <div id="sidebar-footer">
+        <button id="zoomJakarta"><i class="fas fa-map-pin"></i> Jakarta</button>
+        <button id="zoomSurabaya"><i class="fas fa-map-pin"></i> Surabaya</button>
+        <button id="zoomMedan"><i class="fas fa-map-pin"></i> Medan</button>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+    // ===================== KONFIGURASI =====================
+    const FIRMS_API_KEY = 'e916bdfd16f5230b3e6cabc6c03f5870';
+
+    const AREAS = {
+        jakarta: [106.7, -6.4, 107.0, -6.0],
+        surabaya: [112.6, -7.4, 112.9, -7.2],
+        medan: [98.6, 3.5, 98.8, 3.7],
+        bandung: [107.5, -6.95, 107.7, -6.8],
+        makassar: [119.3, -5.2, 119.5, -5.0],
+    };
+
+    const CACHE_KEY = 'damkar_hotspot_cache';
+    let map, markersLayer;
+    let currentData = [];
+    let isCached = false;
+    let locationMarker = null;
+    let locationCircle = null;
+
+    // ===================== INISIALISASI PETA =====================
+    function initMap() {
+        map = L.map('map').setView([-6.2, 106.8], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        markersLayer = L.layerGroup().addTo(map);
+
+        // Tambahkan tombol Lokasi Saya
+        const locateBtn = L.control({ position: 'topleft' });
+        locateBtn.onAdd = function() {
+            const div = L.DomUtil.create('div', 'leaflet-control-locate');
+            div.innerHTML = '<i class="fas fa-crosshairs"></i>';
+            div.title = 'Lokasi Saya';
+            div.style.fontSize = '20px';
+            div.style.padding = '4px 6px';
+            L.DomEvent.on(div, 'click', function() {
+                locateUser();
+            });
+            return div;
+        };
+        locateBtn.addTo(map);
+    }
+
+    // ===================== LOKASI GPS =====================
+    function locateUser() {
+        const gpsStatus = document.getElementById('gpsStatus');
+        gpsStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GPS: mencari...';
+        if (!navigator.geolocation) {
+            alert('Browser Anda tidak mendukung GPS.');
+            gpsStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GPS: tidak didukung';
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const acc = position.coords.accuracy;
+                // Hapus marker lama
+                if (locationMarker) map.removeLayer(locationMarker);
+                if (locationCircle) map.removeLayer(locationCircle);
+
+                // Marker lokasi
+                const icon = L.divIcon({
+                    className: 'location-marker',
+                    html: `<div style="background:#1a73e8; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 0 2px #1a73e8;"></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+                locationMarker = L.marker([lat, lng], { icon }).addTo(map);
+                // Circle akurasi
+                locationCircle = L.circle([lat, lng], {
+                    radius: acc,
+                    color: '#1a73e8',
+                    fillColor: '#1a73e8',
+                    fillOpacity: 0.15,
+                    weight: 1
+                }).addTo(map);
+
+                map.setView([lat, lng], 16);
+                gpsStatus.innerHTML = `<i class="fas fa-check-circle"></i> GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            },
+            function(error) {
+                let msg = 'Tidak dapat mengakses GPS. ';
+                if (error.code === 1) msg += 'Izin ditolak.';
+                else if (error.code === 2) msg += 'Sinyal GPS tidak tersedia.';
+                else if (error.code === 3) msg += 'Waktu habis.';
+                alert(msg);
+                gpsStatus.innerHTML = `<i class="fas fa-exclamation-triangle"></i> GPS: gagal`;
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    }
+
+    // ===================== CACHE =====================
+    function saveCache(data, params) {
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                data: data,
+                params: params,
+                timestamp: Date.now()
+            }));
+        } catch(e) {}
+    }
+
+    function loadCache() {
+        try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch(e) { return null; }
+    }
+
+    function getCacheAge() {
+        try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (!raw) return Infinity;
+            const parsed = JSON.parse(raw);
+            return (Date.now() - parsed.timestamp) / (1000 * 60);
+        } catch(e) { return Infinity; }
+    }
+
+    // ===================== AMBIL DATA DARI FIRMS =====================
+    async function fetchHotspots(source, areaBbox, days) {
+        const coordStr = areaBbox.join(',');
+        const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_API_KEY}/${source}/${coordStr}/${days}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            let msg = `HTTP ${response.status}`;
+            if (response.status === 403) msg += ' - Kuota API habis atau key tidak valid';
+            else if (response.status === 404) msg += ' - Parameter salah';
+            else if (response.status === 429) msg += ' - Terlalu banyak request, coba nanti';
+            throw new Error(msg);
+        }
+        const csvText = await response.text();
+        return parseCSV(csvText);
+    }
+
+    function parseCSV(csv) {
+        const lines = csv.split('\n').filter(line => line.trim() !== '');
+        if (lines.length < 2) return [];
+        const headers = lines[0].split(',');
+        const getIdx = (name) => headers.findIndex(h => h.trim() === name);
+        const latIdx = getIdx('latitude');
+        const lonIdx = getIdx('longitude');
+        const confIdx = getIdx('confidence');
+        const dateIdx = getIdx('acq_date');
+        const timeIdx = getIdx('acq_time');
+        const brightIdx = getIdx('brightness');
+        if (latIdx === -1 || lonIdx === -1) return [];
+
+        const result = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',');
+            if (cols.length <= Math.max(latIdx, lonIdx, confIdx)) continue;
+            const lat = parseFloat(cols[latIdx]);
+            const lon = parseFloat(cols[lonIdx]);
+            if (isNaN(lat) || isNaN(lon)) continue;
+            const confidence = (cols[confIdx] || 'nominal').toLowerCase();
+            const date = cols[dateIdx] || '';
+            const time = cols[timeIdx] || '';
+            const brightness = parseFloat(cols[brightIdx]) || 0;
+            result.push({ lat, lon, confidence, date, time, brightness });
+        }
+        return result;
+    }
+
+    // ===================== RENDER =====================
+    function renderAll(data, fromCache = false) {
+        currentData = data;
+        isCached = fromCache;
+        updateStats(data);
+        updateList(data);
+        updateMap(data);
+        updateStatus(fromCache);
+        document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('id-ID');
+    }
+
+    function updateStatus(fromCache) {
+        const indicator = document.getElementById('statusIndicator');
+        if (fromCache) {
+            indicator.className = 'cached';
+            indicator.innerHTML = '<i class="fas fa-database"></i> Data Cache';
+        } else {
+            indicator.className = 'live';
+            indicator.innerHTML = '<i class="fas fa-satellite-dish"></i> Live';
+        }
+    }
+
+    function updateStats(data) {
+        document.getElementById('totalPoints').textContent = data.length;
+        const high = data.filter(d => d.confidence === 'high').length;
+        const nominal = data.filter(d => d.confidence === 'nominal').length;
+        const low = data.filter(d => d.confidence === 'low').length;
+        document.getElementById('highCount').textContent = high;
+        document.getElementById('nominalCount').textContent = nominal;
+        document.getElementById('lowCount').textContent = low;
+    }
+
+    function updateList(data) {
+        const container = document.getElementById('report-list');
+        if (data.length === 0) {
+            container.innerHTML = '<div class="loading">Tidak ada titik api dalam periode ini.</div>';
+            return;
+        }
+        const sorted = [...data].sort((a,b) => (a.date+b.time) > (b.date+a.time) ? -1 : 1);
+        container.innerHTML = sorted.map(d => {
+            const confClass = 'conf-' + d.confidence;
+            const timeStr = d.date ? `${d.date} ${d.time}` : '-';
+            return `
+                <div class="report-item" data-lat="${d.lat}" data-lon="${d.lon}">
+                    <span class="title"><i class="fas fa-fire" style="color:#d32f2f;"></i> ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}</span>
+                    <span class="sub">${timeStr}</span>
+                    <span class="confidence ${confClass}">${d.confidence.toUpperCase()} (${d.brightness.toFixed(1)}K)</span>
+                </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.report-item').forEach(el => {
+            el.addEventListener('click', function() {
+                const lat = parseFloat(this.dataset.lat);
+                const lon = parseFloat(this.dataset.lon);
+                map.setView([lat, lon], 14);
+            });
+        });
+    }
+
+    function updateMap(data) {
+        markersLayer.clearLayers();
+        data.forEach(d => {
+            const color = d.confidence === 'high' ? '#d32f2f' :
+                          d.confidence === 'nominal' ? '#f57c00' : '#388e3c';
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background:${color}; width:26px; height:26px; border-radius:50%; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; color:white; font-size:14px;">
+                            <i class="fas fa-fire"></i>
+                       </div>`,
+                iconSize: [26, 26],
+                iconAnchor: [13, 13],
+                popupAnchor: [0, -13]
+            });
+            const marker = L.marker([d.lat, d.lon], { icon }).addTo(markersLayer);
+            const popup = `
+                <b>${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}</b><br>
+                Intensitas: ${d.brightness.toFixed(1)}K<br>
+                Keyakinan: ${d.confidence.toUpperCase()}<br>
+                Waktu: ${d.date} ${d.time}
+            `;
+            marker.bindPopup(popup);
+        });
+    }
+
+    // ===================== GET AREA =====================
+    function getArea() {
+        const areaKey = document.getElementById('filterArea').value;
+        if (areaKey === 'custom') {
+            const bbox = document.getElementById('customBbox').value.trim();
+            if (!bbox) return AREAS.jakarta;
+            const parts = bbox.split(',').map(Number);
+            if (parts.length === 4 && parts.every(v => !isNaN(v))) return parts;
+            alert('Format bounding box salah. Gunakan: minLon,minLat,maxLon,maxLat');
+            return AREAS.jakarta;
+        }
+        return AREAS[areaKey] || AREAS.jakarta;
+    }
+
+    function getCurrentParams() {
+        return {
+            source: document.getElementById('filterSource').value,
+            area: document.getElementById('filterArea').value,
+            bbox: getArea(),
+            days: parseInt(document.getElementById('filterDays').value)
+        };
+    }
+
+    // ===================== MAIN LOAD =====================
+    async function loadData(forceRefresh = false) {
+        const container = document.getElementById('report-list');
+        const params = getCurrentParams();
+
+        const cache = loadCache();
+        const cacheAge = getCacheAge();
+
+        if (!forceRefresh && cache && cacheAge < 60 && cache.params) {
+            const sameParams = (
+                cache.params.source === params.source &&
+                cache.params.area === params.area &&
+                cache.params.days === params.days &&
+                cache.params.bbox.join(',') === params.bbox.join(',')
+            );
+            if (sameParams && cache.data && cache.data.length > 0) {
+                renderAll(cache.data, true);
+                container.innerHTML = '';
+                return;
+            }
+        }
+
+        container.innerHTML = '<div class="loading">⏳ Mengambil data dari satelit...</div>';
+        try {
+            const raw = await fetchHotspots(params.source, params.bbox, params.days);
+            saveCache(raw, params);
+            renderAll(raw, false);
+        } catch (error) {
+            console.error('Error:', error);
+            if (cache && cache.data && cache.data.length > 0) {
+                renderAll(cache.data, true);
+                container.innerHTML = `
+                    <div class="cache-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        ${error.message}<br>
+                        <small>Menampilkan data cache terakhir (${Math.round(cacheAge)} menit yang lalu).</small>
+                    </div>
+                `;
+                const list = document.getElementById('report-list');
+                list.insertBefore(container.firstChild, list.firstChild);
+            } else {
+                container.innerHTML = `<div class="loading">❌ Gagal: ${error.message}<br><br> 
+                    <button onclick="loadData(true)" style="padding:8px 20px;border:none;background:#b22222;color:white;border-radius:20px;cursor:pointer;">
+                        <i class="fas fa-sync-alt"></i> Coba Lagi
+                    </button>
+                </div>`;
+            }
+        }
+    }
+
+    // ===================== EVENT LISTENER =====================
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+
+        document.getElementById('filterArea').addEventListener('change', function() {
+            const customInput = document.getElementById('customBbox');
+            customInput.style.display = (this.value === 'custom') ? 'inline-block' : 'none';
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            loadData(true);
+        });
+
+        document.getElementById('zoomJakarta').addEventListener('click', () => map.setView([-6.2, 106.8], 11));
+        document.getElementById('zoomSurabaya').addEventListener('click', () => map.setView([-7.25, 112.75], 11));
+        document.getElementById('zoomMedan').addEventListener('click', () => map.setView([3.6, 98.7], 11));
+
+        loadData(false);
+        setInterval(() => loadData(false), 600000);
+    });
+</script>
+</body>
+</html>
