@@ -586,6 +586,30 @@
             font-size: 11px;
             font-weight: 700;
         }
+        .badge-desa {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--success-bg);
+            color: var(--success);
+            padding: 3px 11px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid rgba(23, 135, 74, 0.2);
+        }
+        .badge-desa.loading {
+            background: var(--surface-alt);
+            color: var(--ink-muted);
+            border: 1px dashed var(--border);
+            font-style: italic;
+            font-weight: 600;
+            animation: badgeDesaPulse 1.4s ease-in-out infinite;
+        }
+        @keyframes badgeDesaPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
         .badge-conf {
             display: inline-flex;
             align-items: center;
@@ -991,6 +1015,7 @@
 
             .badge-provinsi,
             .badge-kabkota,
+            .badge-desa,
             .badge-conf {
                 font-size: 10px;
                 padding: 2px 9px;
@@ -1135,7 +1160,7 @@
     <div class="main mode-info" id="mainEl">
         <div class="map-container">
             <div id="map"></div>
-            <div class="map-legend" id="mapLegend">
+            <div class="map-legend open" id="mapLegend">
                 <button type="button" class="map-legend-toggle" id="mapLegendToggle">
                     <span class="map-legend-title">🗺️ Legenda</span>
                     <span class="map-legend-caret">▾</span>
@@ -1148,6 +1173,7 @@
                     <div class="map-legend-section" style="margin-top:8px;">Sumber Titik Peta</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="background:#d6421f;"></span> BNPB Open Data</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="background:#b4720f;"></span> BNPB Data Kejadian</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#b45309;"></span> BNPB Geoportal</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="background:#1d5fbf;"></span> BMKG Hotspot</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed;"></span> NASA FIRMS (MODIS)</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="background:#0f766e;"></span> NASA FIRMS (VIIRS NOAA-20)</div>
@@ -1231,7 +1257,10 @@
                     zoom: 5,
                     zoomControl: true,
                     fadeAnimation: true,
-                    attributionControl: true
+                    attributionControl: true,
+                    // tolerance lebih besar = area ketukan/klik pada marker (canvas) lebih luas dari radius visualnya,
+                    // sehingga lebih mudah diketuk terutama di layar sentuh/mobile.
+                    renderer: L.canvas({ tolerance: 8 })
                 });
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
@@ -1469,12 +1498,13 @@
 
                     const color = getMarkerColor(ev.source);
                     const icon = L.circleMarker([lat, lng], {
-                        radius: 6,
+                        radius: 8,
                         fillColor: color,
                         color: '#fff',
-                        weight: 1.5,
+                        weight: 2,
                         opacity: 0.9,
-                        fillOpacity: 0.85
+                        fillOpacity: 0.85,
+                        bubblingMouseEvents: false
                     });
 
                     const title = ev.title || 'Kejadian';
@@ -1547,6 +1577,7 @@
                     const loc = ev.location || kab || '';
                     const catatan = buildCatatan ? buildCatatan(ev) : '';
                     const confBadge = confidenceBadgeHtml(ev.confidence);
+                    const desaBadge = buildDesaBadgeHtml(ev);
 
                     html += `
                             <div class="event-item">
@@ -1554,6 +1585,7 @@
                                 <div class="meta">
                                     <span class="badge-provinsi">${escHtml(prov)}</span>
                                     ${kab ? `<span class="badge-kabkota">${escHtml(kab)}</span>` : ''}
+                                    ${desaBadge}
                                     ${confBadge}
                                     <span class="source">${escHtml(src)}</span>
                                     <span class="time">🕒 ${escHtml(time)}</span>
@@ -1570,6 +1602,71 @@
                         </div>`;
                 }
                 sidebarContent.innerHTML = html;
+                setupListDesaLazyLoad();
+            }
+
+            // ---------- Badge desa/kelurahan pada Daftar Kejadian (lazy, hemat kuota API) ----------
+            // Memakai cache geocode yang sama dengan popup peta (geocodeCache), jadi titik yang
+            // sudah pernah dibuka popup-nya di peta tidak perlu ditembak ulang ke API di daftar ini.
+            function buildDesaBadgeHtml(ev) {
+                const lat = parseFloat(ev.lat);
+                const lng = parseFloat(ev.lng);
+                if (isNaN(lat) || isNaN(lng)) return '';
+                const key = geocodeCacheKey(lat, lng);
+                const cached = geocodeCache.get(key);
+                if (cached) {
+                    // Sudah pernah di-resolve sebelumnya (dari popup peta atau item list lain).
+                    return cached.desa ?
+                        `<span class="badge-desa" data-geo-key="${key}">🏡 ${escHtml(cached.desa)}</span>` : '';
+                }
+                // Belum pernah di-resolve: tampilkan placeholder, baru diambil saat item terlihat di layar (lazy).
+                return `<span class="badge-desa loading" data-pending="1" data-lat="${lat}" data-lng="${lng}" data-geo-key="${key}">⏳ Memuat desa…</span>`;
+            }
+
+            let listDesaObserver = null;
+
+            function setupListDesaLazyLoad() {
+                if (listDesaObserver) {
+                    listDesaObserver.disconnect();
+                    listDesaObserver = null;
+                }
+                const pendingBadges = sidebarContent.querySelectorAll('.badge-desa[data-pending="1"]');
+                if (pendingBadges.length === 0) return;
+
+                if (!('IntersectionObserver' in window)) {
+                    // Fallback aman jika browser tidak mendukung IntersectionObserver:
+                    // sembunyikan placeholder tanpa memanggil API sekaligus agar tidak membebani kuota.
+                    pendingBadges.forEach(el => { el.style.display = 'none'; });
+                    return;
+                }
+
+                listDesaObserver = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        if (!entry.isIntersecting) return;
+                        const el = entry.target;
+                        listDesaObserver.unobserve(el);
+                        const lat = parseFloat(el.dataset.lat);
+                        const lng = parseFloat(el.dataset.lng);
+                        if (isNaN(lat) || isNaN(lng)) { el.remove(); return; }
+                        reverseGeocode(lat, lng).then((geo) => {
+                            // Elemen mungkin sudah tidak ada lagi di DOM (tab/list berganti) - aman diabaikan.
+                            if (!el.isConnected) return;
+                            const desa = geo && geo.desa ? geo.desa : '';
+                            if (desa) {
+                                el.textContent = `🏡 ${desa}`;
+                                el.classList.remove('loading');
+                                el.removeAttribute('data-pending');
+                            } else {
+                                // Tidak ditemukan nama desa untuk titik ini - sembunyikan saja badge-nya.
+                                el.remove();
+                            }
+                        }).catch(() => {
+                            if (el.isConnected) el.remove();
+                        });
+                    });
+                }, { root: sidebarContent, rootMargin: '200px 0px', threshold: 0.01 });
+
+                pendingBadges.forEach(el => listDesaObserver.observe(el));
             }
 
             // ---------- renderRekap ----------
