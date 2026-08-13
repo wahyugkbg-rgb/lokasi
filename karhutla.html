@@ -1127,21 +1127,49 @@
             const filterResetBtn = document.getElementById('filterResetBtn');
             const filterInfo = document.getElementById('filterInfo');
 
-            // ---------- Leaflet map ----------
-            const map = L.map(mapElement, {
-                center: [-2.5, 118.0],
-                zoom: 5,
-                zoomControl: true,
-                fadeAnimation: true,
-                attributionControl: true
+            // ---------- Global safety net ----------
+            // Menangkap SEMUA error tak terduga (termasuk dari library eksternal / CDN gagal
+            // dimuat) supaya aplikasi tidak "diam membisu" atau menampilkan layar kosong,
+            // melainkan tetap mencatat di Log Aktivitas dan sebisa mungkin tetap berjalan.
+            window.addEventListener('error', function(e) {
+                try {
+                    logMessage(`❌ Error tak tertangani: ${e.message || e}` + (e.filename ? ` (${e.filename}:${e.lineno})` : ''), 'err');
+                } catch (_) { /* logMessage mungkin belum siap saat error sangat dini */ }
             });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
-                subdomains: 'abcd',
-                maxZoom: 19,
-                minZoom: 3
-            }).addTo(map);
-            const markerGroup = L.layerGroup().addTo(map);
+            window.addEventListener('unhandledrejection', function(e) {
+                try {
+                    const reason = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+                    logMessage(`❌ Promise gagal tanpa penanganan: ${reason}`, 'err');
+                } catch (_) {}
+            });
+
+            // ---------- Leaflet map ----------
+            // Dibungkus try/catch: jika CDN Leaflet gagal dimuat (mis. offline / diblokir),
+            // sisa aplikasi (Daftar Kejadian, Rekap Wilayah, Statistik) tetap berfungsi normal.
+            let map = null;
+            let markerGroup = null;
+            try {
+                if (typeof L === 'undefined') throw new Error('Library peta (Leaflet) tidak termuat. Cek koneksi internet.');
+                map = L.map(mapElement, {
+                    center: [-2.5, 118.0],
+                    zoom: 5,
+                    zoomControl: true,
+                    fadeAnimation: true,
+                    attributionControl: true
+                });
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
+                    subdomains: 'abcd',
+                    maxZoom: 19,
+                    minZoom: 3
+                }).addTo(map);
+                markerGroup = L.layerGroup().addTo(map);
+            } catch (e) {
+                console.error('Gagal inisialisasi peta:', e);
+                if (mapElement) {
+                    mapElement.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--ink-muted);font-size:13px;">🗺️ Peta tidak dapat dimuat.<br/>${e.message}<br/>Panel lain tetap berfungsi normal.</div>`;
+                }
+            }
 
             // ---------- state ----------
             let allEvents = [];
@@ -1340,6 +1368,7 @@
 
             // ---------- updateMap ----------
             function updateMap(events) {
+                if (!markerGroup) return; // peta gagal dimuat, lewati dengan aman
                 markerGroup.clearLayers();
                 if (!events || events.length === 0) return;
 
@@ -1810,9 +1839,8 @@
             const PROXIES = [
                 'https://api.allorigins.win/raw?url=',
                 'https://api.codetabs.com/v1/proxy?quest=',
-                'https://corsproxy.io/?',
-                'https://cors-anywhere.herokuapp.com/',
-                'https://yacdn.org/proxy/',
+                'https://corsproxy.io/?url=',
+                'https://thingproxy.freeboard.io/fetch/',
                 'https://corsproxy.org/?'
             ];
 
@@ -2451,7 +2479,7 @@
                         btn.classList.toggle('active', btn.dataset.view === view);
                     });
                 }
-                if (view === 'map') {
+                if (view === 'map' && map) {
                     setTimeout(function() { map.invalidateSize(); }, 220);
                 }
             }
@@ -2470,11 +2498,12 @@
                 });
             }
             window.addEventListener('resize', function() {
-                map.invalidateSize();
+                if (map) map.invalidateSize();
             });
 
             // ---------- init ----------
             function init() {
+              try {
                 document.querySelectorAll('.sidebar-tabs button').forEach(btn => {
                     btn.addEventListener('click', function() {
                         switchTab(this.dataset.tab);
@@ -2515,6 +2544,13 @@
                 });
                 setInterval(fetchAllData, 60000);
                 fetchAllData();
+              } catch (e) {
+                console.error('Gagal inisialisasi aplikasi:', e);
+                try { logMessage(`❌ Gagal inisialisasi aplikasi: ${e.message}`, 'err'); } catch (_) {}
+                if (sidebarContent) {
+                    sidebarContent.innerHTML = `<div style="padding:20px;color:var(--danger);">Terjadi error saat memulai aplikasi: ${e.message}. Coba refresh halaman.</div>`;
+                }
+              }
             }
 
             if (document.readyState === 'loading') {
