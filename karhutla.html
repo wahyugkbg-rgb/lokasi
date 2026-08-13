@@ -8,9 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
     <style>
-        /* ====== CSS TIDAK DIUBAH ====== */
+        /* ====== CSS ====== */
         :root {
             --bg-body-1: #fff9ef;
             --bg-body-2: #fef3e0;
@@ -37,8 +38,15 @@
             --shadow-lg: 0 14px 38px rgba(120, 72, 8, 0.16);
             --radius: 14px;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            height: 100%;
+        }
         body {
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(160deg, var(--bg-body-1) 0%, var(--bg-body-2) 45%, #fff 100%);
@@ -51,10 +59,17 @@
             animation: appFadeIn 0.5s ease both;
         }
         @keyframes appFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
-        ::selection { background: var(--gold-light); color: #241c10; }
+        ::selection {
+            background: var(--gold-light);
+            color: #241c10;
+        }
 
         .header {
             background: linear-gradient(120deg, #2a1608 0%, #4a2210 35%, #7a3510 70%, #a8480f 100%);
@@ -73,8 +88,13 @@
             z-index: 20;
         }
         @keyframes headerShimmer {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
         }
         .header h1 {
             font-family: 'Poppins', sans-serif;
@@ -92,10 +112,19 @@
             filter: drop-shadow(0 0 8px rgba(255, 160, 60, 0.8));
         }
         @keyframes flameFlicker {
-            0%, 100% { transform: scale(1) rotate(-2deg); }
-            25% { transform: scale(1.08) rotate(2deg); }
-            50% { transform: scale(0.96) rotate(-1deg); }
-            75% { transform: scale(1.05) rotate(1deg); }
+            0%,
+            100% {
+                transform: scale(1) rotate(-2deg);
+            }
+            25% {
+                transform: scale(1.08) rotate(2deg);
+            }
+            50% {
+                transform: scale(0.96) rotate(-1deg);
+            }
+            75% {
+                transform: scale(1.05) rotate(1deg);
+            }
         }
         .header h1 span.brand {
             background: linear-gradient(90deg, #ffd489, #ffb347);
@@ -131,10 +160,20 @@
             animation: pulse-dot 1.8s ease-in-out infinite;
         }
         @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.8); }
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
         }
-        .last-update { color: #f1dcbf; font-weight: 500; }
+        .last-update {
+            color: #f1dcbf;
+            font-weight: 500;
+        }
         .btn-refresh {
             background: linear-gradient(120deg, var(--fire-2), var(--gold));
             border: none;
@@ -153,14 +192,26 @@
             box-shadow: 0 8px 18px rgba(180, 80, 10, 0.45);
             filter: brightness(1.06);
         }
-        .btn-refresh:active:not(:disabled) { transform: translateY(0); }
-        .btn-refresh:disabled { opacity: 0.55; cursor: not-allowed; }
+        .btn-refresh:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .btn-refresh:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
         .btn-refresh.spinning::before {
             content: '⟳ ';
             display: inline-block;
             animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         .limit-control {
             display: flex;
@@ -172,7 +223,11 @@
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.18);
         }
-        .limit-label { color: #f1dcbf; font-weight: 600; font-size: 12px; }
+        .limit-label {
+            color: #f1dcbf;
+            font-weight: 600;
+            font-size: 12px;
+        }
         .limit-control input[type="number"] {
             width: 62px;
             background: rgba(255, 255, 255, 0.92);
@@ -184,7 +239,9 @@
             color: var(--ink);
             font-family: 'Inter', sans-serif;
         }
-        .limit-control input[type="number"]:disabled { opacity: 0.5; }
+        .limit-control input[type="number"]:disabled {
+            opacity: 0.5;
+        }
         .limit-control button#limitAllBtn {
             background: transparent;
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -197,7 +254,9 @@
             cursor: pointer;
             transition: all 0.18s ease;
         }
-        .limit-control button#limitAllBtn:hover { background: rgba(255, 255, 255, 0.15); }
+        .limit-control button#limitAllBtn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
         .limit-control button#limitAllBtn.active {
             background: linear-gradient(120deg, var(--fire-2), var(--gold));
             border-color: transparent;
@@ -239,7 +298,9 @@
             transition: transform 0.2s ease;
             flex-shrink: 0;
         }
-        .map-legend.open .map-legend-caret { transform: rotate(180deg); }
+        .map-legend.open .map-legend-caret {
+            transform: rotate(180deg);
+        }
         .map-legend-body {
             max-height: 0;
             overflow: hidden;
@@ -250,19 +311,36 @@
             max-height: 260px;
             padding: 0 12px 10px;
         }
-        .map-legend-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .map-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
         .map-legend-dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
             border: 1.5px solid #fff;
-            box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
             flex-shrink: 0;
         }
 
-        .main { display: flex; flex: 1; min-height: 0; }
-        .map-container { flex: 1; position: relative; background: var(--surface-alt); }
-        #map { width: 100%; height: 100%; background: var(--surface-alt); }
+        .main {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: var(--surface-alt);
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            background: var(--surface-alt);
+        }
         .map-container::after {
             content: '';
             position: absolute;
@@ -310,7 +388,10 @@
             border-bottom-color: var(--fire-2);
             background: var(--surface);
         }
-        .sidebar-tabs button:hover { background: #fff2da; color: var(--gold-deep); }
+        .sidebar-tabs button:hover {
+            background: #fff2da;
+            color: var(--gold-deep);
+        }
 
         .filter-bar {
             display: flex;
@@ -334,7 +415,10 @@
             font-family: 'Inter', sans-serif;
             cursor: pointer;
         }
-        .filter-bar select:focus { outline: none; border-color: var(--gold-light); }
+        .filter-bar select:focus {
+            outline: none;
+            border-color: var(--gold-light);
+        }
         .filter-bar button#filterResetBtn {
             flex-shrink: 0;
             background: var(--surface);
@@ -348,7 +432,11 @@
             font-size: 13px;
             transition: all 0.18s ease;
         }
-        .filter-bar button#filterResetBtn:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+        .filter-bar button#filterResetBtn:hover {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
         .filter-info {
             padding: 8px 16px 0;
             font-size: 11.5px;
@@ -356,20 +444,37 @@
             font-weight: 600;
             flex-shrink: 0;
         }
-        .filter-info.hidden { display: none; }
+        .filter-info.hidden {
+            display: none;
+        }
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
             padding: 14px 16px;
         }
-        .sidebar-content::-webkit-scrollbar { width: 6px; }
-        .sidebar-content::-webkit-scrollbar-track { background: var(--surface-alt); }
-        .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        .sidebar-content::-webkit-scrollbar-thumb:hover { background: var(--gold-light); }
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar-content::-webkit-scrollbar-track {
+            background: var(--surface-alt);
+        }
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: var(--gold-light);
+        }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         .event-item {
             background: var(--surface);
@@ -404,8 +509,14 @@
             gap: 8px;
             margin-top: 4px;
         }
-        .event-item .meta .loc { color: var(--info); font-weight: 600; }
-        .event-item .meta .time { color: #7c4fbf; font-weight: 500; }
+        .event-item .meta .loc {
+            color: var(--info);
+            font-weight: 600;
+        }
+        .event-item .meta .time {
+            color: #7c4fbf;
+            font-weight: 500;
+        }
         .event-item .meta .source {
             color: var(--success);
             font-weight: 600;
@@ -429,7 +540,9 @@
             margin-top: 8px;
             line-height: 1.5;
         }
-        .event-item .catatan b { color: var(--gold-deep); }
+        .event-item .catatan b {
+            color: var(--gold-deep);
+        }
         .badge-provinsi {
             display: inline-flex;
             align-items: center;
@@ -477,9 +590,20 @@
             color: var(--ink-muted);
             font-size: 11px;
         }
-        .empty-state { text-align: center; padding: 46px 20px; color: var(--ink-muted); }
-        .empty-state .emoji { font-size: 42px; display: block; margin-bottom: 14px; animation: flameFlicker 2.4s ease-in-out infinite; }
-        .empty-state p { font-weight: 500; }
+        .empty-state {
+            text-align: center;
+            padding: 46px 20px;
+            color: var(--ink-muted);
+        }
+        .empty-state .emoji {
+            font-size: 42px;
+            display: block;
+            margin-bottom: 14px;
+            animation: flameFlicker 2.4s ease-in-out infinite;
+        }
+        .empty-state p {
+            font-weight: 500;
+        }
 
         .rekap-card {
             background: var(--surface);
@@ -491,7 +615,10 @@
             animation: fadeInUp 0.4s ease both;
             transition: box-shadow 0.18s ease, transform 0.18s ease;
         }
-        .rekap-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .rekap-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
         .rekap-card .rekap-head {
             display: flex;
             justify-content: space-between;
@@ -528,9 +655,14 @@
             border-radius: 5px;
             background: linear-gradient(90deg, var(--gold-light), var(--fire-2));
             width: 0%;
-            transition: width 0.9s cubic-bezier(.22,.9,.3,1.4);
+            transition: width 0.9s cubic-bezier(.22, .9, .3, 1.4);
         }
-        .rekap-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .rekap-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
         .rekap-chip {
             background: var(--surface-alt);
             border: 1px solid var(--border-soft);
@@ -556,7 +688,11 @@
             margin: 10px 0 4px;
         }
 
-        .log-wrap { flex-shrink: 0; background: #221709; border-top: 2px solid var(--gold-light); }
+        .log-wrap {
+            flex-shrink: 0;
+            background: #221709;
+            border-top: 2px solid var(--gold-light);
+        }
         .log-toggle {
             display: none;
             width: 100%;
@@ -571,8 +707,12 @@
             padding: 7px 14px;
             cursor: pointer;
         }
-        .log-toggle-caret { transition: transform 0.2s ease; }
-        .log-wrap.open .log-toggle-caret { transform: rotate(180deg); }
+        .log-toggle-caret {
+            transition: transform 0.2s ease;
+        }
+        .log-wrap.open .log-toggle-caret {
+            transform: rotate(180deg);
+        }
         .log-container {
             background: #221709;
             max-height: 116px;
@@ -583,19 +723,106 @@
             color: #d8c9a8;
             flex-shrink: 0;
         }
-        .log-container::-webkit-scrollbar { width: 4px; }
-        .log-container::-webkit-scrollbar-thumb { background: #4a3210; border-radius: 10px; }
-        .log-entry { padding: 2px 0; border-bottom: 1px solid #33240e; animation: fadeInUp 0.25s ease both; }
-        .log-entry .log-time { color: #a08757; margin-right: 12px; }
-        .log-entry .log-ok { color: #6ee79a; }
-        .log-entry .log-err { color: #ff8a7a; }
-        .log-entry .log-info { color: #7cb8ff; }
+        .log-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .log-container::-webkit-scrollbar-thumb {
+            background: #4a3210;
+            border-radius: 10px;
+        }
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #33240e;
+            animation: fadeInUp 0.25s ease both;
+        }
+        .log-entry .log-time {
+            color: #a08757;
+            margin-right: 12px;
+        }
+        .log-entry .log-ok {
+            color: #6ee79a;
+        }
+        .log-entry .log-err {
+            color: #ff8a7a;
+        }
+        .log-entry .log-info {
+            color: #7cb8ff;
+        }
+
+        /* ===== STATS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stats-card {
+            background: var(--surface);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: var(--shadow-sm);
+            animation: fadeInUp 0.4s ease both;
+        }
+        .stats-card .stats-num {
+            font-family: 'Poppins', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--fire);
+            line-height: 1.2;
+        }
+        .stats-card .stats-label {
+            font-size: 12px;
+            color: var(--ink-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .stats-card .stats-sub {
+            font-size: 11.5px;
+            color: var(--ink-soft);
+            margin-top: 4px;
+        }
+        .stats-source-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0;
+        }
+        .stats-source-list li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12.5px;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border-soft);
+        }
+        .stats-source-list li:last-child {
+            border-bottom: none;
+        }
+        .stats-source-list .src-name {
+            color: var(--ink-soft);
+        }
+        .stats-source-list .src-count {
+            font-weight: 700;
+            color: var(--ink);
+        }
 
         @media (max-width: 820px) {
-            .sidebar { width: 100%; min-width: unset; max-width: 100%; border-left: none; border-top: 1px solid var(--border); }
-            .main { flex-direction: column-reverse; }
-            .header h1 { font-size: 17px; }
-            .header-right { font-size: 12px; }
+            .sidebar {
+                width: 100%;
+                min-width: unset;
+                max-width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+            .main {
+                flex-direction: column-reverse;
+            }
+            .header h1 {
+                font-size: 17px;
+            }
+            .header-right {
+                font-size: 12px;
+            }
 
             .view-switch {
                 display: flex;
@@ -632,31 +859,76 @@
                 box-shadow: var(--shadow-sm);
             }
 
-            .main.mode-info .map-container { display: none; }
-            .main.mode-info .sidebar { flex: 1; max-height: none; }
-            .main.mode-map .sidebar { display: none; }
-            .main.mode-map .map-container { flex: 1; }
+            .main.mode-info .map-container {
+                display: none;
+            }
+            .main.mode-info .sidebar {
+                flex: 1;
+                max-height: none;
+            }
+            .main.mode-map .sidebar {
+                display: none;
+            }
+            .main.mode-map .map-container {
+                flex: 1;
+            }
 
-            .map-legend { max-width: 200px; }
+            .map-legend {
+                max-width: 200px;
+            }
 
-            .log-toggle { display: flex; }
-            .log-container { max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
-            .log-wrap.open .log-container { max-height: 130px; padding: 7px 16px; overflow-y: auto; }
+            .log-toggle {
+                display: flex;
+            }
+            .log-container {
+                max-height: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                overflow: hidden;
+            }
+            .log-wrap.open .log-container {
+                max-height: 130px;
+                padding: 7px 16px;
+                overflow-y: auto;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .stats-card .stats-num {
+                font-size: 20px;
+            }
         }
         @media (max-width: 480px) {
-            .header { padding: 9px 12px; }
-            .header h1 { font-size: 15px; }
-            .header-right { gap: 8px; font-size: 11.5px; }
-            .btn-refresh { padding: 5px 13px; font-size: 11px; }
-            .sidebar-content { padding: 9px 10px; }
-            .event-item { padding: 11px 12px; }
+            .header {
+                padding: 9px 12px;
+            }
+            .header h1 {
+                font-size: 15px;
+            }
+            .header-right {
+                gap: 8px;
+                font-size: 11.5px;
+            }
+            .btn-refresh {
+                padding: 5px 13px;
+                font-size: 11px;
+            }
+            .sidebar-content {
+                padding: 9px 10px;
+            }
+            .event-item {
+                padding: 11px 12px;
+            }
 
             .sidebar-tabs {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: none;
             }
-            .sidebar-tabs::-webkit-scrollbar { display: none; }
+            .sidebar-tabs::-webkit-scrollbar {
+                display: none;
+            }
             .sidebar-tabs button {
                 flex: 0 0 auto;
                 white-space: nowrap;
@@ -664,26 +936,85 @@
                 font-size: 11.5px;
             }
 
-            .filter-bar { flex-wrap: wrap; padding: 8px 10px; }
-            .filter-bar select { flex: 1 1 100%; min-width: 0; font-size: 11.5px; }
-            .filter-bar button#filterResetBtn { flex: 0 0 auto; margin-left: auto; }
+            .filter-bar {
+                flex-wrap: wrap;
+                padding: 8px 10px;
+            }
+            .filter-bar select {
+                flex: 1 1 100%;
+                min-width: 0;
+                font-size: 11.5px;
+            }
+            .filter-bar button#filterResetBtn {
+                flex: 0 0 auto;
+                margin-left: auto;
+            }
 
-            .limit-control { padding: 3px 8px; gap: 4px; }
-            .limit-control input[type="number"] { width: 48px; font-size: 11.5px; }
-            .limit-label { font-size: 11px; }
+            .limit-control {
+                padding: 3px 8px;
+                gap: 4px;
+            }
+            .limit-control input[type="number"] {
+                width: 48px;
+                font-size: 11.5px;
+            }
+            .limit-label {
+                font-size: 11px;
+            }
 
-            .badge-provinsi, .badge-kabkota, .badge-conf { font-size: 10px; padding: 2px 9px; }
-            .event-item .title { font-size: 13.5px; }
+            .badge-provinsi,
+            .badge-kabkota,
+            .badge-conf {
+                font-size: 10px;
+                padding: 2px 9px;
+            }
+            .event-item .title {
+                font-size: 13.5px;
+            }
 
-            .view-switch { padding: 7px 10px; gap: 6px; }
-            .view-switch button { padding: 8px 6px; font-size: 11.5px; gap: 4px; }
-            .log-toggle { padding: 6px 12px; font-size: 11px; }
-            .map-legend { max-width: 178px; font-size: 11px; }
+            .view-switch {
+                padding: 7px 10px;
+                gap: 6px;
+            }
+            .view-switch button {
+                padding: 8px 6px;
+                font-size: 11.5px;
+                gap: 4px;
+            }
+            .log-toggle {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            .map-legend {
+                max-width: 178px;
+                font-size: 11px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .stats-card {
+                padding: 10px 12px;
+            }
+            .stats-card .stats-num {
+                font-size: 18px;
+            }
         }
         @media (max-width: 360px) {
-            .status-badge, .last-update { font-size: 10.5px; padding: 4px 10px; }
-            .header h1 { font-size: 13.5px; }
-            .header h1 .flame { font-size: 15px; }
+            .status-badge,
+            .last-update {
+                font-size: 10.5px;
+                padding: 4px 10px;
+            }
+            .header h1 {
+                font-size: 13.5px;
+            }
+            .header h1 .flame {
+                font-size: 15px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .leaflet-control-attribution {
@@ -763,7 +1094,7 @@
                 </select>
                 <button type="button" id="filterResetBtn" title="Hapus filter">✕</button>
             </div>
-            <div class="filter-info" id="filterInfo"></div>
+            <div class="filter-info hidden" id="filterInfo"></div>
             <div class="sidebar-content" id="sidebarContent"></div>
         </div>
     </div>
@@ -866,8 +1197,9 @@
 
             function setStatus(online, msg) {
                 const dot = document.querySelector('.status-dot');
-                if (online) { dot.style.background = '#4ade80'; statusText.textContent = msg || 'Aktif'; }
-                else { dot.style.background = '#f87171'; statusText.textContent = msg || 'Gangguan'; }
+                if (online) { dot.style.background = '#4ade80';
+                    statusText.textContent = msg || 'Aktif'; } else { dot.style.background = '#f87171';
+                    statusText.textContent = msg || 'Gangguan'; }
             }
 
             function updateTimestamp() {
@@ -918,6 +1250,7 @@
                 { name: 'Papua Barat', latMin: -4.50, latMax: 0.50, lngMin: 130.00, lngMax: 135.50 },
                 { name: 'Papua', latMin: -9.50, latMax: -1.50, lngMin: 134.00, lngMax: 141.50 }
             ];
+
             function estimateProvinceFromCoords(lat, lng) {
                 if (isNaN(lat) || isNaN(lng)) return '';
                 for (const p of PROVINCE_BBOX) {
@@ -932,6 +1265,7 @@
                 if (isNaN(d.getTime())) return null;
                 return d.toISOString();
             }
+
             function findDateField(rec) {
                 if (!rec || typeof rec !== 'object') return null;
                 const pattern = /tanggal|periode|tgl|date|waktu|created|updated/i;
@@ -942,6 +1276,7 @@
                 }
                 return null;
             }
+
             function sortByRecency(events) {
                 return [...events].sort((a, b) => {
                     const ta = a.timestamp ? new Date(a.timestamp).getTime() : -Infinity;
@@ -960,6 +1295,7 @@
                 }
                 return out;
             }
+
             function populateFilterOptions() {
                 const provSet = new Set();
                 allEvents.forEach(ev => { const p = String(ev.province || '').trim(); if (p) provSet.add(p); });
@@ -974,7 +1310,8 @@
                 allEvents.forEach(ev => {
                     const kb = String(ev.kabkota || '').trim();
                     if (!kb) return;
-                    if (filterProvinsi && String(ev.province || '').trim().toUpperCase() !== filterProvinsi.toUpperCase()) return;
+                    if (filterProvinsi && String(ev.province || '').trim().toUpperCase() !== filterProvinsi.toUpperCase())
+                        return;
                     kabSet.add(kb);
                 });
                 const kabList = [...kabSet].sort((a, b) => a.localeCompare(b));
@@ -984,6 +1321,7 @@
                 if (kabList.includes(prevKab)) filterKabkotaEl.value = prevKab;
                 else filterKabkota = '';
             }
+
             function updateFilterInfo(filtered) {
                 if (!filterProvinsi && !filterKabkota) {
                     filterInfo.classList.add('hidden');
@@ -996,11 +1334,246 @@
                     (filterProvinsi ? ` · ${filterProvinsi}` : '');
             }
 
-            // ---------- render functions ----------
+            // ===================================================================
+            //  MISSING FUNCTIONS: updateMap, renderList, renderRekap, renderStats
+            // ===================================================================
+
+            // ---------- updateMap ----------
+            function updateMap(events) {
+                markerGroup.clearLayers();
+                if (!events || events.length === 0) return;
+
+                // Icon style berdasarkan sumber
+                function getMarkerColor(source) {
+                    const s = source || '';
+                    if (s.includes('BNPB Open Data')) return '#d6421f';
+                    if (s.includes('BNPB Data Kejadian')) return '#b4720f';
+                    if (s.includes('BNPB Geoportal')) return '#b45309';
+                    if (s.includes('BMKG')) return '#1d5fbf';
+                    if (s.includes('NASA FIRMS (MODIS)')) return '#7c3aed';
+                    if (s.includes('NASA FIRMS (VIIRS NOAA-20)')) return '#0f766e';
+                    if (s.includes('NASA FIRMS (VIIRS Suomi NPP)')) return '#be185d';
+                    return '#8a806c';
+                }
+
+                let plotted = 0;
+                for (const ev of events) {
+                    const lat = parseFloat(ev.lat);
+                    const lng = parseFloat(ev.lng);
+                    if (isNaN(lat) || isNaN(lng)) continue;
+
+                    const color = getMarkerColor(ev.source);
+                    const icon = L.circleMarker([lat, lng], {
+                        radius: 6,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 1.5,
+                        opacity: 0.9,
+                        fillOpacity: 0.85
+                    });
+
+                    const title = ev.title || 'Kejadian';
+                    const prov = ev.province || 'Tidak diketahui';
+                    const kab = ev.kabkota || '';
+                    const src = ev.source || 'Sumber tidak diketahui';
+                    const desc = ev.description || '';
+                    const catatan = buildCatatan ? buildCatatan(ev) : '';
+
+                    let popupContent = `
+                            <strong>${escHtml(title)}</strong><br/>
+                            <span class="provinsi-popup">${escHtml(prov)}</span>
+                            ${kab ? `<br/>📍 ${escHtml(kab)}` : ''}
+                            <br/>📡 ${escHtml(src)}
+                            ${desc ? `<br/>📝 ${escHtml(desc)}` : ''}
+                            ${catatan ? `<span class="catatan-popup">${escHtml(catatan)}</span>` : ''}
+                        `;
+                    icon.bindPopup(popupContent);
+                    icon.addTo(markerGroup);
+                    plotted++;
+                }
+                if (plotted > 0) {
+                    logMessage(`🗺️ ${plotted} titik ditampilkan di peta.`, 'ok');
+                } else {
+                    logMessage('🗺️ Tidak ada titik dengan koordinat valid untuk ditampilkan di peta.', 'info');
+                }
+            }
+
+            // ---------- renderList ----------
+            function renderList(events) {
+                if (!events || events.length === 0) {
+                    sidebarContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="emoji">🔥</span>
+                                <p>Belum ada data kejadian yang tersedia.<br/>Tekan <strong>Refresh</strong> untuk memuat ulang.</p>
+                            </div>
+                        `;
+                    return;
+                }
+
+                let html = '';
+                const maxShow = 200;
+                const show = events.slice(0, maxShow);
+                for (const ev of show) {
+                    const title = ev.title || 'Kejadian';
+                    const prov = ev.province || 'Tidak diketahui';
+                    const kab = ev.kabkota || '';
+                    const src = ev.source || 'Sumber tidak diketahui';
+                    const desc = ev.description || '';
+                    const time = ev.timestamp ? new Date(ev.timestamp).toLocaleString('id-ID') : 'Tidak diketahui';
+                    const loc = ev.location || kab || '';
+                    const catatan = buildCatatan ? buildCatatan(ev) : '';
+
+                    html += `
+                            <div class="event-item">
+                                <div class="title">${escHtml(title)}</div>
+                                <div class="meta">
+                                    <span class="badge-provinsi">${escHtml(prov)}</span>
+                                    ${kab ? `<span class="badge-kabkota">${escHtml(kab)}</span>` : ''}
+                                    <span class="source">${escHtml(src)}</span>
+                                    <span class="time">🕒 ${escHtml(time)}</span>
+                                    ${loc ? `<span class="loc">📍 ${escHtml(loc)}</span>` : ''}
+                                </div>
+                                ${desc ? `<div class="desc">${escHtml(desc)}</div>` : ''}
+                                ${catatan ? `<div class="catatan">💡 ${escHtml(catatan)}</div>` : ''}
+                            </div>
+                        `;
+                }
+                if (events.length > maxShow) {
+                    html += `<div style="text-align:center;padding:12px;color:var(--ink-muted);font-weight:600;font-size:13px;">
+                            Menampilkan ${maxShow} dari ${events.length} kejadian. Gunakan filter atau ubah batas "Jumlah".
+                        </div>`;
+                }
+                sidebarContent.innerHTML = html;
+            }
+
+            // ---------- renderRekap ----------
+            function renderRekap(events) {
+                if (!events || events.length === 0) {
+                    sidebarContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="emoji">🗂️</span>
+                                <p>Belum ada data untuk direkap.</p>
+                            </div>
+                        `;
+                    return;
+                }
+
+                // Group by province
+                const provMap = new Map();
+                for (const ev of events) {
+                    const prov = ev.province || 'Tidak diketahui';
+                    if (!provMap.has(prov)) {
+                        provMap.set(prov, { count: 0, sources: new Set(), kabkotas: new Set(), items: [] });
+                    }
+                    const entry = provMap.get(prov);
+                    entry.count++;
+                    if (ev.source) entry.sources.add(ev.source);
+                    if (ev.kabkota) entry.kabkotas.add(ev.kabkota);
+                    entry.items.push(ev);
+                }
+
+                const sorted = [...provMap.entries()].sort((a, b) => b[1].count - a[1].count);
+                const maxCount = sorted.length > 0 ? sorted[0][1].count : 1;
+
+                let html = `<div class="rekap-label">📊 Rekap per Provinsi (${events.length} kejadian)</div>`;
+                for (const [prov, data] of sorted) {
+                    const pct = Math.round((data.count / maxCount) * 100);
+                    const srcList = [...data.sources].slice(0, 4).join(', ');
+                    const kabList = [...data.kabkotas].slice(0, 4).join(', ');
+                    html += `
+                            <div class="rekap-card">
+                                <div class="rekap-head">
+                                    <span class="rekap-prov">📍 ${escHtml(prov)}</span>
+                                    <span class="rekap-total">${data.count}</span>
+                                </div>
+                                <div class="rekap-bar-track">
+                                    <div class="rekap-bar-fill" style="width:${pct}%;"></div>
+                                </div>
+                                <div class="rekap-src-row">
+                                    <span>Sumber: ${srcList || '—'}${data.sources.size > 4 ? ` +${data.sources.size - 4} lain` : ''}</span>
+                                    <span>Kab/Kota: ${data.kabkotas.size}</span>
+                                </div>
+                                ${data.kabkotas.size > 0 ? `<div class="rekap-chips">${[...data.kabkotas].slice(0, 6).map(k => `<span class="rekap-chip">${escHtml(k)}</span>`).join('')}${data.kabkotas.size > 6 ? `<span class="rekap-chip">+${data.kabkotas.size - 6}</span>` : ''}</div>` : ''}
+                            </div>
+                        `;
+                }
+                sidebarContent.innerHTML = html;
+            }
+
+            // ---------- renderStats ----------
+            function renderStats(events) {
+                if (!events || events.length === 0) {
+                    sidebarContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="emoji">📊</span>
+                                <p>Belum ada data untuk statistik.</p>
+                            </div>
+                        `;
+                    return;
+                }
+
+                // Hitung statistik
+                const total = events.length;
+                const withCoords = events.filter(e => !isNaN(parseFloat(e.lat)) && !isNaN(parseFloat(e.lng))).length;
+                const withoutCoords = total - withCoords;
+
+                const sourceMap = new Map();
+                const provMap = new Map();
+                const dateSet = new Set();
+
+                for (const ev of events) {
+                    const src = ev.source || 'Tidak diketahui';
+                    sourceMap.set(src, (sourceMap.get(src) || 0) + 1);
+                    const prov = ev.province || 'Tidak diketahui';
+                    provMap.set(prov, (provMap.get(prov) || 0) + 1);
+                    if (ev.timestamp) {
+                        const d = new Date(ev.timestamp).toLocaleDateString('id-ID');
+                        if (d) dateSet.add(d);
+                    }
+                }
+
+                const sortedSrc = [...sourceMap.entries()].sort((a, b) => b[1] - a[1]);
+                const topProv = [...provMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+                const uniqueDates = dateSet.size;
+
+                let html = `
+                        <div class="stats-grid">
+                            <div class="stats-card">
+                                <div class="stats-num">${total}</div>
+                                <div class="stats-label">Total Kejadian</div>
+                                <div class="stats-sub">${uniqueDates > 0 ? `Terpantau pada ${uniqueDates} tanggal` : 'Berbagai tanggal'}</div>
+                            </div>
+                            <div class="stats-card">
+                                <div class="stats-num">${withCoords}</div>
+                                <div class="stats-label">Dengan Koordinat</div>
+                                <div class="stats-sub">${withoutCoords} tanpa koordinat</div>
+                            </div>
+                            <div class="stats-card" style="grid-column: 1 / -1;">
+                                <div class="stats-label">📡 Sumber Data</div>
+                                <ul class="stats-source-list">
+                                    ${sortedSrc.map(([src, count]) => `<li><span class="src-name">${escHtml(src)}</span><span class="src-count">${count}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="stats-card" style="grid-column: 1 / -1;">
+                                <div class="stats-label">🏛️ Provinsi Teratas</div>
+                                <ul class="stats-source-list">
+                                    ${topProv.map(([prov, count]) => `<li><span class="src-name">${escHtml(prov)}</span><span class="src-count">${count}</span></li>`).join('')}
+                                    ${provMap.size > 5 ? `<li style="color:var(--ink-muted);font-size:11.5px;padding:4px 0;">+ ${provMap.size - 5} provinsi lainnya</li>` : ''}
+                                </ul>
+                            </div>
+                        </div>
+                        <div style="font-size:11.5px;color:var(--ink-muted);padding-top:4px;border-top:1px solid var(--border-soft);">
+                            ⏱️ Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}
+                        </div>
+                    `;
+                sidebarContent.innerHTML = html;
+            }
+
+            // ---------- renderCurrentTab ----------
             function renderCurrentTab() {
                 const filtered = getFilteredEvents();
                 updateFilterInfo(filtered);
-                // Update peta dan panel dengan pengamanan error terpisah
                 try {
                     updateMap(filtered);
                 } catch (e) {
@@ -1014,30 +1587,71 @@
                 } catch (e) {
                     console.error('Error render panel:', e);
                     logMessage(`⚠️ Gagal merender panel "${currentTab}": ${e.message}`, 'err');
-                    // Tampilkan pesan error di sidebar supaya pengguna tahu
-                    sidebarContent.innerHTML = `<div style="padding:20px;color:var(--danger);">Terjadi error saat menampilkan data: ${escHtml(e.message)}. Silakan cek log.</div>`;
+                    sidebarContent.innerHTML =
+                        `<div style="padding:20px;color:var(--danger);">Terjadi error saat menampilkan data: ${escHtml(e.message)}. Silakan cek log.</div>`;
                 }
             }
 
-            // ---------- Gaya visual per sumber ----------
-            const SOURCE_STYLE = {
-                'BNPB Open Data': { color: '#d6421f', icon: '🔥', label: 'Karhutla (BNPB Open Data)' },
-                'BNPB Data Kejadian': { color: '#b4720f', icon: '🚨', label: 'Kejadian Bencana (BNPB)' },
-                'BNPB Geoportal': { color: '#b45309', icon: '📋', label: 'Kejadian Bencana (BNPB Geoportal)' },
-                'BMKG Hotspot': { color: '#1d5fbf', icon: '🛰️', label: 'Hotspot Satelit (BMKG)' },
-                'NASA FIRMS (MODIS)': { color: '#7c3aed', icon: '🛰️', label: 'Hotspot Satelit (NASA FIRMS MODIS)' },
-                'NASA FIRMS (VIIRS NOAA-20)': { color: '#0f766e', icon: '🛰️', label: 'Hotspot Satelit (NASA VIIRS NOAA-20)' },
-                'NASA FIRMS (VIIRS Suomi NPP)': { color: '#be185d', icon: '🛰️', label: 'Hotspot Satelit (NASA VIIRS Suomi NPP)' }
-            };
-            function getSourceStyle(source) {
-                const s = source || '';
-                for (const key in SOURCE_STYLE) {
-                    if (s.includes(key)) return SOURCE_STYLE[key];
-                }
-                return { color: '#8a806c', icon: '❔', label: s || 'Tidak diketahui' };
+            // ===================================================================
+            //  BUILD CATATAN (untuk popup & item)
+            // ===================================================================
+            function buildCatatan(ev) {
+                const src = ev.source || '';
+                if (src.includes('BNPB Open Data')) return 'Data resmi BNPB mencatat indikasi Kebakaran Hutan dan Lahan (Karhutla) di wilayah ini berdasarkan rekapitulasi bencana nasional.';
+                if (src.includes('BNPB Data Kejadian')) return 'Kejadian bencana tercatat langsung dalam basis data resmi Badan Nasional Penanggulangan Bencana (BNPB).';
+                if (src.includes('BNPB Geoportal')) return 'Kejadian bencana (termasuk kebakaran/karhutla) dari tabel data bencana BNPB Geoportal (gis.bnpb.go.id). Data bersifat agregat tanpa koordinat, sehingga tidak ditampilkan di peta.';
+                if (src.includes('BMKG')) return 'Titik panas (hotspot) terdeteksi oleh satelit pemantau BMKG. Hotspot menandakan area dengan suhu permukaan tinggi yang berpotensi sebagai titik kebakaran hutan/lahan aktif, bukan kepastian mutlak.';
+                if (src.includes('NASA FIRMS')) return 'Titik panas terdeteksi oleh satelit NASA FIRMS (MODIS/VIIRS) melalui sensor termal. Data bersifat near real-time dan digunakan secara global untuk pemantauan kebakaran.';
+                return 'Kejadian kebarakan terpantau dari sumber data terbuka.';
             }
 
-            // ---------- Pencarian field ----------
+            // ---------- Build dynamic description ----------
+            function isMeaningfulValue(v) {
+                if (v === null || v === undefined) return false;
+                const s = String(v).trim();
+                if (s === '' || s === '-' || s === '0' || s.toLowerCase() === 'null' || s.toLowerCase() === 'nan' || s
+                    .toLowerCase() === 'undefined') return false;
+                return true;
+            }
+
+            function prettifyKey(key) {
+                return String(key)
+                    .replace(/_/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .replace(/\b\w/g, c => c.toUpperCase());
+            }
+
+            function buildDynamicDescription(rec, excludeKeys = []) {
+                if (!rec || typeof rec !== 'object') return '';
+                const excl = new Set(['_id', 'id', 'latitude', 'longitude', 'lat', 'lon', 'lng']
+                    .concat(excludeKeys.map(k => k.toLowerCase())));
+                const parts = [];
+                for (const [k, v] of Object.entries(rec)) {
+                    if (excl.has(String(k).toLowerCase())) continue;
+                    if (!isMeaningfulValue(v)) continue;
+                    parts.push(`${prettifyKey(k)}: ${v}`);
+                }
+                return parts.join(' | ');
+            }
+
+            function buildDisasterBreakdown(rec, excludeKeys = []) {
+                if (!rec || typeof rec !== 'object') return [];
+                const excl = new Set(['no', 'id', '_id', 'latitude', 'longitude', 'lat', 'lng', 'lon']
+                    .concat(excludeKeys.map(k => k.toLowerCase())));
+                const items = [];
+                for (const [k, v] of Object.entries(rec)) {
+                    const kl = String(k).toLowerCase().trim();
+                    if (excl.has(kl)) continue;
+                    if (kl.includes('kode wilayah')) continue;
+                    const raw = String(v).trim();
+                    if (!/^-?\d+(\.\d+)?$/.test(raw)) continue;
+                    const num = Math.round(parseFloat(raw));
+                    items.push({ label: prettifyKey(k), value: num > 0 ? String(num) : '-', raw: num });
+                }
+                return items;
+            }
+
             function findFieldKey(rec, patterns) {
                 if (!rec) return undefined;
                 const keys = Object.keys(rec);
@@ -1057,6 +1671,7 @@
                 }
                 return undefined;
             }
+
             function findFieldValue(rec, patterns) {
                 const k = findFieldKey(rec, patterns);
                 if (k === undefined) return undefined;
@@ -1065,36 +1680,16 @@
                 return typeof v === 'string' ? v : String(v);
             }
 
-            function formatDisasterCount(v) {
-                const n = parseFloat(v);
-                if (isNaN(n) || n <= 0) return '-';
-                return String(Math.round(n));
-            }
-            const ID_SMALL_WORDS = new Set(['dan', 'atau', 'di', 'ke', 'dari', 'yang', 'untuk', 'pada']);
-            function titleCaseID(str) {
-                return String(str).toLowerCase().split(' ').map((w, i) => {
-                    if (!w) return w;
-                    if (i > 0 && ID_SMALL_WORDS.has(w)) return w;
-                    return w.charAt(0).toUpperCase() + w.slice(1);
-                }).join(' ');
-            }
-            function buildDisasterBreakdown(rec, excludeKeys = []) {
-                if (!rec || typeof rec !== 'object') return [];
-                const excl = new Set(['no', 'id', '_id', 'latitude', 'longitude', 'lat', 'lng', 'lon']
-                    .concat(excludeKeys.map(k => k.toLowerCase())));
-                const items = [];
-                for (const [k, v] of Object.entries(rec)) {
-                    const kl = String(k).toLowerCase().trim();
-                    if (excl.has(kl)) continue;
-                    if (kl.includes('kode wilayah')) continue;
-                    const raw = String(v).trim();
-                    if (!/^-?\d+(\.\d+)?$/.test(raw)) continue;
-                    const num = Math.round(parseFloat(raw));
-                    items.push({ label: titleCaseID(prettifyKey(k)), value: num > 0 ? String(num) : '-', raw: num });
-                }
-                return items;
+            // ---------- Switch tab ----------
+            function switchTab(tab) {
+                currentTab = tab;
+                document.querySelectorAll('.sidebar-tabs button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tab);
+                });
+                renderCurrentTab();
             }
 
+            // ---------- Wilayah API ----------
             const WILAYAH_API_BASE = 'https://ihsaninh.github.io/wilayah-indonesia';
             let regencyProvinceMap = {};
             let regencyMapReady = false;
@@ -1114,6 +1709,23 @@
                     .replace(/[^A-Z\s]/g, '')
                     .replace(/\s+/g, ' ')
                     .trim();
+            }
+
+            function resolveProvinceFromKabkota(kabkota) {
+                if (!kabkota || !regencyMapReady) return '';
+                const key = normalizeRegencyName(kabkota);
+                if (!key) return '';
+                if (regencyProvinceMap[key]) return regencyProvinceMap[key];
+                let best = '';
+                let bestLen = 0;
+                for (const k in regencyProvinceMap) {
+                    if (k.length < 4) continue;
+                    if (key.includes(k) && k.length > bestLen) { best = regencyProvinceMap[k];
+                        bestLen = k.length; } else if (k.includes(key) && key.length > bestLen) { best = regencyProvinceMap[
+                            k];
+                        bestLen = key.length; }
+                }
+                return best;
             }
 
             async function loadRegencyProvinceMap() {
@@ -1162,87 +1774,18 @@
                         if (totalRegency > 0) {
                             regencyProvinceMap = newMap;
                             regencyMapReady = true;
-                            logMessage(`✅ Basis data wilayah dimuat: ${provinceOk}/${provinces.length} provinsi, ${totalRegency} kab/kota.`, 'ok');
+                            logMessage(`✅ Basis data wilayah dimuat: ${provinceOk}/${provinces.length} provinsi, ${totalRegency} kab/kota.`,
+                                'ok');
                         } else {
                             throw new Error('Tidak ada data kab/kota yang berhasil dimuat');
                         }
                     } catch (e) {
                         regencyMapReady = false;
-                        logMessage(`⚠️ Gagal memuat API wilayah-indonesia (${e.message}). Provinsi akan memakai data sumber asli / estimasi koordinat sebagai cadangan.`, 'err');
+                        logMessage(`⚠️ Gagal memuat API wilayah-indonesia (${e.message}). Provinsi akan memakai data sumber asli / estimasi koordinat sebagai cadangan.`,
+                            'err');
                     }
                 })();
                 return regencyMapPromise;
-            }
-
-            function resolveProvinceFromKabkota(kabkota) {
-                if (!kabkota || !regencyMapReady) return '';
-                const key = normalizeRegencyName(kabkota);
-                if (!key) return '';
-                if (regencyProvinceMap[key]) return regencyProvinceMap[key];
-                let best = '';
-                let bestLen = 0;
-                for (const k in regencyProvinceMap) {
-                    if (k.length < 4) continue;
-                    if (key.includes(k) && k.length > bestLen) { best = regencyProvinceMap[k]; bestLen = k.length; }
-                    else if (k.includes(key) && key.length > bestLen) { best = regencyProvinceMap[k]; bestLen = key.length; }
-                }
-                return best;
-            }
-
-            function isMeaningfulValue(v) {
-                if (v === null || v === undefined) return false;
-                const s = String(v).trim();
-                if (s === '' || s === '-' || s === '0' || s.toLowerCase() === 'null' || s.toLowerCase() === 'nan' || s.toLowerCase() === 'undefined') return false;
-                return true;
-            }
-            function prettifyKey(key) {
-                return String(key)
-                    .replace(/_/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim()
-                    .replace(/\b\w/g, c => c.toUpperCase());
-            }
-            function buildDynamicDescription(rec, excludeKeys = []) {
-                if (!rec || typeof rec !== 'object') return '';
-                const excl = new Set(['_id', 'id', 'latitude', 'longitude', 'lat', 'lon', 'lng']
-                    .concat(excludeKeys.map(k => k.toLowerCase())));
-                const parts = [];
-                for (const [k, v] of Object.entries(rec)) {
-                    if (excl.has(String(k).toLowerCase())) continue;
-                    if (!isMeaningfulValue(v)) continue;
-                    parts.push(`${prettifyKey(k)}: ${v}`);
-                }
-                return parts.join(' | ');
-            }
-
-            function getConfidenceInfo(conf) {
-                if (conf === undefined || conf === null || conf === '' || conf === '-') return null;
-                const num = parseFloat(conf);
-                if (!isNaN(num) && String(conf).match(/^-?\d+(\.\d+)?$/)) {
-                    if (num >= 80) return { label: 'Tinggi', cls: 'high', desc: 'Tingkat keyakinan deteksi tinggi — kemungkinan besar merupakan titik api aktif.' };
-                    if (num >= 50) return { label: 'Sedang', cls: 'mid', desc: 'Tingkat keyakinan deteksi sedang — disarankan verifikasi lebih lanjut.' };
-                    return { label: 'Rendah', cls: 'low', desc: 'Tingkat keyakinan deteksi rendah — berpotensi bukan titik api aktif (mis. panas dari objek lain).' };
-                }
-                const str = String(conf).toLowerCase();
-                if (str.includes('high') || str === 'h') return { label: 'Tinggi', cls: 'high', desc: 'Tingkat keyakinan deteksi tinggi.' };
-                if (str.includes('nominal') || str.includes('medium') || str === 'n') return { label: 'Sedang', cls: 'mid', desc: 'Tingkat keyakinan deteksi sedang.' };
-                if (str.includes('low') || str === 'l') return { label: 'Rendah', cls: 'low', desc: 'Tingkat keyakinan deteksi rendah.' };
-                return { label: String(conf), cls: 'mid', desc: '' };
-            }
-            function confColor(cls) {
-                if (cls === 'high') return { bg: '#fde3e1', fg: '#a3211a', border: '#e8746b', icon: '🔴' };
-                if (cls === 'low') return { bg: '#eef1f4', fg: '#57636e', border: '#c3ccd4', icon: '⚪' };
-                return { bg: '#fff2cf', fg: '#8a5b06', border: '#e8b93f', icon: '🟡' };
-            }
-
-            function buildCatatan(ev) {
-                const src = ev.source || '';
-                if (src.includes('BNPB Open Data')) return 'Data resmi BNPB mencatat indikasi Kebakaran Hutan dan Lahan (Karhutla) di wilayah ini berdasarkan rekapitulasi bencana nasional.';
-                if (src.includes('BNPB Data Kejadian')) return 'Kejadian bencana tercatat langsung dalam basis data resmi Badan Nasional Penanggulangan Bencana (BNPB).';
-                if (src.includes('BNPB Geoportal')) return 'Kejadian bencana (termasuk kebakaran/karhutla) dari tabel data bencana BNPB Geoportal (gis.bnpb.go.id). Data bersifat agregat tanpa koordinat, sehingga tidak ditampilkan di peta.';
-                if (src.includes('BMKG')) return 'Titik panas (hotspot) terdeteksi oleh satelit pemantau BMKG. Hotspot menandakan area dengan suhu permukaan tinggi yang berpotensi sebagai titik kebakaran hutan/lahan aktif, bukan kepastian mutlak.';
-                if (src.includes('NASA FIRMS')) return 'Titik panas terdeteksi oleh satelit NASA FIRMS (MODIS/VIIRS) melalui sensor termal. Data bersifat near real-time dan digunakan secara global untuk pemantauan kebakaran.';
-                return 'Kejadian kebakaran terpantau dari sumber data terbuka.';
             }
 
             // ---------- Fetch dengan timeout & retry ----------
@@ -1264,7 +1807,6 @@
                 throw lastError;
             }
 
-            // Daftar proxy CORS yang lebih lengkap
             const PROXIES = [
                 'https://api.allorigins.win/raw?url=',
                 'https://api.codetabs.com/v1/proxy?quest=',
@@ -1278,12 +1820,14 @@
                 return new Promise((resolve, reject) => {
                     let remaining = promises.length;
                     const errors = [];
-                    if (remaining === 0) { reject(new Error('Tidak ada percobaan')); return; }
+                    if (remaining === 0) { reject(new Error('Tidak ada percobaan'));
+                        return; }
                     promises.forEach((p) => {
                         Promise.resolve(p).then(resolve).catch((err) => {
                             errors.push(err);
                             remaining--;
-                            if (remaining === 0) reject(new Error('Semua percobaan gagal: ' + errors.map(e => e.message).join('; ')));
+                            if (remaining === 0) reject(new Error('Semua percobaan gagal: ' + errors.map(e => e
+                                .message).join('; ')));
                         });
                     });
                 });
@@ -1301,7 +1845,7 @@
                 }
             }
 
-            // ---------- PARSER CSV sederhana ----------
+            // ---------- Parser CSV ----------
             function parseCSVLine(line) {
                 const result = [];
                 let current = '';
@@ -1321,7 +1865,7 @@
                 return result;
             }
 
-            // ---------- NASA FIRMS: Area CSV ----------
+            // ---------- NASA FIRMS ----------
             const FIRMS_API_KEY = 'e916bdfd16f5230b3e6cabc6c03f5870';
             const INDONESIA_BBOX = [95.0, -11.0, 141.0, 6.0];
 
@@ -1330,7 +1874,8 @@
                 try {
                     logMessage(`📡 NASA FIRMS (${label})...`, 'info');
                     const coordStr = INDONESIA_BBOX.join(',');
-                    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_API_KEY}/${sensor}/${coordStr}/1`;
+                    const url =
+                        `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_API_KEY}/${sensor}/${coordStr}/1`;
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'text/csv' } });
                     if (resp.ok) {
                         const text = await resp.text();
@@ -1343,7 +1888,8 @@
                             const timeIdx = header.findIndex(h => h.toLowerCase().includes('acq_time'));
                             const confIdx = header.findIndex(h => h.toLowerCase().includes('confidence'));
                             if (latIdx === -1 || lngIdx === -1) {
-                                logMessage(`⚠️ NASA FIRMS (${label}): format header tidak sesuai (${header.join(',')})`, 'err');
+                                logMessage(`⚠️ NASA FIRMS (${label}): format header tidak sesuai (${header.join(',')})`,
+                                    'err');
                                 return out;
                             }
                             let count = 0;
@@ -1369,11 +1915,13 @@
                                     province: prov,
                                     provinceEstimated: !!prov,
                                     kabkota: '',
-                                    lat: lat, lng: lng,
+                                    lat: lat,
+                                    lng: lng,
                                     timestamp: timestamp,
                                     source: `NASA FIRMS (${label})`,
                                     description: dynamicDesc || `Confidence: ${conf} | Waktu: ${time} | Tanggal: ${date}`,
-                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${conf}` + (dynamicDesc ? ` | ${dynamicDesc}` : ''),
+                                    detail: `Lat: ${lat} | Lng: ${lng} | Confidence: ${conf}` + (dynamicDesc ?
+                                        ` | ${dynamicDesc}` : ''),
                                     confidence: conf
                                 });
                                 count++;
@@ -1428,7 +1976,10 @@
                                 const kec = item.kecamatan || item.kec || '';
                                 const conf = item.confidence || item.conf || item.level || '';
                                 const tanggal = item.tanggal || item.date || item.waktu || item.time || '';
-                                const dynamicDesc = buildDynamicDescription(item, ['provinsi', 'propinsi', 'kabupaten', 'kecamatan', 'latitude', 'longitude', 'lat', 'lon', 'tanggal', 'date', 'waktu', 'time', 'confidence']);
+                                const dynamicDesc = buildDynamicDescription(item, ['provinsi', 'propinsi', 'kabupaten',
+                                    'kecamatan', 'latitude', 'longitude', 'lat', 'lon', 'tanggal', 'date', 'waktu',
+                                    'time', 'confidence'
+                                ]);
                                 out.push({
                                     uid: `bmkg:${lat}|${lng}|${kec}|${kab}|${tanggal}|${conf}|${out.length}`,
                                     title: `Hotspot (BMKG) - ${kec || kab || 'Titik Panas'}`,
@@ -1436,11 +1987,13 @@
                                     province: prov,
                                     provinceEstimated: !provOfficial && !!prov,
                                     kabkota: kab,
-                                    lat: lat, lng: lng,
+                                    lat: lat,
+                                    lng: lng,
                                     timestamp: toISOOrNull(tanggal),
                                     source: 'BMKG Hotspot',
                                     description: dynamicDesc || `Confidence: ${conf || '-'} | Kecamatan: ${kec || '-'}`,
-                                    detail: `Kabupaten: ${kab || ''} | Provinsi: ${provOfficial || ''} | Confidence: ${conf || '-'}` + (dynamicDesc ? ` | ${dynamicDesc}` : ''),
+                                    detail: `Kabupaten: ${kab || ''} | Provinsi: ${provOfficial || ''} | Confidence: ${conf || '-'}` +
+                                        (dynamicDesc ? ` | ${dynamicDesc}` : ''),
                                     confidence: conf
                                 });
                             }
@@ -1462,7 +2015,8 @@
                 const out = [];
                 try {
                     logMessage('📡 BNPB Karhutla...', 'info');
-                    const url = `https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=353da3aa-9ada-42aa-a5c2-e653d52ffd9c&limit=${getApiLimit()}`;
+                    const url =
+                        `https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=353da3aa-9ada-42aa-a5c2-e653d52ffd9c&limit=${getApiLimit()}`;
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
@@ -1474,7 +2028,8 @@
                             const kabKey = findFieldKey(records[0] || {}, ['kabupaten', 'kota']);
                             const provKey = findFieldKey(records[0] || {}, ['provinsi']);
                             const fireKeySample = findFieldKey(records[0] || {}, ['kebakaran']);
-                            logMessage(`🔎 Kolom "kebakaran" terdeteksi sebagai: ${fireKeySample || '(TIDAK DITEMUKAN)'}`, fireKeySample ? 'info' : 'err');
+                            logMessage(`🔎 Kolom "kebakaran" terdeteksi sebagai: ${fireKeySample || '(TIDAK DITEMUKAN)'}`,
+                                fireKeySample ? 'info' : 'err');
                             for (const rec of records) {
                                 const kab = findFieldValue(rec, ['kabupaten', 'kota']) || '';
                                 const prov = findFieldValue(rec, ['provinsi']) || '';
@@ -1485,16 +2040,19 @@
                                 const fireNum = parseFloat(fire);
                                 if (!isNaN(fireNum) && fireNum > 0) {
                                     const breakdown = buildDisasterBreakdown(rec, [kabKey, provKey].filter(Boolean));
-                                    const descText = breakdown.filter(b => b.raw > 0).map(b => `${b.label}: ${b.value}`).join(' | ')
-                                        || `Kebakaran Hutan dan Lahan: ${formatDisasterCount(fire)}`;
+                                    const descText = breakdown.filter(b => b.raw > 0).map(b =>
+                                        `${b.label}: ${b.value}`).join(' | ') ||
+                                        `Kebakaran Hutan dan Lahan: ${formatDisasterCount(fire)}`;
                                     const realDate = findDateField(rec);
                                     out.push({
-                                        uid: 'karhutla:' + (rec['_id'] !== undefined ? rec['_id'] : `${kab}|${prov}|${descText}|${out.length}`),
+                                        uid: 'karhutla:' + (rec['_id'] !== undefined ? rec['_id'] :
+                                            `${kab}|${prov}|${descText}|${out.length}`),
                                         title: 'Karhutla (Hutan dan Lahan)',
                                         location: kab || '',
                                         province: prov,
                                         kabkota: kab,
-                                        lat: lat, lng: lng,
+                                        lat: lat,
+                                        lng: lng,
                                         timestamp: realDate,
                                         source: 'BNPB Open Data',
                                         description: descText,
@@ -1503,24 +2061,30 @@
                                     });
                                 }
                             }
-                            logMessage(`✅ BNPB Karhutla: ${records.length} record diperiksa, ${out.length} kejadian nyata.`, 'ok');
+                            logMessage(`✅ BNPB Karhutla: ${records.length} record diperiksa, ${out.length} kejadian nyata.`,
+                                'ok');
                             if (out.length === 0 && records.length > 0) {
-                                logMessage(`⚠️ Filter "kebakaran > 0" tidak menghasilkan apa pun (kolom: ${fireKeySample || 'tidak ditemukan'}). Menampilkan seluruh ${records.length} baris resource ini tanpa filter sebagai cadangan.`, 'err');
+                                logMessage(
+                                    `⚠️ Filter "kebakaran > 0" tidak menghasilkan apa pun (kolom: ${fireKeySample || 'tidak ditemukan'}). Menampilkan seluruh ${records.length} baris resource ini tanpa filter sebagai cadangan.`,
+                                    'err');
                                 for (const rec of records) {
                                     const kab = findFieldValue(rec, ['kabupaten', 'kota']) || '';
                                     const prov = findFieldValue(rec, ['provinsi']) || '';
                                     const lat = findFieldValue(rec, ['latitude', 'lintang']);
                                     const lng = findFieldValue(rec, ['longitude', 'bujur']);
                                     const breakdown = buildDisasterBreakdown(rec, [kabKey, provKey].filter(Boolean));
-                                    const descText = breakdown.map(b => `${b.label}: ${b.value}`).join(' | ') || 'Data BNPB (tanpa rincian angka)';
+                                    const descText = breakdown.map(b => `${b.label}: ${b.value}`).join(' | ') ||
+                                        'Data BNPB (tanpa rincian angka)';
                                     const realDate = findDateField(rec);
                                     out.push({
-                                        uid: 'karhutla-fallback:' + (rec['_id'] !== undefined ? rec['_id'] : `${kab}|${prov}|${out.length}`),
+                                        uid: 'karhutla-fallback:' + (rec['_id'] !== undefined ? rec['_id'] :
+                                            `${kab}|${prov}|${out.length}`),
                                         title: 'Data BNPB (Rekap Wilayah)',
                                         location: kab || '',
                                         province: prov,
                                         kabkota: kab,
-                                        lat: lat, lng: lng,
+                                        lat: lat,
+                                        lng: lng,
                                         timestamp: realDate,
                                         source: 'BNPB Open Data',
                                         description: descText,
@@ -1541,12 +2105,19 @@
                 return out;
             }
 
+            function formatDisasterCount(v) {
+                const n = parseFloat(v);
+                if (isNaN(n) || n <= 0) return '-';
+                return String(Math.round(n));
+            }
+
             // ---------- BNPB Data Kejadian ----------
             async function fetchBNPBKejadian() {
                 const out = [];
                 try {
                     logMessage('📡 BNPB Data Kejadian...', 'info');
-                    const url = `https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=3c76f12f-30e6-465c-b7e7-81b13a5f2950&limit=${getApiLimit()}`;
+                    const url =
+                        `https://data.bnpb.go.id/ne/api/3/action/datastore_search?resource_id=3c76f12f-30e6-465c-b7e7-81b13a5f2950&limit=${getApiLimit()}`;
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
                     if (resp.ok) {
                         const json = await resp.json();
@@ -1563,41 +2134,51 @@
                             const lngKey = findFieldKey(records[0] || {}, ['longitude', 'bujur']);
                             for (const rec of records) {
                                 let jenis = jenisKey ? String(rec[jenisKey] || '') : '';
-                                if (!jenis.toLowerCase().includes('kebakaran') && !jenis.toLowerCase().includes('karhutla')) {
+                                if (!jenis.toLowerCase().includes('kebakaran') && !jenis.toLowerCase().includes(
+                                    'karhutla')) {
                                     for (const k in rec) {
                                         const v = String(rec[k] || '');
-                                        if (v.toLowerCase().includes('kebakaran') || v.toLowerCase().includes('karhutla')) {
+                                        if (v.toLowerCase().includes('kebakaran') || v.toLowerCase().includes(
+                                            'karhutla')) {
                                             jenis = v;
                                             break;
                                         }
                                     }
                                 }
-                                if (jenis.toLowerCase().includes('kebakaran') || jenis.toLowerCase().includes('karhutla')) {
+                                if (jenis.toLowerCase().includes('kebakaran') || jenis.toLowerCase().includes(
+                                    'karhutla')) {
                                     const kab = findFieldValue(rec, ['kabupaten', 'kota']) || '';
                                     const prov = findFieldValue(rec, ['provinsi']) || '';
                                     const lat = latKey ? rec[latKey] : findFieldValue(rec, ['latitude', 'lintang']);
                                     const lng = lngKey ? rec[lngKey] : findFieldValue(rec, ['longitude', 'bujur']);
                                     const tgl = tglKey ? rec[tglKey] : undefined;
                                     if (lat && lng) {
-                                        const dynamicDesc = buildDynamicDescription(rec, [kabKey, provKey, jenisKey, tglKey].filter(Boolean));
+                                        const dynamicDesc = buildDynamicDescription(rec, [kabKey, provKey, jenisKey,
+                                            tglKey
+                                        ].filter(Boolean));
                                         out.push({
-                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${tgl || ''}|${out.length}`),
+                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] :
+                                                `${jenis}|${kab}|${tgl || ''}|${out.length}`),
                                             title: `Kejadian: ${jenis}`,
                                             location: kab || '',
                                             province: prov,
                                             kabkota: kab,
-                                            lat: lat, lng: lng,
+                                            lat: lat,
+                                            lng: lng,
                                             timestamp: toISOOrNull(tgl),
                                             source: 'BNPB Data Kejadian',
                                             description: dynamicDesc || `Keterangan: ${rec['Keterangan'] || ''}`,
-                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${tgl || ''}` + (dynamicDesc ? ` | ${dynamicDesc}` : '')
+                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${tgl || ''}` +
+                                                (dynamicDesc ? ` | ${dynamicDesc}` : '')
                                         });
                                     }
                                 }
                             }
-                            logMessage(`✅ BNPB Kejadian: ${records.length} record diperiksa, ${out.length} kejadian karhutla.`, 'ok');
+                            logMessage(`✅ BNPB Kejadian: ${records.length} record diperiksa, ${out.length} kejadian karhutla.`,
+                                'ok');
                             if (out.length === 0 && records.length > 0) {
-                                logMessage('⚠️ Tidak ada kejadian kebakaran yang cocok di BNPB Data Kejadian. Sumber lain tetap tampil.', 'err');
+                                logMessage('⚠️ Tidak ada kejadian kebakaran yang cocok di BNPB Data Kejadian. Sumber lain tetap tampil.',
+                                    'err');
                             }
                         } else {
                             logMessage('⚠️ BNPB Kejadian: tidak ada records.', 'err');
@@ -1611,8 +2192,9 @@
                 return out;
             }
 
-            // ---------- BNPB Geoportal (diadopsi dari referensi) ----------
+            // ---------- BNPB Geoportal ----------
             const GEOPORTAL_TARGET = 'https://gis.bnpb.go.id/databencana/tabel/pencarian.php';
+
             async function fetchBNPBGeoportal() {
                 const out = [];
                 try {
@@ -1628,21 +2210,19 @@
                         logMessage('⚠️ BNPB Geoportal: tidak ada <table> ditemukan.', 'err');
                         return out;
                     }
-                    const rows = Array.from(table.querySelectorAll('tr')).filter(tr => tr.querySelectorAll('td').length >= 10);
+                    const rows = Array.from(table.querySelectorAll('tr')).filter(tr => tr.querySelectorAll('td').length >=
+                        10);
                     let count = 0;
                     for (const tr of rows) {
                         const tds = Array.from(tr.querySelectorAll('td')).map(td => td.innerText.trim());
                         if (tds.length < 10) continue;
-                        // Struktur: [0]No, [1]Kode, [2]ID Kab, [3]Tanggal, [4]Kejadian, [5]Lokasi,
-                        // [6]Kabupaten, [7]Provinsi, [8]Kronologi&Dok, [9]Penyebab, [10]MD, [11]Hilang,
-                        // [12]Terluka, [13]RmhRusak, [14]RmhTerendam, [15]Fasum
                         const jenis = tds[4] || '';
-                        if (!jenis.toLowerCase().includes('kebakaran') && !jenis.toLowerCase().includes('karhutla')) continue;
+                        if (!jenis.toLowerCase().includes('kebakaran') && !jenis.toLowerCase().includes('karhutla'))
+                            continue;
                         const tanggal = normalizeDateStr(tds[3]);
                         const prov = tds[7] || '';
                         const kab = tds[6] || '';
                         const lokasi = tds[5] || '';
-                        const dokUrl = tr.querySelector('a[href]')?.href || '';
                         const md = parseInt(tds[10] || '0', 10) || 0;
                         const hilang = parseInt(tds[11] || '0', 10) || 0;
                         const terluka = parseInt(tds[12] || '0', 10) || 0;
@@ -1665,7 +2245,8 @@
                             location: lokasi || kab || '',
                             province: prov,
                             kabkota: kab,
-                            lat: undefined, lng: undefined,
+                            lat: undefined,
+                            lng: undefined,
                             timestamp: toISOOrNull(tanggal),
                             source: 'BNPB Geoportal',
                             description,
@@ -1689,16 +2270,21 @@
             async function fetchGeoportalHTML() {
                 const methods = [
                     { name: 'Direct', fn: () => fetchWithTimeout(GEOPORTAL_TARGET, {}, 6000, 0) },
-                    { name: 'AllOrigins raw', fn: () => fetchWithTimeout('https://api.allorigins.win/raw?url=' + encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
+                    { name: 'AllOrigins raw', fn: () => fetchWithTimeout('https://api.allorigins.win/raw?url=' +
+                            encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
                     { name: 'AllOrigins get', fn: async () => {
-                        const res = await fetchWithTimeout('https://api.allorigins.win/get?url=' + encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0);
-                        if (!res.ok) throw new Error('HTTP ' + res.status);
-                        const j = await res.json();
-                        return new Response(j.contents, { status: 200, headers: {'Content-Type': 'text/html'} });
-                    }},
-                    { name: 'corsproxy.io', fn: () => fetchWithTimeout('https://corsproxy.io/?url=' + encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
-                    { name: 'codetabs', fn: () => fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
-                    { name: 'r.jina.ai', fn: () => fetchWithTimeout('https://r.jina.ai/' + GEOPORTAL_TARGET, {}, 8000, 0) }
+                            const res = await fetchWithTimeout('https://api.allorigins.win/get?url=' +
+                                encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0);
+                            if (!res.ok) throw new Error('HTTP ' + res.status);
+                            const j = await res.json();
+                            return new Response(j.contents, { status: 200, headers: { 'Content-Type': 'text/html' } });
+                        } },
+                    { name: 'corsproxy.io', fn: () => fetchWithTimeout('https://corsproxy.io/?url=' +
+                            encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
+                    { name: 'codetabs', fn: () => fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest=' +
+                            encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
+                    { name: 'r.jina.ai', fn: () => fetchWithTimeout('https://r.jina.ai/' + GEOPORTAL_TARGET, {}, 8000,
+                            0) }
                 ];
 
                 for (const m of methods) {
@@ -1706,7 +2292,8 @@
                         logMessage(`🔌 BNPB Geoportal: mencoba ${m.name}...`, 'info');
                         const res = await m.fn();
                         const text = await res.text();
-                        if (text && text.length > 500 && (text.includes('KEBAKARAN') || text.includes('kebakaran') || text.includes('BANJIR') || text.includes('banjir'))) {
+                        if (text && text.length > 500 && (text.includes('KEBAKARAN') || text.includes('kebakaran') || text
+                                .includes('BANJIR') || text.includes('banjir'))) {
                             logMessage(`✅ BNPB Geoportal: berhasil via ${m.name}.`, 'ok');
                             return text;
                         }
@@ -1718,7 +2305,7 @@
                 return null;
             }
 
-            // ---------- FETCH DATA (semua sumber paralel) ----------
+            // ---------- FETCH DATA ----------
             async function fetchAllData() {
                 if (isRefreshing) return;
                 isRefreshing = true;
@@ -1738,18 +2325,23 @@
                         withHardTimeout(loadRegencyProvinceMap(), 30000, 'Basis Data Wilayah')
                     ]);
 
-                    const SOURCE_LABELS = ['BNPB Karhutla', 'BMKG Hotspot', 'NASA FIRMS MODIS', 'NASA FIRMS VIIRS', 'BNPB Data Kejadian', 'BNPB Geoportal', 'Basis Data Wilayah'];
+                    const SOURCE_LABELS = ['BNPB Karhutla', 'BMKG Hotspot', 'NASA FIRMS MODIS', 'NASA FIRMS VIIRS',
+                        'BNPB Data Kejadian', 'BNPB Geoportal', 'Basis Data Wilayah'
+                    ];
                     let combined = [];
                     try {
                         const perSourceCount = [];
                         results.forEach((r, idx) => {
                             const n = (r.status === 'fulfilled' && Array.isArray(r.value)) ? r.value.length : 0;
                             perSourceCount.push(`${SOURCE_LABELS[idx]}=${n}`);
-                            if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
-                            if (r.status === 'rejected') logMessage(`❌ ${SOURCE_LABELS[idx]} promise ditolak: ${r.reason}`, 'err');
+                            if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r
+                            .value);
+                            if (r.status === 'rejected') logMessage(`❌ ${SOURCE_LABELS[idx]} promise ditolak: ${r.reason}`,
+                                'err');
                         });
                         logMessage(`📊 Kontribusi per sumber ke gabungan: ${perSourceCount.join(', ')}`, 'info');
-                        logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`, 'info');
+                        logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`,
+                            'info');
                     } catch (e) {
                         console.error(e);
                         logMessage(`⚠️ Gagal menggabungkan hasil sumber (${e.message}).`, 'err');
@@ -1766,9 +2358,11 @@
                                     }
                                 }
                             }
-                            logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.', 'ok');
+                            logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.',
+                                'ok');
                         } catch (e) {
-                            logMessage(`⚠️ Koreksi provinsi dilewati (error: ${e.message}), data kejadian tetap ditampilkan.`, 'err');
+                            logMessage(`⚠️ Koreksi provinsi dilewati (error: ${e.message}), data kejadian tetap ditampilkan.`,
+                                'err');
                         }
                     }
 
@@ -1780,7 +2374,8 @@
                         for (const ev of combined) {
                             if (!ev.province) ev.province = '';
                             if (!ev.kabkota) ev.kabkota = '';
-                            const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
+                            const key = ev.uid ||
+                                `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
                             if (!seen.has(key)) {
                                 seen.add(key);
                                 unique.push(ev);
@@ -1788,10 +2383,12 @@
                                 dupCount++;
                             }
                         }
-                        logMessage(`🧹 Setelah deduplikasi: ${unique.length} unik (${dupCount} dianggap duplikat & dibuang).`, 'info');
+                        logMessage(`🧹 Setelah deduplikasi: ${unique.length} unik (${dupCount} dianggap duplikat & dibuang).`,
+                            'info');
                     } catch (e) {
                         console.error(e);
-                        logMessage(`⚠️ Deduplikasi gagal (${e.message}), memakai data mentah tanpa dedup sebagai cadangan.`, 'err');
+                        logMessage(`⚠️ Deduplikasi gagal (${e.message}), memakai data mentah tanpa dedup sebagai cadangan.`,
+                            'err');
                         unique = combined;
                     }
 
@@ -1811,7 +2408,9 @@
                         logMessage('⚠️ Tidak ada data dari semua sumber.', 'err');
                         setStatus(false, 'Tidak ada data');
                     } else {
-                        logMessage(`✅ Total ${unique.length} kejadian terkumpul, ditampilkan ${finalEvents.length}${limitIsAll ? ' (ALL)' : ' (batas: ' + currentLimit + ')'}.`, 'ok');
+                        logMessage(
+                            `✅ Total ${unique.length} kejadian terkumpul, ditampilkan ${finalEvents.length}${limitIsAll ? ' (ALL)' : ' (batas: ' + currentLimit + ')'}.`,
+                            'ok');
                         setStatus(true, `${finalEvents.length} kejadian`);
                     }
 
@@ -1843,6 +2442,7 @@
             // ---------- view switch (mobile) ----------
             const mainEl = document.getElementById('mainEl');
             const viewSwitch = document.getElementById('viewSwitch');
+
             function switchMobileView(view) {
                 mainEl.classList.toggle('mode-map', view === 'map');
                 mainEl.classList.toggle('mode-info', view === 'info');
