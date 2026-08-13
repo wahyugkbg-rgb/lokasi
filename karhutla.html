@@ -1039,7 +1039,15 @@
                 font-size: 11px;
             }
             .log-container {
+                max-height: 0 !important;
+                padding-top: 0;
+                padding-bottom: 0;
+                overflow: hidden;
+            }
+            .log-wrap.open .log-container {
                 max-height: 90px !important;
+                padding: 6px 14px;
+                overflow-y: auto;
             }
             .map-legend {
                 max-width: 160px;
