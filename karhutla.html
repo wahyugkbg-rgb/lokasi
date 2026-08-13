@@ -995,18 +995,27 @@
                     (filterKabkota ? ` · ${filterKabkota}` : '') +
                     (filterProvinsi ? ` · ${filterProvinsi}` : '');
             }
+
+            // ---------- render functions ----------
             function renderCurrentTab() {
                 const filtered = getFilteredEvents();
                 updateFilterInfo(filtered);
-                try { updateMap(filtered); } catch (e) { console.error(e); logMessage(`⚠️ Peta gagal dimuat: ${e.message}`, 'err'); }
+                // Update peta dan panel dengan pengamanan error terpisah
+                try {
+                    updateMap(filtered);
+                } catch (e) {
+                    console.error('Error updateMap:', e);
+                    logMessage(`⚠️ Gagal memperbarui peta: ${e.message}`, 'err');
+                }
                 try {
                     if (currentTab === 'list') renderList(filtered);
                     else if (currentTab === 'rekap') renderRekap(filtered);
                     else renderStats(filtered);
                 } catch (e) {
-                    console.error(e);
-                    logMessage(`⚠️ Gagal menampilkan panel "${currentTab}": ${e.message}`, 'err');
-                    sidebarContent.innerHTML = `<div style="padding:20px;color:var(--danger);">Terjadi error saat menampilkan data: ${escHtml(e.message)}. Coba refresh, atau lihat konsol browser.</div>`;
+                    console.error('Error render panel:', e);
+                    logMessage(`⚠️ Gagal merender panel "${currentTab}": ${e.message}`, 'err');
+                    // Tampilkan pesan error di sidebar supaya pengguna tahu
+                    sidebarContent.innerHTML = `<div style="padding:20px;color:var(--danger);">Terjadi error saat menampilkan data: ${escHtml(e.message)}. Silakan cek log.</div>`;
                 }
             }
 
@@ -1656,7 +1665,7 @@
                             location: lokasi || kab || '',
                             province: prov,
                             kabkota: kab,
-                            lat: undefined, lng: undefined, // tanpa koordinat
+                            lat: undefined, lng: undefined,
                             timestamp: toISOOrNull(tanggal),
                             source: 'BNPB Geoportal',
                             description,
@@ -1678,7 +1687,6 @@
             }
 
             async function fetchGeoportalHTML() {
-                // Coba beberapa metode koneksi secara berurutan
                 const methods = [
                     { name: 'Direct', fn: () => fetchWithTimeout(GEOPORTAL_TARGET, {}, 6000, 0) },
                     { name: 'AllOrigins raw', fn: () => fetchWithTimeout('https://api.allorigins.win/raw?url=' + encodeURIComponent(GEOPORTAL_TARGET), {}, 8000, 0) },
@@ -1819,7 +1827,7 @@
                         renderCurrentTab();
                     } catch (e) {
                         console.error(e);
-                        logMessage(`⚠️ Gagal menampilkan data: ${e.message}`, 'err');
+                        logMessage(`⚠️ Gagal merender data: ${e.message}`, 'err');
                     }
                 } catch (e) {
                     logMessage(`❌ Gagal memproses data: ${e.message}. Lihat konsol browser untuk detail.`, 'err');
