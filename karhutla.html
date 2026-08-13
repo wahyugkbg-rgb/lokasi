@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
+    <!-- Marker clustering: mengelompokkan ribuan titik agar peta tetap ringan & responsif
+         di HP low-end (mis. Oppo A9), sekaligus memperbesar area sentuh tiap titik. -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js">
+    </script>
     <style>
         /* ====== CSS ====== */
         :root {
@@ -204,6 +210,30 @@
             display: inline-block;
             animation: spin 0.8s linear infinite;
         }
+        .btn-fullscreen {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff3e0;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12.5px;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.18s ease, transform 0.18s ease;
+        }
+        .btn-fullscreen:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn-fullscreen.active {
+            background: linear-gradient(120deg, var(--fire-2), var(--gold));
+            border-color: transparent;
+            color: #fff;
+        }
         @keyframes spin {
             from {
                 transform: rotate(0deg);
@@ -360,6 +390,34 @@
             pointer-events: none;
             box-shadow: inset 0 0 40px rgba(120, 72, 8, 0.08);
             z-index: 5;
+        }
+        /* Ikon kelompok titik (cluster) diserasikan dengan tema oranye/emas aplikasi,
+           dan dibesarkan sedikit supaya lebih mudah disentuh di layar kecil. */
+        .marker-cluster-karhutla {
+            background: transparent;
+        }
+        .marker-cluster-karhutla div {
+            width: 40px;
+            height: 40px;
+            margin-left: 0;
+            margin-top: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            font-size: 13px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--fire-2), var(--gold));
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(120, 72, 8, 0.35);
+        }
+        .marker-cluster-karhutla.cluster-lg div {
+            width: 48px;
+            height: 48px;
+            font-size: 14px;
+            background: linear-gradient(135deg, var(--fire), var(--fire-2));
         }
 
         .view-switch {
@@ -857,7 +915,7 @@
             color: var(--ink);
         }
 
-        @media (max-width: 820px) {
+        @media (max-width: 820px), (max-height: 520px) and (max-width: 1024px) {
             .sidebar {
                 width: 100%;
                 min-width: unset;
@@ -950,6 +1008,50 @@
                 font-size: 20px;
             }
         }
+        /* Layar pendek (HP posisi landscape/mendatar): tinggi terbatas (~360-420px),
+           header & toggle dipadatkan supaya konten peta/daftar tetap kebagian ruang. */
+        @media (max-height: 420px) {
+            .header {
+                padding: 6px 16px;
+            }
+            .header h1 {
+                font-size: 14px;
+            }
+            .header h1 .flame {
+                font-size: 15px;
+            }
+            .header-right {
+                gap: 8px;
+                font-size: 11px;
+            }
+            .last-update {
+                display: none;
+            }
+            .status-badge {
+                padding: 3px 10px;
+            }
+            .view-switch {
+                padding: 5px 10px;
+                gap: 6px;
+            }
+            .view-switch button {
+                padding: 6px 8px;
+                font-size: 11px;
+            }
+            .log-container {
+                max-height: 90px !important;
+            }
+            .map-legend {
+                max-width: 160px;
+                font-size: 10.5px;
+            }
+            .btn-fullscreen .fs-label {
+                display: none;
+            }
+            .btn-fullscreen {
+                padding: 6px 9px;
+            }
+        }
         @media (max-width: 480px) {
             .header {
                 padding: 9px 12px;
@@ -964,6 +1066,13 @@
             .btn-refresh {
                 padding: 5px 13px;
                 font-size: 11px;
+            }
+            .btn-fullscreen {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+            .btn-fullscreen .fs-label {
+                display: none;
             }
             .sidebar-content {
                 padding: 9px 10px;
@@ -1149,6 +1258,7 @@
                 <button type="button" id="limitAllBtn" class="active" title="Tampilkan semua data yang tersedia (tanpa batas)">ALL</button>
             </div>
             <button class="btn-refresh" id="refreshBtn">⟳ Refresh</button>
+            <button class="btn-fullscreen" id="fullscreenBtn" title="Tampilan layar penuh">⛶ <span class="fs-label">Layar Penuh</span></button>
         </div>
     </header>
 
@@ -1260,7 +1370,7 @@
                     attributionControl: true,
                     // tolerance lebih besar = area ketukan/klik pada marker (canvas) lebih luas dari radius visualnya,
                     // sehingga lebih mudah diketuk terutama di layar sentuh/mobile.
-                    renderer: L.canvas({ tolerance: 8 })
+                    renderer: L.canvas({ tolerance: 10 })
                 });
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
@@ -1268,7 +1378,40 @@
                     maxZoom: 20,
                     minZoom: 3
                 }).addTo(map);
-                markerGroup = L.layerGroup().addTo(map);
+
+                // Ribuan titik yang ditampilkan mentah (tanpa pengelompokan) adalah penyebab
+                // utama browser "not responding" di HP low-end saat berpindah ke Peta Penuh:
+                // ratusan/ribuan lingkaran canvas + popup dibuat & digambar sekaligus di thread utama.
+                // Marker Cluster mengelompokkan titik yang berdekatan menjadi satu ikon (dibangun
+                // bertahap lewat chunkedLoading agar tidak memblokir layar), sehingga jumlah objek
+                // yang benar-benar digambar di satu waktu jauh lebih sedikit. Saat di-zoom/tap,
+                // klaster otomatis "pecah" (spiderfy) sehingga titik yang berhimpitan tetap mudah
+                // disentuh satu per satu tanpa harus tepat mengenai titik terkecil.
+                if (typeof L.markerClusterGroup === 'function') {
+                    markerGroup = L.markerClusterGroup({
+                        chunkedLoading: true,
+                        chunkInterval: 60,
+                        chunkDelay: 15,
+                        maxClusterRadius: 55,
+                        spiderfyOnMaxZoom: true,
+                        showCoverageOnHover: false,
+                        disableClusteringAtZoom: 15,
+                        iconCreateFunction: function(cluster) {
+                            const count = cluster.getChildCount();
+                            const sizeClass = count >= 50 ? ' cluster-lg' : '';
+                            return L.divIcon({
+                                html: `<div>${count}</div>`,
+                                className: 'marker-cluster marker-cluster-karhutla' + sizeClass,
+                                iconSize: L.point(40, 40)
+                            });
+                        }
+                    }).addTo(map);
+                } else {
+                    // Cadangan aman: bila plugin cluster gagal dimuat (mis. CDN diblokir),
+                    // tetap tampilkan titik seperti sebelumnya alih-alih peta kosong/error.
+                    logMessage('⚠️ Plugin pengelompokan titik (marker cluster) tidak termuat, memakai mode titik biasa.', 'info');
+                    markerGroup = L.layerGroup().addTo(map);
+                }
             } catch (e) {
                 console.error('Gagal inisialisasi peta:', e);
                 if (mapElement) {
@@ -1491,6 +1634,7 @@
                 }
 
                 let plotted = 0;
+                const markersToAdd = [];
                 for (const ev of events) {
                     const lat = parseFloat(ev.lat);
                     const lng = parseFloat(ev.lng);
@@ -1498,7 +1642,9 @@
 
                     const color = getMarkerColor(ev.source);
                     const icon = L.circleMarker([lat, lng], {
-                        radius: 8,
+                        // radius & tolerance diperbesar sedikit supaya area sentuh (terutama di HP)
+                        // lebih longgar dan tidak harus mengenai titik pusat secara presisi.
+                        radius: 9,
                         fillColor: color,
                         color: '#fff',
                         weight: 2,
@@ -1542,11 +1688,22 @@
                         });
                     });
 
-                    icon.addTo(markerGroup);
+                    markersToAdd.push(icon);
                     plotted++;
                 }
+
+                // Ditambahkan sekaligus lewat addLayers (bukan satu-satu) agar plugin cluster
+                // dapat memproses secara bertahap (chunked, via requestAnimationFrame) dan tidak
+                // membekukan layar saat jumlah titik besar (mode "ALL") — inilah perbaikan utama
+                // untuk masalah browser hang/not-responding di HP saat membuka Peta Penuh.
+                if (typeof markerGroup.addLayers === 'function') {
+                    markerGroup.addLayers(markersToAdd);
+                } else {
+                    markersToAdd.forEach(m => m.addTo(markerGroup));
+                }
+
                 if (plotted > 0) {
-                    logMessage(`🗺️ ${plotted} titik ditampilkan di peta.`, 'ok');
+                    logMessage(`🗺️ ${plotted} titik ditampilkan di peta (dikelompokkan otomatis agar ringan).`, 'ok');
                 } else {
                     logMessage('🗺️ Tidak ada titik dengan koordinat valid untuk ditampilkan di peta.', 'info');
                 }
@@ -2752,15 +2909,30 @@
             const viewSwitch = document.getElementById('viewSwitch');
 
             function switchMobileView(view) {
-                mainEl.classList.toggle('mode-map', view === 'map');
-                mainEl.classList.toggle('mode-info', view === 'info');
-                if (viewSwitch) {
-                    viewSwitch.querySelectorAll('button').forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.view === view);
-                    });
-                }
-                if (view === 'map' && map) {
-                    setTimeout(function() { map.invalidateSize(); }, 220);
+                try {
+                    mainEl.classList.toggle('mode-map', view === 'map');
+                    mainEl.classList.toggle('mode-info', view === 'info');
+                    if (viewSwitch) {
+                        viewSwitch.querySelectorAll('button').forEach(btn => {
+                            btn.classList.toggle('active', btn.dataset.view === view);
+                        });
+                    }
+                    if (view === 'map' && map) {
+                        // invalidateSize dipanggil setelah transisi CSS selesai supaya Leaflet
+                        // menghitung ulang dimensi peta yang sebelumnya tersembunyi (display:none),
+                        // lalu peta digambar ulang. Tanpa ini peta bisa tampil kosong/abu-abu.
+                        setTimeout(function() {
+                            try {
+                                map.invalidateSize();
+                            } catch (e) {
+                                console.error('Gagal invalidateSize peta:', e);
+                                logMessage(`⚠️ Gagal menyegarkan tampilan peta: ${e.message}`, 'err');
+                            }
+                        }, 250);
+                    }
+                } catch (e) {
+                    console.error('Gagal berpindah tampilan:', e);
+                    try { logMessage(`⚠️ Gagal berpindah ke tampilan "${view}": ${e.message}`, 'err'); } catch (_) {}
                 }
             }
             if (viewSwitch) {
@@ -2777,8 +2949,65 @@
                     logWrap.classList.toggle('open');
                 });
             }
+
+            // ---------- Fullscreen toggle ----------
+            // Membungkus semua akses Fullscreen API dengan pengecekan & try/catch,
+            // karena beberapa browser/webview di HP tidak mendukungnya secara penuh —
+            // jika gagal, aplikasi tetap berjalan normal (tidak fullscreen) tanpa error.
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            function isFullscreenActive() {
+                return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+                    document.mozFullScreenElement || document.msFullscreenElement);
+            }
+            function updateFullscreenBtn() {
+                if (!fullscreenBtn) return;
+                const active = isFullscreenActive();
+                fullscreenBtn.classList.toggle('active', active);
+                fullscreenBtn.innerHTML = active ?
+                    '⛶ <span class="fs-label">Keluar Layar Penuh</span>' :
+                    '⛶ <span class="fs-label">Layar Penuh</span>';
+                fullscreenBtn.title = active ? 'Keluar dari layar penuh' : 'Tampilan layar penuh';
+            }
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', function() {
+                    try {
+                        if (!isFullscreenActive()) {
+                            const el = document.documentElement;
+                            const req = el.requestFullscreen || el.webkitRequestFullscreen ||
+                                el.mozRequestFullScreen || el.msRequestFullscreen;
+                            if (req) {
+                                const result = req.call(el);
+                                if (result && typeof result.catch === 'function') {
+                                    result.catch(e => logMessage(`⚠️ Gagal masuk layar penuh: ${e.message}`, 'err'));
+                                }
+                            } else {
+                                logMessage('⚠️ Browser ini tidak mendukung mode layar penuh.', 'info');
+                            }
+                        } else {
+                            const exit = document.exitFullscreen || document.webkitExitFullscreen ||
+                                document.mozCancelFullScreen || document.msExitFullscreen;
+                            if (exit) exit.call(document);
+                        }
+                    } catch (e) {
+                        console.error('Gagal mengubah mode layar penuh:', e);
+                        logMessage(`⚠️ Gagal mengubah mode layar penuh: ${e.message}`, 'err');
+                    }
+                });
+                ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+                .forEach(evt => document.addEventListener(evt, function() {
+                    updateFullscreenBtn();
+                    if (map) setTimeout(function() { map.invalidateSize(); }, 200);
+                }));
+                updateFullscreenBtn();
+            }
+
             window.addEventListener('resize', function() {
                 if (map) map.invalidateSize();
+            });
+            // Perubahan orientasi (portrait <-> landscape) di HP: beri sedikit jeda
+            // agar dimensi viewport selesai berubah sebelum peta dihitung ulang.
+            window.addEventListener('orientationchange', function() {
+                setTimeout(function() { if (map) map.invalidateSize(); }, 300);
             });
 
             // ---------- init ----------
