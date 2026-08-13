@@ -264,6 +264,10 @@
         }
 
         .map-legend {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 20;
             background: rgba(255, 251, 240, 0.97);
             border: 1px solid var(--border);
             border-radius: 10px;
@@ -273,6 +277,14 @@
             line-height: 1.7;
             max-width: 220px;
             overflow: hidden;
+        }
+        .map-legend-section {
+            font-weight: 700;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: var(--ink-muted);
+            padding-top: 2px;
         }
         .map-legend-toggle {
             display: flex;
@@ -308,7 +320,7 @@
             padding: 0 12px;
         }
         .map-legend.open .map-legend-body {
-            max-height: 260px;
+            max-height: 340px;
             padding: 0 12px 10px;
         }
         .map-legend-item {
@@ -582,6 +594,21 @@
             border-radius: 20px;
             font-size: 11px;
             font-weight: 700;
+        }
+        .badge-conf-low {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(23, 135, 74, 0.25);
+        }
+        .badge-conf-nominal {
+            background: #fff4de;
+            color: var(--gold-deep);
+            border: 1px solid rgba(180, 114, 15, 0.3);
+        }
+        .badge-conf-high {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(194, 38, 38, 0.3);
         }
         .badge-unknown {
             display: inline-flex;
@@ -1041,6 +1068,36 @@
             font-weight: 700;
             color: var(--gold-deep);
         }
+        .leaflet-popup-content .popup-title {
+            font-weight: 800;
+            font-size: 14px;
+            color: var(--fire);
+            font-family: 'Poppins', sans-serif;
+            margin-bottom: 4px;
+        }
+        .leaflet-popup-content .popup-conf {
+            margin-bottom: 6px;
+        }
+        .leaflet-popup-content .popup-loc-block {
+            background: var(--surface-alt);
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            padding: 6px 9px;
+            margin-bottom: 6px;
+        }
+        .leaflet-popup-content .popup-loc-row {
+            font-size: 12px;
+            padding: 1.5px 0;
+        }
+        .leaflet-popup-content .popup-loc-row b {
+            color: var(--ink-soft);
+            font-weight: 700;
+        }
+        .leaflet-popup-content .popup-loc-full {
+            color: var(--ink-muted);
+            font-size: 11px;
+            font-style: italic;
+        }
         .leaflet-popup-content .catatan-popup {
             display: block;
             margin-top: 6px;
@@ -1078,6 +1135,25 @@
     <div class="main mode-info" id="mainEl">
         <div class="map-container">
             <div id="map"></div>
+            <div class="map-legend" id="mapLegend">
+                <button type="button" class="map-legend-toggle" id="mapLegendToggle">
+                    <span class="map-legend-title">🗺️ Legenda</span>
+                    <span class="map-legend-caret">▾</span>
+                </button>
+                <div class="map-legend-body">
+                    <div class="map-legend-section">Tingkat Keyakinan (Confidence)</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#17874a;"></span> Low (rendah)</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#b4720f;"></span> Nominal (sedang)</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#c22626;"></span> High (tinggi)</div>
+                    <div class="map-legend-section" style="margin-top:8px;">Sumber Titik Peta</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#d6421f;"></span> BNPB Open Data</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#b4720f;"></span> BNPB Data Kejadian</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#1d5fbf;"></span> BMKG Hotspot</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed;"></span> NASA FIRMS (MODIS)</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#0f766e;"></span> NASA FIRMS (VIIRS NOAA-20)</div>
+                    <div class="map-legend-item"><span class="map-legend-dot" style="background:#be185d;"></span> NASA FIRMS (VIIRS Suomi NPP)</div>
+                </div>
+            </div>
         </div>
         <div class="sidebar">
             <div class="sidebar-tabs">
@@ -1160,7 +1236,7 @@
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
                     subdomains: 'abcd',
-                    maxZoom: 19,
+                    maxZoom: 20,
                     minZoom: 3
                 }).addTo(map);
                 markerGroup = L.layerGroup().addTo(map);
@@ -1402,21 +1478,40 @@
                     });
 
                     const title = ev.title || 'Kejadian';
-                    const prov = ev.province || 'Tidak diketahui';
-                    const kab = ev.kabkota || '';
                     const src = ev.source || 'Sumber tidak diketahui';
                     const desc = ev.description || '';
                     const catatan = buildCatatan ? buildCatatan(ev) : '';
+                    const confBadge = confidenceBadgeHtml(ev.confidence);
 
-                    let popupContent = `
-                            <strong>${escHtml(title)}</strong><br/>
-                            <span class="provinsi-popup">${escHtml(prov)}</span>
-                            ${kab ? `<br/>📍 ${escHtml(kab)}` : ''}
-                            <br/>📡 ${escHtml(src)}
-                            ${desc ? `<br/>📝 ${escHtml(desc)}` : ''}
-                            ${catatan ? `<span class="catatan-popup">${escHtml(catatan)}</span>` : ''}
+                    function buildPopupHtml(geo) {
+                        return `
+                            <div class="popup-title">${escHtml(title)}</div>
+                            ${confBadge ? `<div class="popup-conf">${confBadge}</div>` : ''}
+                            <div class="popup-loc-block">${buildLocationRows(ev, geo)}</div>
+                            <div class="popup-loc-row">📡 <b>Sumber:</b> ${escHtml(src)}</div>
+                            ${desc ? `<div class="popup-loc-row">📝 <b>Keterangan:</b> ${escHtml(desc)}</div>` : ''}
+                            ${catatan ? `<div class="catatan-popup">💡 ${escHtml(catatan)}</div>` : ''}
                         `;
-                    icon.bindPopup(popupContent);
+                    }
+
+                    icon.bindPopup(buildPopupHtml(null), { maxWidth: 300 });
+
+                    // Saat popup dibuka: perbesar peta hingga level jalan/desa,
+                    // lalu ambil detail alamat (provinsi/kab-kota/desa/jalan) via reverse geocoding.
+                    let geoFetchedFor = null;
+                    icon.on('popupopen', function() {
+                        if (map) map.flyTo([lat, lng], Math.max(map.getZoom(), 16), { duration: 0.6 });
+                        const key = geocodeCacheKey(lat, lng);
+                        if (geoFetchedFor === key) return;
+                        geoFetchedFor = key;
+                        reverseGeocode(lat, lng).then((geo) => {
+                            const popup = icon.getPopup();
+                            if (popup && popup.isOpen()) {
+                                popup.setContent(buildPopupHtml(geo));
+                            }
+                        });
+                    });
+
                     icon.addTo(markerGroup);
                     plotted++;
                 }
@@ -1451,6 +1546,7 @@
                     const time = ev.timestamp ? new Date(ev.timestamp).toLocaleString('id-ID') : 'Tidak diketahui';
                     const loc = ev.location || kab || '';
                     const catatan = buildCatatan ? buildCatatan(ev) : '';
+                    const confBadge = confidenceBadgeHtml(ev.confidence);
 
                     html += `
                             <div class="event-item">
@@ -1458,6 +1554,7 @@
                                 <div class="meta">
                                     <span class="badge-provinsi">${escHtml(prov)}</span>
                                     ${kab ? `<span class="badge-kabkota">${escHtml(kab)}</span>` : ''}
+                                    ${confBadge}
                                     <span class="source">${escHtml(src)}</span>
                                     <span class="time">🕒 ${escHtml(time)}</span>
                                     ${loc ? `<span class="loc">📍 ${escHtml(loc)}</span>` : ''}
@@ -1634,7 +1731,93 @@
                 return 'Kejadian kebarakan terpantau dari sumber data terbuka.';
             }
 
-            // ---------- Build dynamic description ----------
+            // ---------- Tingkat keyakinan (confidence): Low / Nominal / High ----------
+            // NASA FIRMS VIIRS memakai kode huruf (l/n/h), MODIS & BMKG memakai angka 0-100.
+            function getConfidenceLevel(conf) {
+                if (conf === undefined || conf === null || conf === '') return null;
+                const s = String(conf).trim().toLowerCase();
+                if (s === 'l' || s === 'low' || s === 'rendah') return 'low';
+                if (s === 'n' || s === 'nominal' || s === 'sedang' || s === 'medium') return 'nominal';
+                if (s === 'h' || s === 'high' || s === 'tinggi') return 'high';
+                const num = parseFloat(s);
+                if (!isNaN(num)) {
+                    if (num < 30) return 'low';
+                    if (num < 80) return 'nominal';
+                    return 'high';
+                }
+                return null;
+            }
+
+            function confidenceLabel(level) {
+                if (level === 'low') return 'Low';
+                if (level === 'nominal') return 'Nominal';
+                if (level === 'high') return 'High';
+                return '';
+            }
+
+            function confidenceBadgeHtml(conf) {
+                const level = getConfidenceLevel(conf);
+                if (!level) return '';
+                return `<span class="badge-conf badge-conf-${level}">🔥 ${confidenceLabel(level)}</span>`;
+            }
+
+            // ---------- Reverse geocoding (alamat detail hingga desa) ----------
+            const geocodeCache = new Map();
+            let lastGeocodeAt = 0;
+
+            function geocodeCacheKey(lat, lng) {
+                return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+            }
+
+            async function reverseGeocode(lat, lng) {
+                if (isNaN(lat) || isNaN(lng)) return null;
+                const key = geocodeCacheKey(lat, lng);
+                if (geocodeCache.has(key)) return geocodeCache.get(key);
+
+                // Batasi maksimal 1 permintaan/detik sesuai kebijakan penggunaan Nominatim.
+                const now = Date.now();
+                const wait = Math.max(0, lastGeocodeAt + 1100 - now);
+                lastGeocodeAt = now + wait;
+                if (wait > 0) await new Promise(r => setTimeout(r, wait));
+
+                try {
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
+                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'application/json' } });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const json = await resp.json();
+                    const addr = json.address || {};
+                    const result = {
+                        provinsi: addr.state || addr.province || '',
+                        kabkota: addr.county || addr.city || addr.regency || addr.city_district || addr.municipality || '',
+                        kecamatan: addr.suburb || addr.district || addr.subdistrict || '',
+                        desa: addr.village || addr.hamlet || addr.neighbourhood || '',
+                        jalan: [addr.road, addr.pedestrian].filter(Boolean).join(', '),
+                        alamatLengkap: json.display_name || ''
+                    };
+                    geocodeCache.set(key, result);
+                    return result;
+                } catch (e) {
+                    logMessage(`⚠️ Gagal mengambil detail alamat: ${e.message}`, 'err');
+                    return null;
+                }
+            }
+
+            function buildLocationRows(ev, geo) {
+                const prov = (geo && geo.provinsi) || ev.province || 'Tidak diketahui';
+                const kab = (geo && geo.kabkota) || ev.kabkota || '';
+                const desa = geo && geo.desa ? geo.desa : '';
+                const kec = geo && geo.kecamatan ? geo.kecamatan : '';
+                const jalan = geo && geo.jalan ? geo.jalan : '';
+                const alamatLengkap = geo && geo.alamatLengkap ? geo.alamatLengkap : '';
+                let rows = `<div class="popup-loc-row">🏛️ <b>Provinsi:</b> ${escHtml(prov)}</div>`;
+                rows += `<div class="popup-loc-row">🏙️ <b>Kota/Kabupaten:</b> ${escHtml(kab || 'Tidak diketahui')}</div>`;
+                if (kec) rows += `<div class="popup-loc-row">🏘️ <b>Kecamatan:</b> ${escHtml(kec)}</div>`;
+                rows += `<div class="popup-loc-row">🏡 <b>Desa/Kelurahan:</b> ${escHtml(desa || (geo ? 'Tidak diketahui' : 'Memuat...'))}</div>`;
+                if (jalan) rows += `<div class="popup-loc-row">🛣️ <b>Jalan:</b> ${escHtml(jalan)}</div>`;
+                if (alamatLengkap) rows += `<div class="popup-loc-row popup-loc-full">📮 <b>Alamat lengkap:</b> ${escHtml(alamatLengkap)}</div>`;
+                return rows;
+            }
+
             function isMeaningfulValue(v) {
                 if (v === null || v === undefined) return false;
                 const s = String(v).trim();
@@ -2509,6 +2692,13 @@
                         switchTab(this.dataset.tab);
                     });
                 });
+                const mapLegend = document.getElementById('mapLegend');
+                const mapLegendToggle = document.getElementById('mapLegendToggle');
+                if (mapLegend && mapLegendToggle) {
+                    mapLegendToggle.addEventListener('click', function() {
+                        mapLegend.classList.toggle('open');
+                    });
+                }
                 refreshBtn.addEventListener('click', function() {
                     fetchAllData();
                 });
