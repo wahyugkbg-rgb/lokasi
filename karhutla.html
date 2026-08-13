@@ -1144,26 +1144,45 @@
                 throw lastError;
             }
 
-            // Daftar proxy CORS diringkas ke yang paling responsif; gagal cepat -> lanjut ke proxy berikutnya
+            // Daftar proxy CORS diringkas ke yang paling responsif
             const PROXIES = [
                 'https://corsproxy.io/?',
                 'https://api.allorigins.win/raw?url=',
                 'https://api.codetabs.com/v1/proxy?quest='
             ];
 
-            // Timeout per percobaan diperpendek (6s) supaya total waktu tunggu satu sumber
-            // (3 proxy + 1 percobaan langsung) tetap terbatas dan TIDAK menggantung lama,
-            // meski salah satu/semua proxy sedang lambat atau tidak merespons.
+            // Fallback ringan untuk Promise.any (beberapa WebView Android lawas belum mendukungnya):
+            // resolve begitu SALAH SATU promise berhasil; reject hanya jika SEMUA gagal.
+            function promiseAny(promises) {
+                return new Promise((resolve, reject) => {
+                    let remaining = promises.length;
+                    const errors = [];
+                    if (remaining === 0) { reject(new Error('Tidak ada percobaan')); return; }
+                    promises.forEach((p) => {
+                        Promise.resolve(p).then(resolve).catch((err) => {
+                            errors.push(err);
+                            remaining--;
+                            if (remaining === 0) reject(new Error('Semua percobaan gagal: ' + errors.map(e => e.message).join('; ')));
+                        });
+                    });
+                });
+            }
+
+            // PENTING: proxy dicoba SECARA PARALEL (bukan berurutan). Sebelumnya proxy dicoba
+            // satu-satu (hingga 3 x 6s + 1 x 5s = ~23 detik terburuk) -> ini bisa MELEBIHI batas
+            // watchdog per-sumber (20 detik) di fetchAllData, sehingga sumber data yang sebenarnya
+            // BERHASIL (log-nya sempat tercatat) datang terlambat dan sudah keburu dianggap gagal
+            // & diganti array kosong oleh watchdog -> persis gejala "log bilang X kejadian
+            // ditemukan, tapi daftar kosong". Dengan mencoba semua proxy + percobaan langsung
+            // BERSAMAAN, hasil tercepat langsung dipakai, dan skenario terburuk (semua gagal)
+            // juga jauh lebih cepat terdeteksi (~8 detik, bukan puluhan detik).
             async function fetchWithProxy(url, options = {}) {
-                for (const proxy of PROXIES) {
-                    try {
-                        const proxiedUrl = proxy + encodeURIComponent(url);
-                        const resp = await fetchWithTimeout(proxiedUrl, options, 6000, 0);
-                        if (resp.ok) return resp;
-                    } catch (e) { /* lanjut ke proxy berikutnya */ }
-                }
-                // Percobaan langsung terakhir (barangkali CORS sumber sudah terbuka)
-                return await fetchWithTimeout(url, options, 5000, 0);
+                const attempts = PROXIES.map((proxy) => {
+                    const proxiedUrl = proxy + encodeURIComponent(url);
+                    return fetchWithTimeout(proxiedUrl, options, 8000, 0);
+                });
+                attempts.push(fetchWithTimeout(url, options, 8000, 0)); // percobaan langsung, siapa tahu CORS sumber sudah terbuka
+                return await promiseAny(attempts);
             }
 
             // ---------- RENDER: Daftar Kejadian ----------
@@ -1671,12 +1690,12 @@
                     // lambat/gagal TIDAK PERNAH mengunci dashboard menunggu tanpa batas -> jika
                     // melewati batas waktu, sumber itu dianggap kosong dan proses tetap lanjut.
                     const results = await Promise.allSettled([
-                        withHardTimeout(fetchBNPBKarhutla(), 20000, 'BNPB Karhutla'),
-                        withHardTimeout(fetchBMKGHotspot(), 20000, 'BMKG Hotspot'),
-                        withHardTimeout(fetchNASAFirms(), 20000, 'NASA FIRMS'),
-                        withHardTimeout(fetchGFW(), 20000, 'Global Forest Watch'),
-                        withHardTimeout(fetchBNPBKejadian(), 20000, 'BNPB Data Kejadian'),
-                        withHardTimeout(loadRegencyProvinceMap(), 20000, 'Basis Data Wilayah')
+                        withHardTimeout(fetchBNPBKarhutla(), 30000, 'BNPB Karhutla'),
+                        withHardTimeout(fetchBMKGHotspot(), 30000, 'BMKG Hotspot'),
+                        withHardTimeout(fetchNASAFirms(), 30000, 'NASA FIRMS'),
+                        withHardTimeout(fetchGFW(), 30000, 'Global Forest Watch'),
+                        withHardTimeout(fetchBNPBKejadian(), 30000, 'BNPB Data Kejadian'),
+                        withHardTimeout(loadRegencyProvinceMap(), 30000, 'Basis Data Wilayah')
                     ]);
 
                     let combined = [];
