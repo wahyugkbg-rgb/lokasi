@@ -119,15 +119,22 @@
 
         /* Legend keyakinan pada peta */
         .map-legend {
-            background:white; padding:8px 10px; border-radius:8px;
+            background:white; padding:10px 12px; border-radius:8px;
             box-shadow:0 1px 6px rgba(0,0,0,0.3); font-size:0.75rem; color:#333;
-            line-height:1.6;
+            line-height:1.7; min-width:140px; max-width:200px;
         }
-        .map-legend .legend-title { font-weight:700; margin-bottom:4px; font-size:0.75rem; }
-        .map-legend .legend-row { display:flex; align-items:center; gap:6px; }
+        .map-legend .legend-title { font-weight:700; margin-bottom:6px; font-size:0.75rem; }
+        .map-legend .legend-row { display:flex; align-items:center; gap:6px; white-space:nowrap; }
         .map-legend .legend-dot {
             width:12px; height:12px; border-radius:50%; display:inline-block; flex-shrink:0;
         }
+
+        /* Alamat lengkap hasil reverse-geocode pada popup */
+        .popup-address {
+            margin-top:6px; padding-top:6px; border-top:1px dashed #ccc;
+            font-size:0.78rem; color:#333; max-width:220px; line-height:1.4;
+        }
+        .popup-address i { color:#888; margin-right:3px; }
 
         #sidebar-footer {
             padding:12px 16px; border-top:1px solid #ddd;
@@ -308,9 +315,11 @@
 
     // ===================== INISIALISASI PETA =====================
     function initMap() {
-        map = L.map('map').setView([-6.2, 106.8], 11);
+        map = L.map('map', { maxZoom: 19 }).setView([-6.2, 106.8], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19,
+            maxNativeZoom: 19
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
 
@@ -326,14 +335,16 @@
         };
         locateBtn.addTo(map);
 
-        const legend = L.control({ position: 'bottomright' });
+        // Legend diletakkan di topright agar tidak berdesakan/tertutup oleh
+        // kontrol atribusi OpenStreetMap yang juga ada di sudut bawah.
+        const legend = L.control({ position: 'topright' });
         legend.onAdd = function() {
             const div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = `
                 <div class="legend-title">Tingkat Keyakinan</div>
-                <div class="legend-row"><span class="legend-dot" style="background:#d32f2f;"></span> High (Tinggi)</div>
-                <div class="legend-row"><span class="legend-dot" style="background:#f57c00;"></span> Nominal (Sedang)</div>
-                <div class="legend-row"><span class="legend-dot" style="background:#388e3c;"></span> Low (Rendah)</div>
+                <div class="legend-row"><span class="legend-dot" style="background:#d32f2f;"></span><span>High (Tinggi)</span></div>
+                <div class="legend-row"><span class="legend-dot" style="background:#f57c00;"></span><span>Nominal (Sedang)</span></div>
+                <div class="legend-row"><span class="legend-dot" style="background:#388e3c;"></span><span>Low (Rendah)</span></div>
             `;
             L.DomEvent.disableClickPropagation(div);
             return div;
@@ -606,13 +617,51 @@
             el.addEventListener('click', function() {
                 const lat = parseFloat(this.dataset.lat);
                 const lon = parseFloat(this.dataset.lon);
-                map.setView([lat, lon], 14);
+                map.setView([lat, lon], 18);
+                // Di layar sempit, pindah otomatis ke tab Peta supaya langsung terlihat
+                if (window.innerWidth <= 768) {
+                    const tabMap = document.getElementById('tabMap');
+                    if (tabMap) tabMap.click();
+                }
+                const marker = markerIndex[`${lat},${lon}`];
+                if (marker) setTimeout(() => marker.openPopup(), 250);
             });
         });
     }
 
+    // ===================== ALAMAT LENGKAP (REVERSE GEOCODE) =====================
+    const _reverseGeocodeCache = {};
+    async function reverseGeocode(lat, lon) {
+        const key = lat.toFixed(5) + ',' + lon.toFixed(5);
+        if (_reverseGeocodeCache[key]) return _reverseGeocodeCache[key];
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Gagal memuat alamat (HTTP ' + response.status + ')');
+        const data = await response.json();
+        if (!data || (!data.display_name && !data.address)) {
+            throw new Error('Alamat tidak ditemukan untuk titik ini');
+        }
+        const a = data.address || {};
+        // Susun bagian alamat dari yang paling rinci (jalan/gang) ke yang paling umum
+        const parts = [
+            a.road || a.pedestrian || a.residential,
+            a.hamlet || a.village || a.suburb,
+            a.village ? null : a.city_district,
+            a.town || a.city || a.municipality,
+            a.county,
+            a.state
+        ].filter(Boolean);
+        const addr = parts.length > 0 ? parts.join(', ') : data.display_name;
+        _reverseGeocodeCache[key] = addr;
+        return addr;
+    }
+
+    let markerIndex = {};
+
     function updateMap(data) {
         markersLayer.clearLayers();
+        markerIndex = {};
+        let markerSeq = 0;
         data.forEach(d => {
             const color = d.confidence === 'high' ? '#d32f2f' :
                           d.confidence === 'nominal' ? '#f57c00' : '#388e3c';
@@ -626,13 +675,31 @@
                 popupAnchor: [0, -13]
             });
             const marker = L.marker([d.lat, d.lon], { icon }).addTo(markersLayer);
+            markerIndex[`${d.lat},${d.lon}`] = marker;
+            markerSeq++;
+            const addrId = `hotspot-addr-${markerSeq}-${Date.now()}`;
             const popup = `
                 <b>${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}</b><br>
                 Intensitas: ${d.brightness.toFixed(1)}K<br>
                 Waktu: ${d.date} ${d.time}<br>
                 <span class="popup-badge" style="background:${color};">${d.confidence.toUpperCase()}</span>
+                <div class="popup-address" id="${addrId}"><i class="fas fa-spinner fa-spin"></i> Memuat alamat lengkap...</div>
             `;
-            marker.bindPopup(popup);
+            marker.bindPopup(popup, { maxWidth: 260 });
+
+            // Ambil alamat lengkap (RT/RW/kelurahan/kecamatan) saat popup/badge diklik
+            marker.on('popupopen', async function() {
+                const el = document.getElementById(addrId);
+                if (!el) return;
+                try {
+                    const addr = await reverseGeocode(d.lat, d.lon);
+                    const el2 = document.getElementById(addrId);
+                    if (el2) el2.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${addr}`;
+                } catch (err) {
+                    const el2 = document.getElementById(addrId);
+                    if (el2) el2.innerHTML = `<i class="fas fa-exclamation-circle"></i> Alamat tidak dapat dimuat (${err.message})`;
+                }
+            });
         });
     }
 
