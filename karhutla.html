@@ -912,6 +912,25 @@
                 return { color: '#8a806c', icon: '❔', label: s || 'Tidak diketahui' };
             }
 
+            // ---------- Pencarian field yang toleran terhadap variasi nama kolom ----------
+            // PENTING: nama kolom mentah dari API BNPB tidak 100% pasti sama persis (bisa beda
+            // spasi/kapitalisasi/singkatan antar resource atau berubah sewaktu-waktu). Mencari
+            // berdasarkan KATA KUNCI (bukan nama kolom persis) membuat parsing tahan terhadap
+            // variasi semacam itu -> mencegah seluruh data tersaring habis hanya karena field
+            // yang dicari tidak "match" persis walau sebenarnya ada di record.
+            function findFieldKey(rec, patterns) {
+                if (!rec) return undefined;
+                for (const k of Object.keys(rec)) {
+                    const kl = k.toLowerCase();
+                    if (patterns.some(p => kl.includes(p))) return k;
+                }
+                return undefined;
+            }
+            function findFieldValue(rec, patterns) {
+                const k = findFieldKey(rec, patterns);
+                return k !== undefined ? rec[k] : undefined;
+            }
+
             // ---------- Format angka kejadian per jenis bencana (tanpa desimal, "-" jika nihil) ----------
             function formatDisasterCount(v) {
                 const n = parseFloat(v);
@@ -1426,19 +1445,32 @@
                         const json = await resp.json();
                         if (json.success && json.result && json.result.records) {
                             const records = json.result.records;
+                            // Tampilkan nama kolom asli baris pertama di log -> supaya kalau field
+                            // yang dicari ternyata tidak ketemu, langsung terlihat nama kolom yang
+                            // SEBENARNYA dipakai API (bukan menebak-nebak lagi).
+                            if (records.length > 0) {
+                                logMessage(`🔑 Kolom BNPB Karhutla: ${Object.keys(records[0]).join(' | ')}`, 'info');
+                            }
+                            const kabKey = findFieldKey(records[0] || {}, ['kabupaten', 'kota']);
+                            const provKey = findFieldKey(records[0] || {}, ['provinsi']);
+                            const fireKeySample = findFieldKey(records[0] || {}, ['kebakaran']);
+                            logMessage(`🔎 Kolom "kebakaran" terdeteksi sebagai: ${fireKeySample || '(TIDAK DITEMUKAN)'}`, fireKeySample ? 'info' : 'err');
                             for (const rec of records) {
-                                const kab = rec['Nama Kabupaten/Kota'] || '';
-                                const prov = rec['Provinsi'] || '';
-                                const lat = rec['Latitude'];
-                                const lng = rec['Longitude'];
-                                const fire = rec['KEBAKARAN HUTAN DAN LAHAN'];
+                                const kab = findFieldValue(rec, ['kabupaten', 'kota']) || '';
+                                const prov = findFieldValue(rec, ['provinsi']) || '';
+                                const lat = findFieldValue(rec, ['latitude', 'lintang']);
+                                const lng = findFieldValue(rec, ['longitude', 'bujur']);
+                                // Dicari berdasarkan kata kunci "kebakaran" (bukan nama kolom persis)
+                                // supaya tahan terhadap variasi spasi/kapitalisasi/singkatan.
+                                const fireKey = findFieldKey(rec, ['kebakaran']);
+                                const fire = fireKey !== undefined ? rec[fireKey] : undefined;
                                 const fireNum = parseFloat(fire);
                                 // Hanya masukkan baris yang BENAR-BENAR mencatat kejadian karhutla
                                 // (angka > 0). Sebelumnya perbandingan string "!== '0'" gagal
                                 // menyaring nilai seperti "0.0", sehingga banyak baris kosong
                                 // (bukan kejadian nyata) ikut terhitung sebagai "kejadian".
                                 if (!isNaN(fireNum) && fireNum > 0) {
-                                    const breakdown = buildDisasterBreakdown(rec, ['nama kabupaten/kota', 'provinsi']);
+                                    const breakdown = buildDisasterBreakdown(rec, [kabKey, provKey].filter(Boolean));
                                     const descText = breakdown.filter(b => b.raw > 0).map(b => `${b.label}: ${b.value}`).join(' | ')
                                         || `Kebakaran Hutan dan Lahan: ${formatDisasterCount(fire)}`;
                                     // Tanggal kejadian: pakai field tanggal ASLI dari sumber jika ada;
@@ -1464,6 +1496,38 @@
                                 }
                             }
                             logMessage(`✅ BNPB Karhutla: ${records.length} record diperiksa, ${out.length} kejadian nyata.`, 'ok');
+                            // ---------- Jaring pengaman ----------
+                            // Kalau kolom "kebakaran" memang tidak ketemu sama sekali (nama kolom di
+                            // API berbeda dari perkiraan) ATAU semua nilainya nol/kosong sehingga
+                            // hasilnya 0, JANGAN diam-diam menampilkan 0 kejadian -> lebih baik
+                            // tampilkan seluruh baris resource ini apa adanya (tanpa filter angka),
+                            // supaya data tetap terlihat & bisa diperiksa, sambil log dengan jelas
+                            // bahwa ini mode cadangan (bukan hasil filter kebakaran > 0).
+                            if (out.length === 0 && records.length > 0) {
+                                logMessage(`⚠️ Filter "kebakaran > 0" tidak menghasilkan apa pun (kolom: ${fireKeySample || 'tidak ditemukan'}). Menampilkan seluruh ${records.length} baris resource ini tanpa filter sebagai cadangan.`, 'err');
+                                for (const rec of records) {
+                                    const kab = findFieldValue(rec, ['kabupaten', 'kota']) || '';
+                                    const prov = findFieldValue(rec, ['provinsi']) || '';
+                                    const lat = findFieldValue(rec, ['latitude', 'lintang']);
+                                    const lng = findFieldValue(rec, ['longitude', 'bujur']);
+                                    const breakdown = buildDisasterBreakdown(rec, [kabKey, provKey].filter(Boolean));
+                                    const descText = breakdown.map(b => `${b.label}: ${b.value}`).join(' | ') || 'Data BNPB (tanpa rincian angka)';
+                                    const realDate = findDateField(rec);
+                                    out.push({
+                                        uid: 'karhutla-fallback:' + (rec['_id'] !== undefined ? rec['_id'] : `${kab}|${prov}|${out.length}`),
+                                        title: 'Data BNPB (Rekap Wilayah)',
+                                        location: kab || '',
+                                        province: prov,
+                                        kabkota: kab,
+                                        lat: lat, lng: lng,
+                                        timestamp: realDate,
+                                        source: 'BNPB Open Data',
+                                        description: descText,
+                                        breakdown: breakdown,
+                                        detail: `Kabupaten: ${kab} | Provinsi: ${prov} | ${descText}`
+                                    });
+                                }
+                            }
                         } else {
                             logMessage('⚠️ BNPB Karhutla: tidak ada records.', 'err');
                         }
@@ -1636,31 +1700,42 @@
                         const json = await resp.json();
                         if (json.success && json.result && json.result.records) {
                             const records = json.result.records;
+                            if (records.length > 0) {
+                                logMessage(`🔑 Kolom BNPB Kejadian: ${Object.keys(records[0]).join(' | ')}`, 'info');
+                            }
+                            const jenisKey = findFieldKey(records[0] || {}, ['jenis bencana', 'jenis']);
+                            const kabKey = findFieldKey(records[0] || {}, ['kabupaten', 'kota']);
+                            const provKey = findFieldKey(records[0] || {}, ['provinsi']);
+                            const tglKey = findFieldKey(records[0] || {}, ['tanggal', 'periode', 'waktu', 'date']);
                             for (const rec of records) {
-                                const jenis = rec['Jenis Bencana'] || '';
+                                const jenis = String(findFieldValue(rec, ['jenis bencana', 'jenis']) || '');
                                 if (jenis.toLowerCase().includes('kebakaran') || jenis.toLowerCase().includes('karhutla')) {
-                                    const kab = rec['Kabupaten/Kota'] || '';
-                                    const prov = rec['Provinsi'] || '';
-                                    const lat = rec['Latitude'];
-                                    const lng = rec['Longitude'];
+                                    const kab = findFieldValue(rec, ['kabupaten', 'kota']) || '';
+                                    const prov = findFieldValue(rec, ['provinsi']) || '';
+                                    const lat = findFieldValue(rec, ['latitude', 'lintang']);
+                                    const lng = findFieldValue(rec, ['longitude', 'bujur']);
+                                    const tgl = tglKey !== undefined ? rec[tglKey] : undefined;
                                     if (lat && lng) {
-                                        const dynamicDesc = buildDynamicDescription(rec, ['kabupaten/kota', 'provinsi', 'jenis bencana', 'tanggal']);
+                                        const dynamicDesc = buildDynamicDescription(rec, [kabKey, provKey, jenisKey, tglKey].filter(Boolean));
                                         out.push({
-                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${rec['Tanggal'] || ''}|${out.length}`),
+                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${tgl || ''}|${out.length}`),
                                             title: `Kejadian: ${jenis}`,
                                             location: kab || '',
                                             province: prov,
                                             kabkota: kab,
                                             lat: lat, lng: lng,
-                                            timestamp: toISOOrNull(rec['Tanggal']),
+                                            timestamp: toISOOrNull(tgl),
                                             source: 'BNPB Data Kejadian',
                                             description: dynamicDesc || `Keterangan: ${rec['Keterangan'] || ''}`,
-                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${rec['Tanggal'] || ''}` + (dynamicDesc ? ` | ${dynamicDesc}` : '')
+                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${tgl || ''}` + (dynamicDesc ? ` | ${dynamicDesc}` : '')
                                         });
                                     }
                                 }
                             }
-                            logMessage(`✅ BNPB Kejadian: ${records.length} record.`, 'ok');
+                            logMessage(`✅ BNPB Kejadian: ${records.length} record diperiksa (kolom jenis bencana: ${jenisKey || 'TIDAK DITEMUKAN'}), ${out.length} kejadian karhutla.`, 'ok');
+                            if (out.length === 0 && records.length > 0 && !jenisKey) {
+                                logMessage('⚠️ Kolom "Jenis Bencana" tidak ditemukan di BNPB Data Kejadian, sumber ini tidak bisa disaring dan dilewati (sumber lain tetap tampil).', 'err');
+                            }
                         } else {
                             logMessage('⚠️ BNPB Kejadian: tidak ada records.', 'err');
                         }
