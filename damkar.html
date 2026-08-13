@@ -42,16 +42,18 @@
             border-bottom:1px solid #ddd; background:#fafafa;
         }
         #sidebar-filters select, #sidebar-filters input {
-            padding:5px 10px; border-radius:20px; border:1px solid #ccc;
+            padding:8px 10px; border-radius:20px; border:1px solid #ccc;
             background:white; flex:1; min-width:80px; font-size:0.85rem;
+            min-height:40px;
         }
         #sidebar-filters button {
-            padding:5px 16px; border:none; background:#b22222; color:white;
-            border-radius:20px; cursor:pointer; font-weight:600;
+            padding:8px 16px; border:none; background:#b22222; color:white;
+            border-radius:20px; cursor:pointer; font-weight:600; min-height:40px;
         }
         #sidebar-filters button:hover { background:#8b1a1a; }
+        #sidebar-filters button:active { background:#701313; }
         #sidebar-filters .search-wrapper {
-            width:100%; display:flex; gap:6px; margin-top:4px;
+            width:100%; display:flex; gap:6px; margin-top:4px; position:relative;
         }
         #sidebar-filters .search-wrapper input {
             flex:3; min-width:150px;
@@ -60,19 +62,20 @@
             flex:1;
         }
         #searchResults {
-            width:100%; max-height:150px; overflow-y:auto;
+            width:100%; max-height:220px; overflow-y:auto;
             background:white; border:1px solid #ccc; border-radius:8px;
-            display:none; position:absolute; z-index:1001; margin-top:2px;
+            display:none; position:absolute; top:100%; left:0; z-index:1001; margin-top:4px;
+            box-shadow:0 4px 14px rgba(0,0,0,0.15);
         }
         #searchResults .result-item {
-            padding:8px 12px; cursor:pointer; border-bottom:1px solid #eee;
-            font-size:0.85rem;
+            padding:12px 14px; cursor:pointer; border-bottom:1px solid #eee;
+            font-size:0.85rem; min-height:44px; display:flex; flex-direction:column; justify-content:center;
         }
-        #searchResults .result-item:hover {
+        #searchResults .result-item:hover, #searchResults .result-item:active {
             background:#eef3ff;
         }
         #searchResults .result-item .detail {
-            font-size:0.7rem; color:#666;
+            font-size:0.7rem; color:#666; margin-top:2px;
         }
 
         #status-bar {
@@ -91,20 +94,40 @@
             flex:1; overflow-y:auto; padding:10px 16px;
         }
         .report-item {
-            display:flex; flex-direction:column; padding:8px 12px;
-            margin-bottom:6px; background:#f9f9f9; border-radius:6px;
+            display:flex; flex-direction:column; padding:12px 14px;
+            margin-bottom:8px; background:#f9f9f9; border-radius:6px;
             border-left:4px solid #f57c00; cursor:pointer; transition:0.15s;
+            min-height:44px; justify-content:center;
         }
         .report-item:hover { background:#eef3ff; }
+        .report-item:active { background:#dfeaff; }
         .report-item .title { font-weight:600; font-size:0.9rem; }
         .report-item .sub { font-size:0.75rem; color:#555; margin-top:2px; }
         .report-item .confidence {
-            font-size:0.7rem; padding:2px 8px; border-radius:12px;
-            background:#ddd; display:inline-block; margin-top:4px; align-self:flex-start;
+            font-size:0.7rem; padding:3px 10px; border-radius:12px;
+            background:#ddd; display:inline-block; margin-top:6px; align-self:flex-start;
         }
         .conf-high { background:#d32f2f; color:white; }
         .conf-nominal { background:#f57c00; color:white; }
         .conf-low { background:#388e3c; color:white; }
+
+        /* Badge keyakinan pada popup peta */
+        .popup-badge {
+            font-size:0.7rem; padding:3px 10px; border-radius:12px;
+            color:white; display:inline-block; margin-top:4px; font-weight:600;
+        }
+
+        /* Legend keyakinan pada peta */
+        .map-legend {
+            background:white; padding:8px 10px; border-radius:8px;
+            box-shadow:0 1px 6px rgba(0,0,0,0.3); font-size:0.75rem; color:#333;
+            line-height:1.6;
+        }
+        .map-legend .legend-title { font-weight:700; margin-bottom:4px; font-size:0.75rem; }
+        .map-legend .legend-row { display:flex; align-items:center; gap:6px; }
+        .map-legend .legend-dot {
+            width:12px; height:12px; border-radius:50%; display:inline-block; flex-shrink:0;
+        }
 
         #sidebar-footer {
             padding:12px 16px; border-top:1px solid #ddd;
@@ -147,15 +170,48 @@
             color: #1a73e8;
         }
 
+        /* ===== Tab switcher (info / peta) - hanya tampil di layar sempit ===== */
+        #mobile-tabs { display:none; }
+
         @media (max-width:768px) {
-            #sidebar { width:100%; min-width:unset; height:45vh; }
             body { flex-direction:column; }
-            #map { height:55vh; }
+
+            #mobile-tabs {
+                display:flex; position:sticky; top:0; z-index:2000;
+                background:#8b1a1a; flex-shrink:0;
+            }
+            #mobile-tabs button {
+                flex:1; padding:12px 8px; border:none; background:transparent;
+                color:white; font-weight:600; font-size:0.9rem; opacity:0.75;
+                cursor:pointer; border-bottom:3px solid transparent; min-height:44px;
+            }
+            #mobile-tabs button.active {
+                opacity:1; border-bottom-color:white; background:rgba(255,255,255,0.08);
+            }
+
+            #sidebar {
+                width:100%; min-width:unset;
+                height:calc(100vh - 44px); max-height:calc(100vh - 44px);
+            }
+            #map { width:100%; height:calc(100vh - 44px); }
+
+            /* Default (belum dipilih tab): tampilkan info, sembunyikan peta,
+               supaya tidak tumpang-tindih di layar kecil (mis. Oppo A9) */
+            body.mobile-view-map #sidebar { display:none; }
+            body.mobile-view-info #map { display:none; }
+
             #sidebar-filters .search-wrapper { flex-wrap:wrap; }
+            #sidebar-filters select, #sidebar-filters input,
+            #sidebar-filters button { flex-basis:100%; }
         }
     </style>
 </head>
 <body>
+
+<div id="mobile-tabs">
+    <button id="tabInfo" class="active" type="button"><i class="fas fa-list"></i> Info</button>
+    <button id="tabMap" type="button"><i class="fas fa-map"></i> Peta</button>
+</div>
 
 <div id="sidebar">
     <div id="sidebar-header">
@@ -269,6 +325,20 @@
             return div;
         };
         locateBtn.addTo(map);
+
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'map-legend');
+            div.innerHTML = `
+                <div class="legend-title">Tingkat Keyakinan</div>
+                <div class="legend-row"><span class="legend-dot" style="background:#d32f2f;"></span> High (Tinggi)</div>
+                <div class="legend-row"><span class="legend-dot" style="background:#f57c00;"></span> Nominal (Sedang)</div>
+                <div class="legend-row"><span class="legend-dot" style="background:#388e3c;"></span> Low (Rendah)</div>
+            `;
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        };
+        legend.addTo(map);
     }
 
     // ===================== LOKASI GPS =====================
@@ -401,9 +471,23 @@
 
     // ===================== AMBIL DATA DARI FIRMS =====================
     async function fetchHotspots(source, areaBbox, days) {
+        if (!Array.isArray(areaBbox) || areaBbox.length !== 4 || areaBbox.some(v => typeof v !== 'number' || isNaN(v))) {
+            throw new Error('Area/wilayah tidak valid. Silakan pilih daerah lain atau cari ulang lokasi.');
+        }
+        if (!days || isNaN(days) || days < 1) {
+            throw new Error('Rentang tanggal tidak valid.');
+        }
+
         const coordStr = areaBbox.join(',');
         const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_API_KEY}/${source}/${coordStr}/${days}`;
-        const response = await fetch(url);
+
+        let response;
+        try {
+            response = await fetch(url);
+        } catch (networkErr) {
+            throw new Error('Tidak dapat menghubungi server satelit. Periksa koneksi internet Anda.');
+        }
+
         if (!response.ok) {
             let msg = `HTTP ${response.status}`;
             if (response.status === 403) msg += ' - Kuota API habis atau key tidak valid';
@@ -411,37 +495,60 @@
             else if (response.status === 429) msg += ' - Terlalu banyak request, coba nanti';
             throw new Error(msg);
         }
+
         const csvText = await response.text();
+
+        // FIRMS kadang mengembalikan status 200 tapi isinya pesan error, bukan CSV
+        const firstLine = (csvText.split('\n')[0] || '').toLowerCase();
+        if (firstLine.includes('invalid') || firstLine.includes('error') || firstLine.includes('unauthorized')) {
+            throw new Error('Server satelit menolak permintaan (parameter atau kunci API tidak valid).');
+        }
+
         return parseCSV(csvText);
     }
 
     function parseCSV(csv) {
-        const lines = csv.split('\n').filter(line => line.trim() !== '');
-        if (lines.length < 2) return [];
-        const headers = lines[0].split(',');
-        const getIdx = (name) => headers.findIndex(h => h.trim() === name);
-        const latIdx = getIdx('latitude');
-        const lonIdx = getIdx('longitude');
-        const confIdx = getIdx('confidence');
-        const dateIdx = getIdx('acq_date');
-        const timeIdx = getIdx('acq_time');
-        const brightIdx = getIdx('brightness');
-        if (latIdx === -1 || lonIdx === -1) return [];
+        try {
+            const lines = csv.split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 2) return []; // tidak ada baris data = tidak ada titik api, bukan error
 
-        const result = [];
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(',');
-            if (cols.length <= Math.max(latIdx, lonIdx, confIdx)) continue;
-            const lat = parseFloat(cols[latIdx]);
-            const lon = parseFloat(cols[lonIdx]);
-            if (isNaN(lat) || isNaN(lon)) continue;
-            const confidence = (cols[confIdx] || 'nominal').toLowerCase();
-            const date = cols[dateIdx] || '';
-            const time = cols[timeIdx] || '';
-            const brightness = parseFloat(cols[brightIdx]) || 0;
-            result.push({ lat, lon, confidence, date, time, brightness });
+            const headers = lines[0].split(',');
+            const getIdx = (name) => headers.findIndex(h => h.trim() === name);
+            const latIdx = getIdx('latitude');
+            const lonIdx = getIdx('longitude');
+            const confIdx = getIdx('confidence');
+            const dateIdx = getIdx('acq_date');
+            const timeIdx = getIdx('acq_time');
+            const brightIdx = getIdx('brightness');
+            if (latIdx === -1 || lonIdx === -1) return [];
+
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                if (cols.length <= Math.max(latIdx, lonIdx, confIdx)) continue;
+                const lat = parseFloat(cols[latIdx]);
+                const lon = parseFloat(cols[lonIdx]);
+                if (isNaN(lat) || isNaN(lon)) continue;
+                let confidence = (cols[confIdx] || 'nominal').toLowerCase().trim();
+                if (!['high', 'nominal', 'low'].includes(confidence)) {
+                    // Beberapa sumber (MODIS) memakai angka 0-100, bukan label
+                    const numConf = parseFloat(confidence);
+                    if (!isNaN(numConf)) {
+                        confidence = numConf >= 80 ? 'high' : numConf >= 50 ? 'nominal' : 'low';
+                    } else {
+                        confidence = 'nominal';
+                    }
+                }
+                const date = cols[dateIdx] || '';
+                const time = cols[timeIdx] || '';
+                const brightness = parseFloat(cols[brightIdx]) || 0;
+                result.push({ lat, lon, confidence, date, time, brightness });
+            }
+            return result;
+        } catch (parseErr) {
+            console.error('Gagal membaca data CSV:', parseErr);
+            throw new Error('Format data dari server tidak dikenali.');
         }
-        return result;
     }
 
     // ===================== RENDER =====================
@@ -522,8 +629,8 @@
             const popup = `
                 <b>${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}</b><br>
                 Intensitas: ${d.brightness.toFixed(1)}K<br>
-                Keyakinan: ${d.confidence.toUpperCase()}<br>
-                Waktu: ${d.date} ${d.time}
+                Waktu: ${d.date} ${d.time}<br>
+                <span class="popup-badge" style="background:${color};">${d.confidence.toUpperCase()}</span>
             `;
             marker.bindPopup(popup);
         });
@@ -543,32 +650,47 @@
                 const parts = bboxInput.value.split(',').map(Number);
                 if (parts.length === 4 && parts.every(v => !isNaN(v))) return parts;
             }
-            // Fallback ke Jakarta
-            alert('Silakan cari lokasi terlebih dahulu menggunakan fitur pencarian.');
-            document.getElementById('filterArea').value = 'jakarta';
-            return AREAS.jakarta;
+            // Belum ada lokasi kustom yang dipilih - jangan fetch, biarkan pemanggil menangani
+            return null;
         }
         return AREAS[areaKey] || AREAS.jakarta;
     }
 
     function getCurrentParams() {
+        const daysVal = parseInt(document.getElementById('filterDays').value, 10);
         return {
             source: document.getElementById('filterSource').value,
             area: document.getElementById('filterArea').value,
             bbox: getArea(),
-            days: parseInt(document.getElementById('filterDays').value)
+            days: isNaN(daysVal) ? 3 : daysVal
         };
     }
 
     // ===================== MAIN LOAD =====================
+    let _loadRequestId = 0;
+
     async function loadData(forceRefresh = false) {
         const container = document.getElementById('report-list');
         const params = getCurrentParams();
+        const requestId = ++_loadRequestId;
+
+        // Belum ada lokasi kustom dipilih - tampilkan pesan ramah, jangan fetch/error
+        if (params.area === 'custom' && !params.bbox) {
+            container.innerHTML = `
+                <div class="cache-warning">
+                    <i class="fas fa-info-circle"></i>
+                    Silakan cari nama daerah terlebih dahulu menggunakan kotak pencarian di atas.
+                </div>
+            `;
+            updateStats([]);
+            markersLayer.clearLayers();
+            return;
+        }
 
         const cache = loadCache();
         const cacheAge = getCacheAge();
 
-        if (!forceRefresh && cache && cacheAge < 60 && cache.params) {
+        if (!forceRefresh && cache && cacheAge < 60 && cache.params && cache.params.bbox) {
             const sameParams = (
                 cache.params.source === params.source &&
                 cache.params.area === params.area &&
@@ -585,24 +707,29 @@
         container.innerHTML = '<div class="loading">⏳ Mengambil data dari satelit...</div>';
         try {
             const raw = await fetchHotspots(params.source, params.bbox, params.days);
+            if (requestId !== _loadRequestId) return; // permintaan sudah usang (filter berubah lagi), abaikan
             saveCache(raw, params);
             renderAll(raw, false);
         } catch (error) {
+            if (requestId !== _loadRequestId) return; // abaikan error dari permintaan usang
             console.error('Error:', error);
+            const friendlyMsg = (error && error.message) ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
             if (cache && cache.data && cache.data.length > 0) {
                 renderAll(cache.data, true);
                 container.innerHTML = `
                     <div class="cache-warning">
                         <i class="fas fa-exclamation-triangle"></i> 
-                        ${error.message}<br>
+                        ${friendlyMsg}<br>
                         <small>Menampilkan data cache terakhir (${Math.round(cacheAge)} menit yang lalu).</small>
                     </div>
                 `;
                 const list = document.getElementById('report-list');
                 list.insertBefore(container.firstChild, list.firstChild);
             } else {
-                container.innerHTML = `<div class="loading">❌ Gagal: ${error.message}<br><br> 
-                    <button onclick="loadData(true)" style="padding:8px 20px;border:none;background:#b22222;color:white;border-radius:20px;cursor:pointer;">
+                updateStats([]);
+                markersLayer.clearLayers();
+                container.innerHTML = `<div class="loading">❌ Gagal: ${friendlyMsg}<br><br> 
+                    <button onclick="loadData(true)" style="padding:8px 20px;border:none;background:#b22222;color:white;border-radius:20px;cursor:pointer;min-height:40px;">
                         <i class="fas fa-sync-alt"></i> Coba Lagi
                     </button>
                 </div>`;
@@ -614,18 +741,49 @@
     document.addEventListener('DOMContentLoaded', function() {
         initMap();
 
+        // ----- Tab mobile: Info / Peta -----
+        const tabInfo = document.getElementById('tabInfo');
+        const tabMap = document.getElementById('tabMap');
+        document.body.classList.add('mobile-view-info');
+        tabInfo.addEventListener('click', function() {
+            document.body.classList.remove('mobile-view-map');
+            document.body.classList.add('mobile-view-info');
+            tabInfo.classList.add('active');
+            tabMap.classList.remove('active');
+        });
+        tabMap.addEventListener('click', function() {
+            document.body.classList.remove('mobile-view-info');
+            document.body.classList.add('mobile-view-map');
+            tabMap.classList.add('active');
+            tabInfo.classList.remove('active');
+            // Peta perlu diberitahu ukurannya berubah karena sempat display:none
+            setTimeout(() => { if (map) map.invalidateSize(); }, 50);
+        });
+        window.addEventListener('resize', function() {
+            if (map) map.invalidateSize();
+        });
+
         // Toggle search wrapper
         document.getElementById('filterArea').addEventListener('change', function() {
             const wrapper = document.getElementById('searchWrapper');
             if (this.value === 'custom') {
                 wrapper.style.display = 'flex';
                 document.getElementById('searchLocation').focus();
+                // Jangan langsung fetch - tunggu pengguna memilih lokasi dari hasil pencarian
             } else {
                 wrapper.style.display = 'none';
                 document.getElementById('searchResults').style.display = 'none';
                 window._customBbox = null;
                 loadData(false);
             }
+        });
+
+        // Sumber satelit & rentang tanggal juga harus memicu pemuatan ulang data
+        document.getElementById('filterSource').addEventListener('change', function() {
+            loadData(false);
+        });
+        document.getElementById('filterDays').addEventListener('change', function() {
+            loadData(false);
         });
 
         // Search with debounce
