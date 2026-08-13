@@ -1446,7 +1446,10 @@
                                     // pengganti (itu data semu) -> biarkan null, UI menyembunyikannya.
                                     const realDate = findDateField(rec);
                                     out.push({
-                                        uid: 'karhutla:' + (rec['_id'] !== undefined ? rec['_id'] : `${kab}|${prov}|${descText}`),
+                                        // Tie-breaker "|out.length" menjamin uid TIDAK PERNAH bentrok
+                                        // sekalipun _id absen & kab/provinsi/rincian sama persis
+                                        // (mis. tabel rekap dengan banyak baris per kab di periode berbeda).
+                                        uid: 'karhutla:' + (rec['_id'] !== undefined ? rec['_id'] : `${kab}|${prov}|${descText}|${out.length}`),
                                         title: 'Karhutla (Hutan dan Lahan)',
                                         location: kab || '',
                                         province: prov,
@@ -1490,7 +1493,7 @@
                                 const prov = provOfficial || estimateProvinceFromCoords(lat, lng);
                                 const dynamicDesc = buildDynamicDescription(item, ['provinsi', 'kabupaten']);
                                 out.push({
-                                    uid: `bmkg:${lat}|${lng}|${item.kecamatan || ''}|${item.kabupaten || ''}|${item.tanggal || ''}|${item.confidence || ''}`,
+                                    uid: `bmkg:${lat}|${lng}|${item.kecamatan || ''}|${item.kabupaten || ''}|${item.tanggal || ''}|${item.confidence || ''}|${out.length}`,
                                     title: `Hotspot (BMKG) - ${item.kecamatan || ''}`,
                                     location: `${item.kabupaten || ''}, ${item.provinsi || ''}`,
                                     province: prov,
@@ -1552,7 +1555,7 @@
                                 header.forEach((h, idx) => { if (h) rowObj[h] = cols[idx]; });
                                 const dynamicDesc = buildDynamicDescription(rowObj, ['latitude', 'longitude']);
                                 out.push({
-                                    uid: `nasa:${lat}|${lng}|${date}|${time}|${conf}`,
+                                    uid: `nasa:${lat}|${lng}|${date}|${time}|${conf}|${out.length}`,
                                     title: `Hotspot (NASA MODIS) - ${conf} confidence`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
                                     province: prov,
@@ -1596,7 +1599,7 @@
                                 const prov = estimateProvinceFromCoords(lat, lng);
                                 const dynamicDesc = buildDynamicDescription(item, ['latitude', 'longitude']);
                                 out.push({
-                                    uid: `gfw:${lat}|${lng}|${item.alert_date || ''}|${item.confidence || ''}`,
+                                    uid: `gfw:${lat}|${lng}|${item.alert_date || ''}|${item.confidence || ''}|${out.length}`,
                                     title: `GLAD Alert (GFW) - ${item.confidence || ''}`,
                                     location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
                                     province: prov,
@@ -1643,7 +1646,7 @@
                                     if (lat && lng) {
                                         const dynamicDesc = buildDynamicDescription(rec, ['kabupaten/kota', 'provinsi', 'jenis bencana', 'tanggal']);
                                         out.push({
-                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${rec['Tanggal'] || ''}`),
+                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${rec['Tanggal'] || ''}|${out.length}`),
                                             title: `Kejadian: ${jenis}`,
                                             location: kab || '',
                                             province: prov,
@@ -1698,10 +1701,18 @@
                         withHardTimeout(loadRegencyProvinceMap(), 30000, 'Basis Data Wilayah')
                     ]);
 
+                    const SOURCE_LABELS = ['BNPB Karhutla', 'BMKG Hotspot', 'NASA FIRMS', 'Global Forest Watch', 'BNPB Data Kejadian', 'Basis Data Wilayah'];
                     let combined = [];
-                    for (const r of results) {
+                    const perSourceCount = [];
+                    results.forEach((r, idx) => {
+                        const n = (r.status === 'fulfilled' && Array.isArray(r.value)) ? r.value.length : 0;
+                        perSourceCount.push(`${SOURCE_LABELS[idx]}=${n}`);
                         if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
-                    }
+                        if (r.status === 'rejected') logMessage(`❌ ${SOURCE_LABELS[idx]} promise ditolak: ${r.reason}`, 'err');
+                    });
+                    // Log rinci per sumber supaya kalau ada selisih jumlah di tahap manapun
+                    // setelah ini, langsung terlihat sumber mana & di tahap apa datanya hilang.
+                    logMessage(`📊 Kontribusi per sumber ke gabungan: ${perSourceCount.join(', ')}`, 'info');
                     logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`, 'info');
 
                     // ---------- Koreksi Provinsi berdasarkan Kabupaten/Kota ----------
@@ -1736,6 +1747,7 @@
                     // deskripsi) supaya kemungkinan tabrakan antar record berbeda sangat kecil.
                     const unique = [];
                     const seen = new Set();
+                    let dupCount = 0;
                     for (const ev of combined) {
                         if (!ev.province) ev.province = '';
                         if (!ev.kabkota) ev.kabkota = '';
@@ -1743,8 +1755,11 @@
                         if (!seen.has(key)) {
                             seen.add(key);
                             unique.push(ev);
+                        } else {
+                            dupCount++;
                         }
                     }
+                    logMessage(`🧹 Setelah deduplikasi: ${unique.length} unik (${dupCount} dianggap duplikat & dibuang).`, 'info');
 
                     // ---------- Urutkan berdasarkan waktu terbaru, lalu terapkan batas jumlah ----------
                     // (default ALL, atau angka yang dipilih di header)
