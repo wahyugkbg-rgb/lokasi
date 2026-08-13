@@ -205,23 +205,54 @@
         }
 
         /* ===== MAP LEGEND (sumber data) ===== */
+        /* Legend dibuat "collapsible": judul selalu berupa tombol kecil yang bisa
+           dibuka/ditutup, supaya di layar sempit dia tidak menutupi titik-titik
+           hotspot di peta. Default: tertutup (ringkas), user bisa tap untuk buka. */
         .map-legend {
-            background: rgba(255, 251, 240, 0.95);
+            background: rgba(255, 251, 240, 0.97);
             border: 1px solid var(--border);
             border-radius: 10px;
-            padding: 9px 12px;
             box-shadow: var(--shadow-md);
             font-size: 11.5px;
             color: var(--ink-soft);
             line-height: 1.7;
             max-width: 220px;
+            overflow: hidden;
+        }
+        .map-legend-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
         }
         .map-legend-title {
             font-weight: 800;
             font-size: 12px;
             color: var(--ink);
-            margin-bottom: 4px;
             font-family: 'Poppins', sans-serif;
+        }
+        .map-legend-caret {
+            font-size: 10px;
+            color: var(--ink-muted);
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+        .map-legend.open .map-legend-caret { transform: rotate(180deg); }
+        .map-legend-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.22s ease;
+            padding: 0 12px;
+        }
+        .map-legend.open .map-legend-body {
+            max-height: 260px;
+            padding: 0 12px 10px;
         }
         .map-legend-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
         .map-legend-dot {
@@ -244,6 +275,14 @@
             pointer-events: none;
             box-shadow: inset 0 0 40px rgba(120, 72, 8, 0.08);
             z-index: 5;
+        }
+
+        /* ===== VIEW SWITCH (khusus layar sempit): Info <-> Peta ===== */
+        /* Di layar lebar, peta & info tampil berdampingan (side-by-side), jadi tombol
+           ini disembunyikan. Di layar sempit, hanya salah satu yang ditampilkan penuh
+           secara bergantian supaya tidak tumpang tindih / saling menutupi separuh. */
+        .view-switch {
+            display: none;
         }
         .sidebar {
             width: 420px;
@@ -550,10 +589,59 @@
         .log-entry .log-info { color: #7cb8ff; }
 
         @media (max-width: 820px) {
-            .sidebar { width: 100%; min-width: unset; max-width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 48vh; }
+            .sidebar { width: 100%; min-width: unset; max-width: 100%; border-left: none; border-top: 1px solid var(--border); }
             .main { flex-direction: column-reverse; }
             .header h1 { font-size: 17px; }
             .header-right { font-size: 12px; }
+
+            /* Tombol geser tampilan Info/Peta: tampil sebagai bar sticky di bawah
+               header supaya selalu terjangkau, apa pun mode yang sedang aktif. */
+            .view-switch {
+                display: flex;
+                gap: 8px;
+                padding: 9px 12px;
+                background: var(--surface-alt);
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+                position: sticky;
+                top: 0;
+                z-index: 15;
+            }
+            .view-switch button {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--ink-soft);
+                font-weight: 700;
+                font-size: 12.5px;
+                font-family: 'Inter', sans-serif;
+                padding: 9px 10px;
+                border-radius: 9px;
+                cursor: pointer;
+                transition: all 0.18s ease;
+            }
+            .view-switch button.active {
+                background: linear-gradient(120deg, var(--fire-2), var(--gold));
+                border-color: transparent;
+                color: #fff;
+                box-shadow: var(--shadow-sm);
+            }
+
+            /* Hanya salah satu (peta ATAU info) yang mengisi penuh sisa layar,
+               bergantian sesuai mode yang dipilih lewat .view-switch - bukan
+               keduanya dipaksa muat berbagi ruang sehingga saling terpotong. */
+            .main.mode-info .map-container { display: none; }
+            .main.mode-info .sidebar { flex: 1; max-height: none; }
+            .main.mode-map .sidebar { display: none; }
+            .main.mode-map .map-container { flex: 1; }
+
+            /* Legend: default lebih kompak & bisa dilipat penuh supaya tidak
+               menutupi hotspot saat mode peta penuh dipakai di HP. */
+            .map-legend { max-width: 200px; }
         }
         @media (max-width: 480px) {
             .header { padding: 9px 12px; }
@@ -656,7 +744,12 @@
         </div>
     </header>
 
-    <div class="main">
+    <div class="view-switch" id="viewSwitch">
+        <button type="button" class="active" data-view="info">📋 Info</button>
+        <button type="button" data-view="map">🗺️ Peta Penuh</button>
+    </div>
+
+    <div class="main mode-info" id="mainEl">
         <div class="map-container">
             <div id="map"></div>
         </div>
@@ -1475,15 +1568,30 @@
             const legendControl = L.control({ position: 'bottomleft' });
             legendControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'map-legend');
-                div.innerHTML = `<div class="map-legend-title">🗺️ Sumber Data</div>` +
-                    Object.values(SOURCE_STYLE).map(s => `
-                        <div class="map-legend-item">
-                            <span class="map-legend-dot" style="background:${s.color};"></span>
-                            <span>${s.icon} ${s.label}</span>
-                        </div>
-                    `).join('') +
-                    `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--ink-muted);">≈ = provinsi perkiraan dari koordinat, bukan data resmi</div>`;
+                div.innerHTML = `
+                    <button type="button" class="map-legend-toggle">
+                        <span class="map-legend-title">🗺️ Sumber Data</span>
+                        <span class="map-legend-caret">▲</span>
+                    </button>
+                    <div class="map-legend-body">
+                        ${Object.values(SOURCE_STYLE).map(s => `
+                            <div class="map-legend-item">
+                                <span class="map-legend-dot" style="background:${s.color};"></span>
+                                <span>${s.icon} ${s.label}</span>
+                            </div>
+                        `).join('')}
+                        <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--ink-muted);">≈ = provinsi perkiraan dari koordinat, bukan data resmi</div>
+                    </div>
+                `;
                 L.DomEvent.disableClickPropagation(div);
+                // Di layar lebar (desktop) peta & info berdampingan sehingga ruang
+                // cukup, legend langsung terbuka. Di layar sempit (HP) legend
+                // tertutup dulu supaya tidak menutupi titik hotspot; tinggal tap
+                // judul untuk membuka/menutup rincian sumber data kapan pun perlu.
+                if (window.innerWidth > 820) div.classList.add('open');
+                div.querySelector('.map-legend-toggle').addEventListener('click', function() {
+                    div.classList.toggle('open');
+                });
                 return div;
             };
             legendControl.addTo(map);
@@ -1970,6 +2078,37 @@
                     refreshBtn.classList.remove('spinning');
                 }
             }
+
+            // ---------- view switch (mobile): Info <-> Peta Penuh ----------
+            // Di layar sempit, info & peta bergantian mengisi layar penuh (bukan
+            // berbagi ruang setengah-setengah) supaya tidak saling menutupi.
+            const mainEl = document.getElementById('mainEl');
+            const viewSwitch = document.getElementById('viewSwitch');
+            function switchMobileView(view) {
+                mainEl.classList.toggle('mode-map', view === 'map');
+                mainEl.classList.toggle('mode-info', view === 'info');
+                if (viewSwitch) {
+                    viewSwitch.querySelectorAll('button').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.view === view);
+                    });
+                }
+                if (view === 'map') {
+                    // Peta yang baru saja ditampilkan (sebelumnya display:none) perlu
+                    // dihitung ulang ukurannya, kalau tidak Leaflet menampilkannya
+                    // kosong/terpotong.
+                    setTimeout(function() { map.invalidateSize(); }, 220);
+                }
+            }
+            if (viewSwitch) {
+                viewSwitch.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        switchMobileView(this.dataset.view);
+                    });
+                });
+            }
+            window.addEventListener('resize', function() {
+                map.invalidateSize();
+            });
 
             // ---------- init ----------
             function init() {
