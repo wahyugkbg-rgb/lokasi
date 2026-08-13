@@ -881,10 +881,19 @@
             function renderCurrentTab() {
                 const filtered = getFilteredEvents();
                 updateFilterInfo(filtered);
-                updateMap(filtered);
-                if (currentTab === 'list') renderList(filtered);
-                else if (currentTab === 'rekap') renderRekap(filtered);
-                else renderStats(filtered);
+                // Setiap panggilan render dibungkus try/catch terpisah: jika salah satu (mis.
+                // peta) gagal karena data tak terduga, panel lain (daftar, rekap, statistik)
+                // tetap tampil, bukan ikut kosong semua.
+                try { updateMap(filtered); } catch (e) { console.error('updateMap error:', e); logMessage(`⚠️ Peta gagal dimuat: ${e.message}`, 'err'); }
+                try {
+                    if (currentTab === 'list') renderList(filtered);
+                    else if (currentTab === 'rekap') renderRekap(filtered);
+                    else renderStats(filtered);
+                } catch (e) {
+                    console.error('render tab error:', e);
+                    logMessage(`⚠️ Gagal menampilkan panel "${currentTab}": ${e.message}`, 'err');
+                    sidebarContent.innerHTML = `<div style="padding:20px;color:var(--danger);">Terjadi error saat menampilkan data: ${escHtml(e.message)}. Coba refresh, atau lihat konsol browser.</div>`;
+                }
             }
 
             // ---------- Gaya visual per sumber data (untuk legend, marker & badge) ----------
@@ -1493,7 +1502,7 @@
                 const out = [];
                 try {
                     logMessage('📡 NASA FIRMS (MODIS)...', 'info');
-                    const url = 'https://firms.modaps.eosdis.nasa.gov/api/country/csv/7daea73d6a1e3eba1f1089e3018b1c0e/MODIS_NRT/IDN/1';
+                    const url = 'https://firms.modaps.eosdis.nasa.gov/api/country/csv/e916bdfd16f5230b3e6cabc6c03f5870/MODIS_NRT/IDN/1';
                     const resp = await fetchWithProxy(url, { headers: { 'Accept': 'text/csv' } });
                     if (resp.ok) {
                         const text = await resp.text();
@@ -1651,87 +1660,101 @@
                 setStatus(true, 'Mengambil data...');
                 logMessage('🔄 Memulai pengambilan data dari berbagai sumber online (paralel)...', 'info');
 
-                // Setiap sumber dibungkus watchdog (withHardTimeout) supaya satu sumber yang
-                // lambat/gagal TIDAK PERNAH mengunci dashboard menunggu tanpa batas -> jika
-                // melewati batas waktu, sumber itu dianggap kosong dan proses tetap lanjut.
-                const results = await Promise.allSettled([
-                    withHardTimeout(fetchBNPBKarhutla(), 20000, 'BNPB Karhutla'),
-                    withHardTimeout(fetchBMKGHotspot(), 20000, 'BMKG Hotspot'),
-                    withHardTimeout(fetchNASAFirms(), 20000, 'NASA FIRMS'),
-                    withHardTimeout(fetchGFW(), 20000, 'Global Forest Watch'),
-                    withHardTimeout(fetchBNPBKejadian(), 20000, 'BNPB Data Kejadian'),
-                    withHardTimeout(loadRegencyProvinceMap(), 20000, 'Basis Data Wilayah')
-                ]);
+                // PENTING: seluruh proses di bawah ini dibungkus try/catch/finally. Sebelumnya
+                // TIDAK ADA penanganan error di sini sama sekali -> jika ada satu baris saja yang
+                // melempar exception (mis. data tak terduga dari salah satu API), seluruh fungsi
+                // berhenti diam-diam: log sumber data sudah terlanjur tampil "berhasil", tapi
+                // allEvents/daftar tidak pernah ter-update, dan tombol refresh macet permanen.
+                // Sekarang: error apa pun akan TERLIHAT di log, dan status refresh selalu pulih.
+                try {
+                    // Setiap sumber dibungkus watchdog (withHardTimeout) supaya satu sumber yang
+                    // lambat/gagal TIDAK PERNAH mengunci dashboard menunggu tanpa batas -> jika
+                    // melewati batas waktu, sumber itu dianggap kosong dan proses tetap lanjut.
+                    const results = await Promise.allSettled([
+                        withHardTimeout(fetchBNPBKarhutla(), 20000, 'BNPB Karhutla'),
+                        withHardTimeout(fetchBMKGHotspot(), 20000, 'BMKG Hotspot'),
+                        withHardTimeout(fetchNASAFirms(), 20000, 'NASA FIRMS'),
+                        withHardTimeout(fetchGFW(), 20000, 'Global Forest Watch'),
+                        withHardTimeout(fetchBNPBKejadian(), 20000, 'BNPB Data Kejadian'),
+                        withHardTimeout(loadRegencyProvinceMap(), 20000, 'Basis Data Wilayah')
+                    ]);
 
-                let combined = [];
-                for (const r of results) {
-                    if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
-                }
+                    let combined = [];
+                    for (const r of results) {
+                        if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
+                    }
+                    logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`, 'info');
 
-                // ---------- Koreksi Provinsi berdasarkan Kabupaten/Kota ----------
-                // Setelah basis data wilayah (ihsaninh/wilayah-indonesia) siap, provinsi setiap
-                // kejadian yang memiliki kab/kota DITENTUKAN ULANG berdasarkan pemetaan resmi ini
-                // (lebih akurat & konsisten dibanding field provinsi mentah dari sumber, yang kadang
-                // kosong/typo). Jika tidak ditemukan kecocokan, provinsi asli dari sumber / estimasi
-                // koordinat tetap dipakai sebagai cadangan -> tidak ada data yang hilang.
-                if (regencyMapReady) {
-                    for (const ev of combined) {
-                        if (ev.kabkota) {
-                            const resolved = resolveProvinceFromKabkota(ev.kabkota);
-                            if (resolved) {
-                                ev.province = resolved;
-                                ev.provinceEstimated = false; // sudah dikonfirmasi via basis data resmi
+                    // ---------- Koreksi Provinsi berdasarkan Kabupaten/Kota ----------
+                    // Dibungkus try/catch sendiri: jika basis data wilayah bermasalah, koreksi
+                    // provinsi dilewati tapi data kejadian yang SUDAH ada tetap ditampilkan.
+                    if (regencyMapReady) {
+                        try {
+                            for (const ev of combined) {
+                                if (ev.kabkota) {
+                                    const resolved = resolveProvinceFromKabkota(ev.kabkota);
+                                    if (resolved) {
+                                        ev.province = resolved;
+                                        ev.provinceEstimated = false; // sudah dikonfirmasi via basis data resmi
+                                    }
+                                }
                             }
+                            logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.', 'ok');
+                        } catch (e) {
+                            logMessage(`⚠️ Koreksi provinsi dilewati (error: ${e.message}), data kejadian tetap ditampilkan.`, 'err');
                         }
                     }
-                    logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.', 'ok');
-                }
 
-                // ---------- Deduplikasi ----------
-                // PENTING: kunci deduplikasi TIDAK BOLEH hanya mengandalkan lat/lng/timestamp,
-                // karena banyak record valid (terutama BNPB Karhutla) tidak selalu punya
-                // koordinat, dan timestamp kini bisa null (tidak lagi dipalsukan dengan waktu
-                // "sekarang" - lihat toISOOrNull). Jika lat/lng/timestamp kosong di banyak
-                // record sekaligus, kunci lama akan SAMA untuk semuanya -> record-record nyata
-                // yang berbeda saling menimpa dan "hilang" dari daftar walau sudah tercatat di
-                // log. Maka: pakai uid unik dari sumber (mis. _id resmi CKAN) jika tersedia,
-                // dan fallback ke kombinasi field yang jauh lebih spesifik (sumber+judul+lokasi+
-                // deskripsi) supaya kemungkinan tabrakan antar record berbeda sangat kecil.
-                const unique = [];
-                const seen = new Set();
-                for (const ev of combined) {
-                    if (!ev.province) ev.province = '';
-                    if (!ev.kabkota) ev.kabkota = '';
-                    const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        unique.push(ev);
+                    // ---------- Deduplikasi ----------
+                    // PENTING: kunci deduplikasi TIDAK BOLEH hanya mengandalkan lat/lng/timestamp,
+                    // karena banyak record valid (terutama BNPB Karhutla) tidak selalu punya
+                    // koordinat, dan timestamp kini bisa null (tidak lagi dipalsukan dengan waktu
+                    // "sekarang" - lihat toISOOrNull). Jika lat/lng/timestamp kosong di banyak
+                    // record sekaligus, kunci lama akan SAMA untuk semuanya -> record-record nyata
+                    // yang berbeda saling menimpa dan "hilang" dari daftar walau sudah tercatat di
+                    // log. Maka: pakai uid unik dari sumber (mis. _id resmi CKAN) jika tersedia,
+                    // dan fallback ke kombinasi field yang jauh lebih spesifik (sumber+judul+lokasi+
+                    // deskripsi) supaya kemungkinan tabrakan antar record berbeda sangat kecil.
+                    const unique = [];
+                    const seen = new Set();
+                    for (const ev of combined) {
+                        if (!ev.province) ev.province = '';
+                        if (!ev.kabkota) ev.kabkota = '';
+                        const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            unique.push(ev);
+                        }
                     }
+
+                    // ---------- Urutkan berdasarkan waktu terbaru, lalu terapkan batas jumlah ----------
+                    // (default ALL, atau angka yang dipilih di header)
+                    let finalEvents = sortByRecency(unique);
+                    if (!limitIsAll && finalEvents.length > currentLimit) {
+                        finalEvents = finalEvents.slice(0, currentLimit);
+                    }
+
+                    if (finalEvents.length === 0) {
+                        logMessage('⚠️ Tidak ada data dari semua sumber.', 'err');
+                        setStatus(false, 'Tidak ada data');
+                    } else {
+                        logMessage(`✅ Total ${unique.length} kejadian terkumpul, ditampilkan ${finalEvents.length}${limitIsAll ? ' (ALL)' : ' (batas: ' + currentLimit + ')'}.`, 'ok');
+                        setStatus(true, `${finalEvents.length} kejadian`);
+                    }
+
+                    allEvents = finalEvents;
+                    updateTimestamp();
+                    populateFilterOptions();
+                    renderCurrentTab();
+                } catch (e) {
+                    logMessage(`❌ Gagal memproses data: ${e.message}. Lihat konsol browser untuk detail.`, 'err');
+                    setStatus(false, 'Error saat memproses data');
+                    console.error('fetchAllData error:', e);
+                } finally {
+                    isRefreshing = false;
+                    refreshBtn.disabled = false;
+                    refreshBtn.classList.remove('spinning');
                 }
-
-                // ---------- Urutkan berdasarkan waktu terbaru, lalu terapkan batas jumlah ----------
-                // (default 200, editable dari header, atau ALL jika tombol ALL aktif)
-                let finalEvents = sortByRecency(unique);
-                if (!limitIsAll && finalEvents.length > currentLimit) {
-                    finalEvents = finalEvents.slice(0, currentLimit);
-                }
-
-                if (finalEvents.length === 0) {
-                    logMessage('⚠️ Tidak ada data dari semua sumber.', 'err');
-                    setStatus(false, 'Tidak ada data');
-                } else {
-                    logMessage(`✅ Total ${unique.length} kejadian terkumpul, ditampilkan ${finalEvents.length}${limitIsAll ? ' (ALL)' : ' (batas: ' + currentLimit + ')'}.`, 'ok');
-                    setStatus(true, `${finalEvents.length} kejadian`);
-                }
-
-                allEvents = finalEvents;
-                updateTimestamp();
-                populateFilterOptions();
-                renderCurrentTab();
-
-                isRefreshing = false;
-                refreshBtn.disabled = false;
-                refreshBtn.classList.remove('spinning');
             }
 
             // ---------- init ----------
