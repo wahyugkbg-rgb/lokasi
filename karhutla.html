@@ -835,17 +835,19 @@
             function getFilteredEvents() {
                 let out = allEvents;
                 if (filterProvinsi) {
-                    out = out.filter(ev => (ev.province || '').trim().toUpperCase() === filterProvinsi.toUpperCase());
+                    out = out.filter(ev => String(ev.province || '').trim().toUpperCase() === filterProvinsi.toUpperCase());
                 }
                 if (filterKabkota) {
-                    out = out.filter(ev => (ev.kabkota || '').trim().toUpperCase() === filterKabkota.toUpperCase());
+                    out = out.filter(ev => String(ev.kabkota || '').trim().toUpperCase() === filterKabkota.toUpperCase());
                 }
                 return out;
             }
             function populateFilterOptions() {
                 // Provinsi: daftar unik dari seluruh data yang sedang termuat
+                // (String(...) berjaga-jaga jika field ternyata bukan string murni, supaya
+                // tidak error ".trim() is not a function" dan menghentikan seluruh proses).
                 const provSet = new Set();
-                allEvents.forEach(ev => { if (ev.province && ev.province.trim()) provSet.add(ev.province.trim()); });
+                allEvents.forEach(ev => { const p = String(ev.province || '').trim(); if (p) provSet.add(p); });
                 const provList = [...provSet].sort((a, b) => a.localeCompare(b));
                 const prevProv = filterProvinsiEl.value;
                 filterProvinsiEl.innerHTML = '<option value="">Semua Provinsi</option>' +
@@ -856,9 +858,10 @@
                 // Kab/Kota: dibatasi oleh provinsi terpilih (jika ada) supaya pencarian lebih cepat
                 const kabSet = new Set();
                 allEvents.forEach(ev => {
-                    if (!ev.kabkota || !ev.kabkota.trim()) return;
-                    if (filterProvinsi && (ev.province || '').trim().toUpperCase() !== filterProvinsi.toUpperCase()) return;
-                    kabSet.add(ev.kabkota.trim());
+                    const kb = String(ev.kabkota || '').trim();
+                    if (!kb) return;
+                    if (filterProvinsi && String(ev.province || '').trim().toUpperCase() !== filterProvinsi.toUpperCase()) return;
+                    kabSet.add(kb);
                 });
                 const kabList = [...kabSet].sort((a, b) => a.localeCompare(b));
                 const prevKab = filterKabkotaEl.value;
@@ -920,7 +923,23 @@
             // yang dicari tidak "match" persis walau sebenarnya ada di record.
             function findFieldKey(rec, patterns) {
                 if (!rec) return undefined;
-                for (const k of Object.keys(rec)) {
+                const keys = Object.keys(rec);
+                // Tahap 1: PRIORITASKAN kolom yang diawali "nama" (mis. "Nama Kabupaten/Kota")
+                // dan HINDARI kolom kode (mis. "Kode Wilayah Kabupaten / Kota" -> juga
+                // mengandung kata "kabupaten"/"kota" tapi isinya angka, bukan nama).
+                for (const k of keys) {
+                    const kl = k.toLowerCase();
+                    if (kl.includes('kode') || kl.includes(' id ') || kl.startsWith('id ')) continue;
+                    if (kl.includes('nama') && patterns.some(p => kl.includes(p))) return k;
+                }
+                // Tahap 2: match pola apa saja TAPI tetap hindari kolom kode/id
+                for (const k of keys) {
+                    const kl = k.toLowerCase();
+                    if (kl.includes('kode') || kl.includes(' id ') || kl.startsWith('id ')) continue;
+                    if (patterns.some(p => kl.includes(p))) return k;
+                }
+                // Tahap 3: cadangan terakhir, match pola apa saja tanpa pengecualian
+                for (const k of keys) {
                     const kl = k.toLowerCase();
                     if (patterns.some(p => kl.includes(p))) return k;
                 }
@@ -928,7 +947,12 @@
             }
             function findFieldValue(rec, patterns) {
                 const k = findFieldKey(rec, patterns);
-                return k !== undefined ? rec[k] : undefined;
+                if (k === undefined) return undefined;
+                const v = rec[k];
+                // Selalu kembalikan string (atau undefined) -> mencegah error ".trim() bukan
+                // fungsi" di kode lain jika API mengembalikan tipe tak terduga (angka/null/objek).
+                if (v === null || v === undefined) return undefined;
+                return typeof v === 'string' ? v : String(v);
             }
 
             // ---------- Format angka kejadian per jenis bencana (tanpa desimal, "-" jika nihil) ----------
@@ -1853,8 +1877,22 @@
 
                     allEvents = finalEvents;
                     updateTimestamp();
-                    populateFilterOptions();
-                    renderCurrentTab();
+                    // populateFilterOptions & renderCurrentTab dibungkus try/catch sendiri:
+                    // status "berhasil" & data yang sudah masuk (allEvents) TIDAK BOLEH ditimpa
+                    // jadi "Error" hanya karena langkah tampilan lanjutan (filter/render)
+                    // bermasalah -> setidaknya data & status sukses tetap benar.
+                    try {
+                        populateFilterOptions();
+                    } catch (e) {
+                        console.error('populateFilterOptions error:', e);
+                        logMessage(`⚠️ Gagal menyusun filter provinsi/kab-kota: ${e.message}`, 'err');
+                    }
+                    try {
+                        renderCurrentTab();
+                    } catch (e) {
+                        console.error('renderCurrentTab error:', e);
+                        logMessage(`⚠️ Gagal menampilkan data: ${e.message}`, 'err');
+                    }
                 } catch (e) {
                     logMessage(`❌ Gagal memproses data: ${e.message}. Lihat konsol browser untuk detail.`, 'err');
                     setStatus(false, 'Error saat memproses data');
