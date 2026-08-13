@@ -1793,4 +1793,241 @@
                                     if (lat && lng) {
                                         const dynamicDesc = buildDynamicDescription(rec, [kabKey, provKey, jenisKey, tglKey].filter(Boolean));
                                         out.push({
-                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${
+                                            uid: 'kejadian:' + (rec['_id'] !== undefined ? rec['_id'] : `${jenis}|${kab}|${tgl || ''}|${out.length}`),
+                                            title: `Kejadian: ${jenis}`,
+                                            location: kab || '',
+                                            province: prov,
+                                            kabkota: kab,
+                                            lat: lat, lng: lng,
+                                            timestamp: toISOOrNull(tgl),
+                                            source: 'BNPB Data Kejadian',
+                                            description: dynamicDesc || `Keterangan: ${rec['Keterangan'] || ''}`,
+                                            detail: `Kabupaten: ${kab} | Provinsi: ${prov} | Tanggal: ${tgl || ''}` + (dynamicDesc ? ` | ${dynamicDesc}` : '')
+                                        });
+                                    }
+                                }
+                            }
+                            logMessage(`✅ BNPB Kejadian: ${records.length} record diperiksa, ${out.length} kejadian karhutla.`, 'ok');
+                            if (out.length === 0 && records.length > 0) {
+                                logMessage('⚠️ Tidak ada kejadian kebakaran yang cocok di BNPB Data Kejadian. Sumber lain tetap tampil.', 'err');
+                            }
+                        } else {
+                            logMessage('⚠️ BNPB Kejadian: tidak ada records.', 'err');
+                        }
+                    } else {
+                        logMessage(`⚠️ BNPB Kejadian: HTTP ${resp.status}`, 'err');
+                    }
+                } catch (e) {
+                    logMessage(`❌ BNPB Kejadian error: ${e.message}`, 'err');
+                }
+                return out;
+            }
+
+            // ---------- FETCH DATA (semua sumber paralel) ----------
+            async function fetchAllData() {
+                if (isRefreshing) return;
+                isRefreshing = true;
+                refreshBtn.disabled = true;
+                refreshBtn.classList.add('spinning');
+                setStatus(true, 'Mengambil data...');
+                logMessage('🔄 Memulai pengambilan data dari berbagai sumber online (paralel)...', 'info');
+
+                try {
+                    const results = await Promise.allSettled([
+                        withHardTimeout(fetchBNPBKarhutla(), 30000, 'BNPB Karhutla'),
+                        withHardTimeout(fetchBMKGHotspot(), 30000, 'BMKG Hotspot'),
+                        withHardTimeout(fetchNASAFirms(), 30000, 'NASA FIRMS MODIS'),
+                        withHardTimeout(fetchNASAFirmsVIIRS(), 30000, 'NASA FIRMS VIIRS'),
+                        withHardTimeout(fetchBNPBKejadian(), 30000, 'BNPB Data Kejadian'),
+                        withHardTimeout(loadRegencyProvinceMap(), 30000, 'Basis Data Wilayah')
+                    ]);
+
+                    const SOURCE_LABELS = ['BNPB Karhutla', 'BMKG Hotspot', 'NASA FIRMS MODIS', 'NASA FIRMS VIIRS', 'BNPB Data Kejadian', 'Basis Data Wilayah'];
+                    let combined = [];
+                    try {
+                        const perSourceCount = [];
+                        results.forEach((r, idx) => {
+                            const n = (r.status === 'fulfilled' && Array.isArray(r.value)) ? r.value.length : 0;
+                            perSourceCount.push(`${SOURCE_LABELS[idx]}=${n}`);
+                            if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
+                            if (r.status === 'rejected') logMessage(`❌ ${SOURCE_LABELS[idx]} promise ditolak: ${r.reason}`, 'err');
+                        });
+                        logMessage(`📊 Kontribusi per sumber ke gabungan: ${perSourceCount.join(', ')}`, 'info');
+                        logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`, 'info');
+                    } catch (e) {
+                        console.error(e);
+                        logMessage(`⚠️ Gagal menggabungkan hasil sumber (${e.message}).`, 'err');
+                    }
+
+                    if (regencyMapReady) {
+                        try {
+                            for (const ev of combined) {
+                                if (ev.kabkota) {
+                                    const resolved = resolveProvinceFromKabkota(ev.kabkota);
+                                    if (resolved) {
+                                        ev.province = resolved;
+                                        ev.provinceEstimated = false;
+                                    }
+                                }
+                            }
+                            logMessage('🗺️ Provinsi disesuaikan berdasarkan kabupaten/kota via API wilayah-indonesia.', 'ok');
+                        } catch (e) {
+                            logMessage(`⚠️ Koreksi provinsi dilewati (error: ${e.message}), data kejadian tetap ditampilkan.`, 'err');
+                        }
+                    }
+
+                    let unique;
+                    try {
+                        unique = [];
+                        const seen = new Set();
+                        let dupCount = 0;
+                        for (const ev of combined) {
+                            if (!ev.province) ev.province = '';
+                            if (!ev.kabkota) ev.kabkota = '';
+                            const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                unique.push(ev);
+                            } else {
+                                dupCount++;
+                            }
+                        }
+                        logMessage(`🧹 Setelah deduplikasi: ${unique.length} unik (${dupCount} dianggap duplikat & dibuang).`, 'info');
+                    } catch (e) {
+                        console.error(e);
+                        logMessage(`⚠️ Deduplikasi gagal (${e.message}), memakai data mentah tanpa dedup sebagai cadangan.`, 'err');
+                        unique = combined;
+                    }
+
+                    let finalEvents;
+                    try {
+                        finalEvents = sortByRecency(unique);
+                        if (!limitIsAll && finalEvents.length > currentLimit) {
+                            finalEvents = finalEvents.slice(0, currentLimit);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        logMessage(`⚠️ Pengurutan gagal (${e.message}), memakai urutan apa adanya.`, 'err');
+                        finalEvents = unique;
+                    }
+
+                    if (finalEvents.length === 0) {
+                        logMessage('⚠️ Tidak ada data dari semua sumber.', 'err');
+                        setStatus(false, 'Tidak ada data');
+                    } else {
+                        logMessage(`✅ Total ${unique.length} kejadian terkumpul, ditampilkan ${finalEvents.length}${limitIsAll ? ' (ALL)' : ' (batas: ' + currentLimit + ')'}.`, 'ok');
+                        setStatus(true, `${finalEvents.length} kejadian`);
+                    }
+
+                    allEvents = finalEvents;
+                    updateTimestamp();
+                    try {
+                        populateFilterOptions();
+                    } catch (e) {
+                        console.error(e);
+                        logMessage(`⚠️ Gagal menyusun filter provinsi/kab-kota: ${e.message}`, 'err');
+                    }
+                    try {
+                        renderCurrentTab();
+                    } catch (e) {
+                        console.error(e);
+                        logMessage(`⚠️ Gagal menampilkan data: ${e.message}`, 'err');
+                    }
+                } catch (e) {
+                    logMessage(`❌ Gagal memproses data: ${e.message}. Lihat konsol browser untuk detail.`, 'err');
+                    console.error(e);
+                    setStatus(false, `Error: ${String(e.message || e).slice(0, 60)}`);
+                } finally {
+                    isRefreshing = false;
+                    refreshBtn.disabled = false;
+                    refreshBtn.classList.remove('spinning');
+                }
+            }
+
+            // ---------- view switch (mobile) ----------
+            const mainEl = document.getElementById('mainEl');
+            const viewSwitch = document.getElementById('viewSwitch');
+            function switchMobileView(view) {
+                mainEl.classList.toggle('mode-map', view === 'map');
+                mainEl.classList.toggle('mode-info', view === 'info');
+                if (viewSwitch) {
+                    viewSwitch.querySelectorAll('button').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.view === view);
+                    });
+                }
+                if (view === 'map') {
+                    setTimeout(function() { map.invalidateSize(); }, 220);
+                }
+            }
+            if (viewSwitch) {
+                viewSwitch.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        switchMobileView(this.dataset.view);
+                    });
+                });
+            }
+            const logWrap = document.getElementById('logWrap');
+            const logToggle = document.getElementById('logToggle');
+            if (logToggle) {
+                logToggle.addEventListener('click', function() {
+                    logWrap.classList.toggle('open');
+                });
+            }
+            window.addEventListener('resize', function() {
+                map.invalidateSize();
+            });
+
+            // ---------- init ----------
+            function init() {
+                document.querySelectorAll('.sidebar-tabs button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        switchTab(this.dataset.tab);
+                    });
+                });
+                refreshBtn.addEventListener('click', function() {
+                    fetchAllData();
+                });
+                limitInput.addEventListener('change', function() {
+                    const v = parseInt(limitInput.value, 10);
+                    if (!isNaN(v) && v > 0) {
+                        currentLimit = v;
+                        if (!limitIsAll) fetchAllData();
+                    }
+                });
+                limitAllBtn.addEventListener('click', function() {
+                    limitIsAll = !limitIsAll;
+                    limitAllBtn.classList.toggle('active', limitIsAll);
+                    limitInput.disabled = limitIsAll;
+                    fetchAllData();
+                });
+                filterProvinsiEl.addEventListener('change', function() {
+                    filterProvinsi = filterProvinsiEl.value;
+                    filterKabkota = '';
+                    populateFilterOptions();
+                    renderCurrentTab();
+                });
+                filterKabkotaEl.addEventListener('change', function() {
+                    filterKabkota = filterKabkotaEl.value;
+                    renderCurrentTab();
+                });
+                filterResetBtn.addEventListener('click', function() {
+                    filterProvinsi = '';
+                    filterKabkota = '';
+                    filterProvinsiEl.value = '';
+                    populateFilterOptions();
+                    renderCurrentTab();
+                });
+                setInterval(fetchAllData, 60000);
+                fetchAllData();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+        })();
+    </script>
+</body>
+</html>
