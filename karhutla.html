@@ -42,7 +42,12 @@
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(160deg, var(--bg-body-1) 0%, var(--bg-body-2) 45%, #fff 100%);
             color: var(--ink);
+            /* 100vh di Chrome Android (browser bawaan Oppo A9) memasukkan area yang
+               tertutup address bar, sehingga bagian bawah layar (log/peta) bisa
+               kepotong. 100dvh (dynamic viewport height) mengikuti tinggi layar yang
+               benar-benar terlihat; 100vh dipakai sebagai fallback untuk browser lama. */
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -569,9 +574,25 @@
         }
 
         /* ===== LOG ===== */
+        .log-wrap { flex-shrink: 0; background: #221709; border-top: 2px solid var(--gold-light); }
+        .log-toggle {
+            display: none;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            background: transparent;
+            border: none;
+            color: #d8c9a8;
+            font-family: 'Inter', sans-serif;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 7px 14px;
+            cursor: pointer;
+        }
+        .log-toggle-caret { transition: transform 0.2s ease; }
+        .log-wrap.open .log-toggle-caret { transform: rotate(180deg); }
         .log-container {
             background: #221709;
-            border-top: 2px solid var(--gold-light);
             max-height: 116px;
             overflow-y: auto;
             padding: 7px 16px;
@@ -642,6 +663,14 @@
             /* Legend: default lebih kompak & bisa dilipat penuh supaya tidak
                menutupi hotspot saat mode peta penuh dipakai di HP. */
             .map-legend { max-width: 200px; }
+
+            /* Log aktivitas disembunyikan & dilipat secara default di HP supaya
+               tidak memakan jatah tinggi layar Info/Peta yang sudah sempit
+               (krusial di layar sekitar 6.5" seperti Oppo A9). Tinggal tap bar
+               "Log Aktivitas" kalau memang perlu diperiksa. */
+            .log-toggle { display: flex; }
+            .log-container { max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
+            .log-wrap.open .log-container { max-height: 130px; padding: 7px 16px; overflow-y: auto; }
         }
         @media (max-width: 480px) {
             .header { padding: 9px 12px; }
@@ -684,6 +713,14 @@
                tidak saling menumpuk atau memenuhi lebar layar sempit. */
             .badge-provinsi, .badge-kabkota, .badge-conf { font-size: 10px; padding: 2px 9px; }
             .event-item .title { font-size: 13.5px; }
+
+            /* Tombol geser Info/Peta dirapatkan di layar sekitar 6.5" (mis. Oppo A9,
+               lebar viewport ±412px) supaya tulisan tetap penuh terbaca tanpa
+               terpotong dan tidak mendesak elemen lain. */
+            .view-switch { padding: 7px 10px; gap: 6px; }
+            .view-switch button { padding: 8px 6px; font-size: 11.5px; gap: 4px; }
+            .log-toggle { padding: 6px 12px; font-size: 11px; }
+            .map-legend { max-width: 178px; font-size: 11px; }
         }
         @media (max-width: 360px) {
             .status-badge, .last-update { font-size: 10.5px; padding: 4px 10px; }
@@ -773,8 +810,14 @@
         </div>
     </div>
 
-    <div class="log-container" id="logContainer">
-        <div class="log-entry"><span class="log-time">[INIT]</span> <span class="log-info">Dashboard siap. Mengambil data dari berbagai sumber online...</span></div>
+    <div class="log-wrap" id="logWrap">
+        <button type="button" class="log-toggle" id="logToggle">
+            <span>🧾 Log Aktivitas</span>
+            <span class="log-toggle-caret" id="logToggleCaret">▾</span>
+        </button>
+        <div class="log-container" id="logContainer">
+            <div class="log-entry"><span class="log-time">[INIT]</span> <span class="log-info">Dashboard siap. Mengambil data dari berbagai sumber online...</span></div>
+        </div>
     </div>
 
     <script>
@@ -2104,6 +2147,13 @@
                     btn.addEventListener('click', function() {
                         switchMobileView(this.dataset.view);
                     });
+                });
+            }
+            const logWrap = document.getElementById('logWrap');
+            const logToggle = document.getElementById('logToggle');
+            if (logToggle) {
+                logToggle.addEventListener('click', function() {
+                    logWrap.classList.toggle('open');
                 });
             }
             window.addEventListener('resize', function() {
