@@ -558,9 +558,49 @@
         @media (max-width: 480px) {
             .header { padding: 9px 12px; }
             .header h1 { font-size: 15px; }
+            .header-right { gap: 8px; font-size: 11.5px; }
             .btn-refresh { padding: 5px 13px; font-size: 11px; }
             .sidebar-content { padding: 9px 10px; }
             .event-item { padding: 11px 12px; }
+
+            /* Tab "Daftar Kejadian / Rekap Wilayah / Statistik" TIDAK BOLEH membungkus
+               jadi 2 baris (bikin tinggi tab tak rata & terlihat bertumpuk dengan konten
+               di bawahnya). Solusi: satu baris tetap (nowrap) + geser horizontal kalau
+               kurang lebar, bukan membungkus/bertumpuk. */
+            .sidebar-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .sidebar-tabs::-webkit-scrollbar { display: none; }
+            .sidebar-tabs button {
+                flex: 0 0 auto;
+                white-space: nowrap;
+                padding: 11px 14px;
+                font-size: 11.5px;
+            }
+
+            /* Filter provinsi/kab-kota: turunkan ke dua baris rapi (bukan berdesakan
+               dalam satu baris sempit) supaya teks pilihan tidak terpotong berlebihan. */
+            .filter-bar { flex-wrap: wrap; padding: 8px 10px; }
+            .filter-bar select { flex: 1 1 100%; min-width: 0; font-size: 11.5px; }
+            .filter-bar button#filterResetBtn { flex: 0 0 auto; margin-left: auto; }
+
+            /* Kontrol "Jumlah" & tombol ALL dipersempit supaya muat berdampingan tanpa
+               mendorong tombol Refresh keluar baris / bertumpuk. */
+            .limit-control { padding: 3px 8px; gap: 4px; }
+            .limit-control input[type="number"] { width: 48px; font-size: 11.5px; }
+            .limit-label { font-size: 11px; }
+
+            /* Badge di kartu kejadian (provinsi/kab-kota/keyakinan) dirapatkan supaya
+               tidak saling menumpuk atau memenuhi lebar layar sempit. */
+            .badge-provinsi, .badge-kabkota, .badge-conf { font-size: 10px; padding: 2px 9px; }
+            .event-item .title { font-size: 13.5px; }
+        }
+        @media (max-width: 360px) {
+            .status-badge, .last-update { font-size: 10.5px; padding: 4px 10px; }
+            .header h1 { font-size: 13.5px; }
+            .header h1 .flame { font-size: 15px; }
         }
 
         .leaflet-control-attribution {
@@ -1142,9 +1182,12 @@
                 return { label: String(conf), cls: 'mid', desc: '' };
             }
             function confColor(cls) {
-                if (cls === 'high') return { bg: 'var(--danger-bg)', fg: 'var(--danger)' };
-                if (cls === 'low') return { bg: 'var(--info-bg)', fg: 'var(--info)' };
-                return { bg: '#fff3d6', fg: 'var(--gold-deep)' };
+                // Warna & ikon dibuat KHAS untuk badge keyakinan (beda dari badge lain seperti
+                // kab/kota yang juga pakai biru) supaya Low/Nominal/High jelas berbeda sekilas
+                // mata, tidak cuma mengandalkan warna (ada ikon juga untuk pembaca buta warna).
+                if (cls === 'high') return { bg: '#fde3e1', fg: '#a3211a', border: '#e8746b', icon: '🔴' };
+                if (cls === 'low') return { bg: '#eef1f4', fg: '#57636e', border: '#c3ccd4', icon: '⚪' };
+                return { bg: '#fff2cf', fg: '#8a5b06', border: '#e8b93f', icon: '🟡' };
             }
 
             // ---------- Catatan / penjelasan peristiwa ----------
@@ -1256,7 +1299,7 @@
                             <div class="meta">
                                 ${ev.province ? `<span class="badge-provinsi${ev.provinceEstimated ? ' estimated' : ''}" title="${ev.provinceEstimated ? 'Perkiraan dari koordinat, bukan data resmi' : 'Berdasarkan data resmi'}">🏛️ ${escHtml(ev.province)}${ev.provinceEstimated ? ' ≈' : ''}</span>` : '<span class="badge-unknown">Provinsi belum teridentifikasi</span>'}
                                 ${locBadge}
-                                ${confInfo ? `<span class="badge-conf" style="background:${confColors.bg};color:${confColors.fg};">Keyakinan: ${escHtml(confInfo.label)}</span>` : ''}
+                                ${confInfo ? `<span class="badge-conf" style="background:${confColors.bg};color:${confColors.fg};border:1.5px solid ${confColors.border};">${confColors.icon} Keyakinan: ${escHtml(confInfo.label)}</span>` : ''}
                             </div>
                             <div class="meta">
                                 ${ev.timestamp ? `<span class="time">🕒 ${new Date(ev.timestamp).toLocaleString('id-ID')}</span>` : ''}
@@ -1802,17 +1845,22 @@
 
                     const SOURCE_LABELS = ['BNPB Karhutla', 'BMKG Hotspot', 'NASA FIRMS', 'Global Forest Watch', 'BNPB Data Kejadian', 'Basis Data Wilayah'];
                     let combined = [];
-                    const perSourceCount = [];
-                    results.forEach((r, idx) => {
-                        const n = (r.status === 'fulfilled' && Array.isArray(r.value)) ? r.value.length : 0;
-                        perSourceCount.push(`${SOURCE_LABELS[idx]}=${n}`);
-                        if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
-                        if (r.status === 'rejected') logMessage(`❌ ${SOURCE_LABELS[idx]} promise ditolak: ${r.reason}`, 'err');
-                    });
-                    // Log rinci per sumber supaya kalau ada selisih jumlah di tahap manapun
-                    // setelah ini, langsung terlihat sumber mana & di tahap apa datanya hilang.
-                    logMessage(`📊 Kontribusi per sumber ke gabungan: ${perSourceCount.join(', ')}`, 'info');
-                    logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`, 'info');
+                    try {
+                        const perSourceCount = [];
+                        results.forEach((r, idx) => {
+                            const n = (r.status === 'fulfilled' && Array.isArray(r.value)) ? r.value.length : 0;
+                            perSourceCount.push(`${SOURCE_LABELS[idx]}=${n}`);
+                            if (r.status === 'fulfilled' && Array.isArray(r.value)) combined = combined.concat(r.value);
+                            if (r.status === 'rejected') logMessage(`❌ ${SOURCE_LABELS[idx]} promise ditolak: ${r.reason}`, 'err');
+                        });
+                        // Log rinci per sumber supaya kalau ada selisih jumlah di tahap manapun
+                        // setelah ini, langsung terlihat sumber mana & di tahap apa datanya hilang.
+                        logMessage(`📊 Kontribusi per sumber ke gabungan: ${perSourceCount.join(', ')}`, 'info');
+                        logMessage(`📦 Total mentah terkumpul dari semua sumber: ${combined.length} sebelum deduplikasi.`, 'info');
+                    } catch (e) {
+                        console.error('gabungkan sumber error:', e);
+                        logMessage(`⚠️ Gagal menggabungkan hasil sumber (${e.message}).`, 'err');
+                    }
 
                     // ---------- Koreksi Provinsi berdasarkan Kabupaten/Kota ----------
                     // Dibungkus try/catch sendiri: jika basis data wilayah bermasalah, koreksi
@@ -1844,27 +1892,44 @@
                     // log. Maka: pakai uid unik dari sumber (mis. _id resmi CKAN) jika tersedia,
                     // dan fallback ke kombinasi field yang jauh lebih spesifik (sumber+judul+lokasi+
                     // deskripsi) supaya kemungkinan tabrakan antar record berbeda sangat kecil.
-                    const unique = [];
-                    const seen = new Set();
-                    let dupCount = 0;
-                    for (const ev of combined) {
-                        if (!ev.province) ev.province = '';
-                        if (!ev.kabkota) ev.kabkota = '';
-                        const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
-                        if (!seen.has(key)) {
-                            seen.add(key);
-                            unique.push(ev);
-                        } else {
-                            dupCount++;
+                    // Dibungkus try/catch: kalau proses dedup/sort tetap bermasalah karena isi data
+                    // tak terduga, JANGAN sampai seluruh proses gagal -> pakai data mentah (combined)
+                    // apa adanya sebagai cadangan, supaya tetap ada yang tampil.
+                    let unique;
+                    try {
+                        unique = [];
+                        const seen = new Set();
+                        let dupCount = 0;
+                        for (const ev of combined) {
+                            if (!ev.province) ev.province = '';
+                            if (!ev.kabkota) ev.kabkota = '';
+                            const key = ev.uid || `${ev.source}|${ev.lat}|${ev.lng}|${ev.timestamp}|${ev.location}|${ev.kabkota}|${ev.description}`;
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                unique.push(ev);
+                            } else {
+                                dupCount++;
+                            }
                         }
+                        logMessage(`🧹 Setelah deduplikasi: ${unique.length} unik (${dupCount} dianggap duplikat & dibuang).`, 'info');
+                    } catch (e) {
+                        console.error('dedup error:', e);
+                        logMessage(`⚠️ Deduplikasi gagal (${e.message}), memakai data mentah tanpa dedup sebagai cadangan.`, 'err');
+                        unique = combined;
                     }
-                    logMessage(`🧹 Setelah deduplikasi: ${unique.length} unik (${dupCount} dianggap duplikat & dibuang).`, 'info');
 
                     // ---------- Urutkan berdasarkan waktu terbaru, lalu terapkan batas jumlah ----------
                     // (default ALL, atau angka yang dipilih di header)
-                    let finalEvents = sortByRecency(unique);
-                    if (!limitIsAll && finalEvents.length > currentLimit) {
-                        finalEvents = finalEvents.slice(0, currentLimit);
+                    let finalEvents;
+                    try {
+                        finalEvents = sortByRecency(unique);
+                        if (!limitIsAll && finalEvents.length > currentLimit) {
+                            finalEvents = finalEvents.slice(0, currentLimit);
+                        }
+                    } catch (e) {
+                        console.error('sort/slice error:', e);
+                        logMessage(`⚠️ Pengurutan gagal (${e.message}), memakai urutan apa adanya.`, 'err');
+                        finalEvents = unique;
                     }
 
                     if (finalEvents.length === 0) {
@@ -1895,8 +1960,10 @@
                     }
                 } catch (e) {
                     logMessage(`❌ Gagal memproses data: ${e.message}. Lihat konsol browser untuk detail.`, 'err');
-                    setStatus(false, 'Error saat memproses data');
                     console.error('fetchAllData error:', e);
+                    // Tampilkan PESAN ERROR ASLI langsung di header (bukan cuma teks generik),
+                    // supaya penyebabnya langsung kelihatan tanpa perlu buka log/konsol lagi.
+                    setStatus(false, `Error: ${String(e.message || e).slice(0, 60)}`);
                 } finally {
                     isRefreshing = false;
                     refreshBtn.disabled = false;
