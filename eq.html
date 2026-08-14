@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SeismoWatch — Pemantau Gempa Bumi USGS</title>
+<title>SeismoWatch — Pemantau Gempa Bumi USGS &amp; BMKG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -158,6 +158,17 @@ a{color:var(--teal);}
   color:var(--text-muted);font-size:11.5px;cursor:pointer;transition:.15s;
 }
 .chip.active{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);}
+/* switchable/scrollable chip rows so wide option lists never lose items on narrow phones */
+.chips.chips-scroll{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;}
+.chips.chips-scroll::-webkit-scrollbar{display:none;}
+.chips.chips-scroll .chip{flex:0 0 auto;scroll-snap-align:start;}
+.chip.src-chip[data-source="usgs"].active{background:rgba(56,189,248,.16);border-color:var(--blue);color:var(--blue);}
+.chip.src-chip[data-source="bmkg"].active{background:rgba(239,68,68,.16);border-color:var(--red);color:#ff8f8f;}
+/* source badges: differentiate USGS vs BMKG at a glance */
+.source-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;line-height:1.5;white-space:nowrap;}
+.source-badge.src-usgs{background:rgba(56,189,248,.15);color:var(--blue);border:1px solid rgba(56,189,248,.35);}
+.source-badge.src-bmkg{background:rgba(239,68,68,.15);color:#ff8f8f;border:1px solid rgba(239,68,68,.35);}
+.event-meta .source-badge{font-size:9px;padding:1.5px 6px;}
 .filters-actions{display:flex;gap:8px;padding:2px 14px 16px;}
 .btn-primary{
   flex:1;background:linear-gradient(135deg,var(--amber),#e08c1a);border:none;color:#1a1000;
@@ -363,7 +374,7 @@ body.chart-open .chart-close{display:inline-flex;}
       <div class="brand-mark">◎</div>
       <div>
         <h1>SeismoWatch</h1>
-        <p>Pemantau Gempa Bumi USGS · Real-time</p>
+        <p>Pemantau Gempa Bumi USGS &amp; BMKG · Real-time</p>
       </div>
     </div>
     <div class="topbar-right">
@@ -453,8 +464,16 @@ body.chart-open .chart-close{display:inline-flex;}
           </select>
         </div>
         <div class="field span2">
+          <label>Sumber Data</label>
+          <div class="chips chips-scroll" id="sourceChips">
+            <div class="chip src-chip active" data-source="all">🌐 Semua Sumber</div>
+            <div class="chip src-chip" data-source="usgs">🇺🇸 USGS</div>
+            <div class="chip src-chip" data-source="bmkg">🇮🇩 BMKG</div>
+          </div>
+        </div>
+        <div class="field span2">
           <label>Wilayah</label>
-          <div class="chips" id="regionChips">
+          <div class="chips chips-scroll" id="regionChips">
             <div class="chip active" data-region="global">🌐 Global</div>
             <div class="chip" data-region="indonesia">🇮🇩 Indonesia</div>
             <div class="chip" data-region="radius">📍 Radius Titik</div>
@@ -527,8 +546,10 @@ body.chart-open .chart-close{display:inline-flex;}
 
   <footer class="footer">
     Sumber data: <a href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">USGS Earthquake Hazards Program (FDSN Event Web Service)</a>
+    · <a href="https://data.bmkg.go.id/" target="_blank" rel="noopener">BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)</a> — gempa terkini &amp; dirasakan
     · Geocoding wilayah: <a href="https://nominatim.org" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>
     · Peta: CARTO / OpenStreetMap
+    <br>Catatan: data BMKG mengikuti batas ketersediaan API resmi (±15 kejadian terbaru per kategori), tidak mendukung filter rentang waktu/wilayah di sisi server sehingga disaring otomatis di sisi aplikasi.
   </footer>
 </div>
 
@@ -537,6 +558,7 @@ body.chart-open .chart-close{display:inline-flex;}
     <div class="modal-handle"></div>
     <div class="modal-head">
       <div>
+        <div id="modalSourceBadge" style="margin-bottom:5px;"></div>
         <h2 id="modalPlace">–</h2>
         <div class="sub" id="modalTime">–</div>
       </div>
@@ -567,6 +589,7 @@ body.chart-open .chart-close{display:inline-flex;}
         <div class="kv"><label>Waktu UTC</label><span class="val" id="kvTimeUTC">–</span></div>
         <div class="kv"><label>ID Kejadian</label><span class="val" id="kvId">–</span></div>
         <div class="kv"><label>Jenis Kejadian</label><span class="val" id="kvType">–</span></div>
+        <div class="kv"><label>Sumber Data</label><span class="val" id="kvSource">–</span></div>
         <div class="kv"><label>Dirasakan (laporan)</label><span class="val" id="kvFelt">–</span></div>
         <div class="kv"><label>Potensi Tsunami</label><span class="val" id="kvTsunami">–</span></div>
       </div>
@@ -582,6 +605,7 @@ body.chart-open .chart-close{display:inline-flex;}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -603,8 +627,26 @@ const INDO_REGIONS = {
 
 let state = {
   regionMode: 'global',   // global | indonesia | radius | bbox
+  sourceMode: 'all',      // all | usgs | bmkg
   autoRefresh: false,
 };
+
+/* BMKG Data Terbuka — dua feed digabung agar cakupan gempa Indonesia lebih banyak:
+   gempaterkini (M5.0+ / 15 kejadian terbaru) + gempadirasakan (gempa dirasakan / 15 kejadian terbaru).
+   API resmi tidak mendukung parameter rentang waktu/magnitudo/wilayah, sehingga hasilnya
+   disaring ulang di sisi aplikasi (client-side) memakai filter yang sama dengan USGS. */
+const BMKG_FEEDS = {
+  besar:     'https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json',
+  dirasakan: 'https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json',
+};
+/* Rantai proxy CORS — coba langsung dulu, lalu fallback berurutan, meniru pola
+   multi-proxy yang sudah dipakai pada BNPB.html / DMK.html. */
+const CORS_PROXY_CHAIN = [
+  (u)=> u,
+  (u)=> 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  (u)=> 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+  (u)=> 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+];
 let features = [];
 let map, markersLayer, magChart;
 let modalMap, modalMarker;
@@ -628,6 +670,12 @@ function magColor(m){
   return '#38bdf8';
 }
 function magRadius(m){ return Math.max(5, (m||1)*3.4); }
+function sourceBadgeHTML(source){
+  const s = (source||'USGS').toUpperCase();
+  const cls = s === 'BMKG' ? 'src-bmkg' : 'src-usgs';
+  const icon = s === 'BMKG' ? '🇮🇩' : '🌎';
+  return `<span class="source-badge ${cls}">${icon} ${s}</span>`;
+}
 function alertColor(level){
   return {green:'#22d3b0', yellow:'#eab308', orange:'#f97316', red:'#ef4444'}[level] || '#5c6784';
 }
@@ -738,6 +786,14 @@ $('fRange').addEventListener('change', (e)=>{
 $('fMinMag').addEventListener('input', e=>$('minMagOut').textContent = Number(e.target.value).toFixed(1));
 $('fMaxMag').addEventListener('input', e=>$('maxMagOut').textContent = Number(e.target.value).toFixed(1));
 
+document.querySelectorAll('#sourceChips .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#sourceChips .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    state.sourceMode = chip.dataset.source;
+  });
+});
+
 document.querySelectorAll('#regionChips .chip').forEach(chip=>{
   chip.addEventListener('click', ()=>{
     document.querySelectorAll('#regionChips .chip').forEach(c=>c.classList.remove('active'));
@@ -770,6 +826,9 @@ $('resetFilters').addEventListener('click', ()=>{
   $('fMaxMag').value=10; $('maxMagOut').textContent='10.0';
   $('fEventType').value='earthquake'; $('fAlert').value='';
   $('fLimit').value=150;
+  document.querySelectorAll('#sourceChips .chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('[data-source="all"]').classList.add('active');
+  state.sourceMode='all';
   document.querySelectorAll('#regionChips .chip').forEach(c=>c.classList.remove('active'));
   document.querySelector('[data-region="global"]').classList.add('active');
   state.regionMode='global';
@@ -915,6 +974,154 @@ function renderWaveform(feats){
 }
 
 /* ============================================================
+   BMKG — FETCH, PARSE, FILTER (tambahan sumber data)
+   ============================================================ */
+async function fetchJSONWithProxies(url, timeoutMs=9000){
+  let lastErr;
+  for(const build of CORS_PROXY_CHAIN){
+    try{
+      const target = build(url);
+      const ctrl = new AbortController();
+      const timer = setTimeout(()=>ctrl.abort(), timeoutMs);
+      const res = await fetch(target, {signal: ctrl.signal, cache:'no-store'});
+      clearTimeout(timer);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const txt = await res.text();
+      return JSON.parse(txt);
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('Semua jalur proxy BMKG gagal diakses');
+}
+
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+/* Ubah satu entri gempa BMKG (format Infogempa.gempa[]) menjadi bentuk "feature"
+   selaras dengan struktur GeoJSON USGS, supaya bisa digabung tanpa mengubah
+   renderMap/renderList/renderChart/openDetail yang sudah ada. */
+function bmkgToFeature(g){
+  let lat = NaN, lon = NaN;
+  if(g.Coordinates){
+    const parts = g.Coordinates.split(',').map(s=>parseFloat(s.trim()));
+    if(parts.length===2){ lat = parts[0]; lon = parts[1]; }
+  }
+  if(isNaN(lat)) lat = parseFloat(g.Lintang);
+  if(isNaN(lon)) lon = parseFloat(g.Bujur);
+  const depth = parseFloat(String(g.Kedalaman||'0').replace(/[^\d.]/g,'')) || 0;
+  const mag = parseFloat(g.Magnitude) || 0;
+  const time = Date.parse(g.DateTime);
+  const timeMs = isNaN(time) ? Date.now() : time;
+  const potensi = g.Potensi || '';
+  const tsunami = /tsunami/i.test(potensi) && !/tidak berpotensi/i.test(potensi);
+  const key = (g.DateTime||'') + '|' + (g.Coordinates||lat+','+lon);
+  return {
+    id: 'bmkg-' + key,
+    properties:{
+      mag, place: (g.Wilayah || 'Wilayah tidak diketahui') + ', Indonesia',
+      time: timeMs, updated: timeMs,
+      tsunami: tsunami ? 1 : 0, alert: null,
+      magType: 'SR', felt: g.Dirasakan ? 1 : null, cdi: null,
+      type: 'earthquake', source: 'BMKG',
+      url: g.Shakemap || 'https://www.bmkg.go.id/gempabumi/gempabumi-terkini.bmkg',
+      dirasakanText: g.Dirasakan || null,
+    },
+    geometry:{ coordinates:[lon, lat, depth] },
+  };
+}
+
+async function fetchBMKGFeatures(){
+  const results = await Promise.allSettled([
+    fetchJSONWithProxies(BMKG_FEEDS.besar),
+    fetchJSONWithProxies(BMKG_FEEDS.dirasakan),
+  ]);
+  let ok = false;
+  let raw = [];
+  results.forEach(r=>{
+    if(r.status === 'fulfilled'){
+      ok = true;
+      const arr = r.value && r.value.Infogempa && r.value.Infogempa.gempa;
+      if(Array.isArray(arr)) raw = raw.concat(arr);
+      else if(arr) raw.push(arr);
+    }
+  });
+  if(!ok) throw new Error('BMKG tidak dapat diakses (semua proxy gagal)');
+  const seen = new Set();
+  const feats = [];
+  raw.forEach(g=>{
+    const key = (g.DateTime||'') + '|' + (g.Coordinates||'');
+    if(seen.has(key)) return;
+    seen.add(key);
+    const f = bmkgToFeature(g);
+    if(!isNaN(f.geometry.coordinates[0]) && !isNaN(f.geometry.coordinates[1])) feats.push(f);
+  });
+  return feats;
+}
+
+/* Terapkan filter yang sama seperti query USGS (waktu, magnitudo, wilayah, jenis)
+   secara client-side, karena API BMKG tidak menerima parameter tersebut. */
+function clientFilterBMKG(feats){
+  const range = $('fRange').value;
+  const now = Date.now();
+  let startMs, endMs;
+  if(range === 'custom'){
+    const s = $('fStart').value, e = $('fEnd').value;
+    startMs = s ? new Date(s).getTime() : -Infinity;
+    endMs = e ? new Date(e).getTime() : Infinity;
+  } else {
+    const hoursMap = {'1h':1,'24h':24,'7d':24*7,'30d':24*30};
+    const hrs = hoursMap[range] || 24;
+    startMs = now - hrs*3600*1000;
+    endMs = now;
+  }
+  const minMag = parseFloat($('fMinMag').value);
+  const maxMag = parseFloat($('fMaxMag').value);
+  const evType = $('fEventType').value;
+
+  return feats.filter(f=>{
+    const t = f.properties.time;
+    if(t < startMs || t > endMs) return false;
+    const m = f.properties.mag || 0;
+    if(!isNaN(minMag) && m < minMag) return false;
+    if(!isNaN(maxMag) && m > maxMag) return false;
+    if(evType && evType !== 'earthquake') return false; // BMKG hanya melaporkan gempa bumi
+    const [lon, lat] = f.geometry.coordinates;
+    if(state.regionMode === 'indonesia'){
+      const key = $('fIndoRegion').value;
+      const r = INDO_REGIONS[key] || INDO_REGIONS.all;
+      if(lat < r.bbox[0] || lat > r.bbox[1] || lon < r.bbox[2] || lon > r.bbox[3]) return false;
+    } else if(state.regionMode === 'radius'){
+      const clat = parseFloat($('fLat').value), clon = parseFloat($('fLon').value), rad = parseFloat($('fRadius').value);
+      if(!isNaN(clat) && !isNaN(clon) && !isNaN(rad)){
+        if(haversineKm(clat, clon, lat, lon) > rad) return false;
+      }
+    } else if(state.regionMode === 'bbox'){
+      const minLat = parseFloat($('fMinLat').value), maxLat = parseFloat($('fMaxLat').value);
+      const minLon = parseFloat($('fMinLon').value), maxLon = parseFloat($('fMaxLon').value);
+      if(!isNaN(minLat) && lat < minLat) return false;
+      if(!isNaN(maxLat) && lat > maxLat) return false;
+      if(!isNaN(minLon) && lon < minLon) return false;
+      if(!isNaN(maxLon) && lon > maxLon) return false;
+    }
+    return true;
+  });
+}
+
+function sortFeatures(feats){
+  const order = $('fOrder').value;
+  const sorted = feats.slice();
+  if(order === 'time') sorted.sort((a,b)=> b.properties.time - a.properties.time);
+  else if(order === 'time-asc') sorted.sort((a,b)=> a.properties.time - b.properties.time);
+  else if(order === 'magnitude') sorted.sort((a,b)=> (b.properties.mag||0) - (a.properties.mag||0));
+  else if(order === 'magnitude-asc') sorted.sort((a,b)=> (a.properties.mag||0) - (b.properties.mag||0));
+  return sorted;
+}
+
+/* ============================================================
    QUERY BUILDER
    ============================================================ */
 function buildURL(){
@@ -990,31 +1197,59 @@ function isIndonesiaPlace(place){
 
 async function loadData(){
   setLoading(true);
+  const wantUSGS = state.sourceMode !== 'bmkg';
+  const wantBMKG = state.sourceMode !== 'usgs';
+  let usgsFeats = [], bmkgFeats = [];
+  let usgsError = null, bmkgError = null;
+  let filteredOutCount = 0;
+
+  if(wantUSGS){
+    try{
+      const url = buildURL();
+      const res = await fetch(url);
+      if(!res.ok){
+        const txt = await res.text().catch(()=> '');
+        throw new Error('HTTP '+res.status+(txt? ' — '+txt.slice(0,140):''));
+      }
+      const data = await res.json();
+      let raw = (data.features || []).slice();
+      raw.forEach(f=>{ f.properties.source = 'USGS'; });
+      if(state.regionMode === 'indonesia'){
+        const before = raw.length;
+        raw = raw.filter(f => isIndonesiaPlace(f.properties.place));
+        filteredOutCount = before - raw.length;
+      }
+      usgsFeats = raw;
+    }catch(err){
+      console.error(err);
+      usgsError = err;
+    }
+  }
+
+  if(wantBMKG){
+    try{
+      const rawBmkg = await fetchBMKGFeatures();
+      bmkgFeats = clientFilterBMKG(rawBmkg);
+    }catch(err){
+      console.error(err);
+      bmkgError = err;
+    }
+  }
+
   try{
-    const url = buildURL();
-    const res = await fetch(url);
-    if(!res.ok){
-      const txt = await res.text().catch(()=> '');
-      throw new Error('HTTP '+res.status+(txt? ' — '+txt.slice(0,140):''));
-    }
-    const data = await res.json();
-    let raw = (data.features || []).slice();
-    let filteredOutCount = 0;
-    if(state.regionMode === 'indonesia'){
-      const before = raw.length;
-      raw = raw.filter(f => isIndonesiaPlace(f.properties.place));
-      filteredOutCount = before - raw.length;
-    }
-    features = raw;
+    features = sortFeatures(usgsFeats.concat(bmkgFeats));
     renderAll();
-    toast(filteredOutCount > 0
-      ? `Berhasil memuat ${features.length} kejadian di wilayah Indonesia (${filteredOutCount} dari negara tetangga disaring)`
-      : `Berhasil memuat ${features.length} kejadian`);
-  }catch(err){
-    console.error(err);
-    features = [];
-    renderAll();
-    toast('Gagal memuat data: ' + err.message, 4000);
+
+    const parts = [];
+    if(wantUSGS){
+      parts.push(usgsError ? `USGS gagal (${usgsError.message})` : `${usgsFeats.length} USGS`);
+    }
+    if(wantBMKG){
+      parts.push(bmkgError ? `BMKG gagal (${bmkgError.message})` : `${bmkgFeats.length} BMKG`);
+    }
+    let msg = `Berhasil memuat ${features.length} kejadian — ` + parts.join(' · ');
+    if(filteredOutCount > 0) msg += ` (${filteredOutCount} data negara tetangga disaring)`;
+    toast(msg, 4200);
   }finally{
     setLoading(false);
   }
@@ -1022,7 +1257,10 @@ async function loadData(){
 
 function setLoading(isLoading){
   if(isLoading){
-    $('eventList').innerHTML = `<div class="loading-row"><span class="spinner"></span> Memuat data gempa dari USGS…</div>`;
+    const wantUSGS = state.sourceMode !== 'bmkg';
+    const wantBMKG = state.sourceMode !== 'usgs';
+    const src = wantUSGS && wantBMKG ? 'USGS & BMKG' : (wantUSGS ? 'USGS' : 'BMKG');
+    $('eventList').innerHTML = `<div class="loading-row"><span class="spinner"></span> Memuat data gempa dari ${src}…</div>`;
   }
 }
 
@@ -1065,6 +1303,7 @@ function renderMap(){
       fillOpacity: 0.45,
     });
     marker.bindPopup(`
+      <div style="margin-bottom:4px;">${sourceBadgeHTML(f.properties.source)}</div>
       <b style="color:${magColor(mag)}">M ${fmtNum(mag)}</b> — ${f.properties.place || 'Lokasi tidak diketahui'}<br>
       <span style="color:#8a93ab">${toWIB(f.properties.time)}</span><br>
       <span style="color:#8a93ab">Kedalaman: ${fmtNum(depth,1)} km</span>
@@ -1095,6 +1334,7 @@ function renderList(){
         <div class="event-body">
           <p class="event-place">${(f.properties.place || 'Lokasi tidak diketahui')}</p>
           <div class="event-meta">
+            ${sourceBadgeHTML(f.properties.source)}
             <span>🕒 ${relTime(f.properties.time)}</span>
             <span>⬇ ${fmtNum(depth,0)} km</span>
             ${alert ? `<span><i class="alert-chip" style="background:${alertColor(alert)}"></i>${alert}</span>` : ''}
@@ -1139,6 +1379,7 @@ function openDetail(f){
   const p = f.properties;
   const mag = p.mag;
 
+  $('modalSourceBadge').innerHTML = sourceBadgeHTML(p.source);
   $('modalPlace').textContent = p.place || 'Lokasi tidak diketahui';
   $('modalTime').textContent = relTime(p.time) + ' · ' + toWIB(p.time);
   $('modalMagVal').textContent = fmtNum(mag);
@@ -1154,11 +1395,15 @@ function openDetail(f){
   $('kvTimeUTC').textContent = toUTC(p.time);
   $('kvId').textContent = f.id || '–';
   $('kvType').textContent = p.type || 'earthquake';
-  $('kvFelt').textContent = p.felt ? `${p.felt} laporan (CDI ${fmtNum(p.cdi,1)})` : 'Belum ada laporan';
+  $('kvSource').textContent = p.source === 'BMKG' ? 'BMKG (Data Terbuka)' : 'USGS (FDSN Event Web Service)';
+  $('kvFelt').textContent = p.source === 'BMKG'
+    ? (p.dirasakanText || 'Belum ada laporan dirasakan')
+    : (p.felt ? `${p.felt} laporan (CDI ${fmtNum(p.cdi,1)})` : 'Belum ada laporan');
   const tsu = !!p.tsunami;
   $('kvTsunami').innerHTML = `<span class="badge ${tsu?'tsunami-yes':'tsunami-no'}">${tsu? '⚠️ Berpotensi':'Tidak ada peringatan'}</span>`;
 
   $('usgsLink').href = p.url || '#';
+  $('usgsLink').textContent = p.source === 'BMKG' ? '🔗 Buka Info/Shakemap BMKG' : '🔗 Buka di USGS';
   $('copyCoordBtn').onclick = ()=>{
     navigator.clipboard.writeText(`${lat}, ${lon}`).then(()=>toast('Koordinat disalin')).catch(()=>toast('Gagal menyalin'));
   };
