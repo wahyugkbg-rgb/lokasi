@@ -1326,6 +1326,12 @@
             if (tags.amenity === 'ferry_terminal') {
                 return { type: 'pelabuhan', label: 'PELABUHAN', icon: 'fa-ship' };
             }
+            // Terminal / pangkalan angkot (nama mengandung kata angkot, atau tag share_taxi resmi OSM)
+            if (tags.share_taxi === 'yes' ||
+                ((tags.amenity === 'bus_station' || tags.highway === 'bus_station') &&
+                 tags.name && /angkot|pangkalan|mikrolet|opelet/i.test(tags.name))) {
+                return { type: 'angkot', label: 'TERMINAL ANGKOT', icon: 'fa-van-shuttle' };
+            }
             // Terminal bus
             if (tags.amenity === 'bus_station') {
                 return { type: 'terminal', label: 'TERMINAL', icon: 'fa-bus' };
@@ -1368,6 +1374,9 @@
                 // Terminal bus
                 node["amenity"="bus_station"](around:${r},${lat},${lng});
                 way["amenity"="bus_station"](around:${r},${lat},${lng});
+                // Terminal / pangkalan angkot (tag share_taxi resmi OSM untuk angkutan kota)
+                node["share_taxi"="yes"](around:${r},${lat},${lng});
+                way["share_taxi"="yes"](around:${r},${lat},${lng});
             );out center 30;`;
 
             for (const endpoint of OVERPASS_ENDPOINTS) {
