@@ -22,12 +22,11 @@
             color: #e0e0e0;
             display: flex;
             flex-direction: column;
-            height: 100vh; /* Fallback */
-            height: 100dvh; /* Dynamic viewport height untuk HP */
+            height: 100vh; 
+            height: 100dvh; 
             overflow: hidden;
         }
 
-        /* Header */
         header {
             background-color: #1f1f1f;
             padding: 10px 15px;
@@ -43,9 +42,6 @@
             font-size: 1.1rem;
             font-weight: 600;
             color: #4db8ff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .controls {
@@ -68,7 +64,6 @@
             background-color: #555;
         }
 
-        /* Main Content (Map & Info) */
         main {
             flex: 1;
             position: relative;
@@ -83,7 +78,6 @@
             z-index: 1;
         }
 
-        /* Info Panel di atas peta */
         .info-panel {
             position: absolute;
             top: 15px;
@@ -134,7 +128,6 @@
             font-size: 0.9rem;
         }
 
-        /* Log Panel */
         .log-panel {
             position: absolute;
             bottom: 0;
@@ -188,7 +181,6 @@
             color: #f44336;
         }
 
-        /* Loading Overlay */
         .loader {
             position: absolute;
             top: 50%;
@@ -214,13 +206,12 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Mode Lanscape Adjustments */
         @media screen and (orientation: landscape) {
             .info-panel {
                 top: 10px;
                 left: 10px;
                 right: auto;
-                width: 280px; /* Lebar tetap di samping */
+                width: 280px; 
                 padding: 10px;
             }
             
@@ -252,10 +243,8 @@
     </header>
 
     <main>
-        <!-- Peta -->
         <div id="map"></div>
 
-        <!-- Panel Informasi -->
         <div class="info-panel">
             <div class="info-item">
                 <span class="info-label">Satelit</span>
@@ -283,32 +272,28 @@
             </div>
         </div>
 
-        <!-- Loading -->
         <div class="loader" id="loader">
             <div class="spinner"></div>
-            <p>Mengambil data...</p>
+            <p id="loaderText">Mengambil data...</p>
         </div>
 
-        <!-- Log Panel -->
         <div class="log-panel" id="logPanel">
             <div class="log-header">
-                <span class="log-title">Log Sistem</span>
+                <span class="log-title">Log Sistem & Koneksi</span>
                 <button id="btnCloseLog" style="padding: 5px 10px;">✖</button>
             </div>
             <div class="log-content" id="logContent"></div>
         </div>
     </main>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
         // Konfigurasi API
         const API_KEY = 'LDQR34-DDRFHW-YQ5HVD-5TKW';
-        const SAT_ID = document.getElementById('satSelect').value;
         const MY_LAT = -6.2;  // Default Jakarta
         const MY_LNG = 106.8;
-        const SECONDS = 2; // Prediksi 2 detik ke depan
+        const SECONDS = 2; 
 
         // Elemen UI
         const map = L.map('map', { zoomControl: false }).setView([MY_LAT, MY_LNG], 3);
@@ -317,7 +302,6 @@
             maxZoom: 19
         }).addTo(map);
 
-        // Tambahkan kontrol zoom manual di pojok kanan bawah
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         let satelliteMarker = L.circleMarker([0, 0], {
@@ -330,33 +314,29 @@
         let pathLine = L.polyline([], { color: '#4db8ff', dashArray: '5, 5' }).addTo(map);
         let isFetching = false;
 
-        // Fungsi Logging
         const logContent = document.getElementById('logContent');
         function addLog(message, isError = false) {
             const time = new Date().toLocaleTimeString('id-ID');
             const logClass = isError ? 'log-error' : '';
             logContent.innerHTML += `<div class="${logClass}"><span class="log-time">[${time}]</span>${message}</div>`;
-            logContent.scrollTop = logContent.scrollHeight; // Auto scroll ke bawah
+            logContent.scrollTop = logContent.scrollHeight; 
         }
 
-        // Toggle Log
         const logPanel = document.getElementById('logPanel');
         document.getElementById('btnLog').addEventListener('click', () => {
             logPanel.classList.toggle('show');
-            addLog('Panel log dibuka.');
         });
         document.getElementById('btnCloseLog').addEventListener('click', () => {
             logPanel.classList.remove('show');
         });
 
-        // Fullscreen Toggle
         const btnFs = document.getElementById('btnFullscreen');
         btnFs.addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
                     addLog('Error fullscreen: ' + err.message, true);
                 });
-                btnFs.innerText = '.btnExit';
+                btnFs.innerText = '️ Exit';
             } else {
                 document.exitFullscreen();
                 btnFs.innerText = '⛶ Layar';
@@ -366,72 +346,83 @@
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
                 btnFs.innerText = '⛶ Layar';
-                addLog('Keluar dari mode layar penuh.');
-            } else {
-                addLog('Masuk mode layar penuh.');
             }
-            // Invalidate size untuk mereset peta saat layar berubah
             setTimeout(() => map.invalidateSize(), 300);
         });
 
-        // Ganti Satelit
         document.getElementById('satSelect').addEventListener('change', (e) => {
             const selectedText = e.target.options[e.target.selectedIndex].text;
             document.getElementById('satName').innerText = selectedText;
-            addLog(`Mengganti target ke: ${selectedText} (ID: ${e.target.value})`);
-            pathLine.setLatLngs([]); // Bersihkan jalur lama
+            addLog(`Mengganti target ke: ${selectedText}`);
+            pathLine.setLatLngs([]); 
             fetchSatelliteData();
         });
 
-        // Fungsi Fetch Data Satelit
+        // ==========================================================
+        // SISTEM FETCH AGRESIF DENGAN CORS PROXY FALLBACK
+        // ==========================================================
+        const proxies = [
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            (url) => `https://api.codetabs.com/v1/proxy/?quest=${url}`,
+            (url) => url // Percobaan terakhir langsung tanpa proxy
+        ];
+
+        async function aggressiveFetch(targetUrl) {
+            for (let i = 0; i < proxies.length; i++) {
+                const proxyUrl = proxies[i](targetUrl);
+                const proxyName = i < 3 ? `Proxy ${i + 1}` : "Langsung";
+                
+                try {
+                    document.getElementById('loaderText').innerText = `Mencoba ${proxyName}...`;
+                    addLog(`Mencoba koneksi via ${proxyName}...`);
+                    
+                    const response = await fetch(proxyUrl);
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    const data = await response.json();
+                    addLog(`✅ Sukses via ${proxyName}!`);
+                    return data;
+                    
+                } catch (error) {
+                    addLog(`❌ Gagal via ${proxyName}: ${error.message}`, true);
+                    // Lanjut ke proxy berikutnya jika ada
+                }
+            }
+            throw new Error("Semua metode koneksi (proxy & langsung) gagal!");
+        }
+
         async function fetchSatelliteData() {
             if (isFetching) return;
             isFetching = true;
             
             const currentSatId = document.getElementById('satSelect').value;
-            const url = `https://api.n2yo.com/rest/v1/satellite/positions/${currentSatId}/${MY_LAT}/${MY_LNG}/0/${SECONDS}/&apiKey=${API_KEY}`;
+            const targetUrl = `https://api.n2yo.com/rest/v1/satellite/positions/${currentSatId}/${MY_LAT}/${MY_LNG}/0/${SECONDS}/&apiKey=${API_KEY}`;
             
             document.getElementById('loader').style.display = 'block';
 
             try {
-                addLog(`Menghubungi API N2YO untuk ID ${currentSatId}...`);
-                const response = await fetch(url);
+                const data = await aggressiveFetch(targetUrl);
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.info && data.info.transactionscount !== undefined) {
-                    addLog(`Data diterima. Transaksi tersisa: Tidak terbatas(atau tidak dilaporkan)`);
-                }
-
-                // Ambil posisi terkini (index 0)
                 const pos = data.positions[0];
                 const lat = pos.satlatitude;
                 const lng = pos.satlongitude;
                 const alt = pos.sataltitude;
                 const speed = pos.satvelocity;
 
-                // Update UI
                 document.getElementById('satAltitude').innerText = `${alt.toFixed(2)} km`;
                 document.getElementById('satSpeed').innerText = `${speed.toFixed(2)} km/j`;
                 document.getElementById('satCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
-                // Update Peta
                 satelliteMarker.setLatLng([lat, lng]);
                 map.setView([lat, lng], 4);
 
-                // Gambar jalur orbit (dari posisi sekarang ke prediksi)
                 const pathCoords = data.positions.map(p => [p.satlatitude, p.satlongitude]);
                 pathLine.setLatLngs(pathCoords);
 
-                addLog(`Posisi diperbarui: Lat ${lat.toFixed(2)}, Lng ${lng.toFixed(2)}`);
-
             } catch (error) {
-                addLog('Gagal mengambil data: ' + error.message, true);
-                console.error('Error:', error);
+                addLog('FATAL: ' + error.message, true);
             } finally {
                 document.getElementById('loader').style.display = 'none';
                 isFetching = false;
@@ -439,14 +430,9 @@
         }
 
         // Inisialisasi
-        addLog('Aplikasi Pemantau Satelit dimulai.');
-        addLog('API Key dimuat.');
+        addLog('Aplikasi dimulai. Menyiapkan terobosan CORS...');
         fetchSatelliteData();
-
-        // Set interval untuk update otomatis setiap 15 detik (N2YO memiliki rate limit)
         setInterval(fetchSatelliteData, 15000);
-        addLog('Auto-update dijadwalkan setiap 15 detik.');
-
     </script>
 </body>
 </html>
