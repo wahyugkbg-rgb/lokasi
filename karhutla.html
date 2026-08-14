@@ -2691,7 +2691,7 @@
                         const tanggal = normalizeDateStr(tds[3]);
                         const prov = tds[7] || '';
                         const kab = tds[6] || '';
-                        const lokasi = tds[5] || '';
+                        const lokasi = cleanGeoportalLokasi(tds[5] || '');
                         const md = parseInt(tds[10] || '0', 10) || 0;
                         const hilang = parseInt(tds[11] || '0', 10) || 0;
                         const terluka = parseInt(tds[12] || '0', 10) || 0;
@@ -2734,6 +2734,23 @@
             function normalizeDateStr(s) {
                 const m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})/);
                 return m ? `${m[1]}-${m[2]}-${m[3]}` : String(s || '').trim();
+            }
+
+            // Sel "Lokasi" pada tabel BNPB Geoportal kerap berisi nama field mentah
+            // (mis. "Kecamatan", "Desa", "Kelurahan") yang menempel di depan nilai lokasi
+            // sesungguhnya, dipisahkan baris baru — kadang disertai kata "di" tanpa spasi.
+            // Contoh data mentah: "Kecamatan\ndiKec. Sanga sanga Kel. Muara Sanga-sanga"
+            // atau "Desa\nDs. Sukamaju". Fungsi ini membuang label & penanda baris-baru itu,
+            // menyisakan nilai lokasi yang diawali penanda wilayah resmi (Kec./Kel./Ds./Desa/dst).
+            function cleanGeoportalLokasi(raw) {
+                if (!raw) return '';
+                let s = String(raw);
+                s = s.replace(/\\n/g, '\n'); // newline yang tertulis literal sebagai teks "\n"
+                s = s.replace(/\r/g, '');
+                s = s.replace(/^\s*(kecamatan|kelurahan|desa|kabupaten|kota|provinsi)\s*\n\s*(di)?\s*/i, '');
+                s = s.replace(/\n+/g, ' ');
+                s = s.replace(/\s{2,}/g, ' ').trim();
+                return s;
             }
 
             async function fetchGeoportalHTML() {
