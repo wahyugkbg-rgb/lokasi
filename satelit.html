@@ -251,6 +251,10 @@
                 <span class="info-value" id="satName">ISS (ZARYA)</span>
             </div>
             <div class="info-item">
+                <span class="info-label">Status</span>
+                <span class="info-value" id="connStatus">⏳ Menghubungkan...</span>
+            </div>
+            <div class="info-item">
                 <span class="info-label">Ketinggian</span>
                 <span class="info-value" id="satAltitude">- km</span>
             </div>
@@ -261,6 +265,10 @@
             <div class="info-item">
                 <span class="info-label">Lokasi</span>
                 <span class="info-value" id="satCoords">-, -</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Update Terakhir</span>
+                <span class="info-value" id="lastUpdate">-</span>
             </div>
             <div class="sat-select-container">
                 <select id="satSelect">
@@ -293,7 +301,9 @@
         const API_KEY = 'LDQR34-DDRFHW-YQ5HVD-5TKW';
         const MY_LAT = -6.2;  // Default Jakarta
         const MY_LNG = 106.8;
-        const SECONDS = 2; 
+        const SECONDS = 2;
+        const FETCH_TIMEOUT_MS = 12000; // batas waktu per percobaan proxy
+        const NORMAL_INTERVAL_MS = 15000; 
 
         // Elemen UI
         const map = L.map('map', { zoomControl: false }).setView([MY_LAT, MY_LNG], 3);
@@ -313,6 +323,11 @@
 
         let pathLine = L.polyline([], { color: '#4db8ff', dashArray: '5, 5' }).addTo(map);
         let isFetching = false;
+        let hasCenteredMap = false;
+        let lastKnownGood = null;
+        let lastUpdateTime = null;
+        let consecutiveFailures = 0;
+        let retryTimeoutId = null;
 
         const logContent = document.getElementById('logContent');
         function addLog(message, isError = false) {
@@ -320,6 +335,28 @@
             const logClass = isError ? 'log-error' : '';
             logContent.innerHTML += `<div class="${logClass}"><span class="log-time">[${time}]</span>${message}</div>`;
             logContent.scrollTop = logContent.scrollHeight; 
+        }
+
+        function setStatus(state, detail) {
+            const el = document.getElementById('connStatus');
+            if (state === 'live') {
+                el.innerText = '🟢 Live';
+                el.style.color = '#4caf50';
+            } else if (state === 'retrying') {
+                el.innerText = `🟡 Menyambung ulang${detail ? ' (' + detail + ')' : ''}...`;
+                el.style.color = '#ff9800';
+            } else if (state === 'offline') {
+                el.innerText = '🔴 Offline (pakai data terakhir)';
+                el.style.color = '#f44336';
+            } else {
+                el.innerText = '⏳ Menghubungkan...';
+                el.style.color = '#4db8ff';
+            }
+        }
+
+        function updateLastUpdateLabel() {
+            const el = document.getElementById('lastUpdate');
+            el.innerText = lastUpdateTime ? lastUpdateTime.toLocaleTimeString('id-ID') : '-';
         }
 
         const logPanel = document.getElementById('logPanel');
@@ -354,57 +391,124 @@
             const selectedText = e.target.options[e.target.selectedIndex].text;
             document.getElementById('satName').innerText = selectedText;
             addLog(`Mengganti target ke: ${selectedText}`);
-            pathLine.setLatLngs([]); 
+            pathLine.setLatLngs([]);
+            hasCenteredMap = false;
+            lastKnownGood = null;
+            lastUpdateTime = null;
+            consecutiveFailures = 0;
+            document.getElementById('satAltitude').innerText = '- km';
+            document.getElementById('satSpeed').innerText = '- km/j';
+            document.getElementById('satCoords').innerText = '-, -';
+            updateLastUpdateLabel();
+            setStatus('connecting');
+            if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
             fetchSatelliteData();
         });
 
         // ==========================================================
-        // SISTEM FETCH AGRESIF DENGAN CORS PROXY FALLBACK
+        // SISTEM FETCH AGRESIF DENGAN CORS PROXY FALLBACK (multi-layer)
         // ==========================================================
-        const proxies = [
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-            (url) => `https://api.codetabs.com/v1/proxy/?quest=${url}`,
-            (url) => url // Percobaan terakhir langsung tanpa proxy
+        // Setiap strategi punya cara membangun URL proxy sendiri dan cara
+        // membaca hasilnya sendiri (beberapa proxy membungkus respons asli
+        // di dalam field JSON seperti "contents").
+        const proxyStrategies = [
+            {
+                name: 'Corsfix',
+                build: (url) => `https://proxy.corsfix.com/?${url}`,
+                parse: (res) => res.json()
+            },
+            {
+                name: 'CodeTabs',
+                build: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+                parse: (res) => res.json()
+            },
+            {
+                name: 'AllOrigins (get)',
+                build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                parse: async (res) => {
+                    const wrapper = await res.json();
+                    return JSON.parse(wrapper.contents);
+                }
+            },
+            {
+                name: 'AllOrigins (raw)',
+                build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                parse: (res) => res.json()
+            },
+            {
+                name: 'CorsProxy.io',
+                build: (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+                parse: (res) => res.json()
+            },
+            {
+                name: 'x2u CORS',
+                build: (url) => `https://cors.x2u.in/${url}`,
+                parse: (res) => res.json()
+            },
+            {
+                name: 'Langsung (tanpa proxy)',
+                build: (url) => url,
+                parse: (res) => res.json()
+            }
         ];
 
+        function fetchWithTimeout(url, timeoutMs) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+        }
+
         async function aggressiveFetch(targetUrl) {
-            for (let i = 0; i < proxies.length; i++) {
-                const proxyUrl = proxies[i](targetUrl);
-                const proxyName = i < 3 ? `Proxy ${i + 1}` : "Langsung";
-                
+            let lastError = new Error('Semua metode koneksi gagal!');
+
+            for (const strategy of proxyStrategies) {
+                const proxyUrl = strategy.build(targetUrl);
+
                 try {
-                    document.getElementById('loaderText').innerText = `Mencoba ${proxyName}...`;
-                    addLog(`Mencoba koneksi via ${proxyName}...`);
-                    
-                    const response = await fetch(proxyUrl);
-                    
+                    document.getElementById('loaderText').innerText = `Mencoba ${strategy.name}...`;
+                    setStatus('retrying', strategy.name);
+                    addLog(`Mencoba koneksi via ${strategy.name}...`);
+
+                    const response = await fetchWithTimeout(proxyUrl, FETCH_TIMEOUT_MS);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
-                    const data = await response.json();
-                    addLog(`✅ Sukses via ${proxyName}!`);
+
+                    const data = await strategy.parse(response);
+
+                    if (data && data.error) {
+                        // N2YO mengembalikan HTTP 200 tapi berisi pesan error
+                        // (misal API key tidak valid / kuota habis)
+                        throw new Error(`API N2YO: ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error)}`);
+                    }
+                    if (!data || !Array.isArray(data.positions) || data.positions.length === 0) {
+                        throw new Error('Format respons tidak dikenali (bukan data satelit)');
+                    }
+
+                    addLog(`✅ Sukses via ${strategy.name}!`);
                     return data;
-                    
+
                 } catch (error) {
-                    addLog(`❌ Gagal via ${proxyName}: ${error.message}`, true);
-                    // Lanjut ke proxy berikutnya jika ada
+                    const msg = error.name === 'AbortError' ? `Timeout (>${FETCH_TIMEOUT_MS / 1000}s)` : error.message;
+                    addLog(`❌ Gagal via ${strategy.name}: ${msg}`, true);
+                    lastError = new Error(`${strategy.name}: ${msg}`);
+                    // Lanjut ke strategi berikutnya
                 }
             }
-            throw new Error("Semua metode koneksi (proxy & langsung) gagal!");
+            throw lastError;
         }
 
         async function fetchSatelliteData() {
             if (isFetching) return;
             isFetching = true;
-            
+            if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
+
             const currentSatId = document.getElementById('satSelect').value;
             const targetUrl = `https://api.n2yo.com/rest/v1/satellite/positions/${currentSatId}/${MY_LAT}/${MY_LNG}/0/${SECONDS}/&apiKey=${API_KEY}`;
-            
+
             document.getElementById('loader').style.display = 'block';
 
             try {
                 const data = await aggressiveFetch(targetUrl);
-                
+
                 const pos = data.positions[0];
                 const lat = pos.satlatitude;
                 const lng = pos.satlongitude;
@@ -416,13 +520,36 @@
                 document.getElementById('satCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
                 satelliteMarker.setLatLng([lat, lng]);
-                map.setView([lat, lng], 4);
+                if (!hasCenteredMap) {
+                    map.setView([lat, lng], 4);
+                    hasCenteredMap = true;
+                } else {
+                    // Geser peta tanpa memaksa reset zoom tiap update,
+                    // supaya tidak "kacau" saat pengguna sedang menjelajah peta.
+                    map.panTo([lat, lng], { animate: true });
+                }
 
                 const pathCoords = data.positions.map(p => [p.satlatitude, p.satlongitude]);
                 pathLine.setLatLngs(pathCoords);
 
+                lastKnownGood = { lat, lng, alt, speed };
+                lastUpdateTime = new Date();
+                consecutiveFailures = 0;
+                setStatus('live');
+                updateLastUpdateLabel();
+
             } catch (error) {
-                addLog('FATAL: ' + error.message, true);
+                consecutiveFailures++;
+                addLog(`FATAL (percobaan ke-${consecutiveFailures}): ${error.message}`, true);
+                setStatus('offline');
+                // JANGAN tampilkan data sintetik/palsu — biarkan nilai terakhir
+                // yang valid tetap tampil, tandai lewat status & waktu update.
+
+                // Retry lebih agresif saat gagal total, dengan backoff bertahap,
+                // dibatasi maksimum sama dengan interval normal.
+                const delay = Math.min(4000 * consecutiveFailures, NORMAL_INTERVAL_MS);
+                retryTimeoutId = setTimeout(fetchSatelliteData, delay);
+
             } finally {
                 document.getElementById('loader').style.display = 'none';
                 isFetching = false;
@@ -430,9 +557,10 @@
         }
 
         // Inisialisasi
-        addLog('Aplikasi dimulai. Menyiapkan terobosan CORS...');
+        addLog('Aplikasi dimulai. Menyiapkan terobosan CORS multi-layer...');
+        updateLastUpdateLabel();
         fetchSatelliteData();
-        setInterval(fetchSatelliteData, 15000);
+        setInterval(fetchSatelliteData, NORMAL_INTERVAL_MS);
     </script>
 </body>
 </html>
