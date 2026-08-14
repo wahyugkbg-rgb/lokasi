@@ -1409,6 +1409,14 @@
             console.warn('Gagal ambil data fasilitas transportasi dari semua endpoint Overpass');
         }
 
+        function formatFacilityLabel(f) {
+            const nameUpper = f.name.toUpperCase();
+            const labelUpper = f.label.toUpperCase();
+            // hindari label ganda, mis. nama OSM sudah "Stasiun Jayakarta" -> jangan jadi "STASIUN STASIUN JAYAKARTA"
+            if (nameUpper.startsWith(labelUpper)) return nameUpper;
+            return `${labelUpper} ${nameUpper}`;
+        }
+
         function checkNearestTransportFacility(lat, lng) {
             if (!nearbyTransportFacilities.length) return;
 
@@ -1430,7 +1438,7 @@
             if (nearestDist <= TRANSPORT_ARRIVE_M) {
                 const alreadyArrived = transportNotifyState.id === nearest.id && transportNotifyState.tier === 'arrived';
                 if (!alreadyArrived) {
-                    showToast(`ANDA BERADA DI ${nearest.label} ${nearest.name.toUpperCase()}`, { icon: nearest.icon, duration: 4500, wrap: true });
+                    showToast(`ANDA BERADA DI ${formatFacilityLabel(nearest)}`, { icon: nearest.icon, duration: 4500, wrap: true });
                     transportNotifyState = { id: nearest.id, tier: 'arrived' };
                 }
             } else if (nearestDist <= TRANSPORT_NEAR_M) {
@@ -1438,7 +1446,7 @@
                     (transportNotifyState.tier === 'near' || transportNotifyState.tier === 'arrived');
                 if (!alreadyNotifiedNear) {
                     const distRounded = Math.max(50, Math.round(nearestDist / 50) * 50);
-                    showToast(`${nearest.label} ${nearest.name.toUpperCase()} ${distRounded} METER LAGI`, { icon: nearest.icon, duration: 4000, wrap: true });
+                    showToast(`${formatFacilityLabel(nearest)} ${distRounded} METER LAGI`, { icon: nearest.icon, duration: 4000, wrap: true });
                     transportNotifyState = { id: nearest.id, tier: 'near' };
                 }
             }
