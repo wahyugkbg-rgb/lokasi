@@ -303,7 +303,14 @@
         const MY_LNG = 106.8;
         const SECONDS = 2;
         const FETCH_TIMEOUT_MS = 12000; // batas waktu per percobaan proxy
-        const NORMAL_INTERVAL_MS = 15000; 
+        const NORMAL_INTERVAL_MS = 15000;
+
+        // OPSIONAL: kalau Anda sudah punya proxy pribadi (misal Cloudflare Worker
+        // gratis), isi URL-nya di sini. Proxy pribadi jauh lebih andal daripada
+        // proxy publik karena tidak dibagi-pakai/diblokir orang lain.
+        // Contoh: 'https://nama-worker-anda.workers.dev/?url='
+        // Kosongkan ('') kalau belum punya — sistem tetap jalan pakai proxy publik.
+        const CUSTOM_PROXY_URL = 'https://odd-dew-de57.endangbogorkota.workers.dev/?url='; 
 
         // Elemen UI
         const map = L.map('map', { zoomControl: false }).setView([MY_LAT, MY_LNG], 3);
@@ -412,6 +419,11 @@
         // membaca hasilnya sendiri (beberapa proxy membungkus respons asli
         // di dalam field JSON seperti "contents").
         const proxyStrategies = [
+            ...(CUSTOM_PROXY_URL ? [{
+                name: 'Proxy Pribadi',
+                build: (url) => `${CUSTOM_PROXY_URL}${encodeURIComponent(url)}`,
+                parse: (res) => res.json()
+            }] : []),
             {
                 name: 'Corsfix',
                 build: (url) => `https://proxy.corsfix.com/?${url}`,
@@ -556,9 +568,30 @@
             }
         }
 
+        async function runNetworkSelfTest() {
+            // Endpoint publik yang dipastikan mendukung CORS (Access-Control-Allow-Origin: *).
+            // Kalau permintaan LANGSUNG ke sini saja sudah gagal, berarti masalahnya
+            // BUKAN di proxy/N2YO, tapi di level browser/jaringan/hosting halaman ini
+            // (misalnya dibuka sebagai file lokal / file://, atau diblokir firewall).
+            try {
+                const res = await fetchWithTimeout('https://api.github.com', 8000);
+                if (res.ok) {
+                    addLog('🧪 Tes jaringan: OK — koneksi internet & fetch() browser berfungsi normal.');
+                    return true;
+                }
+                addLog(`🧪 Tes jaringan: respons tidak normal (HTTP ${res.status}).`, true);
+                return false;
+            } catch (err) {
+                const reason = err.name === 'AbortError' ? 'timeout' : err.message;
+                addLog(`🧪 Tes jaringan: GAGAL (${reason}). Kemungkinan halaman ini dibuka sebagai file lokal (file://), tidak ada internet, atau ada firewall/ekstensi yang memblokir fetch().`, true);
+                return false;
+            }
+        }
+
         // Inisialisasi
         addLog('Aplikasi dimulai. Menyiapkan terobosan CORS multi-layer...');
         updateLastUpdateLabel();
+        runNetworkSelfTest();
         fetchSatelliteData();
         setInterval(fetchSatelliteData, NORMAL_INTERVAL_MS);
     </script>
