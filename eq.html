@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SeismoWatch — Pemantau Gempa Bumi USGS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#0a0e1a;
+  --bg-alt:#0d1220;
+  --panel:#111a2e;
+  --panel-2:#141d33;
+  --elevated:#182444;
+  --border:rgba(148,163,184,.14);
+  --border-soft:rgba(148,163,184,.08);
+  --grid-line:rgba(120,150,200,.07);
+  --text:#e7ecf7;
+  --text-muted:#8a93ab;
+  --text-dim:#5c6784;
+  --amber:#f5a623;
+  --amber-soft:rgba(245,166,35,.14);
+  --teal:#22d3b0;
+  --teal-soft:rgba(34,211,176,.14);
+  --blue:#38bdf8;
+  --red:#ef4444;
+  --orange:#f97316;
+  --yellow:#eab308;
+  --radius-sm:8px;
+  --radius:14px;
+  --radius-lg:20px;
+  --shadow:0 12px 32px rgba(0,0,0,.35);
+  --header-h:64px;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(245,166,35,.06), transparent 60%),
+    radial-gradient(1000px 700px at 110% 10%, rgba(34,211,176,.06), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+h1,h2,h3,.font-display{font-family:'Space Grotesk',sans-serif;}
+.mono{font-family:'JetBrains Mono',monospace;}
+::selection{background:var(--amber);color:#1a1200;}
+button{font-family:inherit;}
+a{color:var(--teal);}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--elevated);border-radius:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+.app{min-height:100%;display:flex;flex-direction:column;}
+
+/* ============ TOPBAR ============ */
+.topbar{
+  height:var(--header-h);
+  flex:0 0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;
+  background:rgba(10,14,26,.85);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-soft);
+  position:sticky;top:0;z-index:60;
+  gap:10px;
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;}
+.brand-mark{
+  width:36px;height:36px;flex:0 0 auto;border-radius:10px;
+  background:conic-gradient(from 200deg, var(--amber), var(--teal), var(--amber));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#0a0e1a;font-weight:700;
+  box-shadow:0 0 0 1px var(--border), 0 6px 16px rgba(245,166,35,.25);
+}
+.brand h1{font-size:16px;margin:0;line-height:1.1;letter-spacing:.2px;}
+.brand p{margin:1px 0 0;font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+.clock{
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);
+  text-align:right;line-height:1.2;display:none;
+}
+.clock b{color:var(--text);font-size:13px;display:block;}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;border:1px solid var(--border);
+  background:var(--panel-2);color:var(--text);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;transition:.15s;
+}
+.icon-btn:hover{background:var(--elevated);border-color:var(--amber);}
+.icon-btn.live{position:relative;}
+.icon-btn.live.on{color:var(--teal);border-color:var(--teal);}
+.dot-live{width:6px;height:6px;border-radius:50%;background:var(--text-dim);position:absolute;top:6px;right:6px;}
+.icon-btn.live.on .dot-live{background:var(--teal);box-shadow:0 0 0 3px rgba(34,211,176,.25);animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+/* ============ HERO / WAVEFORM ============ */
+.hero{
+  flex:0 0 auto;
+  margin:12px 14px 0;
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-lg);
+  background:
+    repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 22px),
+    linear-gradient(180deg, var(--panel), var(--bg-alt));
+  overflow:hidden;
+  position:relative;
+}
+.waveform-wrap{position:relative;height:96px;}
+.waveform{width:100%;height:100%;display:block;}
+.waveform-label{
+  position:absolute;top:8px;left:12px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text-dim);font-family:'JetBrains Mono',monospace;
+}
+.hero-stats{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  border-top:1px solid var(--border-soft);
+}
+.stat{padding:10px 8px;text-align:center;border-right:1px solid var(--border-soft);}
+.stat:last-child{border-right:none;}
+.stat-value{display:block;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;color:var(--text);}
+.stat.major .stat-value{color:var(--amber);}
+.stat-label{display:block;font-size:9.5px;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.6px;}
+
+/* ============ FILTERS ============ */
+.filters{margin:12px 14px 0;border:1px solid var(--border-soft);border-radius:var(--radius);background:var(--panel);overflow:hidden;}
+.filters-toggle{
+  width:100%;text-align:left;background:none;border:none;color:var(--text);
+  padding:12px 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;
+  cursor:pointer;
+}
+.filters-toggle .chev{transition:.2s;color:var(--text-muted);font-size:11px;}
+.filters.open .filters-toggle .chev{transform:rotate(180deg);}
+.filters-body{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+.filters.open .filters-body{max-height:900px;}
+.filters-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:2px 14px 14px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field.span2{grid-column:1/-1;}
+.field label{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.field select,.field input{
+  background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;font-family:inherit;
+}
+.field select:focus,.field input:focus{border-color:var(--amber);}
+.field-row{display:flex;gap:8px;}
+.field-row .field{flex:1;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{
+  padding:6px 10px;border-radius:99px;border:1px solid var(--border);background:var(--panel-2);
+  color:var(--text-muted);font-size:11.5px;cursor:pointer;transition:.15s;
+}
+.chip.active{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);}
+.filters-actions{display:flex;gap:8px;padding:2px 14px 16px;}
+.btn-primary{
+  flex:1;background:linear-gradient(135deg,var(--amber),#e08c1a);border:none;color:#1a1000;
+  padding:11px 14px;border-radius:var(--radius-sm);font-weight:700;font-size:13.5px;cursor:pointer;
+  box-shadow:0 6px 16px rgba(245,166,35,.25);
+}
+.btn-primary:active{transform:translateY(1px);}
+.btn-secondary{
+  background:var(--panel-2);border:1px solid var(--border);color:var(--text-muted);
+  padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;
+}
+.btn-secondary:hover{color:var(--text);border-color:var(--text-dim);}
+.range-out{font-family:'JetBrains Mono',monospace;color:var(--amber);font-weight:600;}
+
+/* ============ TABS ============ */
+.view-tabs{
+  display:flex;gap:6px;margin:12px 14px 0;background:var(--panel);border:1px solid var(--border-soft);
+  padding:4px;border-radius:12px;
+}
+.view-tabs button{
+  flex:1;background:none;border:none;color:var(--text-muted);padding:9px 6px;border-radius:9px;
+  font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s;
+}
+.view-tabs button.active{background:var(--elevated);color:var(--amber);}
+
+/* ============ CONTENT ============ */
+.content{margin:12px 14px 14px;flex:1;display:block;min-height:420px;}
+.panel{display:none;border:1px solid var(--border-soft);border-radius:var(--radius);background:var(--panel);overflow:hidden;height:60vh;min-height:380px;}
+.panel.active{display:block;}
+#map{width:100%;height:100%;background:#0d1220;}
+.leaflet-popup-content-wrapper{background:var(--elevated);color:var(--text);border-radius:10px;}
+.leaflet-popup-tip{background:var(--elevated);}
+.leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px;margin:10px 12px;}
+.leaflet-container a.leaflet-popup-close-button{color:var(--text-muted);}
+.leaflet-control-attribution{background:rgba(10,14,26,.7)!important;color:var(--text-dim)!important;font-size:9px!important;}
+.leaflet-control-attribution a{color:var(--text-muted)!important;}
+.leaflet-control-zoom a{background:var(--elevated)!important;color:var(--text)!important;border-color:var(--border)!important;}
+
+.event-list{height:100%;overflow-y:auto;padding:10px;}
+.event-card{
+  display:flex;gap:10px;align-items:flex-start;padding:11px;border-radius:12px;
+  border:1px solid var(--border-soft);margin-bottom:8px;background:var(--panel-2);cursor:pointer;transition:.15s;
+}
+.event-card:hover{border-color:var(--amber);background:var(--elevated);}
+.mag-badge{
+  flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:#0a0e1a;
+}
+.event-body{min-width:0;flex:1;}
+.event-place{font-size:13px;font-weight:600;color:var(--text);margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.event-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+.event-meta span{display:inline-flex;align-items:center;gap:3px;}
+.alert-chip{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-dim);text-align:center;padding:30px;gap:8px;}
+.empty-state .glyph{font-size:32px;opacity:.5;}
+.loading-row{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:10px;font-size:13px;}
+.spinner{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--amber);animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.chart-panel{padding:14px;height:60vh;min-height:380px;}
+.chart-panel canvas{max-height:100%;}
+.chart-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.chart-toolbar h3{margin:0;font-size:13px;color:var(--text-muted);font-weight:600;}
+
+/* landscape chart overlay */
+body.chart-open .chart-panel{
+  display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:90;height:100vh;
+  border-radius:0;margin:0;background:var(--bg-alt);
+}
+.chart-close{display:none;align-self:flex-end;margin-bottom:6px;}
+body.chart-open .chart-close{display:inline-flex;}
+
+/* ============ MODAL ============ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(5,8,16,.72);backdrop-filter:blur(3px);
+  display:none;align-items:flex-end;justify-content:center;z-index:200;
+}
+.modal-overlay.show{display:flex;}
+.modal{
+  background:var(--panel);border:1px solid var(--border);border-top-left-radius:20px;border-top-right-radius:20px;
+  width:100%;max-width:640px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow);
+  animation:slideUp .22s ease;
+}
+@keyframes slideUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:4px;margin:10px auto 0;}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 18px 6px;gap:10px;}
+.modal-head h2{font-size:17px;margin:0 0 4px;line-height:1.3;}
+.modal-head .sub{font-size:11.5px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
+.modal-close{flex:0 0 auto;width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--panel-2);color:var(--text-muted);cursor:pointer;}
+.modal-mag-hero{display:flex;align-items:center;gap:14px;padding:10px 18px 16px;}
+.modal-mag-circle{
+  width:64px;height:64px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Space Grotesk',sans-serif;color:#0a0e1a;flex:0 0 auto;
+}
+.modal-mag-circle b{font-size:22px;line-height:1;}
+.modal-mag-circle span{font-size:8.5px;text-transform:uppercase;}
+.modal-mag-side{font-size:12px;color:var(--text-muted);}
+.modal-mag-side b{color:var(--text);font-size:13.5px;display:block;margin-bottom:2px;}
+#modalMap{height:180px;width:100%;border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);}
+.modal-section{padding:14px 18px;border-bottom:1px solid var(--border-soft);}
+.modal-section:last-of-type{border-bottom:none;}
+.modal-section h3{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);}
+.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+.kv{display:flex;flex-direction:column;gap:2px;}
+.kv label{font-size:10px;color:var(--text-dim);}
+.kv .val{font-size:13px;color:var(--text);font-family:'JetBrains Mono',monospace;}
+.geo-loading{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:12.5px;}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge.tsunami-yes{background:rgba(239,68,68,.14);color:#ff8080;}
+.badge.tsunami-no{background:rgba(34,211,176,.1);color:var(--teal);}
+.modal-actions{display:flex;gap:8px;padding:14px 18px 22px;}
+.link-btn{flex:1;text-align:center;text-decoration:none;background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px;font-size:12.5px;font-weight:600;}
+.link-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+/* ============ TOAST ============ */
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);
+  background:var(--elevated);border:1px solid var(--border);color:var(--text);
+  padding:11px 18px;border-radius:11px;font-size:12.5px;box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:.25s;z-index:300;max-width:88%;text-align:center;
+}
+.toast.show{opacity:1;transform:translate(-50%,0);}
+
+.footer{flex:0 0 auto;text-align:center;padding:14px 14px 20px;font-size:10.5px;color:var(--text-dim);}
+.footer a{color:var(--text-dim);text-decoration:underline;}
+
+/* ============ ORIENTATION HINT ============ */
+.orient-tag{
+  position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:250;
+  background:var(--elevated);border:1px solid var(--border);color:var(--text-dim);
+  font-size:10px;padding:4px 10px;border-radius:99px;font-family:'JetBrains Mono',monospace;
+  opacity:.85;pointer-events:none;
+}
+
+/* =====================================================
+   LANDSCAPE MODE  (target: Oppo A9 2020 & similar phones)
+   ===================================================== */
+@media (orientation: landscape){
+  .topbar{height:52px;}
+  .brand p{display:none;}
+  .clock{display:block;}
+  .hero{margin:8px 10px 0;}
+  .waveform-wrap{height:56px;}
+  .hero-stats{grid-template-columns:repeat(5,1fr);}
+  .stat{padding:6px 4px;}
+  .stat-value{font-size:14px;}
+  .stat-label{font-size:8px;}
+  .filters{margin:8px 10px 0;}
+  .view-tabs{margin:8px 10px 0;}
+  .view-tabs [data-view="map"],.view-tabs [data-view="list"]{display:none;}
+  .content{
+    margin:8px 10px 10px;display:grid;grid-template-columns:1.35fr 1fr;gap:10px;
+    height:calc(100vh - 52px - 8px - 118px - 44px - 10px);
+    min-height:260px;
+  }
+  .panel{display:block!important;height:100%;min-height:0;}
+  .chart-panel{display:none!important;}
+  body.chart-open .chart-panel{display:flex!important;}
+  .modal-overlay{align-items:center;}
+  .modal{max-width:520px;max-height:92vh;border-radius:20px;}
+}
+@media (orientation: landscape) and (max-height:420px){
+  .hero-stats{grid-template-columns:repeat(5,1fr);}
+  .waveform-wrap{height:40px;}
+  .filters-grid{grid-template-columns:repeat(3,1fr);}
+  .content{height:calc(100vh - 52px - 8px - 96px - 40px - 10px);}
+}
+
+/* =====================================================
+   PORTRAIT MODE
+   ===================================================== */
+@media (orientation: portrait){
+  .content{display:block;}
+}
+@media (min-width:640px){
+  .clock{display:block;}
+  .filters-grid{grid-template-columns:repeat(3,1fr);}
+  .hero-stats{grid-template-columns:repeat(5,1fr);}
+}
+@media (min-width:900px){
+  .content{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;}
+  .view-tabs{display:none;}
+  .panel{display:block!important;}
+  .chart-panel{display:none!important;grid-column:1/-1;}
+  body.chart-open .chart-panel{display:flex!important;}
+}
+@media (max-width:360px){
+  .hero-stats{grid-template-columns:repeat(3,1fr);}
+  .stat:nth-child(4),.stat:nth-child(5){border-top:1px solid var(--border-soft);}
+}
+
+/* fullscreen tweaks */
+:fullscreen .app{height:100vh;}
+:-webkit-full-screen .app{height:100vh;}
+</style>
+</head>
+<body>
+<div class="orient-tag" id="orientTag"></div>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">◎</div>
+      <div>
+        <h1>SeismoWatch</h1>
+        <p>Pemantau Gempa Bumi USGS · Real-time</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="clock" id="clock"><b id="clockTime">--:--:--</b><span id="clockDate">WIB</span></div>
+      <button class="icon-btn live" id="liveBtn" title="Perbarui otomatis">⟳<span class="dot-live"></span></button>
+      <button class="icon-btn" id="fullscreenBtn" title="Layar penuh">⤢</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="waveform-wrap">
+      <span class="waveform-label">Seismogram · Magnitudo Terbaru</span>
+      <svg class="waveform" id="waveform" viewBox="0 0 1000 96" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-value" id="statTotal">–</span><span class="stat-label">Total Kejadian</span></div>
+      <div class="stat major"><span class="stat-value" id="statMax">–</span><span class="stat-label">Magnitudo Puncak</span></div>
+      <div class="stat"><span class="stat-value" id="statAvg">–</span><span class="stat-label">Rata² Magnitudo</span></div>
+      <div class="stat"><span class="stat-value" id="statDepth">–</span><span class="stat-label">Rata² Kedalaman</span></div>
+      <div class="stat"><span class="stat-value" id="statLast">–</span><span class="stat-label">Kejadian Terbaru</span></div>
+    </div>
+  </section>
+
+  <section class="filters" id="filtersPanel">
+    <button class="filters-toggle" id="filtersToggle">
+      <span>⚙ Filter &amp; Parameter Pencarian</span><span class="chev">▾</span>
+    </button>
+    <div class="filters-body">
+      <div class="filters-grid">
+        <div class="field">
+          <label>Rentang Waktu</label>
+          <select id="fRange">
+            <option value="1h">1 Jam Terakhir</option>
+            <option value="24h" selected>24 Jam Terakhir</option>
+            <option value="7d">7 Hari Terakhir</option>
+            <option value="30d">30 Hari Terakhir</option>
+            <option value="custom">Kustom…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Urutkan (orderby)</label>
+          <select id="fOrder">
+            <option value="time">Waktu Terbaru</option>
+            <option value="time-asc">Waktu Terlama</option>
+            <option value="magnitude">Magnitudo Tertinggi</option>
+            <option value="magnitude-asc">Magnitudo Terendah</option>
+          </select>
+        </div>
+        <div class="field span2" id="customDates" hidden>
+          <label>Waktu Kustom (UTC)</label>
+          <div class="field-row">
+            <input type="datetime-local" id="fStart">
+            <input type="datetime-local" id="fEnd">
+          </div>
+        </div>
+        <div class="field">
+          <label>Magnitudo Min <span class="range-out" id="minMagOut">2.5</span></label>
+          <input type="range" id="fMinMag" min="0" max="9" step="0.1" value="2.5">
+        </div>
+        <div class="field">
+          <label>Magnitudo Maks <span class="range-out" id="maxMagOut">10.0</span></label>
+          <input type="range" id="fMaxMag" min="0" max="10" step="0.1" value="10">
+        </div>
+        <div class="field">
+          <label>Jenis Kejadian (eventtype)</label>
+          <select id="fEventType">
+            <option value="earthquake" selected>Gempa Bumi</option>
+            <option value="explosion">Ledakan</option>
+            <option value="quarry blast">Ledakan Tambang Batu</option>
+            <option value="mining explosion">Ledakan Pertambangan</option>
+            <option value="chemical explosion">Ledakan Kimia</option>
+            <option value="nuclear explosion">Ledakan Nuklir</option>
+            <option value="landslide">Longsor</option>
+            <option value="ice quake">Gempa Es</option>
+            <option value="other event">Lainnya</option>
+            <option value="">Semua Jenis</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Level Peringatan (alertlevel)</label>
+          <select id="fAlert">
+            <option value="">Semua Level</option>
+            <option value="green">🟢 Hijau</option>
+            <option value="yellow">🟡 Kuning</option>
+            <option value="orange">🟠 Oranye</option>
+            <option value="red">🔴 Merah</option>
+          </select>
+        </div>
+        <div class="field span2">
+          <label>Wilayah</label>
+          <div class="chips" id="regionChips">
+            <div class="chip active" data-region="global">🌐 Global</div>
+            <div class="chip" data-region="indonesia">🇮🇩 Indonesia</div>
+            <div class="chip" data-region="radius">📍 Radius Titik</div>
+            <div class="chip" data-region="bbox">▭ Kotak Kustom</div>
+          </div>
+        </div>
+        <div class="field span2" id="indoSubWrap" hidden>
+          <label>Sub-wilayah Indonesia</label>
+          <select id="fIndoRegion">
+            <option value="all">Seluruh Indonesia</option>
+            <option value="sumatra">Sumatra</option>
+            <option value="jawa">Jawa</option>
+            <option value="kalimantan">Kalimantan</option>
+            <option value="sulawesi">Sulawesi</option>
+            <option value="balinusra">Bali &amp; Nusa Tenggara</option>
+            <option value="maluku">Maluku</option>
+            <option value="papua">Papua</option>
+          </select>
+        </div>
+        <div class="field span2" id="radiusWrap" hidden>
+          <label>Pusat Titik &amp; Radius (km)</label>
+          <div class="field-row">
+            <input type="number" id="fLat" placeholder="Lintang (lat)" step="0.0001" value="-6.2000">
+            <input type="number" id="fLon" placeholder="Bujur (lon)" step="0.0001" value="106.8166">
+            <input type="number" id="fRadius" placeholder="Radius km" value="500">
+          </div>
+        </div>
+        <div class="field span2" id="bboxWrap" hidden>
+          <label>Kotak Wilayah (lat/lon min–maks)</label>
+          <div class="field-row">
+            <input type="number" id="fMinLat" placeholder="Lat min" step="0.01" value="-11">
+            <input type="number" id="fMaxLat" placeholder="Lat maks" step="0.01" value="6">
+          </div>
+          <div class="field-row">
+            <input type="number" id="fMinLon" placeholder="Lon min" step="0.01" value="95">
+            <input type="number" id="fMaxLon" placeholder="Lon maks" step="0.01" value="141">
+          </div>
+        </div>
+        <div class="field">
+          <label>Batas Data (limit)</label>
+          <input type="number" id="fLimit" min="10" max="2000" value="150">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn-secondary" id="useLocationBtn" type="button">📍 Gunakan Lokasi Saya</button>
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button class="btn-secondary" id="resetFilters" type="button">Atur Ulang</button>
+        <button class="btn-primary" id="applyFilters" type="button">Terapkan &amp; Muat Data</button>
+      </div>
+    </div>
+  </section>
+
+  <nav class="view-tabs" id="viewTabs">
+    <button data-view="map" class="active">🗺️ Peta</button>
+    <button data-view="list">📋 Daftar</button>
+    <button data-view="chart">📈 Grafik</button>
+  </nav>
+
+  <main class="content">
+    <div class="panel map-panel active" id="mapPanel"><div id="map"></div></div>
+    <div class="panel list-panel" id="listPanel"><div class="event-list" id="eventList"></div></div>
+    <div class="panel chart-panel" id="chartPanel">
+      <button class="icon-btn chart-close" id="chartCloseBtn">✕</button>
+      <div class="chart-toolbar"><h3>Magnitudo vs. Waktu Kejadian</h3></div>
+      <canvas id="magChart"></canvas>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Sumber data: <a href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">USGS Earthquake Hazards Program (FDSN Event Web Service)</a>
+    · Geocoding wilayah: <a href="https://nominatim.org" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>
+    · Peta: CARTO / OpenStreetMap
+  </footer>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="detailModal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <div>
+        <h2 id="modalPlace">–</h2>
+        <div class="sub" id="modalTime">–</div>
+      </div>
+      <button class="modal-close" id="modalCloseBtn">✕</button>
+    </div>
+    <div class="modal-mag-hero">
+      <div class="modal-mag-circle" id="modalMagCircle"><b id="modalMagVal">–</b><span id="modalMagType">–</span></div>
+      <div class="modal-mag-side">
+        <b id="modalDepthVal">– km</b>
+        Kedalaman episentrum
+      </div>
+      <div class="modal-mag-side">
+        <b id="modalAlertVal">–</b>
+        Status siaga (alert level)
+      </div>
+    </div>
+    <div id="modalMap"></div>
+    <div class="modal-section">
+      <h3>Lokasi Administratif (geocoding)</h3>
+      <div id="geoResult" class="geo-loading"><span class="spinner"></span> Mengambil detail wilayah…</div>
+    </div>
+    <div class="modal-section">
+      <h3>Detail Episentrum</h3>
+      <div class="kv-grid">
+        <div class="kv"><label>Koordinat</label><span class="val" id="kvCoord">–</span></div>
+        <div class="kv"><label>Kedalaman</label><span class="val" id="kvDepth">–</span></div>
+        <div class="kv"><label>Waktu Lokal (WIB)</label><span class="val" id="kvTimeWIB">–</span></div>
+        <div class="kv"><label>Waktu UTC</label><span class="val" id="kvTimeUTC">–</span></div>
+        <div class="kv"><label>ID Kejadian</label><span class="val" id="kvId">–</span></div>
+        <div class="kv"><label>Jenis Kejadian</label><span class="val" id="kvType">–</span></div>
+        <div class="kv"><label>Dirasakan (laporan)</label><span class="val" id="kvFelt">–</span></div>
+        <div class="kv"><label>Potensi Tsunami</label><span class="val" id="kvTsunami">–</span></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="link-btn" id="copyCoordBtn" type="button">📋 Salin Koordinat</button>
+      <a class="link-btn" id="usgsLink" href="#" target="_blank" rel="noopener">🔗 Buka di USGS</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   KONSTAN & STATE
+   ============================================================ */
+const API_BASE = "https://earthquake.usgs.gov/fdsnws/event/1/query";
+const INDO_REGIONS = {
+  all:        {label:'Seluruh Indonesia', bbox:[-11,6,95,141]},
+  sumatra:    {label:'Sumatra',            bbox:[-6,6,95,107]},
+  jawa:       {label:'Jawa',               bbox:[-9,-5,105,115]},
+  kalimantan: {label:'Kalimantan',         bbox:[-4.5,4.5,108,119]},
+  sulawesi:   {label:'Sulawesi',           bbox:[-6,2,118,125.5]},
+  balinusra:  {label:'Bali & Nusa Tenggara',bbox:[-11,-7,114,125]},
+  maluku:     {label:'Maluku',             bbox:[-8.5,3,124,135]},
+  papua:      {label:'Papua',              bbox:[-9,1,131,141]},
+};
+
+let state = {
+  regionMode: 'global',   // global | indonesia | radius | bbox
+  autoRefresh: false,
+};
+let features = [];
+let map, markersLayer, magChart;
+let modalMap, modalMarker;
+let autoTimer = null;
+const geocodeCache = new Map();
+let geocodeQueue = Promise.resolve();
+
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r=>setTimeout(r,ms));
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function magColor(m){
+  if(m===null||m===undefined||isNaN(m)) return '#8a93ab';
+  if(m>=7) return '#ef4444';
+  if(m>=6) return '#f97316';
+  if(m>=5) return '#f5a623';
+  if(m>=4) return '#eab308';
+  if(m>=3) return '#22d3b0';
+  return '#38bdf8';
+}
+function magRadius(m){ return Math.max(5, (m||1)*3.4); }
+function alertColor(level){
+  return {green:'#22d3b0', yellow:'#eab308', orange:'#f97316', red:'#ef4444'}[level] || '#5c6784';
+}
+function fmtNum(n, d=1){ return (n===null||n===undefined||isNaN(n)) ? '–' : Number(n).toFixed(d); }
+
+function toWIB(ts){
+  try{
+    return new Intl.DateTimeFormat('id-ID',{
+      timeZone:'Asia/Jakarta', dateStyle:'medium', timeStyle:'medium'
+    }).format(new Date(ts)) + ' WIB';
+  }catch(e){ return '–'; }
+}
+function toUTC(ts){
+  const d = new Date(ts);
+  return d.toISOString().replace('T',' ').replace('.000Z',' UTC');
+}
+function relTime(ts){
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff/60000);
+  if(m < 1) return 'baru saja';
+  if(m < 60) return m+' menit lalu';
+  const h = Math.floor(m/60);
+  if(h < 24) return h+' jam lalu';
+  const d = Math.floor(h/24);
+  return d+' hari lalu';
+}
+function isoLocalToUTC(v){
+  if(!v) return null;
+  return new Date(v).toISOString();
+}
+function toast(msg, ms=2600){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+/* Parse USGS "place" string, mis. "112 km SSE of Bengkulu, Indonesia" */
+function parsePlace(place){
+  if(!place) return {region:'–', country:'–'};
+  const m = place.match(/^(.*?\bof\s+)(.+)$/i);
+  let rest = m ? m[2] : place;
+  const parts = rest.split(',').map(s=>s.trim());
+  if(parts.length > 1){
+    return {region: parts.slice(0,-1).join(', '), country: parts[parts.length-1]};
+  }
+  return {region: '–', country: parts[0]};
+}
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function tickClock(){
+  const now = new Date();
+  const time = new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);
+  const date = new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',day:'2-digit',month:'short'}).format(now);
+  $('clockTime').textContent = time;
+  $('clockDate').textContent = date+' WIB';
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ============================================================
+   ORIENTATION TAG (debug/informatif kecil, auto-hilang)
+   ============================================================ */
+function updateOrientTag(){
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+  const tag = $('orientTag');
+  tag.textContent = isPortrait ? '📱 Mode Potret' : '📱 Mode Lanskap';
+  tag.style.opacity = '.85';
+  clearTimeout(tag._t);
+  tag._t = setTimeout(()=>{ tag.style.opacity = '0'; }, 1600);
+  document.body.classList.toggle('is-portrait', isPortrait);
+  document.body.classList.toggle('is-landscape', !isPortrait);
+  setTimeout(()=>{ if(map) map.invalidateSize(); if(magChart) magChart.resize(); }, 260);
+}
+window.matchMedia('(orientation: portrait)').addEventListener('change', updateOrientTag);
+window.addEventListener('resize', ()=>{ if(map) map.invalidateSize(); });
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+$('fullscreenBtn').addEventListener('click', ()=>{
+  const el = document.documentElement;
+  if(!document.fullscreenElement){
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el)
+      .catch(()=>toast('Layar penuh tidak didukung di perangkat ini'));
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+  }
+});
+document.addEventListener('fullscreenchange', ()=>{
+  $('fullscreenBtn').textContent = document.fullscreenElement ? '⤡' : '⤢';
+  setTimeout(()=>{ if(map) map.invalidateSize(); }, 200);
+});
+
+/* ============================================================
+   FILTER PANEL INTERAKSI
+   ============================================================ */
+$('filtersToggle').addEventListener('click', ()=>{
+  $('filtersPanel').classList.toggle('open');
+});
+$('filtersPanel').classList.add('open');
+
+$('fRange').addEventListener('change', (e)=>{
+  $('customDates').hidden = e.target.value !== 'custom';
+});
+$('fMinMag').addEventListener('input', e=>$('minMagOut').textContent = Number(e.target.value).toFixed(1));
+$('fMaxMag').addEventListener('input', e=>$('maxMagOut').textContent = Number(e.target.value).toFixed(1));
+
+document.querySelectorAll('#regionChips .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#regionChips .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    state.regionMode = chip.dataset.region;
+    $('indoSubWrap').hidden = state.regionMode !== 'indonesia';
+    $('radiusWrap').hidden = state.regionMode !== 'radius';
+    $('bboxWrap').hidden = state.regionMode !== 'bbox';
+  });
+});
+
+$('useLocationBtn').addEventListener('click', ()=>{
+  if(!navigator.geolocation){ toast('Geolokasi tidak didukung browser ini'); return; }
+  toast('Mengambil lokasi Anda…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    $('fLat').value = pos.coords.latitude.toFixed(4);
+    $('fLon').value = pos.coords.longitude.toFixed(4);
+    document.querySelectorAll('#regionChips .chip').forEach(c=>c.classList.remove('active'));
+    document.querySelector('[data-region="radius"]').classList.add('active');
+    state.regionMode = 'radius';
+    $('radiusWrap').hidden = false; $('indoSubWrap').hidden = true; $('bboxWrap').hidden = true;
+    toast('Lokasi berhasil digunakan');
+  }, ()=> toast('Gagal mengambil lokasi — izin ditolak?'));
+});
+
+$('resetFilters').addEventListener('click', ()=>{
+  $('fRange').value='24h'; $('customDates').hidden=true;
+  $('fOrder').value='time';
+  $('fMinMag').value=2.5; $('minMagOut').textContent='2.5';
+  $('fMaxMag').value=10; $('maxMagOut').textContent='10.0';
+  $('fEventType').value='earthquake'; $('fAlert').value='';
+  $('fLimit').value=150;
+  document.querySelectorAll('#regionChips .chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('[data-region="global"]').classList.add('active');
+  state.regionMode='global';
+  $('indoSubWrap').hidden=true; $('radiusWrap').hidden=true; $('bboxWrap').hidden=true;
+  loadData();
+});
+$('applyFilters').addEventListener('click', loadData);
+
+/* ============================================================
+   TABS
+   ============================================================ */
+document.querySelectorAll('#viewTabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const view = btn.dataset.view;
+    if(view === 'chart'){
+      document.body.classList.toggle('chart-open');
+      btn.classList.toggle('active');
+      if(document.body.classList.contains('chart-open')){
+        requestAnimationFrame(()=>{ if(magChart) magChart.resize(); });
+      }
+      return;
+    }
+    document.querySelectorAll('#viewTabs button').forEach(b=>{ if(b.dataset.view!=='chart') b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    $(view+'Panel').classList.add('active');
+    if(view==='map') setTimeout(()=>{ if(map) map.invalidateSize(); }, 60);
+  });
+});
+$('chartCloseBtn').addEventListener('click', ()=>{
+  document.body.classList.remove('chart-open');
+  document.querySelector('[data-view="chart"]').classList.remove('active');
+});
+
+/* ============================================================
+   LIVE / AUTO REFRESH
+   ============================================================ */
+$('liveBtn').addEventListener('click', ()=>{
+  state.autoRefresh = !state.autoRefresh;
+  $('liveBtn').classList.toggle('on', state.autoRefresh);
+  if(state.autoRefresh){
+    toast('Perbarui otomatis aktif — setiap 60 detik');
+    autoTimer = setInterval(loadData, 60000);
+  } else {
+    toast('Perbarui otomatis dimatikan');
+    clearInterval(autoTimer);
+  }
+});
+
+/* ============================================================
+   MAP INIT
+   ============================================================ */
+function initMap(){
+  map = L.map('map', {zoomControl:true, attributionControl:true}).setView([-2.5, 118], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+}
+
+function initModalMap(){
+  modalMap = L.map('modalMap', {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {subdomains:'abcd', maxZoom:19}).addTo(modalMap);
+}
+
+/* ============================================================
+   CHART INIT
+   ============================================================ */
+function initChart(){
+  const ctx = $('magChart').getContext('2d');
+  magChart = new Chart(ctx, {
+    type:'bar',
+    data:{ datasets:[{
+      label:'Magnitudo',
+      data:[],
+      backgroundColor: ctxData => magColor(ctxData.raw ? ctxData.raw.y : 0),
+      borderRadius:3, barThickness:'flex', maxBarThickness:18
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      parsing:false,
+      scales:{
+        x:{ type:'time', time:{unit:'hour'}, ticks:{color:'#8a93ab', font:{size:10}}, grid:{color:'rgba(148,163,184,.08)'} },
+        y:{ ticks:{color:'#8a93ab', font:{size:10}}, grid:{color:'rgba(148,163,184,.08)'}, title:{display:true, text:'Magnitudo', color:'#8a93ab', font:{size:10}} }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title: items => new Date(items[0].raw.x).toLocaleString('id-ID'),
+            label: item => `M ${item.raw.y.toFixed(1)} — ${item.raw.place}`
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ============================================================
+   WAVEFORM (SVG seismogram dekoratif berbasis data nyata)
+   ============================================================ */
+function renderWaveform(feats){
+  const svg = $('waveform');
+  const W = 1000, H = 96, MID = H/2;
+  if(!feats.length){
+    svg.innerHTML = `<line x1="0" y1="${MID}" x2="${W}" y2="${MID}" stroke="#2a3350" stroke-width="1.5"/>`;
+    return;
+  }
+  const sorted = feats.slice().sort((a,b)=>a.properties.time - b.properties.time).slice(-80);
+  const n = sorted.length;
+  const step = W / Math.max(n-1,1);
+  let d = `M 0 ${MID}`;
+  let pts = [];
+  sorted.forEach((f,i)=>{
+    const mag = f.properties.mag || 0.5;
+    const amp = Math.min(mag*7, MID-4);
+    const x = i*step;
+    const jitter = (i%2===0? 1:-1) * (mag>4? 3:1);
+    const y1 = MID - amp - jitter;
+    const y2 = MID + amp*0.6;
+    pts.push([x,y1],[x+step*0.35,y2],[x+step*0.65, MID-amp*0.3]);
+  });
+  d = 'M ' + pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L ');
+  const maxMag = Math.max(...sorted.map(f=>f.properties.mag||0));
+  svg.innerHTML = `
+    <line x1="0" y1="${MID}" x2="${W}" y2="${MID}" stroke="#2a3350" stroke-width="1" stroke-dasharray="2 4"/>
+    <path d="${d}" fill="none" stroke="url(#wgrad)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" id="wavePath"/>
+    <defs>
+      <linearGradient id="wgrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="${magColor(0)}"/>
+        <stop offset="60%" stop-color="${magColor(3.5)}"/>
+        <stop offset="100%" stop-color="${magColor(maxMag)}"/>
+      </linearGradient>
+    </defs>`;
+  const path = $('wavePath');
+  const len = path.getTotalLength ? path.getTotalLength() : 1000;
+  path.style.strokeDasharray = len;
+  path.style.strokeDashoffset = len;
+  path.getBoundingClientRect();
+  path.style.transition = 'stroke-dashoffset 1.1s ease-out';
+  requestAnimationFrame(()=>{ path.style.strokeDashoffset = 0; });
+}
+
+/* ============================================================
+   QUERY BUILDER
+   ============================================================ */
+function buildURL(){
+  const p = new URLSearchParams();
+  p.set('format','geojson');
+
+  const range = $('fRange').value;
+  let start, end;
+  const now = new Date();
+  if(range === 'custom'){
+    start = isoLocalToUTC($('fStart').value);
+    end = isoLocalToUTC($('fEnd').value);
+  } else {
+    const hoursMap = {'1h':1,'24h':24,'7d':24*7,'30d':24*30};
+    const hrs = hoursMap[range] || 24;
+    start = new Date(now.getTime() - hrs*3600*1000).toISOString();
+    end = now.toISOString();
+  }
+  if(start) p.set('starttime', start);
+  if(end) p.set('endtime', end);
+
+  const minMag = parseFloat($('fMinMag').value);
+  const maxMag = parseFloat($('fMaxMag').value);
+  if(!isNaN(minMag)) p.set('minmagnitude', minMag);
+  if(!isNaN(maxMag)) p.set('maxmagnitude', maxMag);
+
+  if(state.regionMode === 'indonesia'){
+    const key = $('fIndoRegion').value;
+    const r = INDO_REGIONS[key] || INDO_REGIONS.all;
+    p.set('minlatitude', r.bbox[0]); p.set('maxlatitude', r.bbox[1]);
+    p.set('minlongitude', r.bbox[2]); p.set('maxlongitude', r.bbox[3]);
+  } else if(state.regionMode === 'radius'){
+    const lat = parseFloat($('fLat').value), lon = parseFloat($('fLon').value), rad = parseFloat($('fRadius').value);
+    if(!isNaN(lat)) p.set('latitude', lat);
+    if(!isNaN(lon)) p.set('longitude', lon);
+    if(!isNaN(rad)) p.set('maxradiuskm', rad);
+  } else if(state.regionMode === 'bbox'){
+    p.set('minlatitude', $('fMinLat').value); p.set('maxlatitude', $('fMaxLat').value);
+    p.set('minlongitude', $('fMinLon').value); p.set('maxlongitude', $('fMaxLon').value);
+  }
+
+  const evType = $('fEventType').value;
+  if(evType) p.set('eventtype', evType);
+  const alertLvl = $('fAlert').value;
+  if(alertLvl) p.set('alertlevel', alertLvl);
+
+  p.set('orderby', $('fOrder').value);
+  let limit = parseInt($('fLimit').value) || 150;
+  limit = Math.min(Math.max(limit,1), 2000);
+  p.set('limit', limit);
+
+  return API_BASE + '?' + p.toString();
+}
+
+/* ============================================================
+   FETCH + RENDER
+   ============================================================ */
+async function loadData(){
+  setLoading(true);
+  try{
+    const url = buildURL();
+    const res = await fetch(url);
+    if(!res.ok){
+      const txt = await res.text().catch(()=> '');
+      throw new Error('HTTP '+res.status+(txt? ' — '+txt.slice(0,140):''));
+    }
+    const data = await res.json();
+    features = (data.features || []).slice();
+    renderAll();
+    toast(`Berhasil memuat ${features.length} kejadian`);
+  }catch(err){
+    console.error(err);
+    features = [];
+    renderAll();
+    toast('Gagal memuat data: ' + err.message, 4000);
+  }finally{
+    setLoading(false);
+  }
+}
+
+function setLoading(isLoading){
+  if(isLoading){
+    $('eventList').innerHTML = `<div class="loading-row"><span class="spinner"></span> Memuat data gempa dari USGS…</div>`;
+  }
+}
+
+function renderAll(){
+  renderStats();
+  renderWaveform(features);
+  renderMap();
+  renderList();
+  renderChart();
+}
+
+function renderStats(){
+  $('statTotal').textContent = features.length;
+  if(!features.length){
+    $('statMax').textContent = '–'; $('statAvg').textContent = '–';
+    $('statDepth').textContent = '–'; $('statLast').textContent = '–';
+    return;
+  }
+  const mags = features.map(f=>f.properties.mag).filter(m=>m!==null && !isNaN(m));
+  const depths = features.map(f=>f.geometry && f.geometry.coordinates ? f.geometry.coordinates[2] : null).filter(d=>d!==null && !isNaN(d));
+  $('statMax').textContent = mags.length? 'M '+fmtNum(Math.max(...mags)) : '–';
+  $('statAvg').textContent = mags.length? fmtNum(mags.reduce((a,b)=>a+b,0)/mags.length) : '–';
+  $('statDepth').textContent = depths.length? fmtNum(depths.reduce((a,b)=>a+b,0)/depths.length,0)+' km' : '–';
+  const latest = features.slice().sort((a,b)=>b.properties.time - a.properties.time)[0];
+  $('statLast').textContent = latest ? relTime(latest.properties.time) : '–';
+}
+
+function renderMap(){
+  markersLayer.clearLayers();
+  if(!features.length) return;
+  const bounds = [];
+  features.forEach(f=>{
+    const [lon, lat, depth] = f.geometry.coordinates;
+    const mag = f.properties.mag || 0;
+    const marker = L.circleMarker([lat, lon], {
+      radius: magRadius(mag),
+      color: magColor(mag),
+      weight: 1.5,
+      fillColor: magColor(mag),
+      fillOpacity: 0.45,
+    });
+    marker.bindPopup(`
+      <b style="color:${magColor(mag)}">M ${fmtNum(mag)}</b> — ${f.properties.place || 'Lokasi tidak diketahui'}<br>
+      <span style="color:#8a93ab">${toWIB(f.properties.time)}</span><br>
+      <span style="color:#8a93ab">Kedalaman: ${fmtNum(depth,1)} km</span>
+    `);
+    marker.on('click', ()=>openDetail(f));
+    marker.addTo(markersLayer);
+    bounds.push([lat, lon]);
+  });
+  if(bounds.length){
+    try{ map.fitBounds(bounds, {padding:[26,26], maxZoom:8}); }catch(e){}
+  }
+}
+
+function renderList(){
+  const list = $('eventList');
+  if(!features.length){
+    list.innerHTML = `<div class="empty-state"><div class="glyph">🌍</div>Tidak ada data untuk filter ini.<br>Coba perluas rentang waktu atau wilayah.</div>`;
+    return;
+  }
+  const sorted = features.slice();
+  list.innerHTML = sorted.map((f, idx)=>{
+    const mag = f.properties.mag;
+    const depth = f.geometry.coordinates[2];
+    const alert = f.properties.alert;
+    return `
+      <div class="event-card" data-idx="${idx}">
+        <div class="mag-badge" style="background:${magColor(mag)}">${fmtNum(mag)}</div>
+        <div class="event-body">
+          <p class="event-place">${(f.properties.place || 'Lokasi tidak diketahui')}</p>
+          <div class="event-meta">
+            <span>🕒 ${relTime(f.properties.time)}</span>
+            <span>⬇ ${fmtNum(depth,0)} km</span>
+            ${alert ? `<span><i class="alert-chip" style="background:${alertColor(alert)}"></i>${alert}</span>` : ''}
+            ${f.properties.tsunami ? `<span>🌊 tsunami</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  list.querySelectorAll('.event-card').forEach(card=>{
+    card.addEventListener('click', ()=> openDetail(sorted[parseInt(card.dataset.idx)]));
+  });
+}
+
+function renderChart(){
+  if(!magChart) return;
+  const points = features.map(f=>({
+    x: f.properties.time, y: f.properties.mag || 0, place: f.properties.place || '-'
+  })).sort((a,b)=>a.x-b.x);
+  magChart.data.datasets[0].data = points;
+  magChart.update();
+}
+
+/* ============================================================
+   DETAIL MODAL + REVERSE GEOCODING
+   ============================================================ */
+function reverseGeocode(lat, lon){
+  const key = lat.toFixed(2)+','+lon.toFixed(2);
+  if(geocodeCache.has(key)) return Promise.resolve(geocodeCache.get(key));
+  const task = geocodeQueue
+    .catch(()=>{})
+    .then(()=> sleep(1100))
+    .then(()=> fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1&accept-language=id`))
+    .then(r=> r.ok ? r.json() : null)
+    .then(data=>{ geocodeCache.set(key, data); return data; })
+    .catch(()=> null);
+  geocodeQueue = task;
+  return task;
+}
+
+function openDetail(f){
+  const [lon, lat, depth] = f.geometry.coordinates;
+  const p = f.properties;
+  const mag = p.mag;
+
+  $('modalPlace').textContent = p.place || 'Lokasi tidak diketahui';
+  $('modalTime').textContent = relTime(p.time) + ' · ' + toWIB(p.time);
+  $('modalMagVal').textContent = fmtNum(mag);
+  $('modalMagType').textContent = (p.magType || '').toUpperCase() || '–';
+  $('modalMagCircle').style.background = magColor(mag);
+  $('modalDepthVal').textContent = fmtNum(depth,1)+' km';
+  $('modalAlertVal').textContent = p.alert ? p.alert.toUpperCase() : 'Tidak ada';
+  $('modalAlertVal').style.color = p.alert ? alertColor(p.alert) : '';
+
+  $('kvCoord').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  $('kvDepth').textContent = fmtNum(depth,1)+' km';
+  $('kvTimeWIB').textContent = toWIB(p.time);
+  $('kvTimeUTC').textContent = toUTC(p.time);
+  $('kvId').textContent = f.id || '–';
+  $('kvType').textContent = p.type || 'earthquake';
+  $('kvFelt').textContent = p.felt ? `${p.felt} laporan (CDI ${fmtNum(p.cdi,1)})` : 'Belum ada laporan';
+  const tsu = !!p.tsunami;
+  $('kvTsunami').innerHTML = `<span class="badge ${tsu?'tsunami-yes':'tsunami-no'}">${tsu? '⚠️ Berpotensi':'Tidak ada peringatan'}</span>`;
+
+  $('usgsLink').href = p.url || '#';
+  $('copyCoordBtn').onclick = ()=>{
+    navigator.clipboard.writeText(`${lat}, ${lon}`).then(()=>toast('Koordinat disalin')).catch(()=>toast('Gagal menyalin'));
+  };
+
+  // fallback dari string "place"
+  const parsed = parsePlace(p.place);
+
+  const geoBox = $('geoResult');
+  geoBox.className = 'geo-loading';
+  geoBox.innerHTML = `<span class="spinner"></span> Mengambil detail wilayah administratif…`;
+
+  $('modalOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  if(!modalMap){ initModalMap(); }
+  setTimeout(()=>{
+    modalMap.invalidateSize();
+    modalMap.setView([lat, lon], 6);
+    if(modalMarker) modalMap.removeLayer(modalMarker);
+    modalMarker = L.circleMarker([lat,lon], {radius:magRadius(mag), color:magColor(mag), fillColor:magColor(mag), fillOpacity:.5, weight:2}).addTo(modalMap);
+  }, 80);
+
+  reverseGeocode(lat, lon).then(data=>{
+    const addr = data && data.address ? data.address : null;
+    if(!addr){
+      geoBox.className = '';
+      geoBox.innerHTML = `
+        <div class="kv-grid">
+          <div class="kv"><label>Negara (perkiraan)</label><span class="val">${parsed.country}</span></div>
+          <div class="kv"><label>Wilayah (perkiraan)</label><span class="val">${parsed.region}</span></div>
+        </div>
+        <p style="font-size:11.5px;color:var(--text-dim);margin:10px 0 0;">📍 Episentrum kemungkinan berada di perairan/laut lepas sehingga data administratif OpenStreetMap tidak tersedia. Informasi di atas diambil dari deskripsi lokasi USGS.</p>`;
+      return;
+    }
+    const negara = addr.country || parsed.country || '–';
+    const provinsi = addr.state || addr.region || '–';
+    const kabupaten = addr.county || addr.regency || addr.state_district || '–';
+    const kota = addr.city || addr.town || addr.municipality || addr.village || '–';
+    const kecamatan = addr.suburb || addr.district || addr.city_district || '–';
+    geoBox.className = '';
+    geoBox.innerHTML = `
+      <div class="kv-grid">
+        <div class="kv"><label>Negara</label><span class="val">${negara}</span></div>
+        <div class="kv"><label>Provinsi</label><span class="val">${provinsi}</span></div>
+        <div class="kv"><label>Kabupaten</label><span class="val">${kabupaten}</span></div>
+        <div class="kv"><label>Kota / Kecamatan</label><span class="val">${kota !== '–' ? kota : kecamatan}</span></div>
+      </div>
+      <p style="font-size:11px;color:var(--text-dim);margin:10px 0 0;">${data.display_name || ''}</p>`;
+  });
+}
+
+$('modalCloseBtn').addEventListener('click', closeModal);
+$('modalOverlay').addEventListener('click', (e)=>{ if(e.target === $('modalOverlay')) closeModal(); });
+function closeModal(){
+  $('modalOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', ()=>{
+  initMap();
+  initChart();
+  updateOrientTag();
+  loadData();
+});
+})();
+</script>
+</body>
+</html>
