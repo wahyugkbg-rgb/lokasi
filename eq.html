@@ -549,7 +549,7 @@ body.chart-open .chart-close{display:inline-flex;}
     · <a href="https://data.bmkg.go.id/" target="_blank" rel="noopener">BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)</a> — gempa terkini &amp; dirasakan
     · Geocoding wilayah: <a href="https://nominatim.org" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>
     · Peta: CARTO / OpenStreetMap
-    <br>Catatan: data BMKG mengikuti batas ketersediaan API resmi (±15 kejadian terbaru per kategori), tidak mendukung filter rentang waktu/wilayah di sisi server sehingga disaring otomatis di sisi aplikasi.
+    <br>Catatan: data BMKG (gempa terkini &amp; dirasakan) selalu ditampilkan seluruhnya sesuai ketersediaan API resmi (±15 kejadian terbaru per kategori) dan tidak disaring oleh filter waktu/magnitudo/wilayah — filter tersebut hanya berlaku untuk sumber USGS.
   </footer>
 </div>
 
@@ -1062,53 +1062,15 @@ async function fetchBMKGFeatures(){
   return feats;
 }
 
-/* Terapkan filter yang sama seperti query USGS (waktu, magnitudo, wilayah, jenis)
-   secara client-side, karena API BMKG tidak menerima parameter tersebut. */
+/* Sebelumnya fungsi ini menyaring feed BMKG memakai filter waktu/magnitudo/wilayah yang
+   sama dengan USGS. Karena BMKG hanya menyediakan daftar singkat (±15 kejadian terbaru
+   per kategori) dan TIDAK mendukung query historis, penyaringan tambahan itu justru
+   membuang data yang sudah terbatas. Sesuai permintaan, semua data "gempa terkini" &
+   "gempa dirasakan" dari BMKG kini SELALU ditampilkan apa adanya (tidak disaring oleh
+   filter waktu/magnitudo/wilayah aplikasi) — filter tersebut tetap berlaku penuh untuk
+   USGS seperti biasa lewat buildURL(). */
 function clientFilterBMKG(feats){
-  const range = $('fRange').value;
-  const now = Date.now();
-  let startMs, endMs;
-  if(range === 'custom'){
-    const s = $('fStart').value, e = $('fEnd').value;
-    startMs = s ? new Date(s).getTime() : -Infinity;
-    endMs = e ? new Date(e).getTime() : Infinity;
-  } else {
-    const hoursMap = {'1h':1,'24h':24,'7d':24*7,'30d':24*30};
-    const hrs = hoursMap[range] || 24;
-    startMs = now - hrs*3600*1000;
-    endMs = now;
-  }
-  const minMag = parseFloat($('fMinMag').value);
-  const maxMag = parseFloat($('fMaxMag').value);
-  const evType = $('fEventType').value;
-
-  return feats.filter(f=>{
-    const t = f.properties.time;
-    if(t < startMs || t > endMs) return false;
-    const m = f.properties.mag || 0;
-    if(!isNaN(minMag) && m < minMag) return false;
-    if(!isNaN(maxMag) && m > maxMag) return false;
-    if(evType && evType !== 'earthquake') return false; // BMKG hanya melaporkan gempa bumi
-    const [lon, lat] = f.geometry.coordinates;
-    if(state.regionMode === 'indonesia'){
-      const key = $('fIndoRegion').value;
-      const r = INDO_REGIONS[key] || INDO_REGIONS.all;
-      if(lat < r.bbox[0] || lat > r.bbox[1] || lon < r.bbox[2] || lon > r.bbox[3]) return false;
-    } else if(state.regionMode === 'radius'){
-      const clat = parseFloat($('fLat').value), clon = parseFloat($('fLon').value), rad = parseFloat($('fRadius').value);
-      if(!isNaN(clat) && !isNaN(clon) && !isNaN(rad)){
-        if(haversineKm(clat, clon, lat, lon) > rad) return false;
-      }
-    } else if(state.regionMode === 'bbox'){
-      const minLat = parseFloat($('fMinLat').value), maxLat = parseFloat($('fMaxLat').value);
-      const minLon = parseFloat($('fMinLon').value), maxLon = parseFloat($('fMaxLon').value);
-      if(!isNaN(minLat) && lat < minLat) return false;
-      if(!isNaN(maxLat) && lat > maxLat) return false;
-      if(!isNaN(minLon) && lon < minLon) return false;
-      if(!isNaN(maxLon) && lon > maxLon) return false;
-    }
-    return true;
-  });
+  return feats.slice();
 }
 
 function sortFeatures(feats){
