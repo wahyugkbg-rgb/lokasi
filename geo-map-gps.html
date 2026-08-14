@@ -1333,6 +1333,18 @@
             return null;
         }
 
+        function maybeFetchTransportFacilities(lat, lng) {
+            const now = Date.now();
+            const distFromLast = lastTransportFetch.lat !== null
+                ? getDistance([lastTransportFetch.lat, lastTransportFetch.lng], [lat, lng]) : Infinity;
+            const timeOk = (now - lastTransportFetch.time) > TRANSPORT_MIN_INTERVAL_MS;
+            const distOk = distFromLast > TRANSPORT_MIN_DIST_M;
+            if (lastTransportFetch.lat !== null && !timeOk && !distOk) return;
+
+            lastTransportFetch = { lat, lng, time: now };
+            fetchTransportFacilities(lat, lng);
+        }
+
         async function fetchTransportFacilities(lat, lng) {
             const r = TRANSPORT_SEARCH_RADIUS_M;
             const query = `[out:json][timeout:15];(
