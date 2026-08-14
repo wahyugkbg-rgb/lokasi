@@ -972,6 +972,22 @@ function buildURL(){
 /* ============================================================
    FETCH + RENDER
    ============================================================ */
+/* Kotak lintang/bujur tidak bisa mengikuti bentuk kepulauan Indonesia dengan tepat —
+   selalu menyerempet negara tetangga (Malaysia, Filipina, Brunei, Timor-Leste, PNG,
+   ujung utara Australia). Untuk ketepatan wilayah, hasil disaring memakai atribusi
+   negara ASLI dari USGS (berbasis data batas wilayah resmi), bukan sekadar bbox. */
+const NEIGHBOR_COUNTRIES = ['malaysia','philippines','filipina','brunei','papua new guinea',
+  'timor-leste','timor leste','east timor','australia','singapore','palau','vanuatu'];
+function isIndonesiaPlace(place){
+  if(!place) return false;
+  const p = place.toLowerCase();
+  if(p.includes('indonesia')) return true;
+  if(NEIGHBOR_COUNTRIES.some(c=>p.includes(c))) return false;
+  // wilayah laut tanpa nama negara (mis. "Java Sea", "Banda Sea") umumnya perairan
+  // dalam yurisdiksi Indonesia — tetap disertakan selama bukan negara tetangga.
+  return true;
+}
+
 async function loadData(){
   setLoading(true);
   try{
@@ -982,9 +998,18 @@ async function loadData(){
       throw new Error('HTTP '+res.status+(txt? ' — '+txt.slice(0,140):''));
     }
     const data = await res.json();
-    features = (data.features || []).slice();
+    let raw = (data.features || []).slice();
+    let filteredOutCount = 0;
+    if(state.regionMode === 'indonesia'){
+      const before = raw.length;
+      raw = raw.filter(f => isIndonesiaPlace(f.properties.place));
+      filteredOutCount = before - raw.length;
+    }
+    features = raw;
     renderAll();
-    toast(`Berhasil memuat ${features.length} kejadian`);
+    toast(filteredOutCount > 0
+      ? `Berhasil memuat ${features.length} kejadian di wilayah Indonesia (${filteredOutCount} dari negara tetangga disaring)`
+      : `Berhasil memuat ${features.length} kejadian`);
   }catch(err){
     console.error(err);
     features = [];
