@@ -529,12 +529,18 @@
                     // Catatan: endpoint "positions" N2YO TIDAK menyediakan field
                     // kecepatan (satvelocity) sama sekali — hanya field di bawah ini
                     // yang benar-benar ada, jadi validasi hanya untuk field yang nyata.
-                    const p0 = data.positions[0];
-                    const requiredFields = ['satlatitude', 'satlongitude', 'sataltitude'];
-                    const missing = requiredFields.filter(f => typeof p0[f] !== 'number' || Number.isNaN(p0[f]));
-                    if (missing.length > 0) {
-                        throw new Error(`Data tidak lengkap, field kosong: ${missing.join(', ')}`);
+                    const isValidPoint = (p) =>
+                        typeof p.satlatitude === 'number' && Number.isFinite(p.satlatitude) &&
+                        typeof p.satlongitude === 'number' && Number.isFinite(p.satlongitude) &&
+                        typeof p.sataltitude === 'number' && Number.isFinite(p.sataltitude);
+
+                    const validPositions = data.positions.filter(isValidPoint);
+                    if (validPositions.length === 0) {
+                        throw new Error('Tidak ada titik posisi valid dalam respons (semua field kosong/rusak)');
                     }
+                    // Pakai hanya titik-titik yang valid untuk sisa aplikasi,
+                    // supaya satu titik rusak tidak bisa merusak seluruh render peta.
+                    data.positions = validPositions;
 
                     addLog(`✅ Sukses via ${strategy.name}!`);
                     return data;
@@ -562,34 +568,45 @@
             try {
                 const data = await aggressiveFetch(targetUrl);
 
-                const pos = data.positions[0];
-                const lat = pos.satlatitude;
-                const lng = pos.satlongitude;
-                const alt = pos.sataltitude;
-                const speed = computeSpeedKmh(data.positions); // dihitung dari data real, N2YO tidak menyediakan field ini langsung
-
-                document.getElementById('satAltitude').innerText = `${alt.toFixed(2)} km`;
-                document.getElementById('satSpeed').innerText = (speed !== null) ? `${speed.toFixed(2)} km/j` : '- km/j';
-                document.getElementById('satCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-
-                satelliteMarker.setLatLng([lat, lng]);
-                if (!hasCenteredMap) {
-                    map.setView([lat, lng], 4);
-                    hasCenteredMap = true;
-                } else {
-                    // Geser peta tanpa memaksa reset zoom tiap update,
-                    // supaya tidak "kacau" saat pengguna sedang menjelajah peta.
-                    map.panTo([lat, lng], { animate: true });
-                }
-
-                const pathCoords = data.positions.map(p => [p.satlatitude, p.satlongitude]);
-                pathLine.setLatLngs(pathCoords);
-
-                lastKnownGood = { lat, lng, alt, speed };
+                // Data dari server sudah valid di titik ini — tandai koneksi
+                // sukses SEKARANG, sebelum menyentuh DOM/peta. Dengan begini,
+                // kalau ada masalah saat merender (mis. isu Leaflet), itu tidak
+                // akan dianggap sebagai kegagalan koneksi dan memicu retry.
                 lastUpdateTime = new Date();
                 consecutiveFailures = 0;
                 setStatus('live');
                 updateLastUpdateLabel();
+
+                try {
+                    const pos = data.positions[0];
+                    const lat = pos.satlatitude;
+                    const lng = pos.satlongitude;
+                    const alt = pos.sataltitude;
+                    const speed = computeSpeedKmh(data.positions); // dihitung dari data real, N2YO tidak menyediakan field ini langsung
+
+                    document.getElementById('satAltitude').innerText = `${alt.toFixed(2)} km`;
+                    document.getElementById('satSpeed').innerText = (speed !== null) ? `${speed.toFixed(2)} km/j` : '- km/j';
+                    document.getElementById('satCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+                    satelliteMarker.setLatLng([lat, lng]);
+                    if (!hasCenteredMap) {
+                        map.setView([lat, lng], 4);
+                        hasCenteredMap = true;
+                    } else {
+                        // Geser peta tanpa memaksa reset zoom tiap update,
+                        // supaya tidak "kacau" saat pengguna sedang menjelajah peta.
+                        map.panTo([lat, lng], { animate: true });
+                    }
+
+                    const pathCoords = data.positions.map(p => [p.satlatitude, p.satlongitude]);
+                    pathLine.setLatLngs(pathCoords);
+
+                    lastKnownGood = { lat, lng, alt, speed };
+                } catch (renderError) {
+                    // Data real sudah didapat & status sudah "live" — ini cuma
+                    // gagal saat MENAMPILKAN, bukan gagal koneksi. Dicatat saja.
+                    addLog(`⚠️ Data diterima, tapi gagal ditampilkan: ${renderError.message}`, true);
+                }
 
             } catch (error) {
                 consecutiveFailures++;
@@ -629,7 +646,10 @@
             }
         }
 
+        const SCRIPT_VERSION = '2026-08-15-r3 (fix: kecepatan dihitung real-time, filter posisi tidak valid)';
+
         // Inisialisasi
+        addLog(`🔖 Versi skrip: ${SCRIPT_VERSION}`);
         addLog('Aplikasi dimulai. Menyiapkan terobosan CORS multi-layer...');
         addLog('ℹ️ N2YO tidak menyediakan field kecepatan langsung; kecepatan dihitung dari selisih 2 titik posisi real-time.');
         updateLastUpdateLabel();
