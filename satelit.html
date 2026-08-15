@@ -259,7 +259,7 @@
                 <span class="info-value" id="satAltitude">- km</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Kecepatan</span>
+                <span class="info-label">Kecepatan (estimasi)</span>
                 <span class="info-value" id="satSpeed">- km/j</span>
             </div>
             <div class="info-item">
@@ -470,6 +470,38 @@
             return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
         }
 
+        // N2YO TIDAK menyediakan kecepatan satelit secara langsung di endpoint
+        // "positions". Kecepatan di sini dihitung sendiri dari data REAL yang
+        // dikirim N2YO: jarak tempuh antara 2 titik posisi berurutan (yang
+        // benar-benar dihitung N2YO dari TLE terbaru), dibagi selisih waktunya.
+        // Ini bukan data sintetik/rekaan — murni turunan matematis dari data asli.
+        function haversineDistanceKm(lat1, lon1, lat2, lon2, radiusKm) {
+            const toRad = (d) => d * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) ** 2 +
+                      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                      Math.sin(dLon / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return radiusKm * c;
+        }
+
+        function computeSpeedKmh(positions) {
+            if (!Array.isArray(positions) || positions.length < 2) return null;
+            const p0 = positions[0];
+            const p1 = positions[1];
+            const dt = p1.timestamp - p0.timestamp; // detik
+            if (!dt || dt <= 0) return null;
+
+            const avgAlt = ((p0.sataltitude || 0) + (p1.sataltitude || 0)) / 2;
+            const orbitRadiusKm = 6371 + avgAlt; // jari-jari bumi + ketinggian orbit
+            const groundDist = haversineDistanceKm(p0.satlatitude, p0.satlongitude, p1.satlatitude, p1.satlongitude, orbitRadiusKm);
+            const altDiff = (p1.sataltitude || 0) - (p0.sataltitude || 0);
+            const totalDistKm = Math.sqrt(groundDist ** 2 + altDiff ** 2);
+
+            return (totalDistKm / dt) * 3600; // km/jam
+        }
+
         async function aggressiveFetch(targetUrl) {
             let lastError = new Error('Semua metode koneksi gagal!');
 
@@ -493,6 +525,15 @@
                     }
                     if (!data || !Array.isArray(data.positions) || data.positions.length === 0) {
                         throw new Error('Format respons tidak dikenali (bukan data satelit)');
+                    }
+                    // Catatan: endpoint "positions" N2YO TIDAK menyediakan field
+                    // kecepatan (satvelocity) sama sekali — hanya field di bawah ini
+                    // yang benar-benar ada, jadi validasi hanya untuk field yang nyata.
+                    const p0 = data.positions[0];
+                    const requiredFields = ['satlatitude', 'satlongitude', 'sataltitude'];
+                    const missing = requiredFields.filter(f => typeof p0[f] !== 'number' || Number.isNaN(p0[f]));
+                    if (missing.length > 0) {
+                        throw new Error(`Data tidak lengkap, field kosong: ${missing.join(', ')}`);
                     }
 
                     addLog(`✅ Sukses via ${strategy.name}!`);
@@ -525,10 +566,10 @@
                 const lat = pos.satlatitude;
                 const lng = pos.satlongitude;
                 const alt = pos.sataltitude;
-                const speed = pos.satvelocity;
+                const speed = computeSpeedKmh(data.positions); // dihitung dari data real, N2YO tidak menyediakan field ini langsung
 
                 document.getElementById('satAltitude').innerText = `${alt.toFixed(2)} km`;
-                document.getElementById('satSpeed').innerText = `${speed.toFixed(2)} km/j`;
+                document.getElementById('satSpeed').innerText = (speed !== null) ? `${speed.toFixed(2)} km/j` : '- km/j';
                 document.getElementById('satCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
                 satelliteMarker.setLatLng([lat, lng]);
@@ -590,6 +631,7 @@
 
         // Inisialisasi
         addLog('Aplikasi dimulai. Menyiapkan terobosan CORS multi-layer...');
+        addLog('ℹ️ N2YO tidak menyediakan field kecepatan langsung; kecepatan dihitung dari selisih 2 titik posisi real-time.');
         updateLastUpdateLabel();
         runNetworkSelfTest();
         fetchSatelliteData();
