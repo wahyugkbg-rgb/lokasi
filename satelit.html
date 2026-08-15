@@ -270,6 +270,11 @@
                 <span class="info-label">Update Terakhir</span>
                 <span class="info-value" id="lastUpdate">-</span>
             </div>
+            <div class="info-item" style="grid-column: span 2;">
+                <span class="info-label">Perkiraan Wilayah (desa/kel. → kab/kota → provinsi → negara)</span>
+                <span class="info-value" id="satRegion" style="font-size:0.8rem; font-weight: 600; line-height: 1.3;">-</span>
+                <span style="font-size:0.6rem; color:#666; margin-top:2px;">Data wilayah: © OpenStreetMap contributors</span>
+            </div>
             <div class="sat-select-container">
                 <select id="satSelect">
                     <option value="25544">ISS (Stasiun Luar Angkasa)</option>
@@ -406,6 +411,8 @@
             document.getElementById('satAltitude').innerText = '- km';
             document.getElementById('satSpeed').innerText = '- km/j';
             document.getElementById('satCoords').innerText = '-, -';
+            document.getElementById('satRegion').innerText = '-';
+            lastGeocodedKey = null;
             updateLastUpdateLabel();
             setStatus('connecting');
             if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
@@ -502,6 +509,61 @@
             return (totalDistKm / dt) * 3600; // km/jam
         }
 
+        // ==========================================================
+        // PERKIRAAN WILAYAH (reverse geocoding) via OpenStreetMap Nominatim
+        // ==========================================================
+        // Nominatim kadang menolak koneksi langsung (CORS/rate-limit), jadi
+        // dicoba langsung dulu, lalu lewat Proxy Pribadi & CodeTabs sebagai
+        // cadangan — memakai ulang infrastruktur proxy yang sudah ada.
+        // Ini fitur pelengkap (non-kritikal): kalau gagal, tidak memengaruhi
+        // status koneksi utama aplikasi.
+        let lastGeocodedKey = null;
+        async function reverseGeocode(lat, lng) {
+            const targetUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
+            const attempts = [
+                { name: 'Langsung', build: (u) => u },
+                ...(CUSTOM_PROXY_URL ? [{ name: 'Proxy Pribadi', build: (u) => `${CUSTOM_PROXY_URL}${encodeURIComponent(u)}` }] : []),
+                { name: 'CodeTabs', build: (u) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}` }
+            ];
+            for (const attempt of attempts) {
+                try {
+                    const res = await fetchWithTimeout(attempt.build(targetUrl), 8000);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return await res.json();
+                } catch (e) {
+                    // Diam-diam lanjut ke percobaan berikutnya — non-kritikal,
+                    // tidak perlu memenuhi log utama dengan detail tiap gagal.
+                }
+            }
+            return null;
+        }
+
+        function formatRegion(nominatimResult) {
+            if (!nominatimResult || !nominatimResult.address) {
+                return '🌊 Di atas laut / area tanpa data wilayah';
+            }
+            const addr = nominatimResult.address;
+            const desa = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.quarter;
+            const kabKota = addr.city || addr.town || addr.municipality || addr.county || addr.city_district || addr.regency;
+            const provinsi = addr.state || addr.province;
+            const negara = addr.country;
+
+            const parts = [desa, kabKota, provinsi, negara].filter(Boolean);
+            return parts.length > 0 ? parts.join(', ') : '🌊 Di atas laut / area tanpa data wilayah';
+        }
+
+        function updateRegionDisplay(lat, lng) {
+            const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+            if (key === lastGeocodedKey) return; // posisi belum berubah cukup jauh, tak perlu query ulang
+            lastGeocodedKey = key;
+
+            const regionEl = document.getElementById('satRegion');
+            regionEl.innerText = 'Mencari wilayah...';
+            reverseGeocode(lat, lng)
+                .then(result => { regionEl.innerText = formatRegion(result); })
+                .catch(() => { regionEl.innerText = 'Gagal memuat wilayah'; });
+        }
+
         async function aggressiveFetch(targetUrl) {
             let lastError = new Error('Semua metode koneksi gagal!');
 
@@ -514,6 +576,7 @@
                     addLog(`Mencoba koneksi via ${strategy.name}...`);
 
                     const response = await fetchWithTimeout(proxyUrl, FETCH_TIMEOUT_MS);
+                    if (response.status === 429) throw new Error('Dibatasi sementara (429 - terlalu sering diakses)');
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                     const data = await strategy.parse(response);
@@ -587,6 +650,7 @@
                     document.getElementById('satAltitude').innerText = `${alt.toFixed(2)} km`;
                     document.getElementById('satSpeed').innerText = (speed !== null) ? `${speed.toFixed(2)} km/j` : '- km/j';
                     document.getElementById('satCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    updateRegionDisplay(lat, lng); // async, tidak diblok — pelengkap, bukan kritikal
 
                     satelliteMarker.setLatLng([lat, lng]);
                     if (!hasCenteredMap) {
@@ -615,9 +679,9 @@
                 // JANGAN tampilkan data sintetik/palsu — biarkan nilai terakhir
                 // yang valid tetap tampil, tandai lewat status & waktu update.
 
-                // Retry lebih agresif saat gagal total, dengan backoff bertahap,
-                // dibatasi maksimum sama dengan interval normal.
-                const delay = Math.min(4000 * consecutiveFailures, NORMAL_INTERVAL_MS);
+                // Retry lebih agresif saat gagal total, dengan backoff bertahap
+                // + sedikit jitter acak, dibatasi maksimum sama dengan interval normal.
+                const delay = Math.min(4000 * consecutiveFailures, NORMAL_INTERVAL_MS) + Math.random() * 1000;
                 retryTimeoutId = setTimeout(fetchSatelliteData, delay);
 
             } finally {
@@ -646,7 +710,35 @@
             }
         }
 
-        const SCRIPT_VERSION = '2026-08-15-r3 (fix: kecepatan dihitung real-time, filter posisi tidak valid)';
+        const SCRIPT_VERSION = '2026-08-15-r4 (fix: reconnect instan saat tab aktif/internet nyambung lagi, tambah wilayah)';
+
+        // ==========================================================
+        // PEMULIHAN KONEKSI INSTAN
+        // ==========================================================
+        // Browser (terutama Chrome di Android) MEMBEKUKAN setInterval saat
+        // tab pindah ke background untuk hemat baterai. Begitu tab dibuka
+        // lagi, timer yang tertunda terasa seperti "disconnect" padahal
+        // sebenarnya cuma telat. Ini memaksa fetch ulang SEGERA begitu tab
+        // aktif lagi atau koneksi internet pulih, tanpa menunggu timer.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                addLog('👁️ Tab aktif kembali — memaksa sinkronisasi data segera.');
+                if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
+                fetchSatelliteData();
+            }
+        });
+
+        window.addEventListener('online', () => {
+            addLog('🌐 Koneksi internet perangkat pulih — mencoba sambung ulang segera.');
+            consecutiveFailures = 0;
+            if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
+            fetchSatelliteData();
+        });
+
+        window.addEventListener('offline', () => {
+            addLog('📵 Perangkat kehilangan koneksi internet.', true);
+            setStatus('offline');
+        });
 
         // Inisialisasi
         addLog(`🔖 Versi skrip: ${SCRIPT_VERSION}`);
