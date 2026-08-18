@@ -249,7 +249,8 @@
     <!-- Info panel -->
     <div class="info-panel" id="infoPanel">
         <span class="label">Status GPS: </span><span class="value" id="gpsStatus">Tidak aktif</span><br>
-        <span class="label">Koordinat: </span><span class="value" id="gpsCoords">-</span>
+        <span class="label">Koordinat: </span><span class="value" id="gpsCoords">-</span><br>
+        <span class="label">Layar: </span><span class="value" id="wakeStatus">-</span>
         <div class="addr-row" id="addrRow">
             <span class="addr-text" id="addrText">-</span>
             <button class="copy-btn" id="copyAddrBtn">📋</button>
@@ -271,11 +272,55 @@
     const MY_LAT = -6.2;
     const MY_LNG = 106.8;
     const FETCH_TIMEOUT_MS = 7000; // per percobaan koneksi (diturunkan agar pencarian tidak lama)
-    const ADDRESS_REFRESH_MS = 20000; // perbarui alamat tiap 20 detik selama tracking
-    const ADDRESS_MOVE_THRESHOLD_M = 25; // hanya geocode ulang jika bergeser > 25m
+    const ADDRESS_REFRESH_MS = 10000; // cadangan: perbarui alamat tiap 10 detik jika diam di tempat (info tetap segar)
+    const ADDRESS_MOVE_THRESHOLD_M = 12; // geocode ulang tiap kali bergeser > 12m, supaya terasa real time
 
     // Proxy pribadi (kosongkan jika tidak punya)
     const CUSTOM_PROXY_URL = 'https://odd-dew-de57.endangbogorkota.workers.dev/?url=';
+
+    // ======================================================================
+    // LAYAR TETAP MENYALA (Screen Wake Lock)
+    // Mencegah HP masuk mode redup/kunci layar (screensaver) selama aplikasi
+    // dibuka, memakai Wake Lock API bawaan browser (didukung Chrome/Android
+    // versi modern, termasuk browser Chrome di Oppo A9). Wake Lock otomatis
+    // dilepas oleh browser saat tab disembunyikan/minimize, jadi kita minta
+    // ulang otomatis begitu tab terlihat kembali.
+    // ======================================================================
+    let wakeLock = null;
+    const wakeStatusEl = document.getElementById('wakeStatus');
+
+    async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) {
+            if (wakeStatusEl) wakeStatusEl.innerText = 'Tidak didukung browser ini';
+            return;
+        }
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            if (wakeStatusEl) wakeStatusEl.innerText = '🔆 Tetap menyala';
+            wakeLock.addEventListener('release', () => {
+                wakeLock = null;
+                // Hanya tampilkan "nonaktif" jika memang tab masih terlihat
+                // (kalau tab disembunyikan, biarkan status apa adanya sampai
+                // diminta ulang saat tab terlihat lagi)
+                if (wakeStatusEl && document.visibilityState === 'visible') {
+                    wakeStatusEl.innerText = 'Nonaktif';
+                }
+            });
+        } catch (err) {
+            // Bisa gagal jika baterai sangat lemah / izin ditolak sistem - abaikan diam-diam
+            if (wakeStatusEl) wakeStatusEl.innerText = 'Gagal mengaktifkan';
+        }
+    }
+
+    // Minta wake lock begitu halaman dimuat
+    requestWakeLock();
+    // Minta ulang setiap kali tab kembali aktif/terlihat, karena browser
+    // otomatis melepas wake lock saat tab disembunyikan
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !wakeLock) {
+            requestWakeLock();
+        }
+    });
 
     // ======================================================================
     // INISIALISASI PETA
@@ -883,10 +928,15 @@
                     gpsStatusEl.innerText = 'Aktif';
                     gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(pos.coords.accuracy || 0)}m)`;
 
-                    // Alamat lengkap: langsung ambil saat fix pertama + buka popup penanda
+                    // Alamat lengkap: sekarang diperbarui pada SETIAP fix GPS baru (real time
+                    // mengikuti pergerakan), bukan cuma sekali di awal. reverseGeocodeAndUpdate
+                    // sendiri yang membatasi permintaan (hanya jalan jika sudah bergeser >
+                    // ADDRESS_MOVE_THRESHOLD_M) supaya server geocoding tidak dibanjiri.
+                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix });
                     if (firstFix) {
                         firstFix = false;
-                        reverseGeocodeAndUpdate(lat, lng, { openPopup: true });
+                        // Timer cadangan: kalau device diam di tempat (tidak memicu update
+                        // lewat pergeseran), tetap segarkan info alamat tiap ADDRESS_REFRESH_MS
                         if (!addressTimer) {
                             addressTimer = setInterval(() => {
                                 const p = myMarker.getLatLng();
