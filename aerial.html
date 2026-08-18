@@ -254,7 +254,7 @@
     // ======================================================================
     const MY_LAT = -6.2;
     const MY_LNG = 106.8;
-    const FETCH_TIMEOUT_MS = 12000;
+    const FETCH_TIMEOUT_MS = 7000; // per percobaan koneksi (diturunkan agar pencarian tidak lama)
     const ADDRESS_REFRESH_MS = 20000; // perbarui alamat tiap 20 detik selama tracking
     const ADDRESS_MOVE_THRESHOLD_M = 25; // hanya geocode ulang jika bergeser > 25m
 
@@ -355,6 +355,11 @@
     // FUNGSI FETCH DENGAN PROXY (multi-strategy)
     // ======================================================================
     const proxyStrategies = [
+        {
+            name: 'Langsung (tanpa proxy)',
+            build: (url) => url,
+            parse: (res) => res.json()
+        },
         ...(CUSTOM_PROXY_URL ? [{
             name: 'Proxy Pribadi',
             build: (url) => `${CUSTOM_PROXY_URL}${encodeURIComponent(url)}`,
@@ -392,41 +397,55 @@
             name: 'x2u CORS',
             build: (url) => `https://cors.x2u.in/${url}`,
             parse: (res) => res.json()
-        },
-        {
-            name: 'Langsung (tanpa proxy)',
-            build: (url) => url,
-            parse: (res) => res.json()
         }
     ];
 
-    function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
+    function fetchWithTimeout(url, signal, timeoutMs = FETCH_TIMEOUT_MS) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
+        // gabungkan sinyal luar (untuk membatalkan strategi lain saat salah satu sudah menang) dengan timeout internal
+        if (signal) {
+            signal.addEventListener('abort', () => controller.abort());
+        }
         return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
     }
 
+    // ======================================================================
+    // fetchWithProxy: SEMUA strategi koneksi dijalankan BERSAMAAN (paralel),
+    // hasil tercepat & valid yang dipakai, sisanya langsung dibatalkan.
+    // Ini jauh lebih cepat dibanding mencoba satu-per-satu (sequential) yang
+    // sebelumnya bisa memakan waktu sangat lama jika beberapa proxy lambat/mati.
+    // ======================================================================
     async function fetchWithProxy(targetUrl) {
-        let lastError = new Error('Semua metode koneksi gagal!');
-        for (const strategy of proxyStrategies) {
+        const errors = [];
+        const attempts = proxyStrategies.map(strategy => {
+            const controller = new AbortController();
             const proxyUrl = strategy.build(targetUrl);
-            try {
-                const response = await fetchWithTimeout(proxyUrl);
+            const task = (async () => {
+                const response = await fetchWithTimeout(proxyUrl, controller.signal);
                 if (response.status === 429) throw new Error('Dibatasi sementara (429)');
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await strategy.parse(response);
-                if (Array.isArray(data)) {
-                    return data;
-                }
-                if (data && data.error) {
-                    throw new Error(`API error: ${data.error}`);
-                }
+                if (Array.isArray(data)) return data;
+                if (data && data.error) throw new Error(`API error: ${data.error}`);
+                if (data == null) throw new Error('Respons kosong');
                 return data;
-            } catch (e) {
-                lastError = new Error(`${strategy.name}: ${e.message}`);
-            }
+            })().catch(e => {
+                errors.push(`${strategy.name}: ${e.message}`);
+                throw e;
+            });
+            task._controller = controller;
+            return task;
+        });
+
+        try {
+            const result = await Promise.any(attempts);
+            // hentikan semua request lain yang masih berjalan, tidak perlu ditunggu
+            attempts.forEach(t => { try { t._controller.abort(); } catch (_) {} });
+            return result;
+        } catch (aggregateError) {
+            throw new Error('Semua metode koneksi gagal! ' + errors.slice(0, 3).join(' | '));
         }
-        throw lastError;
     }
 
     // ======================================================================
