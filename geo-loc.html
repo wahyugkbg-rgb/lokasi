@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Live GPS Tracker HQ</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
@@ -644,6 +645,7 @@
         <div class="layer-option" data-layer="satellite"><i class="fas fa-satellite"></i> Satelit + Nama Jalan</div>
         <div class="layer-option" data-layer="dark"><i class="fas fa-moon"></i> Gelap</div>
         <div class="layer-option" data-layer="terrain"><i class="fas fa-mountain"></i> Terrain</div>
+        <div class="layer-option" data-layer="vectorHQ" id="layerOptVectorHQ" style="display:none;"><i class="fas fa-route"></i> Vector HQ (Gang)</div>
     </div>
 
     <div id="map"></div>
@@ -714,6 +716,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9/dist/leaflet-src.js"></script>
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
     <script>
     (function() {
         'use strict';
@@ -836,6 +840,107 @@
             attribution: '&copy; OpenTopoMap'
         });
 
+        // ------------------------------------------------------------
+        // Vector HQ layer (MapLibre GL, opsional).
+        // Dibungkus try/catch total: jika library gagal dimuat/parse
+        // (mis. jaringan terblokir, browser lama), aplikasi tetap
+        // berjalan normal dengan 4 layer raster yang sudah ada.
+        // ------------------------------------------------------------
+        let vectorHQAvailable = false;
+
+        function customizeVectorRoadStyle(glMap) {
+            // Perbesar jalan utama (motorway/trunk/primary), perkecil
+            // jalan gang (minor/service/track/path) namun tetap beri
+            // label teks yang jelas & mudah dibaca sampai zoom tinggi.
+            try {
+                const style = glMap.getStyle();
+                if (!style || !style.layers) return;
+                style.layers.forEach(layer => {
+                    try {
+                        if (layer.type === 'line' && layer['source-layer'] === 'transportation') {
+                            glMap.setPaintProperty(layer.id, 'line-width', [
+                                'interpolate', ['linear'], ['zoom'],
+                                10, ['match', ['get', 'class'],
+                                    ['motorway', 'trunk'], 2.2,
+                                    ['primary'], 1.6,
+                                    ['secondary', 'tertiary'], 1.1,
+                                    0.5],
+                                14, ['match', ['get', 'class'],
+                                    ['motorway', 'trunk'], 6,
+                                    ['primary'], 4.5,
+                                    ['secondary', 'tertiary'], 3,
+                                    ['minor'], 1.6,
+                                    ['service', 'track'], 1,
+                                    ['path'], 0.75,
+                                    0.8],
+                                17, ['match', ['get', 'class'],
+                                    ['motorway', 'trunk'], 11,
+                                    ['primary'], 9,
+                                    ['secondary', 'tertiary'], 6.5,
+                                    ['minor'], 3,
+                                    ['service', 'track'], 1.8,
+                                    ['path'], 1.2,
+                                    1.4],
+                                19, ['match', ['get', 'class'],
+                                    ['motorway', 'trunk'], 15,
+                                    ['primary'], 12,
+                                    ['secondary', 'tertiary'], 9,
+                                    ['minor'], 4.5,
+                                    ['service', 'track'], 2.6,
+                                    ['path'], 1.6,
+                                    1.8]
+                            ]);
+                        }
+                        if (layer.type === 'symbol' && layer['source-layer'] === 'transportation_name') {
+                            glMap.setLayoutProperty(layer.id, 'text-size', [
+                                'interpolate', ['linear'], ['zoom'],
+                                11, 8,
+                                14, 10,
+                                16, 11.5,
+                                19, 13.5
+                            ]);
+                            glMap.setPaintProperty(layer.id, 'text-halo-width', 1.4);
+                            glMap.setPaintProperty(layer.id, 'text-halo-color', '#ffffff');
+                            glMap.setPaintProperty(layer.id, 'text-halo-blur', 0.4);
+                        }
+                    } catch (innerErr) {
+                        // Lewati layer yang tidak cocok, jangan hentikan proses
+                    }
+                });
+            } catch (err) {
+                console.warn('Vector HQ style customization dilewati:', err);
+            }
+        }
+
+        try {
+            if (typeof L.maplibreGL === 'function') {
+                tileLayers.vectorHQ = L.maplibreGL({
+                    style: 'https://tiles.openfreemap.org/styles/liberty',
+                    attribution: '&copy; OpenFreeMap &copy; OpenMapTiles &copy; OpenStreetMap contributors'
+                });
+                tileLayers.vectorHQ.on('add', function() {
+                    try {
+                        const glMap = tileLayers.vectorHQ.getMaplibreMap();
+                        if (glMap) {
+                            glMap.on('load', () => customizeVectorRoadStyle(glMap));
+                            glMap.on('error', (e) => {
+                                console.warn('Vector HQ tile error (diabaikan, layer lain tetap normal):', e && e.error);
+                            });
+                            if (glMap.isStyleLoaded && glMap.isStyleLoaded()) {
+                                customizeVectorRoadStyle(glMap);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Vector HQ init style hook gagal:', e);
+                    }
+                });
+                vectorHQAvailable = true;
+            }
+        } catch (err) {
+            console.warn('Vector HQ (MapLibre) tidak tersedia, melanjutkan tanpa layer ini:', err);
+            vectorHQAvailable = false;
+        }
+
         // ============================================================
         // Init Map
         // ============================================================
@@ -843,6 +948,7 @@
             map = L.map('map', {
                 center: [-6.2088, 106.8456],
                 zoom: 16,
+                maxZoom: 19,
                 zoomControl: false,
                 attributionControl: true,
                 fadeAnimation: true,
@@ -853,6 +959,11 @@
                 touchRotate: false,
                 shiftKeyRotate: false
             });
+
+            if (vectorHQAvailable) {
+                const vhqBtn = $('layerOptVectorHQ');
+                if (vhqBtn) vhqBtn.style.display = '';
+            }
 
             mapRotateSupported = !!(map._rotate && L.Browser && L.Browser.any3d);
 
@@ -898,15 +1009,27 @@
         // ============================================================
         function switchLayer(name) {
             if (!tileLayers[name] || name === currentLayer) return;
+            const previousLayer = currentLayer;
             map.removeLayer(tileLayers[currentLayer]);
-            tileLayers[name].addTo(map);
-            currentLayer = name;
+            try {
+                tileLayers[name].addTo(map);
+                currentLayer = name;
+            } catch (err) {
+                // Fallback aman: jika layer baru (mis. Vector HQ) gagal render
+                // di device ini, kembalikan ke layer sebelumnya agar peta
+                // tidak pernah blank / sistem tidak terganggu.
+                console.warn('Gagal memuat layer', name, err);
+                showToast('Layer tidak didukung, kembali ke sebelumnya');
+                tileLayers[previousLayer].addTo(map);
+                currentLayer = previousLayer;
+                name = previousLayer;
+            }
 
             document.querySelectorAll('.layer-option').forEach(el => {
                 el.classList.toggle('active', el.dataset.layer === name);
             });
 
-            const names = { street: 'Jalan HQ', satellite: 'Satelit + Label', dark: 'Gelap', terrain: 'Terrain' };
+            const names = { street: 'Jalan HQ', satellite: 'Satelit + Label', dark: 'Gelap', terrain: 'Terrain', vectorHQ: 'Vector HQ (Gang)' };
             showToast(`Peta: ${names[name] || name}`);
         }
 
