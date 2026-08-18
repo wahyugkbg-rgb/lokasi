@@ -64,20 +64,24 @@
         .search-box button {
             background:#4db8ff; border:none; border-radius:4px;
             color:#111; padding:4px 10px; font-weight:bold;
-            cursor:pointer; font-size:0.8rem;
+            cursor:pointer; font-size:0.8rem; flex-shrink:0;
         }
         .layer-control {
             display:flex; gap:4px;
             background:rgba(20,20,20,0.85); backdrop-filter:blur(6px);
             border:1px solid #444; border-radius:8px; padding:4px;
+            max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+            scrollbar-width:none;
         }
+        .layer-control::-webkit-scrollbar { display:none; }
         .layer-control button {
             background:transparent; border:1px solid transparent;
             color:#ccc; padding:4px 10px; border-radius:4px;
             font-size:0.75rem; cursor:pointer; transition:all 0.2s;
+            white-space:nowrap; flex-shrink:0;
         }
         .layer-control button.active {
-            background:#4db8ff; color:#111; border-color:#4db8ff;
+            background:#4db8ff; color:#111; border-color:#4db8ff; font-weight:600;
         }
         .layer-control button:active { opacity:0.7; }
         .loc-btn {
@@ -85,19 +89,37 @@
             border:1px solid #444; border-radius:8px;
             color:#fff; padding:6px 12px; font-size:0.8rem;
             cursor:pointer; display:flex; align-items:center; gap:4px;
+            flex-shrink:0;
         }
-        .loc-btn.active { border-color:#4db8ff; color:#4db8ff; }
+        .loc-btn.active { border-color:#4db8ff; color:#4db8ff; background:rgba(77,184,255,0.12); }
 
         /* Info panel */
         .info-panel {
-            position:absolute; bottom:20px; left:20px;
-            background:rgba(20,20,20,0.85); backdrop-filter:blur(6px);
+            position:absolute; bottom:20px; left:20px; right:20px;
+            background:rgba(20,20,20,0.9); backdrop-filter:blur(6px);
             border:1px solid #444; border-radius:8px;
             padding:8px 12px; z-index:600;
-            font-size:0.8rem; color:#aaa; max-width:300px;
+            font-size:0.8rem; color:#aaa; max-width:340px;
+            line-height:1.5;
         }
         .info-panel .label { color:#888; }
         .info-panel .value { color:#4db8ff; font-weight:bold; }
+        .info-panel .addr-row {
+            margin-top:4px; padding-top:4px; border-top:1px solid #333;
+            display:none;
+        }
+        .info-panel .addr-row.show { display:flex; align-items:flex-start; gap:6px; }
+        .info-panel .addr-text {
+            color:#e0e0e0; font-size:0.78rem; flex:1;
+            display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+            overflow:hidden;
+        }
+        .info-panel .copy-btn {
+            background:#333; border:1px solid #555; color:#ccc;
+            border-radius:5px; padding:3px 6px; font-size:0.7rem;
+            cursor:pointer; flex-shrink:0;
+        }
+        .info-panel .copy-btn:active { background:#4db8ff; color:#111; }
 
         /* Loader */
         .loader {
@@ -117,9 +139,43 @@
             .search-box { flex:0 1 280px; }
         }
         @media (max-width:480px) {
-            .map-controls .layer-control button { padding:3px 6px; font-size:0.65rem; }
+            .map-controls .layer-control button { padding:3px 7px; font-size:0.68rem; }
         }
-        .leaflet-marker-icon.my-loc { filter:hue-rotate(180deg); }
+
+        /* ================= PENANDA LOKASI SAYA (jelas & menonjol) ================= */
+        .my-loc-wrap {
+            position:relative; width:34px; height:34px;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .my-loc-pulse {
+            position:absolute; width:34px; height:34px; border-radius:50%;
+            background:rgba(77,184,255,0.45);
+            animation:locPulse 1.8s ease-out infinite;
+        }
+        .my-loc-ring {
+            position:absolute; width:20px; height:20px; border-radius:50%;
+            background:#1e88ff; border:3px solid #fff;
+            box-shadow:0 0 10px rgba(30,136,255,0.9), 0 2px 4px rgba(0,0,0,0.5);
+            z-index:2;
+        }
+        @keyframes locPulse {
+            0% { transform:scale(0.4); opacity:1; }
+            100% { transform:scale(2.4); opacity:0; }
+        }
+        /* Penanda hasil pencarian */
+        .search-loc-wrap {
+            position:relative; width:30px; height:40px;
+        }
+        .search-pin {
+            position:absolute; top:0; left:0; width:30px; height:30px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:26px; filter:drop-shadow(0 3px 3px rgba(0,0,0,0.6));
+        }
+        .addr-popup { font-size:0.82rem; line-height:1.5; max-width:260px; }
+        .addr-popup b { color:#1e88ff; }
+        .addr-popup .full { color:#555; font-size:0.75rem; margin-top:4px; display:block; }
+        .addr-popup .row { margin:1px 0; }
+        .addr-popup .loading { color:#888; font-style:italic; }
     </style>
 </head>
 <body>
@@ -140,11 +196,13 @@
             <input type="text" id="searchInput" placeholder="Cari desa, kelurahan, gang..." />
             <button id="searchBtn">Cari</button>
         </div>
-        <div class="layer-control">
-            <button data-layer="osm" class="active">Peta</button>
-            <button data-layer="sat">Satelit</button>
-            <button data-layer="terrain">Medan</button>
-            <button data-layer="aerial">Udara</button>
+        <div class="layer-control" id="layerControl">
+            <button data-layer="osm" class="active">🗺️ Peta</button>
+            <button data-layer="sat">🛰️ Satelit</button>
+            <button data-layer="aerial">✈️ Udara</button>
+            <button data-layer="terrain">⛰️ Medan</button>
+            <button data-layer="hot">🏘️ Detail</button>
+            <button data-layer="dark">🌙 Gelap</button>
         </div>
         <button class="loc-btn" id="locBtn">📍 Lokasi Saya</button>
     </div>
@@ -153,6 +211,10 @@
     <div class="info-panel" id="infoPanel">
         <span class="label">Status GPS: </span><span class="value" id="gpsStatus">Tidak aktif</span><br>
         <span class="label">Koordinat: </span><span class="value" id="gpsCoords">-</span>
+        <div class="addr-row" id="addrRow">
+            <span class="addr-text" id="addrText">-</span>
+            <button class="copy-btn" id="copyAddrBtn">📋</button>
+        </div>
     </div>
 
     <!-- Loader -->
@@ -170,6 +232,8 @@
     const MY_LAT = -6.2;
     const MY_LNG = 106.8;
     const FETCH_TIMEOUT_MS = 12000;
+    const ADDRESS_REFRESH_MS = 20000; // perbarui alamat tiap 20 detik selama tracking
+    const ADDRESS_MOVE_THRESHOLD_M = 25; // hanya geocode ulang jika bergeser > 25m
 
     // Proxy pribadi (kosongkan jika tidak punya)
     const CUSTOM_PROXY_URL = 'https://odd-dew-de57.endangbogorkota.workers.dev/?url=';
@@ -180,41 +244,87 @@
     const map = L.map('map', { zoomControl: false }).setView([MY_LAT, MY_LNG], 4);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Layer base
+    // ======================================================================
+    // REGISTRY LAYER (mudah ditambah: osm, satelit, udara, medan, dll)
+    // ======================================================================
     const layerOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
     });
-    const layerSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© ESRI'
-    });
-    const layerTerrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenTopoMap'
-    });
-    const layerAerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© ESRI'
-    }); // sama dengan satelit, tapi bisa diganti
 
-    let currentLayer = layerOSM;
+    const layerSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
+    });
+
+    // "Udara" = citra satelit/udara ESRI + overlay label jalan/batas wilayah agar tetap terbaca sampai gang
+    const layerAerialImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
+    });
+    const layerAerialLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Labels © Esri'
+    });
+    const layerAerial = L.layerGroup([layerAerialImg, layerAerialLabels]);
+
+    const layerTerrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        attribution: '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors'
+    });
+
+    // Peta detail humanitarian (biasanya lebih lengkap untuk jalan kecil/gang di Indonesia)
+    const layerHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors, Tiles style by HOT'
+    });
+
+    const layerDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors, © CARTO'
+    });
+
+    const layers = {
+        osm: layerOSM,
+        sat: layerSat,
+        aerial: layerAerial,
+        terrain: layerTerrain,
+        hot: layerHOT,
+        dark: layerDark
+    };
+
+    let currentLayerKey = 'osm';
+    let currentLayer = layers[currentLayerKey];
     currentLayer.addTo(map);
 
     // ======================================================================
-    // KONTROL LAYER
+    // KONTROL LAYER (perbaikan bug: selector sebelumnya #layerControl tidak
+    // pernah cocok dengan class-nya sehingga tombol jenis peta tidak berfungsi)
     // ======================================================================
-    const layerButtons = document.querySelectorAll('#layerControl button');
+    const layerControlEl = document.getElementById('layerControl');
+    const layerButtons = layerControlEl.querySelectorAll('button');
+
+    function switchLayer(key) {
+        if (!layers[key] || key === currentLayerKey && map.hasLayer(currentLayer)) {
+            if (key === currentLayerKey) return; // sudah aktif
+        }
+        if (map.hasLayer(currentLayer)) {
+            map.removeLayer(currentLayer);
+        }
+        currentLayerKey = layers[key] ? key : 'osm';
+        currentLayer = layers[currentLayerKey];
+        currentLayer.addTo(map);
+
+        // pastikan marker (lokasi saya & hasil pencarian) tetap tampil di atas layer baru
+        if (myMarker) myMarker.bringToFront();
+        if (searchMarker) searchMarker.bringToFront();
+    }
+
     layerButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             layerButtons.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            const layer = this.dataset.layer;
-            map.removeLayer(currentLayer);
-            switch(layer) {
-                case 'osm': currentLayer = layerOSM; break;
-                case 'sat': currentLayer = layerSat; break;
-                case 'terrain': currentLayer = layerTerrain; break;
-                case 'aerial': currentLayer = layerAerial; break;
-                default: currentLayer = layerOSM;
-            }
-            currentLayer.addTo(map);
+            switchLayer(this.dataset.layer);
         });
     });
 
@@ -297,11 +407,60 @@
     }
 
     // ======================================================================
+    // UTIL: susun alamat lengkap hingga desa/dusun/gang dari hasil Nominatim
+    // ======================================================================
+    function buildDetailedAddress(addr) {
+        if (!addr) return null;
+        const parts = [];
+        // Jalan / gang (Nominatim sering menaruh "Gang ..." di road)
+        const jalan = addr.road || addr.pedestrian || addr.path || addr.footway;
+        if (jalan) parts.push(jalan);
+        if (addr.house_number) parts[parts.length - 1] = `${parts[parts.length - 1] || ''} No. ${addr.house_number}`.trim();
+
+        // RT/RW kadang muncul di quarter/neighbourhood
+        if (addr.neighbourhood) parts.push(addr.neighbourhood);
+        if (addr.quarter && addr.quarter !== addr.neighbourhood) parts.push(addr.quarter);
+
+        // Dusun / hamlet
+        if (addr.hamlet) parts.push(`Dusun ${addr.hamlet}`);
+
+        // Desa / Kelurahan
+        const desa = addr.village || addr.suburb;
+        if (desa) parts.push(desa);
+
+        // Kecamatan
+        const kecamatan = addr.city_district || addr.subdistrict || addr.municipality;
+        if (kecamatan) parts.push(`Kec. ${kecamatan}`);
+
+        // Kabupaten / Kota
+        const kabkota = addr.county || addr.city || addr.town;
+        if (kabkota) parts.push(kabkota);
+
+        // Provinsi
+        if (addr.state) parts.push(addr.state);
+
+        // Kode pos
+        if (addr.postcode) parts.push(addr.postcode);
+
+        return parts.filter(Boolean).join(', ');
+    }
+
+    // ======================================================================
     // PENCARIAN WILAYAH (hingga desa/kelurahan/gang)
     // ======================================================================
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     let searchMarker = null;
+
+    function makeSearchIcon() {
+        return L.divIcon({
+            className: '',
+            html: `<div class="search-loc-wrap"><div class="search-pin">📌</div></div>`,
+            iconSize: [30, 40],
+            iconAnchor: [15, 38],
+            popupAnchor: [0, -34]
+        });
+    }
 
     async function searchLocation(query) {
         if (!query.trim()) return;
@@ -321,10 +480,13 @@
             if (!isNaN(lat) && !isNaN(lng)) {
                 map.setView([lat, lng], 18); // zoom tinggi untuk melihat detail gang
                 if (searchMarker) map.removeLayer(searchMarker);
-                searchMarker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(result.display_name).openPopup();
+                const detail = buildDetailedAddress(result.address) || result.display_name;
+                searchMarker = L.marker([lat, lng], { icon: makeSearchIcon(), zIndexOffset: 900 }).addTo(map)
+                    .bindPopup(`<div class="addr-popup"><b>📌 Hasil Pencarian</b><div class="row">${detail}</div><span class="full">${result.display_name}</span></div>`)
+                    .openPopup();
                 document.getElementById('gpsCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                 document.getElementById('gpsStatus').innerText = 'Pencarian';
+                showAddress(detail);
             }
         } catch (e) {
             alert('Gagal mencari lokasi: ' + e.message);
@@ -337,14 +499,90 @@
     searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchLocation(searchInput.value); });
 
     // ======================================================================
-    // LOKASI SAYA (GPS) - langsung zoom ke lokasi
+    // LOKASI SAYA (GPS) - zoom ke lokasi + penanda jelas + alamat lengkap
     // ======================================================================
     const locBtn = document.getElementById('locBtn');
     let watchId = null;
     let myMarker = null;
     let isLocTracking = false;
+    let addressTimer = null;
+    let lastGeocodedLatLng = null;
+    let geocodeInFlight = false;
     const gpsStatusEl = document.getElementById('gpsStatus');
     const gpsCoordsEl = document.getElementById('gpsCoords');
+    const addrRowEl = document.getElementById('addrRow');
+    const addrTextEl = document.getElementById('addrText');
+    const copyAddrBtn = document.getElementById('copyAddrBtn');
+
+    function makeMyLocIcon() {
+        return L.divIcon({
+            className: '',
+            html: `<div class="my-loc-wrap"><div class="my-loc-pulse"></div><div class="my-loc-ring"></div></div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -20]
+        });
+    }
+
+    function showAddress(text) {
+        if (!text) {
+            addrRowEl.classList.remove('show');
+            return;
+        }
+        addrTextEl.innerText = text;
+        addrRowEl.classList.add('show');
+    }
+
+    function haversineMeters(a, b) {
+        const R = 6371000;
+        const toRad = d => d * Math.PI / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const lat1 = toRad(a.lat);
+        const lat2 = toRad(b.lat);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false } = {}) {
+        if (geocodeInFlight) return;
+        const point = { lat, lng };
+        if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) {
+            return; // belum bergeser cukup jauh, hemat request
+        }
+        geocodeInFlight = true;
+        if (myMarker) {
+            myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row loading">Mengambil alamat lengkap...</div></div>`);
+            if (openPopup) myMarker.openPopup();
+        }
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
+            const data = await fetchWithProxy(url);
+            const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
+            const full = (data && data.display_name) || '';
+            lastGeocodedLatLng = point;
+            if (myMarker) {
+                myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">${detail}</div>${full ? `<span class="full">${full}</span>` : ''}</div>`);
+                if (openPopup) myMarker.openPopup();
+            }
+            showAddress(detail);
+        } catch (e) {
+            if (myMarker) {
+                myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat: ${e.message}</div></div>`);
+            }
+        } finally {
+            geocodeInFlight = false;
+        }
+    }
+
+    copyAddrBtn.addEventListener('click', () => {
+        const text = addrTextEl.innerText;
+        if (!text || text === '-') return;
+        navigator.clipboard?.writeText(text).then(() => {
+            copyAddrBtn.innerText = '✅';
+            setTimeout(() => copyAddrBtn.innerText = '📋', 1200);
+        }).catch(() => {});
+    });
 
     function toggleLocationTracking() {
         if (!navigator.geolocation) {
@@ -357,7 +595,12 @@
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
             }
+            if (addressTimer) {
+                clearInterval(addressTimer);
+                addressTimer = null;
+            }
             isLocTracking = false;
+            lastGeocodedLatLng = null;
             locBtn.classList.remove('active');
             locBtn.innerHTML = '📍 Lokasi Saya';
             if (myMarker) {
@@ -366,22 +609,25 @@
             }
             gpsStatusEl.innerText = 'Tidak aktif';
             gpsCoordsEl.innerText = '-';
+            showAddress(null);
         } else {
             // Aktifkan
             locBtn.innerHTML = '⏳ Mendapatkan...';
+            let firstFix = true;
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     if (!myMarker) {
-                        myMarker = L.marker([lat, lng], { 
-                            icon: L.divIcon({ className: 'my-loc', html: '📍', iconSize: [24,24] })
+                        myMarker = L.marker([lat, lng], {
+                            icon: makeMyLocIcon(),
+                            zIndexOffset: 1000
                         }).addTo(map)
-                        .bindPopup('Lokasi saya');
+                        .bindPopup(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row loading">Mengambil alamat lengkap...</div></div>`);
                     } else {
                         myMarker.setLatLng([lat, lng]);
                     }
-                    // ZOOM ke lokasi dengan level zoom 18 untuk detail
+                    // ZOOM ke lokasi dengan level zoom 18 untuk detail hingga gang
                     map.setView([lat, lng], 18);
                     if (!isLocTracking) {
                         isLocTracking = true;
@@ -389,7 +635,19 @@
                         locBtn.innerHTML = '📍 Aktif';
                     }
                     gpsStatusEl.innerText = 'Aktif';
-                    gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(pos.coords.accuracy || 0)}m)`;
+
+                    // Alamat lengkap: langsung ambil saat fix pertama + buka popup penanda
+                    if (firstFix) {
+                        firstFix = false;
+                        reverseGeocodeAndUpdate(lat, lng, { openPopup: true });
+                        if (!addressTimer) {
+                            addressTimer = setInterval(() => {
+                                const p = myMarker.getLatLng();
+                                reverseGeocodeAndUpdate(p.lat, p.lng);
+                            }, ADDRESS_REFRESH_MS);
+                        }
+                    }
                 },
                 (err) => {
                     alert('Error GPS: ' + err.message);
@@ -435,7 +693,7 @@
     // ======================================================================
     window.addEventListener('resize', () => map.invalidateSize());
 
-    console.log('Peta Interaktif siap digunakan.');
+    console.log('Peta Interaktif siap digunakan. Layer aktif:', currentLayerKey);
 </script>
 </body>
 </html>
