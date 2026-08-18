@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pemantau Satelit & Peta Interaktif</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+        header {
+            background-color: #1f1f1f;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            z-index: 1000;
+            flex-shrink: 0;
+        }
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #4db8ff;
+        }
+        .header-controls {
+            display: flex;
+            gap: 8px;
+        }
+        .header-controls button {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .header-controls button:active {
+            background-color: #555;
+        }
+        main {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        #map {
+            flex: 1;
+            width: 100%;
+            background-color: #0a0a0a;
+            z-index: 1;
+        }
+
+        /* Kontrol kustom di atas peta */
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 500;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .map-controls > * {
+            pointer-events: auto;
+        }
+        .search-box {
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(6px);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex: 1 1 200px;
+            min-width: 160px;
+        }
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            padding: 4px 0;
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+        }
+        .search-box input::placeholder {
+            color: #888;
+        }
+        .search-box button {
+            background: #4db8ff;
+            border: none;
+            border-radius: 4px;
+            color: #111;
+            padding: 4px 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .layer-control {
+            display: flex;
+            gap: 4px;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(6px);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .layer-control button {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #ccc;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .layer-control button.active {
+            background: #4db8ff;
+            color: #111;
+            border-color: #4db8ff;
+        }
+        .layer-control button:active {
+            opacity: 0.7;
+        }
+        .loc-btn {
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(6px);
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .loc-btn.active {
+            border-color: #4db8ff;
+            color: #4db8ff;
+        }
+
+        /* Panel satelit (seperti di satelit.html) */
+        .satellite-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 12px;
+            z-index: 600;
+            display: none;
+            max-height: 70vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        .satellite-panel.show {
+            display: block;
+        }
+        .satellite-panel .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            margin-top: 6px;
+        }
+        .satellite-panel .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .satellite-panel .info-label {
+            font-size: 0.65rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .satellite-panel .info-value {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #4db8ff;
+        }
+        .satellite-panel .sat-select {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .satellite-panel .sat-select select {
+            flex: 1;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .satellite-panel .sat-select button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .satellite-panel .region-info {
+            grid-column: span 2;
+            font-size: 0.8rem;
+            line-height: 1.3;
+            color: #aaa;
+        }
+        .satellite-panel .region-info .val {
+            font-weight: 600;
+            color: #4db8ff;
+        }
+        .satellite-panel .toggle-log {
+            margin-top: 8px;
+            text-align: right;
+        }
+        .satellite-panel .toggle-log button {
+            background: transparent;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        /* Log panel */
+        .log-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #444;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .log-panel.show {
+            transform: translateY(0);
+        }
+        .log-header {
+            padding: 8px 15px;
+            background: #1f1f1f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .log-title {
+            font-size: 0.9rem;
+            color: #ff9800;
+        }
+        .log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #aaa;
+        }
+        .log-content .log-time {
+            color: #4caf50;
+            margin-right: 8px;
+        }
+        .log-content .log-error {
+            color: #f44336;
+        }
+
+        /* Loader */
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            text-align: center;
+            display: none;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #4db8ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+
+        /* Responsif */
+        @media (min-width: 768px) {
+            .satellite-panel {
+                left: 20px;
+                right: auto;
+                width: 320px;
+                bottom: 20px;
+            }
+            .log-panel {
+                height: 100%;
+                width: 40%;
+                max-width: 380px;
+                left: auto;
+                right: 0;
+                transform: translateX(100%);
+                border-top: none;
+                border-left: 1px solid #444;
+            }
+            .log-panel.show {
+                transform: translateX(0);
+            }
+            .map-controls {
+                top: 12px;
+                left: 12px;
+                right: 12px;
+                flex-wrap: nowrap;
+            }
+            .search-box {
+                flex: 0 1 280px;
+            }
+        }
+        @media (max-width: 480px) {
+            .map-controls .layer-control button {
+                padding: 3px 6px;
+                font-size: 0.65rem;
+            }
+            .satellite-panel .info-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        /* Marker warna lokasi */
+        .leaflet-marker-icon.my-loc {
+            filter: hue-rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🛰️ Pemantau Satelit & Peta</h1>
+    <div class="header-controls">
+        <button id="btnToggleSat">🛰️ Satelit</button>
+        <button id="btnToggleLog">📜 Log</button>
+        <button id="btnFullscreen">⛶ Layar</button>
+    </div>
+</header>
+
+<main>
+    <div id="map"></div>
+
+    <!-- Kontrol di atas peta -->
+    <div class="map-controls" id="mapControls">
+        <div class="search-box" id="searchBox">
+            <input type="text" id="searchInput" placeholder="Cari wilayah (desa, kota, provinsi)..." />
+            <button id="searchBtn">Cari</button>
+        </div>
+        <div class="layer-control" id="layerControl">
+            <button data-layer="osm" class="active">Peta</button>
+            <button data-layer="sat">Satelit</button>
+            <button data-layer="terrain">Terrain</button>
+            <button data-layer="aerial">Aerial</button>
+        </div>
+        <button class="loc-btn" id="locBtn">📍 Lokasi</button>
+    </div>
+
+    <!-- Panel satelit -->
+    <div class="satellite-panel" id="satPanel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:bold; color:#4db8ff;">🛰️ Pelacakan Satelit</span>
+            <button id="closeSatPanel" style="background:transparent;border:none;color:#888;font-size:1.2rem;cursor:pointer;">✖</button>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Satelit</span><span class="info-value" id="satName">ISS (ZARYA)</span></div>
+            <div class="info-item"><span class="info-label">Status</span><span class="info-value" id="connStatus">⏳ Menghubungkan...</span></div>
+            <div class="info-item"><span class="info-label">Ketinggian</span><span class="info-value" id="satAltitude">- km</span></div>
+            <div class="info-item"><span class="info-label">Kecepatan (estimasi)</span><span class="info-value" id="satSpeed">- km/j</span></div>
+            <div class="info-item"><span class="info-label">Lokasi</span><span class="info-value" id="satCoords">-, -</span></div>
+            <div class="info-item"><span class="info-label">Update</span><span class="info-value" id="lastUpdate">-</span></div>
+            <div class="region-info"><span class="info-label">Wilayah (desa/kel. → kab/kota → provinsi → negara)</span><br><span class="val" id="satRegion">-</span></div>
+        </div>
+        <div class="sat-select">
+            <select id="satSelect">
+                <option value="25544">ISS (Stasiun Luar Angkasa)</option>
+                <option value="20580">Hubble Space Telescope</option>
+                <option value="44713">Starlink-1007</option>
+                <option value="33591">NOAA 19 (Cuaca)</option>
+            </select>
+            <button id="satRefreshBtn">↻</button>
+        </div>
+        <div class="toggle-log"><button id="satLogBtn">📜 Tampilkan Log</button></div>
+    </div>
+
+    <!-- Panel Log -->
+    <div class="log-panel" id="logPanel">
+        <div class="log-header">
+            <span class="log-title">Log Sistem & Koneksi</span>
+            <button id="closeLogBtn" style="background:transparent;border:none;color:#aaa;font-size:1.2rem;cursor:pointer;">✖</button>
+        </div>
+        <div class="log-content" id="logContent"></div>
+    </div>
+
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <p id="loaderText">Memuat...</p>
+    </div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // ======================================================================
+    // KONFIGURASI
+    // ======================================================================
+    const N2YO_API_KEY = 'LDQR34-DDRFHW-YQ5HVD-5TKW'; // Anda bisa ganti dengan key sendiri
+    const MY_LAT = -6.2;
+    const MY_LNG = 106.8;
+    const SECONDS = 2;                // jumlah titik posisi untuk perhitungan kecepatan
+    const FETCH_TIMEOUT_MS = 12000;
+    const NORMAL_INTERVAL_MS = 15000;
+
+    // Proxy pribadi (kosongkan jika tidak punya)
+    const CUSTOM_PROXY_URL = 'https://odd-dew-de57.endangbogorkota.workers.dev/?url=';
+
+    // ======================================================================
+    // INISIALISASI PETA
+    // ======================================================================
+    const map = L.map('map', { zoomControl: false }).setView([MY_LAT, MY_LNG], 3);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Layer base
+    const layerOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    });
+    const layerSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© ESRI'
+    });
+    const layerTerrain = L.tileLayer('https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap DE'
+    });
+    const layerAerial = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenTopoMap'
+    });
+
+    let currentLayer = layerOSM;
+    currentLayer.addTo(map);
+
+    // ======================================================================
+    // KONTROL LAYER (tombol)
+    // ======================================================================
+    const layerButtons = document.querySelectorAll('#layerControl button');
+    layerButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            layerButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const layer = this.dataset.layer;
+            map.removeLayer(currentLayer);
+            switch(layer) {
+                case 'osm': currentLayer = layerOSM; break;
+                case 'sat': currentLayer = layerSat; break;
+                case 'terrain': currentLayer = layerTerrain; break;
+                case 'aerial': currentLayer = layerAerial; break;
+                default: currentLayer = layerOSM;
+            }
+            currentLayer.addTo(map);
+        });
+    });
+
+    // ======================================================================
+    // PENCARIAN WILAYAH (Nominatim via proxy)
+    // ======================================================================
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    let searchMarker = null;
+
+    async function searchLocation(query) {
+        if (!query.trim()) return;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&accept-language=id`;
+        // Gunakan strategi proxy yang sama
+        const data = await fetchWithProxy(url);
+        if (!data || !data.length) {
+            addLog('Lokasi tidak ditemukan.', true);
+            return;
+        }
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            map.setView([lat, lng], 14);
+            if (searchMarker) map.removeLayer(searchMarker);
+            searchMarker = L.marker([lat, lng]).addTo(map)
+                .bindPopup(result.display_name).openPopup();
+            addLog(`📍 Ditemukan: ${result.display_name}`);
+        }
+    }
+
+    searchBtn.addEventListener('click', () => searchLocation(searchInput.value));
+    searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchLocation(searchInput.value); });
+
+    // ======================================================================
+    // LOKASI SAYA (GPS)
+    // ======================================================================
+    const locBtn = document.getElementById('locBtn');
+    let watchId = null;
+    let myMarker = null;
+    let isLocTracking = false;
+
+    function toggleLocationTracking() {
+        if (!navigator.geolocation) {
+            addLog('Geolokasi tidak didukung oleh browser ini.', true);
+            return;
+        }
+        if (isLocTracking) {
+            // Matikan
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            isLocTracking = false;
+            locBtn.classList.remove('active');
+            locBtn.innerHTML = '📍 Lokasi';
+            if (myMarker) {
+                map.removeLayer(myMarker);
+                myMarker = null;
+            }
+            addLog('Pelacakan lokasi dihentikan.');
+        } else {
+            // Aktifkan
+            locBtn.innerHTML = '⏳ Mendapatkan...';
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    if (!myMarker) {
+                        myMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'my-loc', html: '📍', iconSize: [24,24] }) })
+                            .addTo(map)
+                            .bindPopup('Lokasi saya');
+                    } else {
+                        myMarker.setLatLng([lat, lng]);
+                    }
+                    map.panTo([lat, lng]);
+                    if (!isLocTracking) {
+                        isLocTracking = true;
+                        locBtn.classList.add('active');
+                        locBtn.innerHTML = '📍 Aktif';
+                    }
+                    addLog(`📍 Lokasi diperbarui: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+                },
+                (err) => {
+                    addLog(`Error GPS: ${err.message}`, true);
+                    locBtn.innerHTML = '📍 Lokasi';
+                    locBtn.classList.remove('active');
+                    isLocTracking = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+            );
+            // timeout jika tidak mendapat lokasi dalam 10 detik
+            setTimeout(() => {
+                if (!isLocTracking) {
+                    locBtn.innerHTML = '📍 Lokasi';
+                }
+            }, 10000);
+        }
+    }
+
+    locBtn.addEventListener('click', toggleLocationTracking);
+
+    // ======================================================================
+    // FUNGSI FETCH DENGAN PROXY (multi-strategy) – diadaptasi dari satelit.html
+    // ======================================================================
+    const proxyStrategies = [
+        ...(CUSTOM_PROXY_URL ? [{
+            name: 'Proxy Pribadi',
+            build: (url) => `${CUSTOM_PROXY_URL}${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        }] : []),
+        {
+            name: 'Corsfix',
+            build: (url) => `https://proxy.corsfix.com/?${url}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'CodeTabs',
+            build: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'AllOrigins (get)',
+            build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+            parse: async (res) => {
+                const wrapper = await res.json();
+                return JSON.parse(wrapper.contents);
+            }
+        },
+        {
+            name: 'AllOrigins (raw)',
+            build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'CorsProxy.io',
+            build: (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'x2u CORS',
+            build: (url) => `https://cors.x2u.in/${url}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'Langsung (tanpa proxy)',
+            build: (url) => url,
+            parse: (res) => res.json()
+        }
+    ];
+
+    function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+    }
+
+    async function fetchWithProxy(targetUrl) {
+        let lastError = new Error('Semua metode koneksi gagal!');
+        for (const strategy of proxyStrategies) {
+            const proxyUrl = strategy.build(targetUrl);
+            try {
+                const response = await fetchWithTimeout(proxyUrl);
+                if (response.status === 429) throw new Error('Dibatasi sementara (429)');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await strategy.parse(response);
+                // Untuk Nominatim, data berupa array; untuk N2YO, objek dengan positions
+                if (Array.isArray(data) || (data && data.positions)) {
+                    return data;
+                }
+                // Jika data berupa error dari N2YO
+                if (data && data.error) {
+                    throw new Error(`API error: ${data.error}`);
+                }
+                throw new Error('Format respons tidak dikenali');
+            } catch (e) {
+                lastError = new Error(`${strategy.name}: ${e.message}`);
+                // lanjut
+            }
+        }
+        throw lastError;
+    }
+
+    // ======================================================================
+    // LOG SYSTEM (diadaptasi)
+    // ======================================================================
+    const logContent = document.getElementById('logContent');
+    function addLog(message, isError = false) {
+        const time = new Date().toLocaleTimeString('id-ID');
+        const cls = isError ? 'log-error' : '';
+        logContent.innerHTML += `<div class="${cls}"><span class="log-time">[${time}]</span>${message}</div>`;
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // ======================================================================
+    // SATELIT TRACKING (diadaptasi dari satelit.html)
+    // ======================================================================
+    let satelliteMarker = L.circleMarker([0, 0], {
+        color: '#ff0000',
+        fillColor: '#f03',
+        fillOpacity: 0.5,
+        radius: 8
+    }).addTo(map);
+    let pathLine = L.polyline([], { color: '#4db8ff', dashArray: '5, 5' }).addTo(map);
+    let isFetchingSat = false;
+    let hasCenteredMapSat = false;
+    let lastKnownGoodSat = null;
+    let lastUpdateTimeSat = null;
+    let consecutiveFailuresSat = 0;
+    let retryTimeoutIdSat = null;
+    let lastGeocodedKey = null;
+    let satInterval = null;
+
+    // Elemen UI satelit
+    const satNameEl = document.getElementById('satName');
+    const connStatusEl = document.getElementById('connStatus');
+    const satAltitudeEl = document.getElementById('satAltitude');
+    const satSpeedEl = document.getElementById('satSpeed');
+    const satCoordsEl = document.getElementById('satCoords');
+    const satRegionEl = document.getElementById('satRegion');
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    const satSelect = document.getElementById('satSelect');
+    const satRefreshBtn = document.getElementById('satRefreshBtn');
+
+    function setStatus(state, detail) {
+        if (state === 'live') {
+            connStatusEl.innerText = '🟢 Live';
+            connStatusEl.style.color = '#4caf50';
+        } else if (state === 'retrying') {
+            connStatusEl.innerText = `🟡 Menyambung ulang${detail ? ' (' + detail + ')' : ''}...`;
+            connStatusEl.style.color = '#ff9800';
+        } else if (state === 'offline') {
+            connStatusEl.innerText = '🔴 Offline (pakai data terakhir)';
+            connStatusEl.style.color = '#f44336';
+        } else {
+            connStatusEl.innerText = '⏳ Menghubungkan...';
+            connStatusEl.style.color = '#4db8ff';
+        }
+    }
+
+    function updateLastUpdateLabel() {
+        lastUpdateEl.innerText = lastUpdateTimeSat ? lastUpdateTimeSat.toLocaleTimeString('id-ID') : '-';
+    }
+
+    // Reverse geocode (Nominatim) via proxy
+    async function reverseGeocode(lat, lng) {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
+        try {
+            const data = await fetchWithProxy(url);
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function formatRegion(nominatimResult) {
+        if (!nominatimResult || !nominatimResult.address) {
+            return '🌊 Di atas laut / area tanpa data';
+        }
+        const addr = nominatimResult.address;
+        const desa = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.quarter;
+        const kabKota = addr.city || addr.town || addr.municipality || addr.county || addr.city_district || addr.regency;
+        const provinsi = addr.state || addr.province;
+        const negara = addr.country;
+        const parts = [desa, kabKota, provinsi, negara].filter(Boolean);
+        return parts.length > 0 ? parts.join(', ') : '🌊 Di atas laut / area tanpa data';
+    }
+
+    async function updateRegionDisplay(lat, lng) {
+        const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+        if (key === lastGeocodedKey) return;
+        lastGeocodedKey = key;
+        satRegionEl.innerText = 'Mencari wilayah...';
+        const result = await reverseGeocode(lat, lng);
+        satRegionEl.innerText = formatRegion(result);
+    }
+
+    // Hitung kecepatan dari dua titik posisi (dari data N2YO)
+    function haversineDistanceKm(lat1, lon1, lat2, lon2, radiusKm) {
+        const toRad = d => d * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return radiusKm * c;
+    }
+
+    function computeSpeedKmh(positions) {
+        if (!Array.isArray(positions) || positions.length < 2) return null;
+        const p0 = positions[0], p1 = positions[1];
+        const dt = p1.timestamp - p0.timestamp;
+        if (!dt || dt <= 0) return null;
+        const avgAlt = ((p0.sataltitude||0)+(p1.sataltitude||0))/2;
+        const orbitRadiusKm = 6371 + avgAlt;
+        const groundDist = haversineDistanceKm(p0.satlatitude, p0.satlongitude, p1.satlatitude, p1.satlongitude, orbitRadiusKm);
+        const altDiff = (p1.sataltitude||0)-(p0.sataltitude||0);
+        const totalDistKm = Math.sqrt(groundDist**2 + altDiff**2);
+        return (totalDistKm / dt) * 3600;
+    }
+
+    async function fetchSatelliteData() {
+        if (isFetchingSat) return;
+        isFetchingSat = true;
+        if (retryTimeoutIdSat) { clearTimeout(retryTimeoutIdSat); retryTimeoutIdSat = null; }
+
+        const satId = satSelect.value;
+        const targetUrl = `https://api.n2yo.com/rest/v1/satellite/positions/${satId}/${MY_LAT}/${MY_LNG}/0/${SECONDS}/&apiKey=${N2YO_API_KEY}`;
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('loaderText').innerText = 'Mengambil data satelit...';
+
+        try {
+            const data = await fetchWithProxy(targetUrl);
+            // Validasi
+            if (!data || !Array.isArray(data.positions) || data.positions.length === 0) {
+                throw new Error('Data posisi kosong');
+            }
+            // Filter titik valid
+            const valid = data.positions.filter(p =>
+                typeof p.satlatitude === 'number' && Number.isFinite(p.satlatitude) &&
+                typeof p.satlongitude === 'number' && Number.isFinite(p.satlongitude) &&
+                typeof p.sataltitude === 'number' && Number.isFinite(p.sataltitude)
+            );
+            if (valid.length === 0) throw new Error('Tidak ada titik posisi valid');
+            data.positions = valid;
+
+            // Sukses
+            lastUpdateTimeSat = new Date();
+            consecutiveFailuresSat = 0;
+            setStatus('live');
+            updateLastUpdateLabel();
+
+            // Update info
+            const pos = data.positions[0];
+            const lat = pos.satlatitude;
+            const lng = pos.satlongitude;
+            const alt = pos.sataltitude;
+            const speed = computeSpeedKmh(data.positions);
+
+            satAltitudeEl.innerText = `${alt.toFixed(2)} km`;
+            satSpeedEl.innerText = (speed !== null) ? `${speed.toFixed(2)} km/j` : '- km/j';
+            satCoordsEl.innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            updateRegionDisplay(lat, lng);
+
+            // Peta
+            satelliteMarker.setLatLng([lat, lng]);
+            if (!hasCenteredMapSat) {
+                map.setView([lat, lng], 4);
+                hasCenteredMapSat = true;
+            } else {
+                map.panTo([lat, lng], { animate: true });
+            }
+            const pathCoords = data.positions.map(p => [p.satlatitude, p.satlongitude]);
+            pathLine.setLatLngs(pathCoords);
+
+            lastKnownGoodSat = { lat, lng, alt, speed };
+
+        } catch (error) {
+            consecutiveFailuresSat++;
+            addLog(`Satelit gagal (${consecutiveFailuresSat}): ${error.message}`, true);
+            setStatus('offline');
+            // Retry dengan backoff
+            const delay = Math.min(4000 * consecutiveFailuresSat, NORMAL_INTERVAL_MS) + Math.random()*1000;
+            retryTimeoutIdSat = setTimeout(fetchSatelliteData, delay);
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+            isFetchingSat = false;
+        }
+    }
+
+    // Event listener satelit
+    satSelect.addEventListener('change', function() {
+        const txt = this.options[this.selectedIndex].text;
+        satNameEl.innerText = txt;
+        addLog(`Ganti satelit: ${txt}`);
+        pathLine.setLatLngs([]);
+        hasCenteredMapSat = false;
+        lastKnownGoodSat = null;
+        lastUpdateTimeSat = null;
+        consecutiveFailuresSat = 0;
+        satAltitudeEl.innerText = '- km';
+        satSpeedEl.innerText = '- km/j';
+        satCoordsEl.innerText = '-, -';
+        satRegionEl.innerText = '-';
+        lastGeocodedKey = null;
+        updateLastUpdateLabel();
+        setStatus('connecting');
+        if (retryTimeoutIdSat) { clearTimeout(retryTimeoutIdSat); retryTimeoutIdSat = null; }
+        fetchSatelliteData();
+    });
+
+    satRefreshBtn.addEventListener('click', () => {
+        addLog('Refresh manual satelit');
+        if (retryTimeoutIdSat) clearTimeout(retryTimeoutIdSat);
+        fetchSatelliteData();
+    });
+
+    // Toggle panel satelit
+    const satPanel = document.getElementById('satPanel');
+    document.getElementById('btnToggleSat').addEventListener('click', () => {
+        satPanel.classList.toggle('show');
+        if (satPanel.classList.contains('show')) {
+            document.getElementById('btnToggleSat').innerHTML = '🛰️ Tutup';
+        } else {
+            document.getElementById('btnToggleSat').innerHTML = '🛰️ Satelit';
+        }
+    });
+    document.getElementById('closeSatPanel').addEventListener('click', () => {
+        satPanel.classList.remove('show');
+        document.getElementById('btnToggleSat').innerHTML = '🛰️ Satelit';
+    });
+
+    // Toggle log panel
+    const logPanel = document.getElementById('logPanel');
+    document.getElementById('btnToggleLog').addEventListener('click', () => {
+        logPanel.classList.toggle('show');
+        document.getElementById('btnToggleLog').innerHTML = logPanel.classList.contains('show') ? '📜 Tutup' : '📜 Log';
+    });
+    document.getElementById('closeLogBtn').addEventListener('click', () => {
+        logPanel.classList.remove('show');
+        document.getElementById('btnToggleLog').innerHTML = '📜 Log';
+    });
+    document.getElementById('satLogBtn').addEventListener('click', () => {
+        logPanel.classList.toggle('show');
+        document.getElementById('btnToggleLog').innerHTML = logPanel.classList.contains('show') ? '📜 Tutup' : '📜 Log';
+    });
+
+    // ======================================================================
+    // FULLSCREEN
+    // ======================================================================
+    const btnFs = document.getElementById('btnFullscreen');
+    btnFs.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+            btnFs.innerText = '⛶ Exit';
+        } else {
+            document.exitFullscreen();
+            btnFs.innerText = '⛶ Layar';
+        }
+    });
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            btnFs.innerText = '⛶ Layar';
+        }
+        setTimeout(() => map.invalidateSize(), 300);
+    });
+
+    // ======================================================================
+    // SELF TEST JARINGAN (dari satelit.html)
+    // ======================================================================
+    async function runNetworkSelfTest() {
+        try {
+            const res = await fetchWithTimeout('https://api.github.com', 8000);
+            if (res.ok) {
+                addLog('🧪 Tes jaringan: OK — koneksi internet berfungsi.');
+                return true;
+            }
+            addLog(`🧪 Tes jaringan: respons ${res.status}.`, true);
+            return false;
+        } catch (e) {
+            addLog(`🧪 Tes jaringan: GAGAL (${e.message}).`, true);
+            return false;
+        }
+    }
+
+    // ======================================================================
+    // INISIALISASI
+    // ======================================================================
+    const SCRIPT_VERSION = '2026-08-15-r5 (integrasi penuh)';
+    addLog(`🔖 Versi: ${SCRIPT_VERSION}`);
+    addLog('Aplikasi dimulai. Mengaktifkan semua fitur.');
+    runNetworkSelfTest();
+
+    // Mulai satelit
+    satNameEl.innerText = satSelect.options[satSelect.selectedIndex].text;
+    fetchSatelliteData();
+    satInterval = setInterval(fetchSatelliteData, NORMAL_INTERVAL_MS);
+
+    // Pulihkan koneksi saat tab aktif / online
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            addLog('👁️ Tab aktif kembali — perbarui satelit.');
+            if (retryTimeoutIdSat) { clearTimeout(retryTimeoutIdSat); retryTimeoutIdSat = null; }
+            fetchSatelliteData();
+        }
+    });
+    window.addEventListener('online', () => {
+        addLog('🌐 Koneksi internet pulih — coba sambung ulang satelit.');
+        consecutiveFailuresSat = 0;
+        if (retryTimeoutIdSat) clearTimeout(retryTimeoutIdSat);
+        fetchSatelliteData();
+    });
+    window.addEventListener('offline', () => {
+        addLog('📵 Koneksi internet terputus.', true);
+        setStatus('offline');
+    });
+
+    // Tambahkan event resize untuk peta
+    window.addEventListener('resize', () => map.invalidateSize());
+
+    // ======================================================================
+    // TAMBAHAN: Marker untuk pencarian otomatis (bisa dihapus)
+    // ======================================================================
+    addLog('✅ Siap! Gunakan pencarian, lokasi GPS, dan layer peta.');
+</script>
+</body>
+</html>
