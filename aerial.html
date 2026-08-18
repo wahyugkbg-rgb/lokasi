@@ -160,9 +160,24 @@
             .map-controls { flex-wrap:nowrap; }
             .search-box { flex:0 1 280px; }
         }
+        /* ====== Perbaikan tampilan mobile (mis. Oppo A9 / layar ~360-400px) ======
+           Sebelumnya search-box berbagi 1 baris sempit dengan layer-control &
+           tombol lokasi, sehingga daftar hasil pencarian ikut sempit dan
+           terlihat "terpotong" di dalam kotak kecil. Sekarang search-box dibuat
+           selebar penuh pada baris tersendiri agar semua pilihan hasil pencarian
+           terlihat jelas, tidak tersembunyi. */
         @media (max-width:480px) {
-            .map-controls .layer-control button { padding:3px 7px; font-size:0.68rem; }
+            .map-controls { flex-direction:column; align-items:stretch; }
+            .search-box { flex:1 1 auto; width:100%; min-width:0; }
+            .layer-control { width:100%; }
+            .loc-btn { width:100%; justify-content:center; }
+            .map-controls .layer-control button { padding:5px 9px; font-size:0.72rem; }
+            .search-results { max-height:55vh; }
+            .search-results .result-item { padding:10px 12px; font-size:0.85rem; }
+            .search-results .result-item .r-sub { font-size:0.76rem; }
         }
+        .search-results .result-item .r-title,
+        .search-results .result-item .r-sub { word-break:break-word; }
 
         /* ================= PENANDA LOKASI SAYA (jelas & menonjol) ================= */
         .my-loc-wrap {
@@ -221,8 +236,9 @@
         </div>
         <div class="layer-control" id="layerControl">
             <button data-layer="osm" class="active">🗺️ Peta</button>
-            <button data-layer="sat">🛰️ Satelit</button>
-            <button data-layer="aerial">✈️ Udara</button>
+            <button data-layer="sat" title="Citra satelit polos">🛰️ Satelit</button>
+            <button data-layer="aerial" title="Citra satelit + label jalan/nama tempat (Hybrid)">✈️ Udara</button>
+            <button data-layer="aerialhq" title="Citra udara resolusi tinggi (Esri World Imagery Clarity)">🌆 Udara HQ</button>
             <button data-layer="terrain">⛰️ Medan</button>
             <button data-layer="hot">🏘️ Detail</button>
             <button data-layer="dark">🌙 Gelap</button>
@@ -280,16 +296,35 @@
         attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
     });
 
-    // "Udara" = citra satelit/udara ESRI + overlay label jalan/batas wilayah agar tetap terbaca sampai gang
+    // "Udara" = citra satelit/udara ESRI + overlay label jalan/nama tempat (mode "Hybrid" ala Google Earth).
+    // CATATAN PERBAIKAN: sebelumnya overlay label memakai layanan Esri lama
+    // (server.arcgisonline.com/.../World_Boundaries_and_Places) yang sudah
+    // dipensiunkan Esri (butuh API key baru), sehingga overlay-nya gagal
+    // dimuat secara diam-diam dan "Udara" terlihat identik dengan "Satelit".
+    // Diganti dengan overlay label CARTO (gratis, tanpa API key, umum dipakai
+    // untuk kombinasi citra satelit + label) supaya benar-benar berbeda & jelas.
     const layerAerialImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
         attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
     });
-    const layerAerialLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    const layerAerialLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        attribution: 'Labels © Esri'
+        subdomains: 'abcd',
+        attribution: 'Labels © CARTO, © OpenStreetMap contributors'
     });
     const layerAerial = L.layerGroup([layerAerialImg, layerAerialLabels]);
+
+    // "Udara HQ" = citra udara/satelit beresolusi lebih tinggi & lebih jernih dari arsip
+    // Esri World Imagery (Clarity) — layanan gratis tanpa API key, seringkali menampilkan
+    // detail lebih tajam (mendekati sudut pandang tegak lurus) dibanding World Imagery biasa.
+    // Sumber lain yang disebut (Google Earth, aerialview.co.id, OpenAerialMap) tidak
+    // menyediakan endpoint ubin (tile) publik yang stabil tanpa akun/API key berbayar,
+    // jadi belum bisa dipasang langsung; slot layer di bawah ini bisa diganti mudah
+    // begitu Anda punya URL tile & API key dari salah satu sumber tersebut.
+    const layerAerialHQ = L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles © Esri — World Imagery (Clarity)'
+    });
 
     const layerTerrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         maxZoom: 17,
@@ -311,6 +346,7 @@
         osm: layerOSM,
         sat: layerSat,
         aerial: layerAerial,
+        aerialhq: layerAerialHQ,
         terrain: layerTerrain,
         hot: layerHOT,
         dark: layerDark
@@ -518,6 +554,63 @@
         return map[result.type] || map[result.class] || result.type || result.class || '';
     }
 
+    // ======================================================================
+    // Adapter: ubah hasil Photon (geocoder OSM alternatif dari Komoot) menjadi
+    // bentuk yang sama dengan hasil Nominatim, supaya bisa digabung & dipakai
+    // oleh fungsi render/pilih hasil yang sudah ada tanpa mengubah fungsi itu.
+    // Photon punya indeks berbeda dari Nominatim sehingga kadang menemukan
+    // nama perumahan/kompleks yang tidak muncul di Nominatim, atau sebaliknya.
+    // ======================================================================
+    function photonToResult(feature) {
+        const p = feature.properties || {};
+        const coords = feature.geometry && feature.geometry.coordinates;
+        if (!coords) return null;
+        const [lon, lat] = coords;
+        const address = {
+            road: p.street,
+            house_number: p.housenumber,
+            neighbourhood: p.district,
+            quarter: p.locality,
+            hamlet: undefined,
+            village: (p.osm_key === 'place') ? undefined : undefined,
+            city_district: p.county,
+            county: p.county,
+            city: p.city,
+            town: p.city,
+            state: p.state,
+            postcode: p.postcode,
+            country: p.country
+        };
+        const display_name = [p.name, p.street, p.district, p.city, p.state, p.country]
+            .filter((v, i, arr) => v && arr.indexOf(v) === i)
+            .join(', ');
+        return {
+            lat: String(lat),
+            lon: String(lon),
+            display_name: display_name || 'Lokasi',
+            address,
+            type: p.osm_value,
+            class: p.osm_key,
+            namedetails: { name: p.name }
+        };
+    }
+
+    // Gabungkan & buang duplikat (hasil Nominatim & Photon yang menunjuk ke
+    // titik yang sama, jaraknya < 30m dianggap sama)
+    function mergeSearchResults(lists) {
+        const merged = [];
+        lists.flat().forEach(r => {
+            const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
+            if (isNaN(lat) || isNaN(lon)) return;
+            const isDup = merged.some(m => {
+                const mLat = parseFloat(m.lat), mLon = parseFloat(m.lon);
+                return haversineMeters({ lat, lng: lon }, { lat: mLat, lng: mLon }) < 30;
+            });
+            if (!isDup) merged.push(r);
+        });
+        return merged;
+    }
+
     function hideSearchResults() {
         searchResultsEl.classList.remove('show');
         searchResultsEl.innerHTML = '';
@@ -570,17 +663,59 @@
         searchInput.value = result.display_name.split(',')[0];
     }
 
+    function nominatimUrl(q) {
+        // limit diperbesar & tanpa dedupe agar perumahan/kompleks dengan nama mirip tetap muncul semua
+        return `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=8&addressdetails=1&namedetails=1&accept-language=id&dedupe=0`;
+    }
+
+    // ======================================================================
+    // PENCARIAN: sekarang menggabungkan 2 sumber data (Nominatim + Photon)
+    // secara paralel, plus percobaan ulang otomatis dengan awalan "Perumahan "
+    // jika tidak ada hasil sama sekali. Ini dibuat karena banyak kompleks
+    // perumahan (mis. "Mega Sentul" di Bogor) kadang hanya tercatat di salah
+    // satu indeks, atau tercatat dengan nama lengkap "Perumahan ...".
+    // Jika lokasi memang belum pernah dipetakan di OpenStreetMap, pencarian
+    // tetap tidak akan menemukannya (bukan bug program, tapi data peta yang
+    // dipakai — OpenStreetMap — belum memuat lokasi tersebut).
+    // ======================================================================
     async function searchLocation(query) {
-        if (!query.trim()) return;
+        query = query.trim();
+        if (!query) return;
         // Matikan Lokasi Saya agar peta tidak lompat-lompat kembali ke posisi GPS saat mencari wilayah lain
         if (isLocTracking) stopLocationTracking();
-        // Nominatim: limit diperbesar & tanpa dedupe agar perumahan/kompleks dengan nama mirip tetap muncul semua
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&namedetails=1&accept-language=id&dedupe=0`;
         try {
             document.getElementById('loader').style.display = 'block';
-            document.getElementById('loaderText').innerText = 'Mencari lokasi...';
-            const data = await fetchWithProxy(url);
-            renderSearchResults(data || []);
+            document.getElementById('loaderText').innerText = 'Mencari lokasi (alamat, gang, perumahan)...';
+
+            const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=id&limit=8&lat=${MY_LAT}&lon=${MY_LNG}`;
+
+            const [nomRes, photonRes] = await Promise.allSettled([
+                fetchWithProxy(nominatimUrl(query)),
+                fetchWithProxy(photonUrl)
+            ]);
+
+            let results = [];
+            if (nomRes.status === 'fulfilled' && Array.isArray(nomRes.value)) {
+                results = results.concat(nomRes.value);
+            }
+            if (photonRes.status === 'fulfilled' && photonRes.value && Array.isArray(photonRes.value.features)) {
+                results = results.concat(photonRes.value.features.map(photonToResult).filter(Boolean));
+            }
+
+            // Jika belum ada hasil sama sekali, coba lagi dengan awalan "Perumahan "
+            // (banyak kompleks perumahan di Indonesia terdaftar di OSM dengan awalan ini)
+            if (results.length === 0 && !/^(perumahan|komplek|kompleks|cluster|griya|bumi|villa)\b/i.test(query)) {
+                try {
+                    const retryData = await fetchWithProxy(nominatimUrl('Perumahan ' + query));
+                    if (Array.isArray(retryData)) results = results.concat(retryData);
+                } catch (_) { /* abaikan, hasil tetap dari percobaan pertama */ }
+            }
+
+            if (results.length === 0 && nomRes.status === 'rejected' && photonRes.status === 'rejected') {
+                throw new Error('Semua sumber pencarian gagal dihubungi: ' + nomRes.reason.message);
+            }
+
+            renderSearchResults(mergeSearchResults([results]));
         } catch (e) {
             hideSearchResults();
             alert('Gagal mencari lokasi: ' + e.message);
