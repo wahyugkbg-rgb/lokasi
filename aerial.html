@@ -55,6 +55,7 @@
             border:1px solid #444; border-radius:8px;
             padding:6px 10px; display:flex; gap:6px; align-items:center;
             flex:1 1 200px; min-width:160px;
+            position:relative;
         }
         .search-box input {
             background:transparent; border:none; color:#fff;
@@ -66,6 +67,27 @@
             color:#111; padding:4px 10px; font-weight:bold;
             cursor:pointer; font-size:0.8rem; flex-shrink:0;
         }
+        /* Dropdown daftar hasil pencarian (jika lebih dari 1 kandidat) */
+        .search-results {
+            position:absolute; top:calc(100% + 6px); left:0; right:0;
+            background:rgba(20,20,20,0.97); backdrop-filter:blur(6px);
+            border:1px solid #444; border-radius:8px;
+            max-height:280px; overflow-y:auto;
+            display:none; z-index:900;
+            box-shadow:0 6px 18px rgba(0,0,0,0.5);
+        }
+        .search-results.show { display:block; }
+        .search-results .result-item {
+            padding:8px 10px; border-bottom:1px solid #333;
+            cursor:pointer; font-size:0.8rem; line-height:1.4;
+        }
+        .search-results .result-item:last-child { border-bottom:none; }
+        .search-results .result-item:active,
+        .search-results .result-item.hover { background:#2a2a2a; }
+        .search-results .result-item .r-title { color:#e0e0e0; font-weight:600; }
+        .search-results .result-item .r-type { color:#4db8ff; font-size:0.68rem; margin-left:4px; }
+        .search-results .result-item .r-sub { color:#888; font-size:0.72rem; margin-top:2px; }
+        .search-results .result-empty { padding:10px; color:#888; font-size:0.8rem; text-align:center; }
         .layer-control {
             display:flex; gap:4px;
             background:rgba(20,20,20,0.85); backdrop-filter:blur(6px);
@@ -193,8 +215,9 @@
     <!-- Kontrol peta -->
     <div class="map-controls">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Cari desa, kelurahan, gang..." />
+            <input type="text" id="searchInput" placeholder="Cari desa, kelurahan, gang, perumahan..." autocomplete="off" />
             <button id="searchBtn">Cari</button>
+            <div class="search-results" id="searchResults"></div>
         </div>
         <div class="layer-control" id="layerControl">
             <button data-layer="osm" class="active">🗺️ Peta</button>
@@ -450,7 +473,9 @@
     // ======================================================================
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
+    const searchResultsEl = document.getElementById('searchResults');
     let searchMarker = null;
+    let lastSearchResults = [];
 
     function makeSearchIcon() {
         return L.divIcon({
@@ -462,33 +487,83 @@
         });
     }
 
+    // Label kategori singkat berdasarkan type/class Nominatim, agar mudah membedakan
+    // hasil yang namanya mirip (mis. beberapa "Perumahan Griya Asri" di kota berbeda)
+    function categoryLabel(result) {
+        const map = {
+            residential: 'Perumahan', neighbourhood: 'Lingkungan', suburb: 'Kelurahan/Suburb',
+            village: 'Desa', hamlet: 'Dusun', town: 'Kota', city: 'Kota', county: 'Kabupaten',
+            state: 'Provinsi', road: 'Jalan', house: 'Bangunan', building: 'Bangunan',
+            administrative: 'Wilayah Administratif'
+        };
+        return map[result.type] || map[result.class] || result.type || result.class || '';
+    }
+
+    function hideSearchResults() {
+        searchResultsEl.classList.remove('show');
+        searchResultsEl.innerHTML = '';
+    }
+
+    function renderSearchResults(results) {
+        lastSearchResults = results;
+        if (!results.length) {
+            searchResultsEl.innerHTML = `<div class="result-empty">Lokasi tidak ditemukan.</div>`;
+            searchResultsEl.classList.add('show');
+            return;
+        }
+        // Hanya tampilkan daftar pilihan jika ada lebih dari satu kandidat yang mirip
+        if (results.length === 1) {
+            hideSearchResults();
+            selectSearchResult(results[0]);
+            return;
+        }
+        searchResultsEl.innerHTML = results.map((r, i) => {
+            const detail = buildDetailedAddress(r.address) || r.display_name;
+            const cat = categoryLabel(r);
+            return `<div class="result-item" data-idx="${i}">
+                <span class="r-title">${r.namedetails?.name || r.display_name.split(',')[0]}</span>${cat ? `<span class="r-type">${cat}</span>` : ''}
+                <div class="r-sub">${detail}</div>
+            </div>`;
+        }).join('');
+        searchResultsEl.classList.add('show');
+        searchResultsEl.querySelectorAll('.result-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const idx = parseInt(el.dataset.idx, 10);
+                hideSearchResults();
+                selectSearchResult(lastSearchResults[idx]);
+            });
+        });
+    }
+
+    function selectSearchResult(result) {
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        if (isNaN(lat) || isNaN(lng)) return;
+        map.setView([lat, lng], 18); // zoom tinggi untuk melihat detail gang/perumahan
+        if (searchMarker) map.removeLayer(searchMarker);
+        const detail = buildDetailedAddress(result.address) || result.display_name;
+        searchMarker = L.marker([lat, lng], { icon: makeSearchIcon(), zIndexOffset: 900 }).addTo(map)
+            .bindPopup(`<div class="addr-popup"><b>📌 Hasil Pencarian</b><div class="row">${detail}</div><span class="full">${result.display_name}</span></div>`)
+            .openPopup();
+        document.getElementById('gpsCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        document.getElementById('gpsStatus').innerText = 'Pencarian';
+        showAddress(detail);
+        searchInput.value = result.display_name.split(',')[0];
+    }
+
     async function searchLocation(query) {
         if (!query.trim()) return;
-        // Nominatim dengan parameter detail tinggi
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&accept-language=id&zoom=18`;
+        // Matikan Lokasi Saya agar peta tidak lompat-lompat kembali ke posisi GPS saat mencari wilayah lain
+        if (isLocTracking) stopLocationTracking();
+        // Nominatim: limit diperbesar & tanpa dedupe agar perumahan/kompleks dengan nama mirip tetap muncul semua
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&namedetails=1&accept-language=id&dedupe=0`;
         try {
             document.getElementById('loader').style.display = 'block';
             document.getElementById('loaderText').innerText = 'Mencari lokasi...';
             const data = await fetchWithProxy(url);
-            if (!data || !data.length) {
-                alert('Lokasi tidak ditemukan.');
-                return;
-            }
-            const result = data[0];
-            const lat = parseFloat(result.lat);
-            const lng = parseFloat(result.lon);
-            if (!isNaN(lat) && !isNaN(lng)) {
-                map.setView([lat, lng], 18); // zoom tinggi untuk melihat detail gang
-                if (searchMarker) map.removeLayer(searchMarker);
-                const detail = buildDetailedAddress(result.address) || result.display_name;
-                searchMarker = L.marker([lat, lng], { icon: makeSearchIcon(), zIndexOffset: 900 }).addTo(map)
-                    .bindPopup(`<div class="addr-popup"><b>📌 Hasil Pencarian</b><div class="row">${detail}</div><span class="full">${result.display_name}</span></div>`)
-                    .openPopup();
-                document.getElementById('gpsCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                document.getElementById('gpsStatus').innerText = 'Pencarian';
-                showAddress(detail);
-            }
+            renderSearchResults(data || []);
         } catch (e) {
+            hideSearchResults();
             alert('Gagal mencari lokasi: ' + e.message);
         } finally {
             document.getElementById('loader').style.display = 'none';
@@ -497,6 +572,18 @@
 
     searchBtn.addEventListener('click', () => searchLocation(searchInput.value));
     searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchLocation(searchInput.value); });
+    // Segera matikan Lokasi Saya begitu pengguna mulai mengetik pencarian,
+    // supaya watchPosition tidak terus menarik peta kembali ke posisi GPS.
+    searchInput.addEventListener('input', () => {
+        if (isLocTracking) stopLocationTracking();
+        if (!searchInput.value.trim()) hideSearchResults();
+    });
+    searchInput.addEventListener('focus', () => {
+        if (isLocTracking) stopLocationTracking();
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-box')) hideSearchResults();
+    });
 
     // ======================================================================
     // LOKASI SAYA (GPS) - zoom ke lokasi + penanda jelas + alamat lengkap
@@ -584,32 +671,37 @@
         }).catch(() => {});
     });
 
+    // Matikan tracking GPS (dipakai tombol Lokasi Saya & otomatis saat pencarian aktif,
+    // supaya peta tidak "lompat-lompat" kembali ke posisi GPS ketika sedang mencari wilayah lain)
+    function stopLocationTracking() {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        if (addressTimer) {
+            clearInterval(addressTimer);
+            addressTimer = null;
+        }
+        isLocTracking = false;
+        lastGeocodedLatLng = null;
+        locBtn.classList.remove('active');
+        locBtn.innerHTML = '📍 Lokasi Saya';
+        if (myMarker) {
+            map.removeLayer(myMarker);
+            myMarker = null;
+        }
+        gpsStatusEl.innerText = 'Tidak aktif';
+        gpsCoordsEl.innerText = '-';
+        showAddress(null);
+    }
+
     function toggleLocationTracking() {
         if (!navigator.geolocation) {
             alert('Geolokasi tidak didukung oleh browser ini.');
             return;
         }
         if (isLocTracking) {
-            // Matikan
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
-            if (addressTimer) {
-                clearInterval(addressTimer);
-                addressTimer = null;
-            }
-            isLocTracking = false;
-            lastGeocodedLatLng = null;
-            locBtn.classList.remove('active');
-            locBtn.innerHTML = '📍 Lokasi Saya';
-            if (myMarker) {
-                map.removeLayer(myMarker);
-                myMarker = null;
-            }
-            gpsStatusEl.innerText = 'Tidak aktif';
-            gpsCoordsEl.innerText = '-';
-            showAddress(null);
+            stopLocationTracking();
         } else {
             // Aktifkan
             locBtn.innerHTML = '⏳ Mendapatkan...';
