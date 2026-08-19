@@ -680,16 +680,16 @@
     let activeGpsGeocodeAbortController = null;  // membatalkan fetch reverse-geocode GPS yang sedang berjalan secara nyata
     const modePillEl = document.getElementById('modePill');
     function updateModePill() {
-        if (!modePillEl) return;
-        if (activeLocation && activeLocation.source === 'gps') {
-            modePillEl.textContent = '📍 MODE: GPS AKTIF';
-            modePillEl.classList.add('show');
-        } else if (activeLocation && activeLocation.source === 'search') {
-            modePillEl.textContent = '🔍 MODE: HASIL PENCARIAN';
-            modePillEl.classList.add('show');
-        } else {
-            modePillEl.classList.remove('show');
-        }
+        //if (!modePillEl) return;
+        //if (activeLocation && activeLocation.source === 'gps') {
+         //   modePillEl.textContent = '📍 MODE: GPS AKTIF';
+         //   modePillEl.classList.add('show');
+        //} else if (activeLocation && activeLocation.source === 'search') {
+        //    modePillEl.textContent = '🔍 MODE: HASIL PENCARIAN';
+         //   modePillEl.classList.add('show');
+        //} else {
+         //   modePillEl.classList.remove('show');
+        //}
     }
 
     // ======================================================================
