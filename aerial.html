@@ -111,6 +111,7 @@
             background:rgba(255,255,255,0.06); color:var(--text); border:1px solid var(--panel-border);
             width:32px; height:32px; border-radius:8px; font-size:0.9rem; font-weight:600;
             cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center;
+            touch-action:manipulation;
         }
         .header-controls button:active { transform:scale(0.92); }
         .header-controls button.on{
@@ -135,10 +136,11 @@
         }
         .toolbar::-webkit-scrollbar{ display:none; }
         .tbtn{
-            flex-shrink:0; width:${'auto'}; min-width:40px; height:40px; border-radius:10px;
+            flex-shrink:0; min-width:40px; height:40px; border-radius:10px;
             background:transparent; border:1px solid transparent; color:var(--text);
             font-size:1.05rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
             gap:4px; padding:0 8px; transition:all 0.2s; position:relative;
+            touch-action:manipulation; pointer-events:auto;
         }
         .tbtn:active{ transform:scale(0.92); }
         .tbtn.open{ background:rgba(0,229,255,0.14); border-color:var(--panel-border-strong); box-shadow:var(--glow-accent); }
@@ -172,7 +174,7 @@
         }
         .popover.open{
             max-height:70vh; opacity:1; transform:translateY(0); pointer-events:auto;
-            overflow-y:auto;
+            overflow-y:auto; z-index:750; /* pastikan panel terbuka selalu di atas toolbar, tidak pernah tertutup/tidak bisa diklik */
         }
         .popover-inner{ padding:12px; }
         @media (min-width:768px){ .popover{ left:10px; right:auto; width:340px; } }
@@ -194,6 +196,7 @@
             background:linear-gradient(135deg, var(--accent), var(--accent2)); border:none; border-radius:8px;
             color:#04060d; padding:9px 14px; font-weight:700;
             cursor:pointer; font-size:0.8rem; flex-shrink:0; box-shadow:var(--glow-accent);
+            touch-action:manipulation; pointer-events:auto; position:relative; z-index:1;
         }
         body.sunlight-mode .search-row button{ background:#ffdd00; color:#000; border:2px solid #000; box-shadow:none; }
         .search-row input:disabled, .search-row button:disabled{ opacity:0.4; cursor:not-allowed; filter:grayscale(0.4); }
@@ -402,8 +405,8 @@
         <h1>Peta Interaktif</h1>
     </div>
     <div class="header-controls">
-        <button id="btnSunlight" title="Mode kontras tinggi untuk dibaca di bawah terik matahari">☀️</button>
-        <button id="btnFullscreen" title="Layar penuh">⛶</button>
+        <button type="button" id="btnSunlight" title="Mode kontras tinggi untuk dibaca di bawah terik matahari">☀️</button>
+        <button type="button" id="btnFullscreen" title="Layar penuh">⛶</button>
     </div>
 </header>
 
@@ -412,12 +415,12 @@
 
     <!-- Toolbar ikon ramping: semua panel di bawah ini bisa show/hide lewat tombol ini -->
     <div class="toolbar glass" id="toolbar">
-        <button class="tbtn" id="tbSearch" title="Cari lokasi">🔍<span class="tb-label">Cari</span></button>
-        <button class="tbtn active-layer" id="tbLayers" title="Jenis peta">🗺️<span class="tb-label">Peta</span></button>
-        <button class="tbtn" id="tbCompass" title="Kompas">🧭<span class="tb-label">Arah</span></button>
-        <button class="tbtn" id="tbWeather" title="Cuaca">🌤️<span class="tb-label">Cuaca</span></button>
-        <button class="tbtn" id="tbInfo" title="Info GPS & alamat">ℹ️<span class="tb-label">Info</span></button>
-        <button class="tbtn loc" id="locBtn" title="Aktifkan/matikan lokasi saya (GPS)">📍<span class="loc-pulse"></span><span class="tb-label" id="locLabel">GPS</span></button>
+        <button type="button" class="tbtn" id="tbSearch" title="Cari lokasi">🔍<span class="tb-label">Cari</span></button>
+        <button type="button" class="tbtn active-layer" id="tbLayers" title="Jenis peta">🗺️<span class="tb-label">Peta</span></button>
+        <button type="button" class="tbtn" id="tbCompass" title="Kompas">🧭<span class="tb-label">Arah</span></button>
+        <button type="button" class="tbtn" id="tbWeather" title="Cuaca">🌤️<span class="tb-label">Cuaca</span></button>
+        <button type="button" class="tbtn" id="tbInfo" title="Info GPS & alamat">ℹ️<span class="tb-label">Info</span></button>
+        <button type="button" class="tbtn loc" id="locBtn" title="Aktifkan/matikan lokasi saya (GPS)">📍<span class="loc-pulse"></span><span class="tb-label" id="locLabel">GPS</span></button>
     </div>
 
     <!-- Popover: Pencarian -->
@@ -426,7 +429,7 @@
             <div class="popover-title">🔍 Cari Lokasi</div>
             <div class="search-row">
                 <input type="text" id="searchInput" placeholder="Cari desa, kelurahan, gang, perumahan..." autocomplete="off" />
-                <button id="searchBtn">Cari</button>
+                <button type="button" id="searchBtn">Cari</button>
             </div>
             <div class="search-results" id="searchResults"></div>
             <div class="search-disabled-hint" id="searchDisabledHint">🔒 Matikan GPS (tombol 📍) dahulu untuk mencari lokasi lain.</div>
@@ -438,13 +441,13 @@
         <div class="popover-inner">
             <div class="popover-title">🗺️ Jenis Peta</div>
             <div class="layer-grid" id="layerControl">
-                <button data-layer="osm" class="active">🗺️ Peta</button>
-                <button data-layer="sat" title="Citra satelit polos">🛰️ Satelit</button>
-                <button data-layer="aerial" title="Citra satelit + label jalan/nama tempat (Hybrid)">✈️ Udara</button>
-                <button data-layer="aerialhq" title="Citra udara resolusi tinggi (Esri World Imagery Clarity)">🌆 Udara HQ</button>
-                <button data-layer="terrain">⛰️ Medan</button>
-                <button data-layer="hot">🏘️ Detail</button>
-                <button data-layer="dark">🌙 Gelap</button>
+                <button type="button" data-layer="osm" class="active">🗺️ Peta</button>
+                <button type="button" data-layer="sat" title="Citra satelit polos">🛰️ Satelit</button>
+                <button type="button" data-layer="aerial" title="Citra satelit + label jalan/nama tempat (Hybrid)">✈️ Udara</button>
+                <button type="button" data-layer="aerialhq" title="Citra udara resolusi tinggi (Esri World Imagery Clarity)">🌆 Udara HQ</button>
+                <button type="button" data-layer="terrain">⛰️ Medan</button>
+                <button type="button" data-layer="hot">🏘️ Detail</button>
+                <button type="button" data-layer="dark">🌙 Gelap</button>
             </div>
         </div>
     </div>
@@ -469,7 +472,7 @@
                     <span id="compassDir">Sensor belum aktif</span>
                 </div>
             </div>
-            <button class="compass-enable-btn" id="compassEnableBtn">Aktifkan Sensor Kompas</button>
+            <button type="button" class="compass-enable-btn" id="compassEnableBtn">Aktifkan Sensor Kompas</button>
         </div>
     </div>
 
@@ -498,7 +501,7 @@
             </div>
             <div class="addr-row" id="addrRow">
                 <span class="addr-text" id="addrText">-</span>
-                <button class="copy-btn" id="copyAddrBtn">📋</button>
+                <button type="button" class="copy-btn" id="copyAddrBtn">📋</button>
             </div>
         </div>
     </div>
@@ -557,6 +560,18 @@
     // ======================================================================
     // PANEL / POPOVER: semua panel dashboard bisa show/hide via toolbar
     // ======================================================================
+    // Sinkronkan tinggi asli toolbar ke variabel CSS --toolbar-h, supaya panel
+    // (termasuk panel Cari) tidak pernah tertindih/ketutup toolbar di perangkat nyata
+    // (ukuran toolbar bisa sedikit berbeda dari asumsi tetap tergantung perangkat).
+    const toolbarEl = document.getElementById('toolbar');
+    function syncToolbarHeight() {
+        if (!toolbarEl) return;
+        const h = toolbarEl.getBoundingClientRect().height;
+        if (h > 0) document.documentElement.style.setProperty('--toolbar-h', h + 'px');
+    }
+    syncToolbarHeight();
+    window.addEventListener('resize', syncToolbarHeight);
+
     const popovers = {
         search: document.getElementById('popSearch'),
         layers: document.getElementById('popLayers'),
@@ -962,6 +977,9 @@
         if (isLocTracking) stopLocationTracking();
         if (!searchInput.value.trim()) hideSearchResults();
     });
+    // Pastikan state awal tombol/input "Cari" eksplisit aktif (belum ada GPS yang berjalan),
+    // sesuai rule eksklusivitas: Cari <-> MyLocation hanya salah satu yang aktif.
+    setSearchEnabled(true);
 
     // ======================================================================
     // LOKASI SAYA (GPS)
@@ -973,12 +991,6 @@
     let addressTimer = null;
     let lastGeocodedLatLng = null;
     let geocodeInFlight = false;
-    // Token sesi GPS: dinaikkan setiap kali GPS start/stop. Semua callback async
-    // (posisi GPS, reverse-geocode) membawa token saat dibuat dan memeriksa ulang
-    // token ini sebelum menyentuh UI — sehingga hasil "basi" dari sesi GPS lama
-    // (mis. proses reverse-geocode yang masih berjalan saat user beralih ke "cari")
-    // tidak bisa lagi menimpa lokasi aktif yang baru.
-    let gpsSessionId = 0;
     const gpsStatusEl = document.getElementById('gpsStatus');
     const gpsCoordsEl = document.getElementById('gpsCoords');
     const addrRowEl = document.getElementById('addrRow');
@@ -1006,12 +1018,7 @@
         const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
         return 2 * R * Math.asin(Math.sqrt(h));
     }
-    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false, sessionId } = {}) {
-        // Jika dipanggil dari alur GPS (sessionId diisi) tapi sesi itu sudah
-        // tidak berlaku lagi (GPS dimatikan / lokasi aktif berpindah ke "cari"
-        // sebelum proses ini selesai), batalkan — jangan sentuh UI sama sekali.
-        const isStale = () => sessionId !== undefined && sessionId !== gpsSessionId;
-        if (isStale()) return;
+    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false } = {}) {
         if (geocodeInFlight) return;
         const point = { lat, lng };
         if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) return;
@@ -1023,7 +1030,6 @@
         try {
             const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
             const data = await fetchWithProxy(url);
-            if (isStale()) return; // sesi GPS berakhir selagi menunggu respons — abaikan hasil basi
             const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
             const full = (data && data.display_name) || '';
             lastGeocodedLatLng = point;
@@ -1033,7 +1039,6 @@
             }
             showAddress(detail);
         } catch (e) {
-            if (isStale()) return;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat: ${e.message}</div></div>`);
         } finally {
             geocodeInFlight = false;
@@ -1154,8 +1159,20 @@
         }
         window.addEventListener('deviceorientationabsolute', handleOrientation, true);
         window.addEventListener('deviceorientation', handleOrientation, true);
+        // Begitu sensor berhasil diaktifkan (izin diberikan / listener terpasang),
+        // kompas langsung berstatus aktif — tidak menunggu event pertama datang,
+        // supaya "Aktifkan Sensor Kompas" langsung membuat kompas aktif sesuai rule.
+        if (!compassActive) {
+            compassActive = true;
+            compassEnableBtn.style.display = 'none';
+            compassDir.innerText = 'Menunggu data arah…';
+        }
         showSensorToast('🧭 Kompas aktif — pegang HP tegak untuk hasil terbaik.');
-        setTimeout(() => { if (!compassActive) showSensorToast('Sensor kompas tidak terdeteksi di perangkat ini.'); }, 2500);
+        setTimeout(() => {
+            if (pendingRawHeading == null && smoothedHeading == null) {
+                showSensorToast('Sensor kompas belum mengirim data di perangkat ini.');
+            }
+        }, 2500);
     }
     compassEnableBtn.addEventListener('click', enableCompass);
     if (!(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')) {
@@ -1390,7 +1407,6 @@
     }
 
     function stopLocationTracking() {
-        gpsSessionId++; // batalkan sesi GPS ini — semua callback/async yang masih berjalan akan diabaikan
         if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         if (addressTimer) { clearInterval(addressTimer); addressTimer = null; }
         if (weatherTimer) { clearInterval(weatherTimer); weatherTimer = null; }
@@ -1418,11 +1434,8 @@
             setSearchEnabled(false);
             document.getElementById('locLabel').innerText = '...';
             let firstFix = true;
-            gpsSessionId++;
-            const mySession = gpsSessionId; // token sesi GPS ini — dicek di tiap callback async di bawah
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
-                    if (mySession !== gpsSessionId) return; // sesi ini sudah dihentikan (mis. user beralih ke "cari") — abaikan
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     setActiveLocation(lat, lng, 'gps');
@@ -1441,7 +1454,7 @@
                     gpsStatusEl.innerText = 'Aktif';
                     gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(pos.coords.accuracy || 0)}m)`;
 
-                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix, sessionId: mySession });
+                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix });
                     checkNearbyTransport(lat, lng, firstFix);
                     maybeFetchWeather(lat, lng, firstFix);
                     maybeFetchGeophysics(lat, lng, firstFix);
@@ -1450,21 +1463,18 @@
                         firstFix = false;
                         if (!addressTimer) {
                             addressTimer = setInterval(() => {
-                                if (mySession !== gpsSessionId || !myMarker) return;
                                 const p = myMarker.getLatLng();
-                                reverseGeocodeAndUpdate(p.lat, p.lng, { sessionId: mySession });
+                                reverseGeocodeAndUpdate(p.lat, p.lng);
                             }, ADDRESS_REFRESH_MS);
                         }
                         if (!transportTimer) {
                             transportTimer = setInterval(() => {
-                                if (mySession !== gpsSessionId || !myMarker) return;
                                 const p = myMarker.getLatLng();
                                 checkNearbyTransport(p.lat, p.lng, true);
                             }, TRANSPORT_CHECK_INTERVAL_MS);
                         }
                         if (!weatherTimer) {
                             weatherTimer = setInterval(() => {
-                                if (mySession !== gpsSessionId || !myMarker) return;
                                 const p = myMarker.getLatLng();
                                 maybeFetchWeather(p.lat, p.lng, true);
                                 maybeFetchGeophysics(p.lat, p.lng, true);
@@ -1473,7 +1483,6 @@
                     }
                 },
                 (err) => {
-                    if (mySession !== gpsSessionId) return; // sesi ini sudah tidak berlaku — abaikan error basi
                     alert('Error GPS: ' + err.message);
                     document.getElementById('locLabel').innerText = 'GPS';
                     locBtn.classList.remove('active');
