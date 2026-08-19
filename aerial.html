@@ -11,8 +11,8 @@
     <style>
         :root{
             --bg1:#04060d; --bg2:#0a1220; --bg3:#0d1b2e;
-            --panel-bg:rgba(10,16,30,0.80);
-            --panel-bg-solid:rgba(10,16,30,0.97);
+            --panel-bg:rgba(10,16,30,0.72);
+            --panel-bg-solid:rgba(10,16,30,0.94);
             --panel-border:rgba(0,229,255,0.28);
             --panel-border-strong:rgba(0,229,255,0.55);
             --accent:#00e5ff;
@@ -23,16 +23,16 @@
             --text:#eaf5ff;
             --text-dim:#a9bcda;
             --glow-accent:0 0 14px rgba(0,229,255,0.55), 0 0 2px rgba(0,229,255,0.9);
+            --glow-accent2:0 0 14px rgba(138,92,255,0.55);
             --glow-good:0 0 14px rgba(0,255,176,0.55);
             --radius:14px;
             --radius-sm:9px;
             --font-head:'Rajdhani', 'Segoe UI', sans-serif;
             --font-mono:'Share Tech Mono', 'Consolas', monospace;
-            --toolbar-h:48px;
         }
         body.sunlight-mode{
             --bg1:#f4f6f8; --bg2:#eef1f4; --bg3:#e7ecf1;
-            --panel-bg:rgba(255,255,255,0.98);
+            --panel-bg:rgba(255,255,255,0.97);
             --panel-bg-solid:#ffffff;
             --panel-border:#0a0a0a;
             --panel-border-strong:#000000;
@@ -44,6 +44,7 @@
             --text:#050608;
             --text-dim:#20242c;
             --glow-accent:none;
+            --glow-accent2:none;
             --glow-good:none;
         }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -63,61 +64,67 @@
             transition: background 0.4s ease, color 0.3s ease;
         }
         body.sunlight-mode{ background: var(--bg1); }
-        .glass{
-            background:var(--panel-bg); backdrop-filter:blur(10px);
-            border:1px solid var(--panel-border); border-radius:var(--radius);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.02);
-        }
-        body.sunlight-mode .glass{ box-shadow:0 3px 0 #000; border-width:2px; }
 
-        /* ============================= HEADER (ramping) ============================= */
+        /* ============================= HEADER ============================= */
         header {
-            background: linear-gradient(90deg, rgba(10,16,30,0.94), rgba(13,27,46,0.94));
+            background: linear-gradient(90deg, rgba(10,16,30,0.92), rgba(13,27,46,0.92));
             backdrop-filter: blur(10px);
-            padding: 6px 10px;
+            padding: 9px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--panel-border);
+            box-shadow: 0 1px 0 rgba(0,229,255,0.15), 0 4px 18px rgba(0,0,0,0.35);
             z-index: 1000;
             flex-shrink: 0;
             position: relative;
             overflow: hidden;
-            min-height:44px;
         }
         body.sunlight-mode header{ background:#ffffff; box-shadow:0 2px 0 #000; }
-        .brand{ display:flex; align-items:center; gap:7px; min-width:0; }
+        header::after{
+            content:''; position:absolute; left:-40%; top:0; bottom:0; width:30%;
+            background:linear-gradient(90deg, transparent, rgba(0,229,255,0.12), transparent);
+            animation: headerSweep 6s linear infinite;
+            pointer-events:none;
+        }
+        body.sunlight-mode header::after{ display:none; }
+        @keyframes headerSweep{ 0%{ left:-40%; } 100%{ left:120%; } }
+
+        .brand{ display:flex; align-items:center; gap:9px; }
         .brand-badge{
-            width:26px; height:26px; border-radius:8px; flex-shrink:0;
-            display:flex; align-items:center; justify-content:center; font-size:0.8rem;
+            width:34px; height:34px; border-radius:10px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center; font-size:1.05rem;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
             box-shadow: var(--glow-accent);
             position:relative;
         }
         .brand-badge .live-dot{
-            position:absolute; top:-2px; right:-2px; width:7px; height:7px; border-radius:50%;
-            background:var(--accent3); box-shadow:0 0 6px var(--accent3);
+            position:absolute; top:-3px; right:-3px; width:9px; height:9px; border-radius:50%;
+            background:var(--accent3); box-shadow:0 0 8px var(--accent3);
             animation: livePulse 1.6s ease-in-out infinite;
         }
         body.sunlight-mode .brand-badge .live-dot{ box-shadow:none; border:1px solid #000; }
         @keyframes livePulse{ 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:0.4; transform:scale(0.8);} }
         header h1 {
-            font-family: var(--font-head); font-size: 0.95rem; font-weight:700;
-            letter-spacing:0.3px; color:var(--text); white-space:nowrap;
-            overflow:hidden; text-overflow:ellipsis;
+            font-family: var(--font-head); font-size: 1.12rem; font-weight:700;
+            letter-spacing:0.5px; color:var(--text);
+            text-shadow: 0 0 10px rgba(0,229,255,0.35);
         }
-        .header-controls { display:flex; gap:6px; flex-shrink:0; }
+        body.sunlight-mode header h1{ text-shadow:none; }
+        header h1 small{ display:block; font-size:0.6rem; font-weight:600; color:var(--accent); letter-spacing:2px; }
+
+        .header-controls { display:flex; gap:8px; }
         .header-controls button {
             background:rgba(255,255,255,0.06); color:var(--text); border:1px solid var(--panel-border);
-            width:32px; height:32px; border-radius:8px; font-size:0.9rem; font-weight:600;
-            cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center;
+            padding:7px 11px; border-radius:var(--radius-sm); font-size:0.78rem; font-weight:600;
+            cursor:pointer; transition:all 0.2s; letter-spacing:0.2px;
         }
-        .header-controls button:active { transform:scale(0.92); }
+        .header-controls button:active { transform:scale(0.95); }
         .header-controls button.on{
             background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#04060d;
             border-color:transparent; box-shadow:var(--glow-accent);
         }
-        body.sunlight-mode .header-controls button{ background:#fff; border:2px solid #000; }
+        body.sunlight-mode .header-controls button{ background:#fff; border:2px solid #000; font-weight:700; }
         body.sunlight-mode .header-controls button.on{ background:#ffdd00; color:#000; }
 
         main {
@@ -127,217 +134,205 @@
             flex:1; width:100%; background:#070b13; z-index:1;
         }
 
-        /* ============================= TOOLBAR IKON (ramping, peta tetap fokus) ============================= */
-        .toolbar{
+        /* ============================= KONTROL ATAS PETA ============================= */
+        .map-controls {
             position:absolute; top:10px; left:10px; right:10px;
-            z-index:700; display:flex; gap:6px; padding:5px;
-            overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-        }
-        .toolbar::-webkit-scrollbar{ display:none; }
-        .tbtn{
-            flex-shrink:0; width:${'auto'}; min-width:40px; height:40px; border-radius:10px;
-            background:transparent; border:1px solid transparent; color:var(--text);
-            font-size:1.05rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
-            gap:4px; padding:0 8px; transition:all 0.2s; position:relative;
-        }
-        .tbtn:active{ transform:scale(0.92); }
-        .tbtn.open{ background:rgba(0,229,255,0.14); border-color:var(--panel-border-strong); box-shadow:var(--glow-accent); }
-        body.sunlight-mode .tbtn.open{ background:#ffdd00; }
-        .tbtn .tb-label{ font-size:0.72rem; font-weight:700; color:var(--text-dim); display:none; }
-        @media (min-width:520px){ .tbtn .tb-label{ display:inline; } }
-        .tbtn.loc.active{
-            background:linear-gradient(135deg, var(--accent3), var(--accent)); color:#04060d;
-            border-color:transparent; box-shadow:var(--glow-good);
-        }
-        body.sunlight-mode .tbtn.loc.active{ background:#00e08a; color:#000; }
-        .tbtn.loc .loc-pulse{
-            position:absolute; top:2px; right:2px; width:8px; height:8px; border-radius:50%;
-            background:var(--accent3); box-shadow:0 0 6px var(--accent3); display:none;
-        }
-        .tbtn.loc.active .loc-pulse{ display:block; animation: livePulse 1.4s ease-in-out infinite; }
-        .tbtn .tb-badge{
-            position:absolute; top:-3px; right:-3px; min-width:15px; height:15px; padding:0 3px; border-radius:8px;
-            background:var(--danger); color:#fff; font-size:0.6rem; font-weight:800; display:none;
-            align-items:center; justify-content:center; line-height:1;
-        }
-        .tbtn .tb-badge.show{ display:flex; }
-
-        /* ============================= POPOVER (semua panel dashboard: show/hide) ============================= */
-        .popover{
-            position:absolute; left:10px; right:10px; top:calc(var(--toolbar-h) + 20px);
-            z-index:650; max-height:0; overflow:hidden; opacity:0;
-            transform:translateY(-8px);
-            transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.2s ease;
+            z-index:500; display:flex; flex-wrap:wrap; gap:8px;
             pointer-events:none;
         }
-        .popover.open{
-            max-height:70vh; opacity:1; transform:translateY(0); pointer-events:auto;
-            overflow-y:auto;
+        .map-controls > * { pointer-events:auto; }
+        .glass{
+            background:var(--panel-bg); backdrop-filter:blur(10px);
+            border:1px solid var(--panel-border); border-radius:var(--radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.02);
         }
-        .popover-inner{ padding:12px; }
-        @media (min-width:768px){ .popover{ left:10px; right:auto; width:340px; } }
+        body.sunlight-mode .glass{ box-shadow:0 3px 0 #000; border-width:2px; }
 
-        .popover-title{
-            font-family:var(--font-head); font-weight:700; font-size:0.78rem; letter-spacing:1px;
-            color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;
+        .search-box {
+            padding:7px 11px; display:flex; gap:6px; align-items:center;
+            flex:1 1 200px; min-width:160px;
+            position:relative;
         }
+        .search-box .sicon{ color:var(--accent); font-size:0.95rem; flex-shrink:0; }
+        .search-box input {
+            background:transparent; border:none; color:var(--text);
+            padding:4px 0; font-size:0.92rem; font-weight:600; outline:none; width:100%;
+        }
+        .search-box input::placeholder { color:var(--text-dim); font-weight:500; }
+        .search-box button {
+            background:linear-gradient(135deg, var(--accent), var(--accent2)); border:none; border-radius:7px;
+            color:#04060d; padding:6px 13px; font-weight:700;
+            cursor:pointer; font-size:0.78rem; flex-shrink:0; box-shadow:var(--glow-accent);
+            letter-spacing:0.3px;
+        }
+        body.sunlight-mode .search-box button{ background:#ffdd00; color:#000; border:2px solid #000; box-shadow:none; }
+        .search-box button:active{ transform:scale(0.94); }
+        /* Dinonaktifkan otomatis ketika lokasi GPS (MyLocation) sedang aktif,
+           supaya hanya satu sumber lokasi yang aktif dalam satu waktu */
+        .search-box.disabled { opacity:0.45; }
+        .search-box input:disabled, .search-box button:disabled { cursor:not-allowed; }
 
-        /* ---- Popover: Pencarian ---- */
-        .search-row{ display:flex; gap:6px; align-items:center; }
-        .search-row input {
-            background:rgba(255,255,255,0.06); border:1px solid var(--panel-border); border-radius:8px;
-            color:var(--text); padding:9px 10px; font-size:0.9rem; font-weight:600; outline:none; width:100%;
-        }
-        body.sunlight-mode .search-row input{ background:#fff; border:2px solid #000; }
-        .search-row input::placeholder { color:var(--text-dim); font-weight:500; }
-        .search-row button {
-            background:linear-gradient(135deg, var(--accent), var(--accent2)); border:none; border-radius:8px;
-            color:#04060d; padding:9px 14px; font-weight:700;
-            cursor:pointer; font-size:0.8rem; flex-shrink:0; box-shadow:var(--glow-accent);
-        }
-        body.sunlight-mode .search-row button{ background:#ffdd00; color:#000; border:2px solid #000; box-shadow:none; }
         .search-results {
-            margin-top:8px; border-radius:10px; overflow:hidden;
-            border:1px solid var(--panel-border-strong); display:none; max-height:280px; overflow-y:auto;
+            position:absolute; top:calc(100% + 6px); left:0; right:0;
+            background:var(--panel-bg-solid); backdrop-filter:blur(10px);
+            border:1px solid var(--panel-border-strong); border-radius:var(--radius);
+            max-height:280px; overflow-y:auto;
+            display:none; z-index:900;
+            box-shadow:0 10px 28px rgba(0,0,0,0.55);
         }
-        .search-results.show { display:block; }
+        .search-results.show { display:block; animation: dropIn 0.18s ease; }
+        @keyframes dropIn{ from{ opacity:0; transform:translateY(-6px);} to{ opacity:1; transform:translateY(0);} }
         .search-results .result-item {
             padding:9px 11px; border-bottom:1px solid rgba(255,255,255,0.06);
-            cursor:pointer; font-size:0.82rem; line-height:1.4; background:rgba(0,0,0,0.15);
+            cursor:pointer; font-size:0.82rem; line-height:1.4;
         }
-        body.sunlight-mode .search-results .result-item{ border-bottom:1px solid #ccc; background:#fff; }
+        body.sunlight-mode .search-results .result-item{ border-bottom:1px solid #ccc; }
         .search-results .result-item:last-child { border-bottom:none; }
         .search-results .result-item:active,
-        .search-results .result-item.hover { background:rgba(0,229,255,0.14); }
+        .search-results .result-item.hover { background:rgba(0,229,255,0.10); }
         .search-results .result-item .r-title { color:var(--text); font-weight:700; }
         .search-results .result-item .r-type { color:var(--accent); font-size:0.68rem; margin-left:4px; font-weight:700; }
         .search-results .result-item .r-sub { color:var(--text-dim); font-size:0.74rem; margin-top:2px; font-weight:600; }
         .search-results .result-empty { padding:12px; color:var(--text-dim); font-size:0.82rem; text-align:center; font-weight:600; }
-        .search-results .result-item .r-title, .search-results .result-item .r-sub { word-break:break-word; }
 
-        /* ---- Popover: Layer peta ---- */
-        .layer-grid{ display:flex; flex-wrap:wrap; gap:6px; }
-        .layer-grid button {
-            background:rgba(255,255,255,0.05); border:1px solid var(--panel-border);
-            color:var(--text-dim); padding:8px 12px; border-radius:9px;
-            font-size:0.78rem; font-weight:700; cursor:pointer; transition:all 0.2s;
+        .layer-control {
+            display:flex; gap:4px;
+            padding:4px;
+            max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+            scrollbar-width:none;
         }
-        .layer-grid button.active {
+        .layer-control::-webkit-scrollbar { display:none; }
+        .layer-control button {
+            background:transparent; border:1px solid transparent;
+            color:var(--text-dim); padding:6px 11px; border-radius:8px;
+            font-size:0.76rem; font-weight:700; cursor:pointer; transition:all 0.2s;
+            white-space:nowrap; flex-shrink:0;
+        }
+        .layer-control button.active {
             background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#04060d;
             border-color:transparent; box-shadow:var(--glow-accent);
         }
-        body.sunlight-mode .layer-grid button.active{ background:#ffdd00; color:#000; }
-        body.sunlight-mode .layer-grid button{ color:#000; background:#fff; }
+        body.sunlight-mode .layer-control button.active{ background:#ffdd00; color:#000; }
+        body.sunlight-mode .layer-control button{ color:#000; }
+        .layer-control button:active { opacity:0.7; }
 
-        /* ---- Popover: Kompas ---- */
-        .compass-big{ display:flex; align-items:center; gap:16px; }
-        .compass-dial-wrap{
-            position:relative; width:88px; height:88px;
-            flex:0 0 88px; /* ukuran tetap mutlak: teks di sampingnya tidak akan pernah menggeser dial ini */
-            isolation:isolate; contain:layout; /* cegah reflow dari elemen sebelah mempengaruhi dial */
+        .loc-btn {
+            padding:8px 14px; font-size:0.8rem; font-weight:700;
+            cursor:pointer; display:flex; align-items:center; gap:5px;
+            flex-shrink:0; color:var(--text); border:1px solid var(--panel-border);
         }
-        .compass-dial-wrap svg{
-            width:100%; height:100%; transform-origin:50% 50%;
-            transition: transform 0.1s linear;
-            will-change: transform;
-            backface-visibility:hidden;
-            -webkit-font-smoothing:antialiased;
+        .loc-btn.active { border-color:var(--accent); color:#04060d; background:linear-gradient(135deg, var(--accent3), var(--accent)); box-shadow:var(--glow-good); }
+        body.sunlight-mode .loc-btn.active{ background:#00e08a; color:#000; }
+
+        /* ---- Chip Kompas ---- */
+        .compass-chip{
+            display:flex; align-items:center; gap:8px; padding:5px 10px; cursor:pointer;
+            flex-shrink:0; user-select:none;
         }
-        .compass-dial .dial-ring{ fill:none; stroke:var(--accent); stroke-width:1.3; opacity:0.6; }
-        .compass-dial text{ font-size:6.5px; font-weight:800; fill:var(--text); font-family:var(--font-head); }
+        .compass-dial-wrap{ position:relative; width:38px; height:38px; flex-shrink:0; }
+        .compass-dial-wrap svg{ width:100%; height:100%; transition: transform 0.15s linear; transform-origin:50% 50%; }
+        .compass-dial .dial-ring{ fill:none; stroke:var(--accent); stroke-width:1.4; opacity:0.6; }
+        .compass-dial text{ font-size:7px; font-weight:800; fill:var(--text); font-family:var(--font-head); }
         .compass-dial .dial-n{ fill:var(--danger); }
         .compass-pointer{
-            position:absolute; top:2px; left:50%; transform:translateX(-50%);
-            width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent;
-            border-bottom:11px solid var(--accent3); filter:drop-shadow(0 0 3px rgba(0,255,176,0.8));
+            position:absolute; top:1px; left:50%; transform:translateX(-50%);
+            width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent;
+            border-bottom:7px solid var(--accent3); filter:drop-shadow(0 0 3px rgba(0,255,176,0.8));
         }
         body.sunlight-mode .compass-pointer{ border-bottom-color:#c40033; filter:none; }
-        /* Kolom teks: lebar & tinggi tetap (fixed) supaya panjang kata arah mata angin
-           ("Utara" vs "Barat Daya") TIDAK PERNAH mengubah ukuran/posisi kompas di sebelahnya */
-        .compass-readout{
-            display:flex; flex-direction:column; gap:2px;
-            flex:1 1 auto; min-width:0;
-        }
-        #compassDeg{
-            font-family:var(--font-mono); font-size:1.6rem; font-weight:700; color:var(--accent); line-height:1.2;
-            font-variant-numeric:tabular-nums; letter-spacing:0.5px;
-        }
-        #compassDir{
-            font-size:0.82rem; font-weight:700; color:var(--text-dim);
-            min-height:1.3em; /* jaga tinggi baris tetap meski teks kosong sesaat */
-            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-            display:block; width:100%;
-        }
-        .compass-enable-btn{
-            margin-top:10px; width:100%; padding:9px; border-radius:9px; border:1px solid var(--panel-border-strong);
-            background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#04060d; font-weight:700;
-            cursor:pointer; font-size:0.82rem;
-        }
-        body.sunlight-mode .compass-enable-btn{ background:#ffdd00; color:#000; border:2px solid #000; }
+        .compass-text{ display:flex; flex-direction:column; line-height:1.15; }
+        .compass-text #compassDeg{ font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:var(--accent); }
+        .compass-text #compassDir{ font-size:0.66rem; font-weight:700; color:var(--text-dim); white-space:nowrap; }
 
-        /* ---- Popover: Cuaca ---- */
-        .w-row{ display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px dashed rgba(255,255,255,0.12); font-weight:600; font-size:0.85rem; }
-        body.sunlight-mode .w-row{ border-bottom:1px dashed #999; }
-        .w-row:last-child{ border-bottom:none; }
-        .w-row span:first-child{ color:var(--text-dim); }
-        .w-row b{ color:var(--accent); font-weight:800; }
-        .w-error{ color:var(--danger); font-weight:700; }
-        .w-updated{ margin-top:6px; font-size:0.68rem; color:var(--text-dim); text-align:right; font-weight:600; }
+        /* ---- Chip Cuaca ---- */
+        .weather-box{ position:relative; flex-shrink:0; }
+        .weather-toggle{
+            background:transparent; border:none; color:var(--text); cursor:pointer;
+            padding:8px 12px; font-size:0.8rem; font-weight:700; display:flex; align-items:center; gap:6px;
+        }
+        .weather-toggle .chev{ font-size:0.65rem; color:var(--text-dim); transition:transform 0.2s; }
+        .weather-box.open .weather-toggle .chev{ transform:rotate(180deg); }
+        .weather-panel{
+            position:absolute; top:calc(100% + 6px); right:0; min-width:250px; max-width:290px;
+            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong); border-radius:var(--radius);
+            padding:10px 12px; display:none; z-index:900; box-shadow:0 10px 28px rgba(0,0,0,0.55);
+            font-size:0.8rem; max-height:min(60vh, 420px); overflow-y:auto;
+        }
+        .weather-box.open .weather-panel{ display:block; animation: dropIn 0.18s ease; }
+        .weather-panel .w-section-title{
+            font-family:var(--font-head); font-weight:700; font-size:0.68rem; letter-spacing:1px;
+            color:var(--accent); text-transform:uppercase; margin:8px 0 2px;
+        }
+        .weather-panel .w-section-title:first-child{ margin-top:0; }
+        .weather-panel .w-row{ display:flex; justify-content:space-between; gap:10px; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.1); font-weight:600; }
+        body.sunlight-mode .weather-panel .w-row{ border-bottom:1px dashed #999; }
+        .weather-panel .w-row:last-child{ border-bottom:none; }
+        .weather-panel .w-row span:first-child{ color:var(--text-dim); }
+        .weather-panel .w-row b{ color:var(--accent); font-weight:800; }
+        .weather-panel .w-error{ color:var(--danger); font-weight:700; }
+        .weather-panel .w-updated{ margin-top:6px; font-size:0.68rem; color:var(--text-dim); text-align:right; font-weight:600; }
 
-        /* ---- Popover: Info GPS & alamat ---- */
-        .info-row{ font-size:0.85rem; color:var(--text-dim); line-height:1.7; font-weight:600; }
-        .info-row .label{ color:var(--text-dim); }
-        .info-row .value{ color:var(--accent); font-weight:800; font-family:var(--font-mono); }
-        .addr-row {
-            margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.14);
+        /* ============================= BOTTOM STACK ============================= */
+        .bottom-stack{
+            position:absolute; left:14px; right:14px; bottom:14px; z-index:600;
+            display:flex; flex-direction:column; gap:8px; pointer-events:none; max-height:60%;
+        }
+        .bottom-stack > *{ pointer-events:auto; }
+        @media (min-width:768px){ .bottom-stack{ max-width:380px; } }
+
+        /* ---- Feed Transportasi (badge live) ---- */
+        .transport-feed{ display:none; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; }
+        .transport-feed.show{ display:flex; }
+        .transport-badge{
+            display:flex; align-items:center; gap:8px;
+            background:var(--panel-bg); backdrop-filter:blur(10px);
+            border:1px solid var(--panel-border-strong); border-radius:10px;
+            padding:8px 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+            animation: badgeIn 0.35s ease;
+        }
+        body.sunlight-mode .transport-badge{ border-width:2px; box-shadow:0 3px 0 #000; }
+        @keyframes badgeIn{ from{ opacity:0; transform:translateY(10px) scale(0.97);} to{ opacity:1; transform:translateY(0) scale(1);} }
+        .transport-badge .tb-icon{ font-size:1.15rem; flex-shrink:0; filter:drop-shadow(0 0 4px rgba(0,229,255,0.6)); }
+        .transport-badge .tb-text{
+            font-size:0.76rem; font-weight:800; letter-spacing:0.2px; color:var(--text);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+            line-height:1.3;
+        }
+        body.sunlight-mode .transport-badge .tb-text{ text-shadow:none; }
+        .transport-badge{ border-left:4px solid var(--accent); }
+        .transport-badge.arrived{
+            border-left:4px solid var(--accent3);
+            box-shadow: 0 0 0 1px rgba(0,255,176,0.35), 0 6px 18px rgba(0,255,176,0.18);
+            animation: badgeIn 0.35s ease, arrivedPulse 1.8s ease-in-out infinite;
+        }
+        body.sunlight-mode .transport-badge.arrived{ box-shadow:0 3px 0 #000; animation:badgeIn 0.35s ease; }
+        @keyframes arrivedPulse{ 0%,100%{ box-shadow:0 0 0 1px rgba(0,255,176,0.35), 0 6px 18px rgba(0,255,176,0.18);} 50%{ box-shadow:0 0 0 1px rgba(0,255,176,0.7), 0 6px 26px rgba(0,255,176,0.4);} }
+
+        /* ---- Info panel ---- */
+        .info-panel {
+            padding:10px 13px;
+            font-size:0.82rem; color:var(--text-dim); max-width:100%;
+            line-height:1.6; font-weight:600;
+        }
+        .info-panel .label { color:var(--text-dim); }
+        .info-panel .value { color:var(--accent); font-weight:800; font-family:var(--font-mono); }
+        .info-panel .addr-row {
+            margin-top:6px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.12);
             display:none;
         }
-        body.sunlight-mode .addr-row{ border-top:1px dashed #999; }
-        .addr-row.show { display:flex; align-items:flex-start; gap:6px; }
-        .addr-text {
-            color:var(--text); font-size:0.84rem; flex:1; font-weight:700; line-height:1.5;
+        body.sunlight-mode .info-panel .addr-row{ border-top:1px dashed #999; }
+        .info-panel .addr-row.show { display:flex; align-items:flex-start; gap:6px; }
+        .info-panel .addr-text {
+            color:var(--text); font-size:0.8rem; flex:1; font-weight:700;
+            display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+            overflow:hidden;
         }
-        .copy-btn {
+        .info-panel .copy-btn {
             background:rgba(255,255,255,0.08); border:1px solid var(--panel-border); color:var(--text);
-            border-radius:6px; padding:5px 8px; font-size:0.75rem;
+            border-radius:6px; padding:4px 7px; font-size:0.72rem;
             cursor:pointer; flex-shrink:0;
         }
-        .copy-btn:active { background:var(--accent); color:#04060d; }
-
-        /* ============================= TOAST TRANSPORTASI (info sekilas, tidak mengganggu peta) ============================= */
-        .toast-stack{
-            position:absolute; left:10px; right:10px; top:64px; z-index:550;
-            display:flex; flex-direction:column; gap:6px; align-items:center;
-            pointer-events:none;
-        }
-        .transport-toast{
-            max-width:92%; display:flex; align-items:center; gap:8px;
-            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong); border-radius:11px;
-            padding:8px 12px; box-shadow:0 8px 22px rgba(0,0,0,0.5);
-            opacity:0; transform:translateY(-10px) scale(0.97);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            border-left:4px solid var(--accent);
-        }
-        .transport-toast.show{ opacity:1; transform:translateY(0) scale(1); }
-        .transport-toast.hide{ opacity:0; transform:translateY(-8px) scale(0.97); }
-        .transport-toast.arrived{
-            border-left:4px solid var(--accent3);
-            box-shadow: 0 0 0 1px rgba(0,255,176,0.35), 0 8px 22px rgba(0,255,176,0.18);
-        }
-        .transport-toast .tt-icon{ font-size:1.1rem; flex-shrink:0; }
-        .transport-toast .tt-text{
-            font-size:0.74rem; font-weight:800; letter-spacing:0.2px; color:var(--text); line-height:1.3;
-        }
-
-        /* Toast izin sensor kompas */
-        .sensor-toast{
-            position:absolute; left:50%; top:64px; transform:translateX(-50%) translateY(-16px);
-            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong);
-            border-radius:var(--radius); padding:10px 16px; z-index:1500; font-weight:700;
-            font-size:0.8rem; box-shadow:0 10px 28px rgba(0,0,0,0.5); opacity:0; pointer-events:none;
-            transition:all 0.25s ease; text-align:center; max-width:88%;
-        }
-        .sensor-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+        .info-panel .copy-btn:active { background:var(--accent); color:#04060d; }
 
         /* Loader */
         .loader {
@@ -351,8 +346,29 @@
             margin:0 auto 10px; box-shadow:var(--glow-accent);
         }
         @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-        .loader p{ font-weight:700; font-size:0.85rem; }
-        body.sunlight-mode .loader p{ background:#fff; padding:4px 10px; border-radius:6px; border:2px solid #000; }
+        .loader p{ font-weight:700; font-size:0.85rem; text-shadow:0 0 10px rgba(0,229,255,0.4); }
+        body.sunlight-mode .loader p{ text-shadow:none; background:#fff; padding:4px 10px; border-radius:6px; border:2px solid #000; }
+
+        @media (min-width:768px) {
+            .map-controls { flex-wrap:nowrap; }
+            .search-box { flex:0 1 280px; }
+        }
+        @media (max-width:480px) {
+            .map-controls { flex-direction:column; align-items:stretch; }
+            .search-box { flex:1 1 auto; width:100%; min-width:0; }
+            .layer-control { width:100%; }
+            .loc-btn { width:100%; justify-content:center; }
+            .compass-chip{ width:100%; justify-content:center; }
+            .weather-box{ width:100%; }
+            .weather-toggle{ width:100%; justify-content:center; }
+            .weather-panel{ left:0; right:0; min-width:0; }
+            .map-controls .layer-control button { padding:6px 10px; font-size:0.72rem; }
+            .search-results { max-height:55vh; }
+            .search-results .result-item { padding:10px 12px; font-size:0.85rem; }
+            .search-results .result-item .r-sub { font-size:0.76rem; }
+        }
+        .search-results .result-item .r-title,
+        .search-results .result-item .r-sub { word-break:break-word; }
 
         /* ================= PENANDA LOKASI SAYA (jelas & menonjol) ================= */
         .my-loc-wrap {
@@ -389,6 +405,16 @@
         .addr-popup .full { color:#555; font-size:0.75rem; margin-top:4px; display:block; font-weight:500; }
         .addr-popup .row { margin:1px 0; }
         .addr-popup .loading { color:#888; font-style:italic; }
+
+        /* Enable-sensor toast (kompas) */
+        .sensor-toast{
+            position:absolute; left:50%; top:14px; transform:translateX(-50%) translateY(-16px);
+            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong);
+            border-radius:var(--radius); padding:10px 16px; z-index:1500; font-weight:700;
+            font-size:0.82rem; box-shadow:0 10px 28px rgba(0,0,0,0.5); opacity:0; pointer-events:none;
+            transition:all 0.25s ease; text-align:center;
+        }
+        .sensor-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
     </style>
 </head>
 <body>
@@ -396,110 +422,78 @@
 <header>
     <div class="brand">
         <div class="brand-badge">🛰️<span class="live-dot"></span></div>
-        <h1>Peta Interaktif</h1>
+        <h1>Peta Interaktif<small>GPS · REAL-TIME NAV</small></h1>
     </div>
     <div class="header-controls">
-        <button id="btnSunlight" title="Mode kontras tinggi untuk dibaca di bawah terik matahari">☀️</button>
-        <button id="btnFullscreen" title="Layar penuh">⛶</button>
+        <button id="btnSunlight" title="Mode kontras tinggi untuk dibaca di bawah terik matahari">☀️ Mode Terik</button>
+        <button id="btnFullscreen">⛶ Layar Penuh</button>
     </div>
 </header>
 
 <main>
     <div id="map"></div>
 
-    <!-- Toolbar ikon ramping: semua panel di bawah ini bisa show/hide lewat tombol ini -->
-    <div class="toolbar glass" id="toolbar">
-        <button class="tbtn" id="tbSearch" title="Cari lokasi">🔍<span class="tb-label">Cari</span></button>
-        <button class="tbtn active-layer" id="tbLayers" title="Jenis peta">🗺️<span class="tb-label">Peta</span></button>
-        <button class="tbtn" id="tbCompass" title="Kompas">🧭<span class="tb-label">Arah</span></button>
-        <button class="tbtn" id="tbWeather" title="Cuaca">🌤️<span class="tb-label">Cuaca</span></button>
-        <button class="tbtn" id="tbInfo" title="Info GPS & alamat">ℹ️<span class="tb-label">Info</span></button>
-        <button class="tbtn loc" id="locBtn" title="Aktifkan/matikan lokasi saya (GPS)">📍<span class="loc-pulse"></span><span class="tb-label" id="locLabel">GPS</span></button>
-    </div>
-
-    <!-- Popover: Pencarian -->
-    <div class="popover glass" id="popSearch">
-        <div class="popover-inner">
-            <div class="popover-title">🔍 Cari Lokasi</div>
-            <div class="search-row">
-                <input type="text" id="searchInput" placeholder="Cari desa, kelurahan, gang, perumahan..." autocomplete="off" />
-                <button id="searchBtn">Cari</button>
-            </div>
+    <!-- Kontrol peta -->
+    <div class="map-controls">
+        <div class="search-box glass">
+            <span class="sicon">🔎</span>
+            <input type="text" id="searchInput" placeholder="Cari desa, kelurahan, gang, perumahan..." autocomplete="off" />
+            <button id="searchBtn">Cari</button>
             <div class="search-results" id="searchResults"></div>
         </div>
-    </div>
+        <div class="layer-control glass" id="layerControl">
+            <button data-layer="osm" class="active">🗺️ Peta</button>
+            <button data-layer="sat" title="Citra satelit polos">🛰️ Satelit</button>
+            <button data-layer="aerial" title="Citra satelit + label jalan/nama tempat (Hybrid)">✈️ Udara</button>
+            <button data-layer="aerialhq" title="Citra udara resolusi tinggi (Esri World Imagery Clarity)">🌆 Udara HQ</button>
+            <button data-layer="terrain">⛰️ Medan</button>
+            <button data-layer="hot">🏘️ Detail</button>
+            <button data-layer="dark">🌙 Gelap</button>
+        </div>
 
-    <!-- Popover: Layer peta -->
-    <div class="popover glass" id="popLayers">
-        <div class="popover-inner">
-            <div class="popover-title">🗺️ Jenis Peta</div>
-            <div class="layer-grid" id="layerControl">
-                <button data-layer="osm" class="active">🗺️ Peta</button>
-                <button data-layer="sat" title="Citra satelit polos">🛰️ Satelit</button>
-                <button data-layer="aerial" title="Citra satelit + label jalan/nama tempat (Hybrid)">✈️ Udara</button>
-                <button data-layer="aerialhq" title="Citra udara resolusi tinggi (Esri World Imagery Clarity)">🌆 Udara HQ</button>
-                <button data-layer="terrain">⛰️ Medan</button>
-                <button data-layer="hot">🏘️ Detail</button>
-                <button data-layer="dark">🌙 Gelap</button>
+        <div class="compass-chip glass" id="compassChip" title="Arah kepala HP terhadap utara">
+            <div class="compass-dial-wrap">
+                <svg class="compass-dial" id="compassDial" viewBox="0 0 40 40">
+                    <circle cx="20" cy="20" r="17" class="dial-ring"/>
+                    <text x="20" y="8" text-anchor="middle" class="dial-n">U</text>
+                    <text x="20" y="36" text-anchor="middle">S</text>
+                    <text x="35" y="23" text-anchor="middle">T</text>
+                    <text x="5" y="23" text-anchor="middle">B</text>
+                </svg>
+                <div class="compass-pointer"></div>
+            </div>
+            <div class="compass-text">
+                <span id="compassDeg">--°</span>
+                <span id="compassDir">Tap aktifkan</span>
             </div>
         </div>
-    </div>
 
-    <!-- Popover: Kompas -->
-    <div class="popover glass" id="popCompass">
-        <div class="popover-inner">
-            <div class="popover-title">🧭 Arah (Kepala HP)</div>
-            <div class="compass-big">
-                <div class="compass-dial-wrap">
-                    <svg class="compass-dial" id="compassDial" viewBox="0 0 40 40">
-                        <circle cx="20" cy="20" r="17" class="dial-ring"/>
-                        <text x="20" y="8" text-anchor="middle" class="dial-n">U</text>
-                        <text x="20" y="36" text-anchor="middle">S</text>
-                        <text x="35" y="23" text-anchor="middle">T</text>
-                        <text x="5" y="23" text-anchor="middle">B</text>
-                    </svg>
-                    <div class="compass-pointer"></div>
-                </div>
-                <div class="compass-readout">
-                    <span id="compassDeg">--°</span>
-                    <span id="compassDir">Sensor belum aktif</span>
-                </div>
-            </div>
-            <button class="compass-enable-btn" id="compassEnableBtn">Aktifkan Sensor Kompas</button>
-        </div>
-    </div>
-
-    <!-- Popover: Cuaca -->
-    <div class="popover glass" id="popWeather">
-        <div class="popover-inner">
-            <div class="popover-title">🌤️ Cuaca Lokasi</div>
-            <div id="weatherBody">
-                <div class="w-row"><span>Buka lokasi GPS atau tunggu sebentar…</span></div>
+        <div class="weather-box glass" id="weatherBox">
+            <button class="weather-toggle" id="weatherToggleBtn">🌤️ <span id="weatherSummary">Cuaca</span><span class="chev">▾</span></button>
+            <div class="weather-panel" id="weatherPanel">
+                <div class="w-row"><span>Menunggu lokasi…</span></div>
             </div>
         </div>
+
+        <button class="loc-btn glass" id="locBtn">📍 Lokasi Saya</button>
     </div>
 
-    <!-- Popover: Info GPS & alamat -->
-    <div class="popover glass" id="popInfo">
-        <div class="popover-inner">
-            <div class="popover-title">ℹ️ Status & Alamat</div>
-            <div class="info-row">
-                <span class="label">Status GPS: </span><span class="value" id="gpsStatus">Tidak aktif</span><br>
-                <span class="label">Koordinat: </span><span class="value" id="gpsCoords">-</span><br>
-                <span class="label">Layar: </span><span class="value" id="wakeStatus">-</span>
-            </div>
+    <!-- Toast izin sensor kompas -->
+    <div class="sensor-toast" id="sensorToast"></div>
+
+    <!-- Tumpukan bawah: feed transportasi + info panel -->
+    <div class="bottom-stack">
+        <div class="transport-feed" id="transportFeed"></div>
+        <div class="info-panel glass" id="infoPanel">
+            <span class="label">Status GPS: </span><span class="value" id="gpsStatus">Tidak aktif</span><br>
+            <span class="label">Koordinat: </span><span class="value" id="gpsCoords">-</span><br>
+            <span class="label">Layar: </span><span class="value" id="wakeStatus">-</span>
             <div class="addr-row" id="addrRow">
                 <span class="addr-text" id="addrText">-</span>
                 <button class="copy-btn" id="copyAddrBtn">📋</button>
             </div>
         </div>
     </div>
-
-    <!-- Toast izin sensor kompas -->
-    <div class="sensor-toast" id="sensorToast"></div>
-
-    <!-- Toast transportasi: info sekilas, otomatis hilang, tidak menutupi peta -->
-    <div class="toast-stack" id="toastStack"></div>
 
     <!-- Loader -->
     <div class="loader" id="loader">
@@ -515,10 +509,11 @@
     // ======================================================================
     const MY_LAT = -6.2;
     const MY_LNG = 106.8;
-    const FETCH_TIMEOUT_MS = 7000;
-    const ADDRESS_REFRESH_MS = 10000;
-    const ADDRESS_MOVE_THRESHOLD_M = 12;
+    const FETCH_TIMEOUT_MS = 7000; // per percobaan koneksi (diturunkan agar pencarian tidak lama)
+    const ADDRESS_REFRESH_MS = 10000; // cadangan: perbarui alamat tiap 10 detik jika diam di tempat (info tetap segar)
+    const ADDRESS_MOVE_THRESHOLD_M = 12; // geocode ulang tiap kali bergeser > 12m, supaya terasa real time
 
+    // Proxy pribadi (kosongkan jika tidak punya)
     const CUSTOM_PROXY_URL = 'https://odd-dew-de57.endangbogorkota.workers.dev/?url=';
 
     // ======================================================================
@@ -538,51 +533,12 @@
     applySunlightPref();
 
     // ======================================================================
-    // PANEL / POPOVER: semua panel dashboard bisa show/hide via toolbar
-    // ======================================================================
-    const popovers = {
-        search: document.getElementById('popSearch'),
-        layers: document.getElementById('popLayers'),
-        compass: document.getElementById('popCompass'),
-        weather: document.getElementById('popWeather'),
-        info: document.getElementById('popInfo')
-    };
-    const tbtns = {
-        search: document.getElementById('tbSearch'),
-        layers: document.getElementById('tbLayers'),
-        compass: document.getElementById('tbCompass'),
-        weather: document.getElementById('tbWeather'),
-        info: document.getElementById('tbInfo')
-    };
-    function closeAllPopovers(except) {
-        Object.entries(popovers).forEach(([k, el]) => {
-            if (k !== except) { el.classList.remove('open'); tbtns[k].classList.remove('open'); }
-        });
-    }
-    function togglePopover(key, onOpen) {
-        const el = popovers[key];
-        const willOpen = !el.classList.contains('open');
-        closeAllPopovers(key);
-        el.classList.toggle('open', willOpen);
-        tbtns[key].classList.toggle('open', willOpen);
-        if (willOpen && typeof onOpen === 'function') onOpen();
-    }
-    tbtns.search.addEventListener('click', () => togglePopover('search', () => {
-        setTimeout(() => searchInput.focus(), 150);
-    }));
-    tbtns.layers.addEventListener('click', () => togglePopover('layers'));
-    tbtns.compass.addEventListener('click', () => togglePopover('compass'));
-    tbtns.weather.addEventListener('click', () => togglePopover('weather', () => {
-        const p = myMarker ? myMarker.getLatLng() : { lat: MY_LAT, lng: MY_LNG };
-        maybeFetchWeather(p.lat, p.lng, true);
-    }));
-    tbtns.info.addEventListener('click', () => togglePopover('info'));
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.popover') && !e.target.closest('.toolbar')) closeAllPopovers();
-    });
-
-    // ======================================================================
     // LAYAR TETAP MENYALA (Screen Wake Lock)
+    // Mencegah HP masuk mode redup/kunci layar (screensaver) selama aplikasi
+    // dibuka, memakai Wake Lock API bawaan browser (didukung Chrome/Android
+    // versi modern, termasuk browser Chrome di Oppo A9). Wake Lock otomatis
+    // dilepas oleh browser saat tab disembunyikan/minimize, jadi kita minta
+    // ulang otomatis begitu tab terlihat kembali.
     // ======================================================================
     let wakeLock = null;
     const wakeStatusEl = document.getElementById('wakeStatus');
@@ -605,9 +561,12 @@
             if (wakeStatusEl) wakeStatusEl.innerText = 'Gagal mengaktifkan';
         }
     }
+
     requestWakeLock();
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+        if (document.visibilityState === 'visible' && !wakeLock) {
+            requestWakeLock();
+        }
     });
 
     // ======================================================================
@@ -617,62 +576,82 @@
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // ======================================================================
-    // REGISTRY LAYER
+    // REGISTRY LAYER (mudah ditambah: osm, satelit, udara, medan, dll)
     // ======================================================================
     const layerOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '© OpenStreetMap contributors'
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
     });
+
     const layerSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
+        maxZoom: 19,
+        attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
     });
+
     const layerAerialImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
+        maxZoom: 19,
+        attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
     });
     const layerAerialLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19, subdomains: 'abcd', attribution: 'Labels © CARTO, © OpenStreetMap contributors'
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: 'Labels © CARTO, © OpenStreetMap contributors'
     });
     const layerAerial = L.layerGroup([layerAerialImg, layerAerialLabels]);
+
     const layerAerialHQ = L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, attribution: 'Tiles © Esri — World Imagery (Clarity)'
+        maxZoom: 19,
+        attribution: 'Tiles © Esri — World Imagery (Clarity)'
     });
+
     const layerTerrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        maxZoom: 17, attribution: '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors'
+        maxZoom: 17,
+        attribution: '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors'
     });
+
     const layerHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '© OpenStreetMap contributors, Tiles style by HOT'
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors, Tiles style by HOT'
     });
+
     const layerDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19, attribution: '© OpenStreetMap contributors, © CARTO'
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors, © CARTO'
     });
 
     const layers = {
-        osm: layerOSM, sat: layerSat, aerial: layerAerial, aerialhq: layerAerialHQ,
-        terrain: layerTerrain, hot: layerHOT, dark: layerDark
-    };
-    const layerShortLabel = {
-        osm: '🗺️ Peta', sat: '🛰️ Satelit', aerial: '✈️ Udara', aerialhq: '🌆 Udara HQ',
-        terrain: '⛰️ Medan', hot: '🏘️ Detail', dark: '🌙 Gelap'
+        osm: layerOSM,
+        sat: layerSat,
+        aerial: layerAerial,
+        aerialhq: layerAerialHQ,
+        terrain: layerTerrain,
+        hot: layerHOT,
+        dark: layerDark
     };
 
     let currentLayerKey = 'osm';
     let currentLayer = layers[currentLayerKey];
     currentLayer.addTo(map);
 
+    // ======================================================================
+    // KONTROL LAYER
+    // ======================================================================
     const layerControlEl = document.getElementById('layerControl');
     const layerButtons = layerControlEl.querySelectorAll('button');
-    const tbLayersLabel = tbtns.layers.querySelector('.tb-label');
 
     function switchLayer(key) {
         if (!layers[key] || key === currentLayerKey && map.hasLayer(currentLayer)) {
             if (key === currentLayerKey) return;
         }
-        if (map.hasLayer(currentLayer)) map.removeLayer(currentLayer);
+        if (map.hasLayer(currentLayer)) {
+            map.removeLayer(currentLayer);
+        }
         currentLayerKey = layers[key] ? key : 'osm';
         currentLayer = layers[currentLayerKey];
         currentLayer.addTo(map);
+
         if (myMarker) myMarker.bringToFront();
         if (searchMarker) searchMarker.bringToFront();
-        tbLayersLabel.innerText = layerShortLabel[currentLayerKey].replace(/^\S+\s/, '');
     }
 
     layerButtons.forEach(btn => {
@@ -684,23 +663,60 @@
     });
 
     // ======================================================================
-    // FETCH DENGAN PROXY (multi-strategy)
+    // FUNGSI FETCH DENGAN PROXY (multi-strategy)
     // ======================================================================
     const proxyStrategies = [
-        { name: 'Langsung (tanpa proxy)', build: (url) => url, parse: (res) => res.json() },
-        ...(CUSTOM_PROXY_URL ? [{ name: 'Proxy Pribadi', build: (url) => `${CUSTOM_PROXY_URL}${encodeURIComponent(url)}`, parse: (res) => res.json() }] : []),
-        { name: 'Corsfix', build: (url) => `https://proxy.corsfix.com/?${url}`, parse: (res) => res.json() },
-        { name: 'CodeTabs', build: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`, parse: (res) => res.json() },
-        { name: 'AllOrigins (get)', build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, parse: async (res) => { const wrapper = await res.json(); return JSON.parse(wrapper.contents); } },
-        { name: 'AllOrigins (raw)', build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, parse: (res) => res.json() },
-        { name: 'CorsProxy.io', build: (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`, parse: (res) => res.json() },
-        { name: 'x2u CORS', build: (url) => `https://cors.x2u.in/${url}`, parse: (res) => res.json() }
+        {
+            name: 'Langsung (tanpa proxy)',
+            build: (url) => url,
+            parse: (res) => res.json()
+        },
+        ...(CUSTOM_PROXY_URL ? [{
+            name: 'Proxy Pribadi',
+            build: (url) => `${CUSTOM_PROXY_URL}${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        }] : []),
+        {
+            name: 'Corsfix',
+            build: (url) => `https://proxy.corsfix.com/?${url}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'CodeTabs',
+            build: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'AllOrigins (get)',
+            build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+            parse: async (res) => {
+                const wrapper = await res.json();
+                return JSON.parse(wrapper.contents);
+            }
+        },
+        {
+            name: 'AllOrigins (raw)',
+            build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'CorsProxy.io',
+            build: (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            parse: (res) => res.json()
+        },
+        {
+            name: 'x2u CORS',
+            build: (url) => `https://cors.x2u.in/${url}`,
+            parse: (res) => res.json()
+        }
     ];
 
     function fetchWithTimeout(url, signal, timeoutMs = FETCH_TIMEOUT_MS) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
-        if (signal) signal.addEventListener('abort', () => controller.abort());
+        if (signal) {
+            signal.addEventListener('abort', () => controller.abort());
+        }
         return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
     }
 
@@ -718,10 +734,14 @@
                 if (data && data.error) throw new Error(`API error: ${data.error}`);
                 if (data == null) throw new Error('Respons kosong');
                 return data;
-            })().catch(e => { errors.push(`${strategy.name}: ${e.message}`); throw e; });
+            })().catch(e => {
+                errors.push(`${strategy.name}: ${e.message}`);
+                throw e;
+            });
             task._controller = controller;
             return task;
         });
+
         try {
             const result = await Promise.any(attempts);
             attempts.forEach(t => { try { t._controller.abort(); } catch (_) {} });
@@ -732,7 +752,7 @@
     }
 
     // ======================================================================
-    // UTIL: susun alamat lengkap
+    // UTIL: susun alamat lengkap hingga desa/dusun/gang dari hasil Nominatim
     // ======================================================================
     function buildDetailedAddress(addr) {
         if (!addr) return null;
@@ -740,35 +760,71 @@
         const jalan = addr.road || addr.pedestrian || addr.path || addr.footway;
         if (jalan) parts.push(jalan);
         if (addr.house_number) parts[parts.length - 1] = `${parts[parts.length - 1] || ''} No. ${addr.house_number}`.trim();
+
         if (addr.neighbourhood) parts.push(addr.neighbourhood);
         if (addr.quarter && addr.quarter !== addr.neighbourhood) parts.push(addr.quarter);
+
         if (addr.hamlet) parts.push(`Dusun ${addr.hamlet}`);
+
         const desa = addr.village || addr.suburb;
         if (desa) parts.push(desa);
+
         const kecamatan = addr.city_district || addr.subdistrict || addr.municipality;
         if (kecamatan) parts.push(`Kec. ${kecamatan}`);
+
         const kabkota = addr.county || addr.city || addr.town;
         if (kabkota) parts.push(kabkota);
+
         if (addr.state) parts.push(addr.state);
+
         if (addr.postcode) parts.push(addr.postcode);
+
         return parts.filter(Boolean).join(', ');
     }
 
     // ======================================================================
-    // PENCARIAN WILAYAH
+    // PENCARIAN WILAYAH (hingga desa/kelurahan/gang)
     // ======================================================================
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const searchResultsEl = document.getElementById('searchResults');
+    const searchBoxEl = searchInput.closest('.search-box');
     let searchMarker = null;
     let lastSearchResults = [];
 
+    // ======================================================================
+    // LOKASI AKTIF (satu-satunya sumber kebenaran): 'gps' atau 'search'.
+    // Semua parameter (alamat, cuaca, transportasi terdekat) selalu mengacu
+    // ke titik ini, siapa pun sumbernya. Hanya satu sumber boleh aktif.
+    // ======================================================================
+    let activeSource = null; // null | 'gps' | 'search'
+    let activeLat = null;
+    let activeLng = null;
+
+    function getActiveLatLng() {
+        if (activeSource === 'gps' && myMarker) return myMarker.getLatLng();
+        if (activeSource === 'search' && activeLat != null) return { lat: activeLat, lng: activeLng };
+        return null;
+    }
+
+    const SEARCH_PLACEHOLDER_DEFAULT = searchInput.placeholder;
+    function setSearchEnabled(enabled) {
+        searchInput.disabled = !enabled;
+        searchBtn.disabled = !enabled;
+        searchBoxEl.classList.toggle('disabled', !enabled);
+        searchInput.placeholder = enabled ? SEARCH_PLACEHOLDER_DEFAULT : 'GPS aktif — pencarian dinonaktifkan';
+    }
+
     function makeSearchIcon() {
         return L.divIcon({
-            className: '', html: `<div class="search-loc-wrap"><div class="search-pin">📌</div></div>`,
-            iconSize: [30, 40], iconAnchor: [15, 38], popupAnchor: [0, -34]
+            className: '',
+            html: `<div class="search-loc-wrap"><div class="search-pin">📌</div></div>`,
+            iconSize: [30, 40],
+            iconAnchor: [15, 38],
+            popupAnchor: [0, -34]
         });
     }
+
     function categoryLabel(result) {
         const map = {
             residential: 'Perumahan', neighbourhood: 'Lingkungan', suburb: 'Kelurahan/Suburb',
@@ -778,24 +834,41 @@
         };
         return map[result.type] || map[result.class] || result.type || result.class || '';
     }
+
     function photonToResult(feature) {
         const p = feature.properties || {};
         const coords = feature.geometry && feature.geometry.coordinates;
         if (!coords) return null;
         const [lon, lat] = coords;
         const address = {
-            road: p.street, house_number: p.housenumber, neighbourhood: p.district, quarter: p.locality,
-            hamlet: undefined, village: (p.osm_key === 'place') ? undefined : undefined,
-            city_district: p.county, county: p.county, city: p.city, town: p.city,
-            state: p.state, postcode: p.postcode, country: p.country
+            road: p.street,
+            house_number: p.housenumber,
+            neighbourhood: p.district,
+            quarter: p.locality,
+            hamlet: undefined,
+            village: (p.osm_key === 'place') ? undefined : undefined,
+            city_district: p.county,
+            county: p.county,
+            city: p.city,
+            town: p.city,
+            state: p.state,
+            postcode: p.postcode,
+            country: p.country
         };
         const display_name = [p.name, p.street, p.district, p.city, p.state, p.country]
-            .filter((v, i, arr) => v && arr.indexOf(v) === i).join(', ');
+            .filter((v, i, arr) => v && arr.indexOf(v) === i)
+            .join(', ');
         return {
-            lat: String(lat), lon: String(lon), display_name: display_name || 'Lokasi',
-            address, type: p.osm_value, class: p.osm_key, namedetails: { name: p.name }
+            lat: String(lat),
+            lon: String(lon),
+            display_name: display_name || 'Lokasi',
+            address,
+            type: p.osm_value,
+            class: p.osm_key,
+            namedetails: { name: p.name }
         };
     }
+
     function mergeSearchResults(lists) {
         const merged = [];
         lists.flat().forEach(r => {
@@ -809,10 +882,12 @@
         });
         return merged;
     }
+
     function hideSearchResults() {
         searchResultsEl.classList.remove('show');
         searchResultsEl.innerHTML = '';
     }
+
     function renderSearchResults(results) {
         lastSearchResults = results;
         if (!results.length) {
@@ -842,25 +917,41 @@
             });
         });
     }
+
     function selectSearchResult(result) {
         const lat = parseFloat(result.lat);
         const lng = parseFloat(result.lon);
         if (isNaN(lat) || isNaN(lng)) return;
+
+        // Pastikan hanya "cari" yang aktif sebagai sumber lokasi: GPS dimatikan.
+        if (isLocTracking) stopLocationTracking();
+
         map.setView([lat, lng], 18);
         if (searchMarker) map.removeLayer(searchMarker);
         const detail = buildDetailedAddress(result.address) || result.display_name;
         searchMarker = L.marker([lat, lng], { icon: makeSearchIcon(), zIndexOffset: 900 }).addTo(map)
             .bindPopup(`<div class="addr-popup"><b>📌 Hasil Pencarian</b><div class="row">${detail}</div><span class="full">${result.display_name}</span></div>`)
             .openPopup();
+
+        // Lokasi hasil pencarian ini menjadi lokasi aktif: alamat, cuaca, dan
+        // transportasi terdekat semuanya mengacu ke titik ini.
+        activeSource = 'search';
+        activeLat = lat;
+        activeLng = lng;
+
         document.getElementById('gpsCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         document.getElementById('gpsStatus').innerText = 'Pencarian';
         showAddress(detail);
+        checkNearbyTransport(lat, lng, true);
+        maybeFetchWeather(lat, lng, true);
+        startWeatherAutoRefresh();
         searchInput.value = result.display_name.split(',')[0];
-        closeAllPopovers();
     }
+
     function nominatimUrl(q) {
         return `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=8&addressdetails=1&namedetails=1&accept-language=id&dedupe=0`;
     }
+
     async function searchLocation(query) {
         query = query.trim();
         if (!query) return;
@@ -868,25 +959,33 @@
         try {
             document.getElementById('loader').style.display = 'block';
             document.getElementById('loaderText').innerText = 'Mencari lokasi (alamat, gang, perumahan)...';
+
             const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=id&limit=8&lat=${MY_LAT}&lon=${MY_LNG}`;
+
             const [nomRes, photonRes] = await Promise.allSettled([
                 fetchWithProxy(nominatimUrl(query)),
                 fetchWithProxy(photonUrl)
             ]);
+
             let results = [];
-            if (nomRes.status === 'fulfilled' && Array.isArray(nomRes.value)) results = results.concat(nomRes.value);
+            if (nomRes.status === 'fulfilled' && Array.isArray(nomRes.value)) {
+                results = results.concat(nomRes.value);
+            }
             if (photonRes.status === 'fulfilled' && photonRes.value && Array.isArray(photonRes.value.features)) {
                 results = results.concat(photonRes.value.features.map(photonToResult).filter(Boolean));
             }
+
             if (results.length === 0 && !/^(perumahan|komplek|kompleks|cluster|griya|bumi|villa)\b/i.test(query)) {
                 try {
                     const retryData = await fetchWithProxy(nominatimUrl('Perumahan ' + query));
                     if (Array.isArray(retryData)) results = results.concat(retryData);
-                } catch (_) {}
+                } catch (_) { /* abaikan, hasil tetap dari percobaan pertama */ }
             }
+
             if (results.length === 0 && nomRes.status === 'rejected' && photonRes.status === 'rejected') {
                 throw new Error('Semua sumber pencarian gagal dihubungi: ' + nomRes.reason.message);
             }
+
             renderSearchResults(mergeSearchResults([results]));
         } catch (e) {
             hideSearchResults();
@@ -895,15 +994,22 @@
             document.getElementById('loader').style.display = 'none';
         }
     }
+
     searchBtn.addEventListener('click', () => searchLocation(searchInput.value));
     searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchLocation(searchInput.value); });
     searchInput.addEventListener('input', () => {
         if (isLocTracking) stopLocationTracking();
         if (!searchInput.value.trim()) hideSearchResults();
     });
+    searchInput.addEventListener('focus', () => {
+        if (isLocTracking) stopLocationTracking();
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-box')) hideSearchResults();
+    });
 
     // ======================================================================
-    // LOKASI SAYA (GPS)
+    // LOKASI SAYA (GPS) - zoom ke lokasi + penanda jelas + alamat lengkap
     // ======================================================================
     const locBtn = document.getElementById('locBtn');
     let watchId = null;
@@ -920,15 +1026,23 @@
 
     function makeMyLocIcon() {
         return L.divIcon({
-            className: '', html: `<div class="my-loc-wrap"><div class="my-loc-pulse"></div><div class="my-loc-ring"></div></div>`,
-            iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20]
+            className: '',
+            html: `<div class="my-loc-wrap"><div class="my-loc-pulse"></div><div class="my-loc-ring"></div></div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -20]
         });
     }
+
     function showAddress(text) {
-        if (!text) { addrRowEl.classList.remove('show'); return; }
+        if (!text) {
+            addrRowEl.classList.remove('show');
+            return;
+        }
         addrTextEl.innerText = text;
         addrRowEl.classList.add('show');
     }
+
     function haversineMeters(a, b) {
         const R = 6371000;
         const toRad = d => d * Math.PI / 180;
@@ -939,10 +1053,13 @@
         const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
         return 2 * R * Math.asin(Math.sqrt(h));
     }
+
     async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false } = {}) {
         if (geocodeInFlight) return;
         const point = { lat, lng };
-        if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) return;
+        if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) {
+            return;
+        }
         geocodeInFlight = true;
         if (myMarker) {
             myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row loading">Mengambil alamat lengkap...</div></div>`);
@@ -960,11 +1077,14 @@
             }
             showAddress(detail);
         } catch (e) {
-            if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat: ${e.message}</div></div>`);
+            if (myMarker) {
+                myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat: ${e.message}</div></div>`);
+            }
         } finally {
             geocodeInFlight = false;
         }
     }
+
     copyAddrBtn.addEventListener('click', () => {
         const text = addrTextEl.innerText;
         if (!text || text === '-') return;
@@ -975,12 +1095,12 @@
     });
 
     // ======================================================================
-    // KOMPAS
+    // KOMPAS (arah kepala HP terhadap utara sebenarnya)
     // ======================================================================
+    const compassChip = document.getElementById('compassChip');
     const compassDial = document.getElementById('compassDial');
     const compassDeg = document.getElementById('compassDeg');
     const compassDir = document.getElementById('compassDir');
-    const compassEnableBtn = document.getElementById('compassEnableBtn');
     const sensorToast = document.getElementById('sensorToast');
     let compassActive = false;
 
@@ -990,83 +1110,36 @@
         clearTimeout(showSensorToast._t);
         showSensorToast._t = setTimeout(() => sensorToast.classList.remove('show'), ms);
     }
+
     function degToCompassDir(deg) {
         const dirs = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
         const idx = Math.round(deg / 45) % 8;
         return dirs[idx];
     }
 
-    // ---- Penghalus (smoothing) arah kompas ----
-    // Sensor arah HP mentah cenderung "bergetar" (noise kecil naik-turun).
-    // Di sini nilai mentah difilter dengan exponential smoothing melingkar
-    // (memperhitungkan pergantian 359°->0°) sehingga jarum bergerak halus,
-    // tidak gemetar. Rotasi CSS memakai nilai kumulatif tak-terbatas supaya
-    // saat melewati batas 0/360 jarum tidak "loncat" berputar balik.
-    const COMPASS_SMOOTHING = 0.14;      // 0-1 : makin kecil makin halus (sedikit lag)
-    const TEXT_UPDATE_INTERVAL_MS = 220; // perbarui angka & teks arah tidak terlalu sering
-    let smoothedHeading = null;          // heading hasil filter (0-360)
-    let continuousRotation = 0;          // nilai rotasi kumulatif tak-terbatas untuk CSS
-    let lastHeadingForRotation = null;
-    let pendingRawHeading = null;
-    let compassRafId = null;
-    let lastTextUpdateTs = 0;
-
-    function shortestAngleDelta(from, to) {
-        return ((to - from + 540) % 360) - 180; // hasil di rentang (-180, 180]
-    }
-
     function updateCompassUI(heading) {
-        // -- rotasi dial: dihitung sebagai delta terpendek dari posisi sebelumnya,
-        //    lalu ditambahkan ke nilai kumulatif -> tidak pernah "lompat" di 0/360.
-        if (lastHeadingForRotation == null) {
-            continuousRotation = -heading;
-        } else {
-            const delta = shortestAngleDelta(lastHeadingForRotation, heading);
-            continuousRotation += -delta;
-        }
-        lastHeadingForRotation = heading;
-        compassDial.style.transform = `rotate(${continuousRotation}deg)`;
-
-        // -- teks (derajat & arah mata angin) sengaja diperbarui lebih jarang
-        //    supaya perubahan panjang teks ("Utara" vs "Barat Daya") tidak
-        //    memicu reflow berulang yang membuat kompas terlihat goyang.
-        const now = performance.now();
-        if (now - lastTextUpdateTs >= TEXT_UPDATE_INTERVAL_MS) {
-            lastTextUpdateTs = now;
-            compassDeg.innerText = `${Math.round(heading).toString().padStart(3, '0')}°`;
-            compassDir.innerText = degToCompassDir(heading);
-        }
-    }
-
-    function compassAnimationTick() {
-        compassRafId = null;
-        if (pendingRawHeading == null) return;
-        const raw = pendingRawHeading;
-        if (smoothedHeading == null) {
-            smoothedHeading = raw;
-        } else {
-            const delta = shortestAngleDelta(smoothedHeading, raw);
-            smoothedHeading = (smoothedHeading + delta * COMPASS_SMOOTHING + 360) % 360;
-        }
-        updateCompassUI(smoothedHeading);
+        heading = (heading % 360 + 360) % 360;
+        compassDial.style.transform = `rotate(${-heading}deg)`;
+        compassDeg.innerText = `${Math.round(heading).toString().padStart(3, '0')}°`;
+        compassDir.innerText = degToCompassDir(heading);
     }
 
     function handleOrientation(e) {
         let heading;
         if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
-            heading = e.webkitCompassHeading;
+            heading = e.webkitCompassHeading; // iOS: 0 = utara, searah jarum jam (sudah akurat)
         } else if (e.alpha != null) {
-            heading = 360 - e.alpha;
-        } else { return; }
-        heading = (heading % 360 + 360) % 360;
-        pendingRawHeading = heading;
-        if (!compassActive) { compassActive = true; compassEnableBtn.style.display = 'none'; }
-        // Batasi pembaruan tampilan ke ritme refresh layar (~60fps) agar mulus
-        // dan tidak "gemetar" walau event sensor datang lebih sering dari itu.
-        if (compassRafId == null) {
-            compassRafId = requestAnimationFrame(compassAnimationTick);
+            // Android: formula dasar "360 - alpha" terbukti menunjuk arah 180° terbalik
+            // di perangkat nyata (HP menghadap Utara malah tertunjuk Selatan pada kompas).
+            // Dikoreksi dengan menambah 180° di sini.
+            heading = (360 - e.alpha + 180) % 360;
+        } else {
+            return;
         }
+        compassActive = true;
+        updateCompassUI(heading);
     }
+
     async function enableCompass() {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             try {
@@ -1077,22 +1150,29 @@
         window.addEventListener('deviceorientationabsolute', handleOrientation, true);
         window.addEventListener('deviceorientation', handleOrientation, true);
         showSensorToast('🧭 Kompas aktif — pegang HP tegak untuk hasil terbaik.');
-        setTimeout(() => { if (!compassActive) showSensorToast('Sensor kompas tidak terdeteksi di perangkat ini.'); }, 2500);
+        setTimeout(() => {
+            if (!compassActive) showSensorToast('Sensor kompas tidak terdeteksi di perangkat ini.');
+        }, 2500);
     }
-    compassEnableBtn.addEventListener('click', enableCompass);
+
+    compassChip.addEventListener('click', enableCompass);
+    // Coba aktifkan otomatis di perangkat yang tidak butuh izin eksplisit (kebanyakan Android)
     if (!(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')) {
         window.addEventListener('deviceorientationabsolute', handleOrientation, true);
         window.addEventListener('deviceorientation', handleOrientation, true);
     }
 
     // ======================================================================
-    // CUACA REAL-TIME (Open-Meteo, tanpa API key) — panel show/hide via toolbar
+    // CUACA REAL-TIME (Open-Meteo, tanpa API key) — dapat show/hide
     // ======================================================================
     const WEATHER_REFRESH_MS = 5 * 60 * 1000;
     const WEATHER_MOVE_THRESHOLD_M = 300;
     let weatherTimer = null;
     let lastWeatherLatLng = null;
-    const weatherBody = document.getElementById('weatherBody');
+    const weatherBox = document.getElementById('weatherBox');
+    const weatherToggleBtn = document.getElementById('weatherToggleBtn');
+    const weatherPanel = document.getElementById('weatherPanel');
+    const weatherSummary = document.getElementById('weatherSummary');
 
     function cloudCoverDesc(pct) {
         if (pct == null) return '-';
@@ -1102,50 +1182,113 @@
         if (pct < 90) return 'Mendung';
         return 'Mendung Tebal';
     }
+
+    // Kode cuaca WMO (dipakai Open-Meteo) -> deskripsi Bahasa Indonesia, lebih akurat
+    // daripada sekadar tebakan dari persentase awan.
+    function weatherCodeDesc(code) {
+        const map = {
+            0: 'Cerah', 1: 'Cerah Berawan Tipis', 2: 'Berawan Sebagian', 3: 'Mendung',
+            45: 'Kabut', 48: 'Kabut Beku',
+            51: 'Gerimis Ringan', 53: 'Gerimis Sedang', 55: 'Gerimis Lebat',
+            56: 'Gerimis Beku Ringan', 57: 'Gerimis Beku Lebat',
+            61: 'Hujan Ringan', 63: 'Hujan Sedang', 65: 'Hujan Lebat',
+            66: 'Hujan Beku Ringan', 67: 'Hujan Beku Lebat',
+            71: 'Salju Ringan', 73: 'Salju Sedang', 75: 'Salju Lebat', 77: 'Butiran Salju',
+            80: 'Hujan Sesaat Ringan', 81: 'Hujan Sesaat Sedang', 82: 'Hujan Sesaat Ekstrem',
+            85: 'Hujan Salju Ringan', 86: 'Hujan Salju Lebat',
+            95: 'Badai Petir', 96: 'Badai Petir + Hujan Es Ringan', 99: 'Badai Petir + Hujan Es Lebat'
+        };
+        return map[code];
+    }
+
     async function fetchWeather(lat, lng) {
-        weatherBody.innerHTML = `<div class="w-row"><span>Memuat data cuaca…</span></div>`;
+        weatherPanel.innerHTML = `<div class="w-row"><span>Memuat data cuaca…</span></div>`;
         try {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,cloud_cover,wind_speed_10m,wind_direction_10m&timezone=auto`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+                `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,cloud_cover,` +
+                `pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&timezone=auto`;
             const res = await fetchWithTimeout(url, null, 9000);
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
             const c = data.current || {};
-            const cond = cloudCoverDesc(c.cloud_cover);
-            weatherBody.innerHTML = `
+            const cond = weatherCodeDesc(c.weather_code) || cloudCoverDesc(c.cloud_cover);
+            const siangMalam = c.is_day === 0 ? 'Malam' : 'Siang';
+            weatherSummary.innerText = `${c.temperature_2m != null ? Math.round(c.temperature_2m) + '°C' : 'Cuaca'} · ${cond}`;
+            weatherPanel.innerHTML = `
+                <div class="w-section-title">Cuaca Saat Ini · ${siangMalam}</div>
                 <div class="w-row"><span>🌡️ Suhu</span><b>${c.temperature_2m ?? '-'}°C</b></div>
+                <div class="w-row"><span>🥵 Terasa Seperti</span><b>${c.apparent_temperature ?? '-'}°C</b></div>
                 <div class="w-row"><span>💧 Kelembaban</span><b>${c.relative_humidity_2m ?? '-'}%</b></div>
-                <div class="w-row"><span>☁️ Kondisi</span><b>${cond} (${c.cloud_cover ?? '-'}%)</b></div>
-                <div class="w-row"><span>💨 Angin</span><b>${c.wind_speed_10m ?? '-'} km/j ${c.wind_direction_10m != null ? degToCompassDir(c.wind_direction_10m) : ''}</b></div>
+                <div class="w-row"><span>🌧️ Presipitasi</span><b>${c.precipitation ?? 0} mm</b></div>
+                <div class="w-row"><span>☁️ Kondisi</span><b>${cond} (awan ${c.cloud_cover ?? '-'}%)</b></div>
+                <div class="w-section-title">Angin</div>
+                <div class="w-row"><span>💨 Kecepatan</span><b>${c.wind_speed_10m ?? '-'} km/j</b></div>
+                <div class="w-row"><span>🌬️ Hembusan</span><b>${c.wind_gusts_10m ?? '-'} km/j</b></div>
+                <div class="w-row"><span>🧭 Arah Angin</span><b>${c.wind_direction_10m != null ? Math.round(c.wind_direction_10m) + '° ' + degToCompassDir(c.wind_direction_10m) : '-'}</b></div>
+                <div class="w-section-title">Geofisika Lokasi</div>
                 <div class="w-row"><span>⛰️ Ketinggian</span><b>${data.elevation != null ? Math.round(data.elevation) + ' m dpl' : '-'}</b></div>
+                <div class="w-row"><span>🌊 Tekanan Laut</span><b>${c.pressure_msl ?? '-'} hPa</b></div>
+                <div class="w-row"><span>📟 Tekanan Permukaan</span><b>${c.surface_pressure ?? '-'} hPa</b></div>
+                <div class="w-row"><span>📍 Koordinat</span><b>${lat.toFixed(4)}, ${lng.toFixed(4)}</b></div>
+                <div class="w-row"><span>🕒 Zona Waktu</span><b>${data.timezone ?? '-'}</b></div>
                 <div class="w-updated">Diperbarui ${new Date().toLocaleTimeString('id-ID')}</div>
             `;
         } catch (e) {
-            weatherBody.innerHTML = `<div class="w-row w-error">Gagal memuat cuaca: ${e.message}</div>`;
+            weatherPanel.innerHTML = `<div class="w-row w-error">Gagal memuat cuaca: ${e.message}</div>`;
         }
     }
+
     function maybeFetchWeather(lat, lng, force = false) {
-        if (!popovers.weather.classList.contains('open')) return;
+        if (!weatherBox.classList.contains('open')) return;
         const point = { lat, lng };
         if (!force && lastWeatherLatLng && haversineMeters(lastWeatherLatLng, point) < WEATHER_MOVE_THRESHOLD_M) return;
         lastWeatherLatLng = point;
         fetchWeather(lat, lng);
     }
 
+    // Timer cuaca digeneralisasi: mengacu ke lokasi AKTIF (GPS atau hasil
+    // pencarian), bukan cuma GPS, sesuai lokasi yang sedang ditunjuk.
+    function startWeatherAutoRefresh() {
+        if (weatherTimer) return;
+        weatherTimer = setInterval(() => {
+            const p = getActiveLatLng();
+            if (p) maybeFetchWeather(p.lat, p.lng, true);
+        }, WEATHER_REFRESH_MS);
+    }
+    function stopWeatherAutoRefresh() {
+        if (weatherTimer) { clearInterval(weatherTimer); weatherTimer = null; }
+    }
+
+    weatherToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = !weatherBox.classList.contains('open');
+        weatherBox.classList.toggle('open', willOpen);
+        if (willOpen) {
+            const p = getActiveLatLng() || { lat: MY_LAT, lng: MY_LNG };
+            maybeFetchWeather(p.lat, p.lng, true);
+        }
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.weather-box')) weatherBox.classList.remove('open');
+    });
+
     // ======================================================================
-    // DETEKSI TRANSPORTASI TERDEKAT — TOAST SEKILAS (Overpass/OpenStreetMap)
-    // Tidak menutupi peta: muncul singkat lalu hilang otomatis.
+    // DETEKSI TRANSPORTASI TERDEKAT SECARA REAL-TIME (Overpass/OpenStreetMap)
+    // Memantau pergerakan GPS dan memunculkan pesan seperti:
+    // "ANDA BERADA 700 METER DARI STASIUN JAYAKARTA" atau
+    // "ANDA BERADA DI STASIUN JAYAKARTA" saat sudah sangat dekat/tiba.
+    // Mencakup: stasiun kereta/komuter, MRT, LRT, terminal bus, terminal
+    // taxi/angkot (halte), bandara, dan pelabuhan feri.
     // ======================================================================
     const TRANSPORT_RADIUS_M = 3000;
     const TRANSPORT_NOTIFY_M = 1200;
     const TRANSPORT_ARRIVED_M = 60;
     const TRANSPORT_CHECK_INTERVAL_MS = 45000;
     const TRANSPORT_MOVE_THRESHOLD_M = 250;
-    const TOAST_DURATION_MS = 4200;
     let transportTimer = null;
     let lastTransportLatLng = null;
     let transportInFlight = false;
-    let lastToastMsg = null;
-    const toastStackEl = document.getElementById('toastStack');
+    const transportFeedEl = document.getElementById('transportFeed');
 
     const TRANSPORT_META = {
         railway_station: { icon: '🚆', label: 'Stasiun' },
@@ -1176,6 +1319,7 @@
             node["highway"="bus_stop"](around:${rr},${lat},${lon});
         );out center 80;`;
     }
+
     function classifyElement(tags) {
         if (!tags) return null;
         if (tags.railway === 'station' || tags.railway === 'halt') return 'railway_station';
@@ -1189,34 +1333,27 @@
         if (tags.highway === 'bus_stop') return 'bus_stop';
         return null;
     }
-    function showTransportToast(list) {
-        if (!list.length) return;
-        // tampilkan hingga 2 badge terdekat sebagai info sekilas, tanpa menumpuk permanen
-        list.slice(0, 2).forEach((item, i) => {
+
+    function renderTransportFeed(list) {
+        if (!list.length) {
+            transportFeedEl.innerHTML = '';
+            transportFeedEl.classList.remove('show');
+            return;
+        }
+        transportFeedEl.classList.add('show');
+        transportFeedEl.innerHTML = list.map(item => {
             const meta = TRANSPORT_META[item.cat];
             const arrived = item.dist <= TRANSPORT_ARRIVED_M;
             const text = arrived
                 ? `ANDA BERADA DI ${item.name.toUpperCase()}`
                 : `ANDA BERADA ${Math.round(item.dist)} METER DARI ${item.name.toUpperCase()}`;
-            if (i === 0) {
-                if (text === lastToastMsg) return;
-                lastToastMsg = text;
-            }
-            setTimeout(() => {
-                const el = document.createElement('div');
-                el.className = 'transport-toast' + (arrived ? ' arrived' : '');
-                el.innerHTML = `<span class="tt-icon">${meta.icon}</span><span class="tt-text">${text}</span>`;
-                toastStackEl.appendChild(el);
-                requestAnimationFrame(() => el.classList.add('show'));
-                setTimeout(() => {
-                    el.classList.remove('show');
-                    el.classList.add('hide');
-                    setTimeout(() => el.remove(), 350);
-                }, TOAST_DURATION_MS);
-                while (toastStackEl.children.length > 3) toastStackEl.removeChild(toastStackEl.firstChild);
-            }, i * 350);
-        });
+            return `<div class="transport-badge ${arrived ? 'arrived' : ''}">
+                <span class="tb-icon">${meta.icon}</span>
+                <span class="tb-text">${text}</span>
+            </div>`;
+        }).join('');
     }
+
     async function checkNearbyTransport(lat, lng, force = false) {
         if (transportInFlight) return;
         const point = { lat, lng };
@@ -1243,51 +1380,85 @@
                 candidates.push({ cat, name, dist });
             });
             const byCat = {};
-            candidates.forEach(c => { if (!byCat[c.cat] || c.dist < byCat[c.cat].dist) byCat[c.cat] = c; });
+            candidates.forEach(c => {
+                if (!byCat[c.cat] || c.dist < byCat[c.cat].dist) byCat[c.cat] = c;
+            });
             const list = Object.values(byCat).sort((a, b) => a.dist - b.dist).slice(0, 5);
-            showTransportToast(list);
+            renderTransportFeed(list);
         } catch (e) {
             console.warn('Gagal memeriksa transportasi terdekat:', e.message);
         } finally {
             transportInFlight = false;
         }
     }
+
     function stopTransportTracking() {
         if (transportTimer) { clearInterval(transportTimer); transportTimer = null; }
         lastTransportLatLng = null;
-        lastToastMsg = null;
+        transportFeedEl.innerHTML = '';
+        transportFeedEl.classList.remove('show');
     }
 
+    // Matikan tracking GPS
     function stopLocationTracking() {
-        if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-        if (addressTimer) { clearInterval(addressTimer); addressTimer = null; }
-        if (weatherTimer) { clearInterval(weatherTimer); weatherTimer = null; }
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        if (addressTimer) {
+            clearInterval(addressTimer);
+            addressTimer = null;
+        }
+        stopWeatherAutoRefresh();
         stopTransportTracking();
         isLocTracking = false;
         lastGeocodedLatLng = null;
         lastWeatherLatLng = null;
         locBtn.classList.remove('active');
-        document.getElementById('locLabel').innerText = 'GPS';
-        if (myMarker) { map.removeLayer(myMarker); myMarker = null; }
+        locBtn.innerHTML = '📍 Lokasi Saya';
+        if (myMarker) {
+            map.removeLayer(myMarker);
+            myMarker = null;
+        }
+        if (activeSource === 'gps') {
+            activeSource = null;
+            activeLat = null;
+            activeLng = null;
+        }
+        // Pencarian boleh dipakai lagi setelah GPS dimatikan
+        setSearchEnabled(true);
         gpsStatusEl.innerText = 'Tidak aktif';
         gpsCoordsEl.innerText = '-';
         showAddress(null);
     }
 
     function toggleLocationTracking() {
-        if (!navigator.geolocation) { alert('Geolokasi tidak didukung oleh browser ini.'); return; }
+        if (!navigator.geolocation) {
+            alert('Geolokasi tidak didukung oleh browser ini.');
+            return;
+        }
         if (isLocTracking) {
             stopLocationTracking();
         } else {
-            document.getElementById('locLabel').innerText = '...';
+            // GPS diaktifkan: kosongkan & nonaktifkan pencarian, hapus penanda
+            // hasil pencarian jika ada — supaya cuma satu sumber lokasi aktif.
+            searchInput.value = '';
+            hideSearchResults();
+            if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+            setSearchEnabled(false);
+
+            locBtn.innerHTML = '⏳ Mendapatkan...';
             let firstFix = true;
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     if (!myMarker) {
-                        myMarker = L.marker([lat, lng], { icon: makeMyLocIcon(), zIndexOffset: 1000 }).addTo(map)
-                            .bindPopup(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row loading">Mengambil alamat lengkap...</div></div>`);
+                        myMarker = L.marker([lat, lng], {
+                            icon: makeMyLocIcon(),
+                            zIndexOffset: 1000
+                        }).addTo(map)
+                        .bindPopup(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row loading">Mengambil alamat lengkap...</div></div>`);
                     } else {
                         myMarker.setLatLng([lat, lng]);
                     }
@@ -1295,10 +1466,16 @@
                     if (!isLocTracking) {
                         isLocTracking = true;
                         locBtn.classList.add('active');
-                        document.getElementById('locLabel').innerText = 'Aktif';
+                        locBtn.innerHTML = '📍 Aktif';
                     }
                     gpsStatusEl.innerText = 'Aktif';
                     gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(pos.coords.accuracy || 0)}m)`;
+
+                    // GPS adalah lokasi aktif sekarang: alamat, cuaca, dan
+                    // transportasi terdekat semuanya mengacu ke titik ini.
+                    activeSource = 'gps';
+                    activeLat = lat;
+                    activeLng = lng;
 
                     reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix });
                     checkNearbyTransport(lat, lng, firstFix);
@@ -1318,26 +1495,26 @@
                                 checkNearbyTransport(p.lat, p.lng, true);
                             }, TRANSPORT_CHECK_INTERVAL_MS);
                         }
-                        if (!weatherTimer) {
-                            weatherTimer = setInterval(() => {
-                                const p = myMarker.getLatLng();
-                                maybeFetchWeather(p.lat, p.lng, true);
-                            }, WEATHER_REFRESH_MS);
-                        }
+                        startWeatherAutoRefresh();
                     }
                 },
                 (err) => {
                     alert('Error GPS: ' + err.message);
-                    document.getElementById('locLabel').innerText = 'GPS';
+                    locBtn.innerHTML = '📍 Lokasi Saya';
                     locBtn.classList.remove('active');
                     isLocTracking = false;
                     gpsStatusEl.innerText = 'Error';
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
             );
-            setTimeout(() => { if (!isLocTracking) document.getElementById('locLabel').innerText = 'GPS'; }, 10000);
+            setTimeout(() => {
+                if (!isLocTracking) {
+                    locBtn.innerHTML = '📍 Lokasi Saya';
+                }
+            }, 10000);
         }
     }
+
     locBtn.addEventListener('click', toggleLocationTracking);
 
     // ======================================================================
@@ -1347,14 +1524,16 @@
     btnFs.addEventListener('click', () => {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(() => {});
-            btnFs.classList.add('on');
+            btnFs.innerText = '⛶ Keluar';
         } else {
             document.exitFullscreen();
-            btnFs.classList.remove('on');
+            btnFs.innerText = '⛶ Layar Penuh';
         }
     });
     document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement) btnFs.classList.remove('on');
+        if (!document.fullscreenElement) {
+            btnFs.innerText = '⛶ Layar Penuh';
+        }
         setTimeout(() => map.invalidateSize(), 300);
     });
 
