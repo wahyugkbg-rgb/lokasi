@@ -1130,26 +1130,44 @@
         updateCompassUI(smoothedHeading);
     }
 
-    function handleOrientation(e) {
-        let heading;
-        if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
-            heading = e.webkitCompassHeading;
-        } else if (e.alpha != null) {
-            // Formula terkoreksi: "360 - alpha" menghasilkan arah terbalik 180°
-            // (kepala HP ke Utara tapi kompas menunjuk Selatan) pada sensor
-            // Android perangkat ini. (540 - alpha) % 360 = (360 - alpha) + 180,
-            // sehingga hasilnya sefase dengan arah sebenarnya.
-            heading = (360 - e.alpha) % 360;
-        } else { return; }
-        heading = (heading % 360 + 360) % 360;
-        pendingRawHeading = heading;
-        if (!compassActive) { compassActive = true; compassEnableBtn.style.display = 'none'; }
-        // Batasi pembaruan tampilan ke ritme refresh layar (~60fps) agar mulus
-        // dan tidak "gemetar" walau event sensor datang lebih sering dari itu.
-        if (compassRafId == null) {
-            compassRafId = requestAnimationFrame(compassAnimationTick);
-        }
+function handleOrientation(e) {
+    let heading;
+
+    // 1. PRIORITAS TERTINGGI: iOS / webkit (sudah absolut)
+    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+        heading = e.webkitCompassHeading;
     }
+    // 2. PRIORITAS KEDUA: Event Absolut (Chrome/Android modern)
+    else if (e.isAbsolute === true) {
+        // Alpha langsung adalah azimuth dari Utara (0 = Utara, 90 = Timur)
+        heading = e.alpha;
+    }
+    // 3. FALLBACK TERAKHIR: Event Relatif (kuno / jika absolut tidak tersedia)
+    else if (e.alpha != null) {
+        // Data relatif biasanya berputar berlawanan arah jarum jam,
+        // sehingga perlu dibalik (360 - alpha) agar Utara = 0
+        heading = (360 - e.alpha) % 360;
+    } else {
+        return; // tidak ada data
+    }
+
+    // Pastikan dalam rentang 0-359
+    heading = (heading % 360 + 360) % 360;
+
+    // Simpan heading mentah untuk dismooting
+    pendingRawHeading = heading;
+
+    // Aktifkan status kompas
+    if (!compassActive) {
+        compassActive = true;
+        compassEnableBtn.style.display = 'none';
+    }
+
+    // Trigger animasi smoothing (RAF)
+    if (compassRafId == null) {
+        compassRafId = requestAnimationFrame(compassAnimationTick);
+    }
+}
     async function enableCompass() {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             try {
