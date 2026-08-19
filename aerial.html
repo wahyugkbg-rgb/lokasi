@@ -325,6 +325,30 @@
         .transport-toast .tt-icon{ font-size:1.1rem; flex-shrink:0; }
         .transport-toast .tt-text{ font-size:0.74rem; font-weight:800; letter-spacing:0.2px; color:var(--text); line-height:1.3; }
 
+        /* Box info fasilitas transportasi terdekat (radius <=700m) */
+        .nearby-box{
+            max-width:94%; width:100%; display:flex; flex-direction:column; gap:1px;
+            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong); border-radius:11px;
+            padding:9px 12px; box-shadow:0 8px 22px rgba(0,0,0,0.5);
+            opacity:0; transform:translateY(-10px) scale(0.97); pointer-events:none;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            border-left:4px solid var(--accent);
+        }
+        .nearby-box.show{ opacity:1; transform:translateY(0) scale(1); }
+        .nearby-header{
+            display:flex; align-items:center; gap:6px; margin-bottom:4px;
+            font-family:var(--font-head); font-weight:700; font-size:0.78rem;
+            letter-spacing:0.3px; color:var(--text-dim);
+        }
+        .nearby-row{ display:flex; align-items:center; gap:8px; padding:2px 0; }
+        .nearby-row .nb-badge{
+            flex-shrink:0; display:flex; align-items:center; justify-content:center;
+            width:21px; height:21px; border-radius:6px; font-size:0.8rem;
+            background:rgba(255,255,255,0.08);
+        }
+        .nearby-row .nb-text{ font-size:0.74rem; font-weight:800; letter-spacing:0.15px; line-height:1.3; }
+        body.sunlight-mode .nearby-row .nb-badge{ background:rgba(0,0,0,0.06); border:1px solid #000; }
+
         /* Toast izin sensor kompas */
         .sensor-toast{
             position:absolute; left:50%; top:64px; transform:translateX(-50%) translateY(-16px);
@@ -682,13 +706,13 @@
     function updateModePill() {
         //if (!modePillEl) return;
         //if (activeLocation && activeLocation.source === 'gps') {
-         //   modePillEl.textContent = '📍 MODE: GPS AKTIF';
-         //   modePillEl.classList.add('show');
+        //    modePillEl.textContent = '📍 MODE: GPS AKTIF';
+        //    modePillEl.classList.add('show');
         //} else if (activeLocation && activeLocation.source === 'search') {
         //    modePillEl.textContent = '🔍 MODE: HASIL PENCARIAN';
-         //   modePillEl.classList.add('show');
+        //    modePillEl.classList.add('show');
         //} else {
-         //   modePillEl.classList.remove('show');
+        //    modePillEl.classList.remove('show');
         //}
     }
 
@@ -1237,8 +1261,13 @@
     const compassDial = document.getElementById('compassDial');
     const compassDeg = document.getElementById('compassDeg');
     const compassDir = document.getElementById('compassDir');
-    let compassActive = false; let continuousRotation = 0; let lastHeadingForRotation = null;
-    
+    let compassActive = false; let lastHeadingForRotation = null;
+    // targetRotation = rotasi kontinu (tanpa lompatan 359°→0°) hasil event sensor terbaru.
+    // displayRotation = nilai yang benar-benar dirender, dihaluskan menuju target lewat rAF
+    // agar tidak berkedip/bergetar akibat noise sensor & laju event yang tidak rata.
+    let targetRotation = null; let displayRotation = null;
+    let compassLoopRunning = false; let lastDisplayedDeg = null;
+
     function degToCompassDir(deg) {
         const dirs = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
         return dirs[Math.round(deg / 45) % 8];
@@ -1251,17 +1280,34 @@
         else if (e.isAbsolute === true) heading = e.alpha;
         else if (e.alpha != null) heading = (360 - e.alpha) % 360;
         else return;
-        
+
         heading = (heading % 360 + 360) % 360;
         if (!compassActive) { compassActive = true; document.getElementById('compassEnableBtn').style.display = 'none'; }
-        
-        if (lastHeadingForRotation == null) continuousRotation = -heading;
-        else continuousRotation += -shortestAngleDelta(lastHeadingForRotation, heading);
+
+        if (targetRotation == null) { targetRotation = -heading; displayRotation = targetRotation; }
+        else targetRotation += -shortestAngleDelta(lastHeadingForRotation, heading);
         lastHeadingForRotation = heading;
-        
-        compassDial.style.transform = `rotate(${continuousRotation}deg)`;
-        compassDeg.innerText = `${Math.round(heading).toString().padStart(3, '0')}°`;
-        compassDir.innerText = degToCompassDir(heading);
+
+        if (!compassLoopRunning) { compassLoopRunning = true; requestAnimationFrame(compassRenderLoop); }
+    }
+
+    function compassRenderLoop() {
+        if (targetRotation != null && displayRotation != null) {
+            // Low-pass filter (EMA): jarum mengejar target secara halus tiap frame,
+            // bukan langsung melompat ke posisi mentah sensor.
+            const diff = targetRotation - displayRotation;
+            displayRotation += Math.abs(diff) < 0.05 ? diff : diff * 0.18;
+            compassDial.style.transform = `rotate(${displayRotation}deg)`;
+
+            const shownHeading = ((-displayRotation) % 360 + 360) % 360;
+            const roundedDeg = Math.round(shownHeading);
+            if (roundedDeg !== lastDisplayedDeg) {
+                lastDisplayedDeg = roundedDeg;
+                compassDeg.innerText = `${roundedDeg.toString().padStart(3, '0')}°`;
+                compassDir.innerText = degToCompassDir(shownHeading);
+            }
+        }
+        requestAnimationFrame(compassRenderLoop);
     }
     document.getElementById('compassEnableBtn').addEventListener('click', async () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -1364,22 +1410,98 @@
     }
 
     const toastStackEl = document.getElementById('toastStack');
+    const NEARBY_RADIUS_M = 700;
+    let nearbyBoxEl = null; let nearbyBodyEl = null; let nearbyHideTimer = null;
+    function ensureNearbyBox() {
+        if (nearbyBoxEl) return nearbyBoxEl;
+        nearbyBoxEl = document.createElement('div');
+        nearbyBoxEl.className = 'nearby-box';
+        nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span>Anda berada</span></div><div class="nearby-body"></div>`;
+        toastStackEl.appendChild(nearbyBoxEl);
+        nearbyBodyEl = nearbyBoxEl.querySelector('.nearby-body');
+        return nearbyBoxEl;
+    }
+    function nearbyDistanceColor(d) {
+        // Warna berdasar jarak: makin dekat makin "hidup" (hijau), makin jauh (mendekati 700m) makin redup.
+        if (d <= 150) return 'var(--accent3)';
+        if (d <= 350) return 'var(--accent)';
+        if (d <= 550) return 'var(--warn)';
+        return 'var(--text-dim)';
+    }
+    // Kategorikan elemen Overpass menjadi jenis fasilitas naik-turun penumpang.
+    function categorizeTransportElement(tags) {
+        if (!tags) return null;
+        if (tags.aeroway === 'aerodrome') return { cat: 'bandara', label: 'Bandara', icon: '✈️' };
+        if (tags.amenity === 'ferry_terminal') return { cat: 'pelabuhan', label: 'Pelabuhan', icon: '⛴️' };
+        if (tags.railway === 'station' || tags.railway === 'halt') {
+            const station = (tags.station || '').toLowerCase();
+            const network = (tags.network || '').toLowerCase();
+            if (station === 'subway' || network.includes('mrt')) return { cat: 'mrt', label: 'Stasiun MRT', icon: '🚇' };
+            if (station === 'light_rail' || network.includes('lrt')) return { cat: 'lrt', label: 'Stasiun LRT', icon: '🚈' };
+            return { cat: 'kai', label: 'Stasiun KAI/Komuter', icon: '🚆' };
+        }
+        if (tags.amenity === 'bus_station') {
+            const name = (tags.name || '').toLowerCase();
+            if (name.includes('angkot') || name.includes('mikrolet') || name.includes('pangkalan')) return { cat: 'angkot', label: 'Pangkalan Angkot', icon: '🚐' };
+            return { cat: 'angkot', label: 'Terminal/Pangkalan Angkot', icon: '🚌' };
+        }
+        if (tags.amenity === 'taxi') {
+            const name = (tags.name || '').toLowerCase();
+            if (name.includes('ojek')) return { cat: 'ojek', label: 'Pangkalan Ojek', icon: '🛵' };
+            return { cat: 'taksi', label: 'Pangkalan Taksi', icon: '🚕' };
+        }
+        return null;
+    }
+    function showNearbyBox() {
+        ensureNearbyBox();
+        if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
+        nearbyBoxEl.classList.add('show');
+        // Box muncul sebentar lalu sembunyi otomatis agar tidak mengganggu peta.
+        nearbyHideTimer = setTimeout(() => { nearbyBoxEl.classList.remove('show'); nearbyHideTimer = null; }, 7000);
+    }
+    function hideNearbyBox() {
+        if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
+        if (nearbyBoxEl) nearbyBoxEl.classList.remove('show');
+    }
+    function renderNearbyBox(bestByCat) {
+        const order = ['bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek'];
+        // Urutkan dari yang terjauh (mendekati 700m) ke yang terdekat, sesuai instruksi tampilan.
+        const items = order.map(k => bestByCat[k]).filter(Boolean).sort((a, b) => b.dist - a.dist);
+        if (!items.length) { hideNearbyBox(); return; }
+        ensureNearbyBox();
+        nearbyBodyEl.innerHTML = items.map(it => {
+            const distText = Math.round(it.dist);
+            const nameText = it.name ? ` ${it.name}` : '';
+            return `<div class="nearby-row" style="color:${nearbyDistanceColor(it.dist)}">` +
+                   `<span class="nb-badge">${it.icon}</span>` +
+                   `<span class="nb-text">${distText} meter dari ${it.label}${nameText}</span>` +
+                   `</div>`;
+        }).join('');
+        showNearbyBox();
+    }
     async function checkNearbyTransport(lat, lng, force = false) {
-        // [Fungsi Overpass API tetap ada dan disederhanakan untuk ukuran file, logic sama persis]
         try {
-            const q = `[out:json][timeout:15];(node["railway"="station"](around:2000,${lat},${lng});node["aeroway"="aerodrome"](around:2000,${lat},${lng});node["amenity"="bus_station"](around:2000,${lat},${lng}););out center 3;`;
+            const q = `[out:json][timeout:15];(nwr["aeroway"="aerodrome"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="ferry_terminal"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="halt"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="bus_station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="taxi"](around:${NEARBY_RADIUS_M},${lat},${lng}););out center 30;`;
             const url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q);
             const res = await fetchWithTimeout(url, null, 10000);
             const data = await res.json();
-            if (data.elements && data.elements.length > 0) {
-                const name = data.elements[0].tags.name || "Stasiun/Terminal";
-                const el = document.createElement('div');
-                el.className = 'transport-toast show';
-                el.innerHTML = `<span class="tt-icon">🚆</span><span class="tt-text">Di sekitar area ${name}</span>`;
-                toastStackEl.appendChild(el);
-                setTimeout(() => el.remove(), 4000);
+            const elements = (data && data.elements) || [];
+            const bestByCat = {};
+            for (const el of elements) {
+                const info = categorizeTransportElement(el.tags);
+                if (!info) continue;
+                const elat = el.lat != null ? el.lat : (el.center && el.center.lat);
+                const elng = el.lon != null ? el.lon : (el.center && el.center.lon);
+                if (elat == null || elng == null) continue;
+                const dist = haversineMeters({ lat, lng }, { lat: elat, lng: elng });
+                if (dist > NEARBY_RADIUS_M) continue;
+                const name = (el.tags && el.tags.name) || '';
+                if (!bestByCat[info.cat] || dist < bestByCat[info.cat].dist) {
+                    bestByCat[info.cat] = { label: info.label, icon: info.icon, name, dist };
+                }
             }
-        } catch(e){}
+            renderNearbyBox(bestByCat);
+        } catch (e) { /* diamkan agar kegagalan API tidak mengganggu peta */ }
     }
 
     // ======================================================================
