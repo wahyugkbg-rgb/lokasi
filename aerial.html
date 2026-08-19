@@ -1139,7 +1139,7 @@
             // (kepala HP ke Utara tapi kompas menunjuk Selatan) pada sensor
             // Android perangkat ini. (540 - alpha) % 360 = (360 - alpha) + 180,
             // sehingga hasilnya sefase dengan arah sebenarnya.
-            heading = (540 - e.alpha) % 360;
+            heading = (360 - e.alpha) % 360;
         } else { return; }
         heading = (heading % 360 + 360) % 360;
         pendingRawHeading = heading;
