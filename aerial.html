@@ -676,6 +676,8 @@
     // ======================================================================
     let gpsSessionId = 0;      // bertambah setiap kali sesi GPS dimulai/dihentikan
     let searchRequestId = 0;   // bertambah setiap kali pencarian baru dimulai/dibatalkan
+    let activeSearchAbortController = null;      // membatalkan fetch pencarian alamat yang sedang berjalan secara nyata
+    let activeGpsGeocodeAbortController = null;  // membatalkan fetch reverse-geocode GPS yang sedang berjalan secara nyata
     const modePillEl = document.getElementById('modePill');
     function updateModePill() {
         if (!modePillEl) return;
@@ -764,18 +766,23 @@
     });
 
     // ======================================================================
-    // LAYAR TETAP MENYALA (Screen Wake Lock)
+    // LAYAR TETAP MENYALA (Screen Wake Lock) — DIPERKUAT AGAR SELALU AKTIF
     // ======================================================================
     let wakeLock = null;
+    let wakeLockRetryTimer = null;
     const wakeStatusEl = document.getElementById('wakeStatus');
     async function requestWakeLock() {
         if (!('wakeLock' in navigator)) { if (wakeStatusEl) wakeStatusEl.innerText = 'Tidak didukung browser ini'; return; }
+        if (wakeLock) return; // sudah aktif, tidak perlu minta ulang
+        if (document.visibilityState !== 'visible') return; // wake lock hanya bisa diminta saat tab terlihat
         try {
             wakeLock = await navigator.wakeLock.request('screen');
             if (wakeStatusEl) wakeStatusEl.innerText = '🔆 Tetap menyala';
             wakeLock.addEventListener('release', () => {
                 wakeLock = null;
-                if (wakeStatusEl && document.visibilityState === 'visible') wakeStatusEl.innerText = 'Nonaktif';
+                if (wakeStatusEl && document.visibilityState === 'visible') wakeStatusEl.innerText = 'Menyambung ulang…';
+                // Coba sambungkan lagi segera selama halaman masih terlihat, agar aplikasi terus berjalan tanpa layar padam/tidur
+                if (document.visibilityState === 'visible') setTimeout(requestWakeLock, 300);
             });
         } catch (err) {
             if (wakeStatusEl) wakeStatusEl.innerText = 'Gagal mengaktifkan';
@@ -783,6 +790,11 @@
     }
     requestWakeLock();
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock(); });
+    window.addEventListener('focus', () => { if (!wakeLock) requestWakeLock(); });
+    window.addEventListener('pageshow', () => { if (!wakeLock) requestWakeLock(); });
+    // Jaring pengaman berkala: beberapa browser/OS melepas wake lock tanpa memicu event apa pun (mis. hemat baterai) —
+    // periksa secara berkala agar aplikasi tetap "menyala" selama masih dibuka.
+    wakeLockRetryTimer = setInterval(() => { if (!wakeLock && document.visibilityState === 'visible') requestWakeLock(); }, 20000);
 
     // ======================================================================
     // INISIALISASI PETA & LAYER (SAMA SEPERTI ASLI)
@@ -895,10 +907,15 @@
         return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
     }
 
-    async function fetchWithProxy(targetUrl) {
+    async function fetchWithProxy(targetUrl, externalSignal) {
+        if (externalSignal && externalSignal.aborted) throw new Error('Dibatalkan');
         const errors = [];
         const attempts = proxyStrategies.map(strategy => {
             const controller = new AbortController();
+            if (externalSignal) {
+                if (externalSignal.aborted) controller.abort();
+                else externalSignal.addEventListener('abort', () => controller.abort());
+            }
             const proxyUrl = strategy.build(targetUrl);
             const task = (async () => {
                 const response = await fetchWithTimeout(proxyUrl, controller.signal);
@@ -958,7 +975,10 @@
         if (searchDisabledHintEl) searchDisabledHintEl.classList.toggle('show', !enabled);
         if (!enabled) {
             searchRequestId++; // batalkan permintaan pencarian yang mungkin masih tertunda
+            if (activeSearchAbortController) { activeSearchAbortController.abort(); activeSearchAbortController = null; }
             searchInput.value = ''; hideSearchResults(); stopSearchLocationMonitoring();
+            searchBtn.classList.remove('scanning');
+            document.getElementById('loader').style.display = 'none';
             if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
             if (activeLocation && activeLocation.source === 'search') { activeLocation = null; updateModePill(); }
         }
@@ -1037,21 +1057,28 @@
     async function searchLocation(query) {
         query = query.trim(); if (!query) return;
         if (isLocTracking) stopLocationTracking();
-        const myRequestId = ++searchRequestId; // klik "Cari" eksplisit: tandai permintaan ini sebagai yang terbaru
+        searchRequestId++;
+        const myRequestId = searchRequestId; // klik "Cari" eksplisit: tandai permintaan ini sebagai yang terbaru
+        if (activeSearchAbortController) activeSearchAbortController.abort(); // batalkan fetch pencarian sebelumnya yang mungkin masih berjalan
+        const myAbort = new AbortController();
+        activeSearchAbortController = myAbort;
         try {
             document.getElementById('loader').style.display = 'block';
             searchBtn.classList.add('scanning');
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&namedetails=1&accept-language=id`;
-            const data = await fetchWithProxy(url);
+            const data = await fetchWithProxy(url, myAbort.signal);
             // Jika sudah dibatalkan oleh permintaan/aksi berikutnya (mis. pengguna mengklik GPS di tengah proses), abaikan hasil ini
             if (myRequestId !== searchRequestId || isLocTracking) return;
             renderSearchResults(data || []);
         } catch (e) {
-            if (myRequestId !== searchRequestId || isLocTracking) return;
+            if (myRequestId !== searchRequestId || isLocTracking) return; // dibatalkan secara sengaja (mode berganti), jangan tampilkan error
             hideSearchResults(); alert('Gagal mencari lokasi: ' + e.message);
         } finally {
-            document.getElementById('loader').style.display = 'none';
-            searchBtn.classList.remove('scanning');
+            if (activeSearchAbortController === myAbort) activeSearchAbortController = null;
+            if (myRequestId === searchRequestId) {
+                document.getElementById('loader').style.display = 'none';
+                searchBtn.classList.remove('scanning');
+            }
         }
     }
     searchBtn.addEventListener('click', () => searchLocation(searchInput.value));
@@ -1123,6 +1150,32 @@
     const addrTextEl = document.getElementById('addrText');
     const copyAddrBtn = document.getElementById('copyAddrBtn');
 
+    // ---- Monitoring real-time selama GPS aktif: cuaca, geofisika & transportasi ----
+    // selalu mengikuti posisi terbaru pengguna, bukan hanya sekali di awal.
+    const GPS_TRANSPORT_MOVE_THRESHOLD_M = 250; // cek ulang transportasi tiap kali bergeser >250m
+    let lastTransportCheckLatLng = null;
+    let gpsWeatherTimer = null;
+    let gpsTransportTimer = null;
+    function stopGpsLocationMonitoring() {
+        if (gpsWeatherTimer) { clearInterval(gpsWeatherTimer); gpsWeatherTimer = null; }
+        if (gpsTransportTimer) { clearInterval(gpsTransportTimer); gpsTransportTimer = null; }
+        lastTransportCheckLatLng = null;
+    }
+    function startGpsLocationMonitoring() {
+        stopGpsLocationMonitoring();
+        // Jaring pengaman waktu: tetap segarkan cuaca/geofisika/transportasi berkala walau
+        // pergerakan GPS lambat/kecil, supaya info tidak basi selama aplikasi tetap berjalan.
+        gpsWeatherTimer = setInterval(() => {
+            if (isLocTracking && activeLocation && activeLocation.source === 'gps') {
+                maybeFetchWeather(activeLocation.lat, activeLocation.lng, true);
+                maybeFetchGeophysics(activeLocation.lat, activeLocation.lng, true);
+            }
+        }, 5 * 60 * 1000);
+        gpsTransportTimer = setInterval(() => {
+            if (isLocTracking && activeLocation && activeLocation.source === 'gps') checkNearbyTransport(activeLocation.lat, activeLocation.lng, true);
+        }, 45000);
+    }
+
     function makeMyLocIcon() { return L.divIcon({ className: '', html: `<div class="my-loc-wrap"><div class="my-loc-pulse"></div><div class="my-loc-ring"></div></div>`, iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20] }); }
     function showAddress(text) { if (!text) { addrRowEl.classList.remove('show'); return; } addrTextEl.innerText = text; addrRowEl.classList.add('show'); }
     function haversineMeters(a, b) {
@@ -1137,9 +1190,12 @@
         const point = { lat, lng };
         if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) return;
         geocodeInFlight = true;
+        if (activeGpsGeocodeAbortController) activeGpsGeocodeAbortController.abort();
+        const myAbort = new AbortController();
+        activeGpsGeocodeAbortController = myAbort;
         try {
             const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
-            const data = await fetchWithProxy(url);
+            const data = await fetchWithProxy(url, myAbort.signal);
             if (session !== null && session !== gpsSessionId) return; // mode GPS sudah beralih/nonaktif sebelum hasil datang, abaikan
             const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
             lastGeocodedLatLng = point;
@@ -1148,7 +1204,10 @@
         } catch (e) {
             if (session !== null && session !== gpsSessionId) return;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat</div></div>`);
-        } finally { geocodeInFlight = false; }
+        } finally {
+            geocodeInFlight = false;
+            if (activeGpsGeocodeAbortController === myAbort) activeGpsGeocodeAbortController = null;
+        }
     }
 
     // FITUR 4: WEB SHARE API PWA
@@ -1293,8 +1352,15 @@
             }).join('');
         } catch (e) { geoBody.innerHTML = `<div class="w-row w-error">Gagal memuat gempa</div>`; }
     }
+    let lastGeoLatLng = null; let lastGeoFetchTime = 0;
     function maybeFetchGeophysics(lat, lng, force = false) {
-        if (popovers.weather.classList.contains('open')) fetchGeophysics(lat, lng);
+        if (!popovers.weather.classList.contains('open')) return;
+        const point = { lat, lng };
+        const now = Date.now();
+        // Throttle jarak (300m) + waktu (60dtk) agar aman dipanggil berulang mengikuti pergerakan GPS tanpa membanjiri API
+        if (!force && lastGeoLatLng && haversineMeters(lastGeoLatLng, point) < 300 && (now - lastGeoFetchTime) < 60000) return;
+        lastGeoLatLng = point; lastGeoFetchTime = now;
+        fetchGeophysics(lat, lng);
     }
 
     const toastStackEl = document.getElementById('toastStack');
@@ -1321,8 +1387,10 @@
     // ======================================================================
     function stopLocationTracking() {
         gpsSessionId++; // batalkan sesi GPS ini — callback watchPosition/geocoding yang masih tertunda akan diabaikan
+        if (activeGpsGeocodeAbortController) { activeGpsGeocodeAbortController.abort(); activeGpsGeocodeAbortController = null; }
         if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         if (addressTimer) { clearInterval(addressTimer); addressTimer = null; }
+        stopGpsLocationMonitoring();
         isLocTracking = false; lastGeocodedLatLng = null;
         locBtn.classList.remove('active'); document.getElementById('locLabel').innerText = 'GPS';
         if (myMarker) { map.removeLayer(myMarker); myMarker = null; }
@@ -1353,9 +1421,23 @@
                     map.setView([lat, lng], 18);
                     isLocTracking = true; locBtn.classList.add('active'); document.getElementById('locLabel').innerText = 'Aktif';
                     gpsStatusEl.innerText = 'Aktif'; gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                    
+
+                    // Alamat selalu mengikuti posisi terkini (dijaga ambang jarak internal agar tidak spam)
                     reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix, session: mySession });
-                    if(firstFix) { checkNearbyTransport(lat, lng); maybeFetchWeather(lat, lng); firstFix = false; }
+                    // Cuaca & geofisika juga mengikuti arah/posisi terkini secara real-time (dijaga ambang jarak & waktu internal)
+                    maybeFetchWeather(lat, lng, firstFix);
+                    maybeFetchGeophysics(lat, lng, firstFix);
+
+                    if (firstFix) {
+                        lastTransportCheckLatLng = { lat, lng };
+                        checkNearbyTransport(lat, lng);
+                        startGpsLocationMonitoring();
+                        firstFix = false;
+                    } else if (!lastTransportCheckLatLng || haversineMeters(lastTransportCheckLatLng, { lat, lng }) >= GPS_TRANSPORT_MOVE_THRESHOLD_M) {
+                        // Sudah berpindah cukup jauh (naik/turun kendaraan, dsb.) — perbarui info stasiun/terminal/bandara terdekat
+                        lastTransportCheckLatLng = { lat, lng };
+                        checkNearbyTransport(lat, lng);
+                    }
                 },
                 (err) => { if (mySession === gpsSessionId) { stopLocationTracking(); alert('Error GPS: ' + err.message); } },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
