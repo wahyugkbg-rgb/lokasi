@@ -373,9 +373,134 @@
         .addr-popup .full { color:#555; font-size:0.75rem; margin-top:4px; display:block; font-weight:500; }
         .addr-popup .row { margin:1px 0; }
         .addr-popup .loading { color:#888; font-style:italic; }
+
+        /* ============================================================
+           SENTUHAN SCI-FI / FUTURISTIK — TAMBAHAN VISUAL (TIDAK MENGUBAH FUNGSI)
+           ============================================================ */
+        @keyframes gridDrift{ 0%{ background-position:0 0, 0 0; } 100%{ background-position:60px 60px, -60px 60px; } }
+        @keyframes scanSweep{ 0%{ transform:translateY(-100%); opacity:0; } 8%{ opacity:0.5; } 50%{ opacity:0.28; } 92%{ opacity:0.5; } 100%{ transform:translateY(100%); opacity:0; } }
+        @keyframes hudFlicker{ 0%,100%{ opacity:0.55; } 45%{ opacity:0.9; } 50%{ opacity:0.35; } 55%{ opacity:0.9; } }
+        @keyframes popMaterialize{
+            0%{ filter:blur(6px) brightness(1.8); opacity:0; transform:translateY(-10px) scale(0.97); }
+            60%{ filter:blur(1px) brightness(1.15); }
+            100%{ filter:blur(0) brightness(1); opacity:1; transform:translateY(0) scale(1); }
+        }
+        @keyframes badgeRing{ 0%{ transform:rotate(0deg);} 100%{ transform:rotate(360deg);} }
+        @keyframes reticleSpin{ 0%{ transform:rotate(0deg) scale(1);} 100%{ transform:rotate(360deg) scale(1);} }
+        @keyframes titleGlow{ 0%,100%{ text-shadow:0 0 6px rgba(0,229,255,0.35), 0 0 1px rgba(0,229,255,0.8);} 50%{ text-shadow:0 0 14px rgba(0,229,255,0.75), 0 0 2px rgba(0,229,255,1);} }
+        @keyframes shineSweep{ 0%{ transform:translateX(-120%) skewX(-18deg);} 100%{ transform:translateX(220%) skewX(-18deg);} }
+        @keyframes radarSweepRot{ 0%{ transform:rotate(0deg);} 100%{ transform:rotate(360deg);} }
+        @keyframes bootIn{ 0%{ opacity:0; letter-spacing:6px; filter:blur(4px);} 100%{ opacity:1; letter-spacing:0.3px; filter:blur(0);} }
+
+        /* Latar belakang grid HUD bergerak halus di balik peta */
+        .hud-bg{
+            position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.5;
+            background-image:
+                linear-gradient(rgba(0,229,255,0.055) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,229,255,0.055) 1px, transparent 1px);
+            background-size:60px 60px, 60px 60px;
+            animation: gridDrift 14s linear infinite;
+            mask-image: radial-gradient(1100px 700px at 50% 20%, #000 20%, transparent 78%);
+            -webkit-mask-image: radial-gradient(1100px 700px at 50% 20%, #000 20%, transparent 78%);
+        }
+        body.sunlight-mode .hud-bg{ display:none; }
+
+        /* Garis pemindai (scanner) yang lewat perlahan di atas peta */
+        .hud-scanline{
+            position:absolute; left:0; right:0; height:140px; z-index:2; pointer-events:none;
+            background:linear-gradient(180deg, transparent, rgba(0,229,255,0.10) 45%, rgba(0,229,255,0.20) 50%, rgba(0,229,255,0.10) 55%, transparent);
+            animation: scanSweep 7s linear infinite;
+            mix-blend-mode:screen;
+        }
+        body.sunlight-mode .hud-scanline{ display:none; }
+
+        /* Bingkai sudut HUD di area peta */
+        .hud-corner{ position:absolute; width:26px; height:26px; z-index:600; pointer-events:none; opacity:0.75; animation:hudFlicker 5s ease-in-out infinite; }
+        .hud-corner.tl{ top:10px; left:10px; border-top:2px solid var(--accent); border-left:2px solid var(--accent); border-radius:4px 0 0 0; }
+        .hud-corner.tr{ top:10px; right:10px; border-top:2px solid var(--accent); border-right:2px solid var(--accent); border-radius:0 4px 0 0; }
+        .hud-corner.bl{ bottom:10px; left:10px; border-bottom:2px solid var(--accent2); border-left:2px solid var(--accent2); border-radius:0 0 0 4px; }
+        .hud-corner.br{ bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); border-radius:0 0 4px 0; }
+        body.sunlight-mode .hud-corner{ display:none; }
+
+        /* Efek header: garis scan tipis + judul menyala + badge berputar */
+        header::after{
+            content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+            background:linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+            opacity:0.7;
+        }
+        header h1{ animation: titleGlow 3.2s ease-in-out infinite, bootIn 0.7s ease both; }
+        body.sunlight-mode header h1{ animation:none; }
+        .brand-badge{ overflow:visible; }
+        .brand-badge::before{
+            content:''; position:absolute; inset:-4px; border-radius:10px;
+            background:conic-gradient(from 0deg, var(--accent), transparent 30%, var(--accent2), transparent 70%, var(--accent));
+            opacity:0.55; animation: badgeRing 3.5s linear infinite; z-index:-1;
+        }
+        body.sunlight-mode .brand-badge::before{ display:none; }
+
+        /* Shine sweep pada tombol toolbar & header saat hover/aktif */
+        .tbtn, .header-controls button, .search-row button, .compass-enable-btn{ position:relative; overflow:hidden; }
+        .tbtn::before, .header-controls button::before, .search-row button::before{
+            content:''; position:absolute; top:0; left:0; width:40%; height:100%;
+            background:linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+            transform:translateX(-120%) skewX(-18deg); pointer-events:none;
+        }
+        .tbtn:hover::before, .tbtn.open::before, .header-controls button.on::before{ animation: shineSweep 1.1s ease; }
+        body.sunlight-mode .tbtn::before, body.sunlight-mode .header-controls button::before{ display:none; }
+
+        .tbtn.open{ animation: hudFlicker 2.4s ease-in-out infinite; }
+
+        /* Popover materialisasi holografik saat terbuka */
+        .popover.open{ animation: popMaterialize 0.32s cubic-bezier(.2,.9,.25,1) both; }
+        body.sunlight-mode .popover.open{ animation:none; }
+
+        /* Reticle target berputar di sekeliling tombol GPS saat aktif melacak */
+        .tbtn.loc{ position:relative; }
+        .tbtn.loc.active::before{
+            content:''; position:absolute; inset:-3px; border-radius:12px;
+            border:1.5px dashed var(--accent3); opacity:0.85;
+            animation: reticleSpin 3s linear infinite;
+        }
+        body.sunlight-mode .tbtn.loc.active::before{ display:none; }
+
+        /* Tombol cari dalam status "memindai" saat request berlangsung */
+        .search-row button.scanning{ animation: hudFlicker 0.8s ease-in-out infinite; }
+
+        /* Spinner loader bergaya radar futuristik */
+        .loader{
+            padding:18px 22px; border-radius:16px;
+            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong);
+            box-shadow:0 0 30px rgba(0,229,255,0.25), 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .spinner{
+            position:relative; border:2px solid rgba(0,229,255,0.18); border-left-color:transparent;
+            box-shadow:none; background:
+                repeating-conic-gradient(rgba(0,229,255,0.35) 0deg 4deg, transparent 4deg 18deg);
+            animation: radarSweepRot 1.1s linear infinite;
+        }
+        .spinner::after{
+            content:''; position:absolute; inset:6px; border-radius:50%;
+            background:radial-gradient(circle, rgba(0,229,255,0.25), transparent 70%);
+        }
+        body.sunlight-mode .spinner{ background:none; box-shadow:none; }
+        #loaderText{ font-family:var(--font-mono); letter-spacing:1px; color:var(--accent); }
+        body.sunlight-mode #loaderText{ color:#000; }
+
+        /* Status pill kecil untuk menandai mode lokasi aktif (Cari vs GPS) */
+        .mode-pill{
+            position:absolute; top:calc(var(--toolbar-h) + 16px); left:50%; transform:translateX(-50%);
+            z-index:640; padding:4px 12px; border-radius:20px; font-family:var(--font-mono);
+            font-size:0.66rem; font-weight:700; letter-spacing:0.6px; color:var(--accent);
+            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong);
+            box-shadow:0 0 12px rgba(0,229,255,0.25); opacity:0; pointer-events:none;
+            transition:opacity 0.25s ease, transform 0.25s ease; white-space:nowrap;
+        }
+        .mode-pill.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+        body.sunlight-mode .mode-pill{ color:#000; }
     </style>
 </head>
 <body>
+<div class="hud-bg"></div>
 
 <header>
     <div class="brand">
@@ -390,6 +515,12 @@
 
 <main>
     <div id="map"></div>
+    <div class="hud-scanline"></div>
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
+    <div class="mode-pill" id="modePill">MODE: STANDBY</div>
 
     <!-- Toolbar ikon ramping -->
     <div class="toolbar glass" id="toolbar">
@@ -534,7 +665,30 @@
     const CUSTOM_PROXY_URL = 'https://odd-dew-de57.endangbogorkota.workers.dev/?url=';
 
     let activeLocation = null; // { lat, lng, source: 'gps' | 'search' }
-    function setActiveLocation(lat, lng, source) { activeLocation = { lat, lng, source }; }
+    function setActiveLocation(lat, lng, source) { activeLocation = { lat, lng, source }; updateModePill(); }
+
+    // ======================================================================
+    // MODE LOKASI EKSKLUSIF (FITUR PERBAIKAN)
+    // Menjamin hanya satu mode aktif (GPS ATAU Pencarian), dan hanya berganti
+    // ketika pengguna benar-benar mengklik kontrol yang bersangkutan. Setiap
+    // respons async (fetch alamat/geocoding/GPS) yang datang terlambat dari
+    // sesi yang sudah tidak aktif akan diabaikan lewat mekanisme token.
+    // ======================================================================
+    let gpsSessionId = 0;      // bertambah setiap kali sesi GPS dimulai/dihentikan
+    let searchRequestId = 0;   // bertambah setiap kali pencarian baru dimulai/dibatalkan
+    const modePillEl = document.getElementById('modePill');
+    function updateModePill() {
+        if (!modePillEl) return;
+        if (activeLocation && activeLocation.source === 'gps') {
+            modePillEl.textContent = '📍 MODE: GPS AKTIF';
+            modePillEl.classList.add('show');
+        } else if (activeLocation && activeLocation.source === 'search') {
+            modePillEl.textContent = '🔍 MODE: HASIL PENCARIAN';
+            modePillEl.classList.add('show');
+        } else {
+            modePillEl.classList.remove('show');
+        }
+    }
 
     // ======================================================================
     // MODE TERIK
@@ -803,9 +957,10 @@
         searchInput.disabled = !enabled; searchBtn.disabled = !enabled;
         if (searchDisabledHintEl) searchDisabledHintEl.classList.toggle('show', !enabled);
         if (!enabled) {
+            searchRequestId++; // batalkan permintaan pencarian yang mungkin masih tertunda
             searchInput.value = ''; hideSearchResults(); stopSearchLocationMonitoring();
             if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
-            if (activeLocation && activeLocation.source === 'search') activeLocation = null;
+            if (activeLocation && activeLocation.source === 'search') { activeLocation = null; updateModePill(); }
         }
     }
     function stopSearchLocationMonitoring() {
@@ -858,6 +1013,7 @@
     }
 
     function selectSearchResult(result) {
+        if (isLocTracking) return; // GPS sudah diaktifkan (mis. lewat klik lain) sebelum hasil ini diproses — abaikan agar tetap eksklusif
         const lat = parseFloat(result.lat); const lng = parseFloat(result.lon);
         if (isNaN(lat) || isNaN(lng)) return;
         map.setView([lat, lng], 18);
@@ -881,15 +1037,21 @@
     async function searchLocation(query) {
         query = query.trim(); if (!query) return;
         if (isLocTracking) stopLocationTracking();
+        const myRequestId = ++searchRequestId; // klik "Cari" eksplisit: tandai permintaan ini sebagai yang terbaru
         try {
             document.getElementById('loader').style.display = 'block';
+            searchBtn.classList.add('scanning');
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&namedetails=1&accept-language=id`;
             const data = await fetchWithProxy(url);
+            // Jika sudah dibatalkan oleh permintaan/aksi berikutnya (mis. pengguna mengklik GPS di tengah proses), abaikan hasil ini
+            if (myRequestId !== searchRequestId || isLocTracking) return;
             renderSearchResults(data || []);
         } catch (e) {
+            if (myRequestId !== searchRequestId || isLocTracking) return;
             hideSearchResults(); alert('Gagal mencari lokasi: ' + e.message);
         } finally {
             document.getElementById('loader').style.display = 'none';
+            searchBtn.classList.remove('scanning');
         }
     }
     searchBtn.addEventListener('click', () => searchLocation(searchInput.value));
@@ -970,7 +1132,7 @@
         return 2 * R * Math.asin(Math.sqrt(h));
     }
     
-    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false } = {}) {
+    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false, session = null } = {}) {
         if (geocodeInFlight) return;
         const point = { lat, lng };
         if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) return;
@@ -978,11 +1140,13 @@
         try {
             const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
             const data = await fetchWithProxy(url);
+            if (session !== null && session !== gpsSessionId) return; // mode GPS sudah beralih/nonaktif sebelum hasil datang, abaikan
             const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
             lastGeocodedLatLng = point;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">${detail}</div></div>`);
             showAddress(detail);
         } catch (e) {
+            if (session !== null && session !== gpsSessionId) return;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat</div></div>`);
         } finally { geocodeInFlight = false; }
     }
@@ -1156,6 +1320,7 @@
     // TRACKING LOKASI UTAMA
     // ======================================================================
     function stopLocationTracking() {
+        gpsSessionId++; // batalkan sesi GPS ini — callback watchPosition/geocoding yang masih tertunda akan diabaikan
         if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         if (addressTimer) { clearInterval(addressTimer); addressTimer = null; }
         isLocTracking = false; lastGeocodedLatLng = null;
@@ -1164,6 +1329,7 @@
         gpsStatusEl.innerText = 'Tidak aktif'; gpsCoordsEl.innerText = '-';
         showAddress(null);
         if (activeLocation && activeLocation.source === 'gps') activeLocation = null;
+        updateModePill();
         setSearchEnabled(true);
     }
 
@@ -1171,10 +1337,15 @@
         if (!navigator.geolocation) { alert('Geolokasi tidak didukung.'); return; }
         if (isLocTracking) stopLocationTracking();
         else {
+            // Klik eksplisit pada tombol GPS: batalkan pencarian yang mungkin masih berjalan
+            // dan pastikan mode Pencarian benar-benar nonaktif sebelum GPS mengambil alih.
+            searchRequestId++;
             setSearchEnabled(false); document.getElementById('locLabel').innerText = '...';
+            const mySession = ++gpsSessionId;
             let firstFix = true;
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
+                    if (mySession !== gpsSessionId) return; // sesi ini sudah dibatalkan (mis. pengguna beralih ke pencarian)
                     const lat = pos.coords.latitude; const lng = pos.coords.longitude;
                     setActiveLocation(lat, lng, 'gps');
                     if (!myMarker) myMarker = L.marker([lat, lng], { icon: makeMyLocIcon(), zIndexOffset: 1000 }).addTo(map);
@@ -1183,10 +1354,10 @@
                     isLocTracking = true; locBtn.classList.add('active'); document.getElementById('locLabel').innerText = 'Aktif';
                     gpsStatusEl.innerText = 'Aktif'; gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                     
-                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix });
+                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix, session: mySession });
                     if(firstFix) { checkNearbyTransport(lat, lng); maybeFetchWeather(lat, lng); firstFix = false; }
                 },
-                (err) => { stopLocationTracking(); alert('Error GPS: ' + err.message); },
+                (err) => { if (mySession === gpsSessionId) { stopLocationTracking(); alert('Error GPS: ' + err.message); } },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
             );
         }
