@@ -973,6 +973,12 @@
     let addressTimer = null;
     let lastGeocodedLatLng = null;
     let geocodeInFlight = false;
+    // Token sesi GPS: dinaikkan setiap kali GPS start/stop. Semua callback async
+    // (posisi GPS, reverse-geocode) membawa token saat dibuat dan memeriksa ulang
+    // token ini sebelum menyentuh UI — sehingga hasil "basi" dari sesi GPS lama
+    // (mis. proses reverse-geocode yang masih berjalan saat user beralih ke "cari")
+    // tidak bisa lagi menimpa lokasi aktif yang baru.
+    let gpsSessionId = 0;
     const gpsStatusEl = document.getElementById('gpsStatus');
     const gpsCoordsEl = document.getElementById('gpsCoords');
     const addrRowEl = document.getElementById('addrRow');
@@ -1000,7 +1006,12 @@
         const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
         return 2 * R * Math.asin(Math.sqrt(h));
     }
-    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false } = {}) {
+    async function reverseGeocodeAndUpdate(lat, lng, { openPopup = false, sessionId } = {}) {
+        // Jika dipanggil dari alur GPS (sessionId diisi) tapi sesi itu sudah
+        // tidak berlaku lagi (GPS dimatikan / lokasi aktif berpindah ke "cari"
+        // sebelum proses ini selesai), batalkan — jangan sentuh UI sama sekali.
+        const isStale = () => sessionId !== undefined && sessionId !== gpsSessionId;
+        if (isStale()) return;
         if (geocodeInFlight) return;
         const point = { lat, lng };
         if (lastGeocodedLatLng && haversineMeters(lastGeocodedLatLng, point) < ADDRESS_MOVE_THRESHOLD_M && !openPopup) return;
@@ -1012,6 +1023,7 @@
         try {
             const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
             const data = await fetchWithProxy(url);
+            if (isStale()) return; // sesi GPS berakhir selagi menunggu respons — abaikan hasil basi
             const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
             const full = (data && data.display_name) || '';
             lastGeocodedLatLng = point;
@@ -1021,6 +1033,7 @@
             }
             showAddress(detail);
         } catch (e) {
+            if (isStale()) return;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat: ${e.message}</div></div>`);
         } finally {
             geocodeInFlight = false;
@@ -1377,6 +1390,7 @@
     }
 
     function stopLocationTracking() {
+        gpsSessionId++; // batalkan sesi GPS ini — semua callback/async yang masih berjalan akan diabaikan
         if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         if (addressTimer) { clearInterval(addressTimer); addressTimer = null; }
         if (weatherTimer) { clearInterval(weatherTimer); weatherTimer = null; }
@@ -1404,8 +1418,11 @@
             setSearchEnabled(false);
             document.getElementById('locLabel').innerText = '...';
             let firstFix = true;
+            gpsSessionId++;
+            const mySession = gpsSessionId; // token sesi GPS ini — dicek di tiap callback async di bawah
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
+                    if (mySession !== gpsSessionId) return; // sesi ini sudah dihentikan (mis. user beralih ke "cari") — abaikan
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
                     setActiveLocation(lat, lng, 'gps');
@@ -1424,7 +1441,7 @@
                     gpsStatusEl.innerText = 'Aktif';
                     gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(pos.coords.accuracy || 0)}m)`;
 
-                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix });
+                    reverseGeocodeAndUpdate(lat, lng, { openPopup: firstFix, sessionId: mySession });
                     checkNearbyTransport(lat, lng, firstFix);
                     maybeFetchWeather(lat, lng, firstFix);
                     maybeFetchGeophysics(lat, lng, firstFix);
@@ -1433,18 +1450,21 @@
                         firstFix = false;
                         if (!addressTimer) {
                             addressTimer = setInterval(() => {
+                                if (mySession !== gpsSessionId || !myMarker) return;
                                 const p = myMarker.getLatLng();
-                                reverseGeocodeAndUpdate(p.lat, p.lng);
+                                reverseGeocodeAndUpdate(p.lat, p.lng, { sessionId: mySession });
                             }, ADDRESS_REFRESH_MS);
                         }
                         if (!transportTimer) {
                             transportTimer = setInterval(() => {
+                                if (mySession !== gpsSessionId || !myMarker) return;
                                 const p = myMarker.getLatLng();
                                 checkNearbyTransport(p.lat, p.lng, true);
                             }, TRANSPORT_CHECK_INTERVAL_MS);
                         }
                         if (!weatherTimer) {
                             weatherTimer = setInterval(() => {
+                                if (mySession !== gpsSessionId || !myMarker) return;
                                 const p = myMarker.getLatLng();
                                 maybeFetchWeather(p.lat, p.lng, true);
                                 maybeFetchGeophysics(p.lat, p.lng, true);
@@ -1453,6 +1473,7 @@
                     }
                 },
                 (err) => {
+                    if (mySession !== gpsSessionId) return; // sesi ini sudah tidak berlaku — abaikan error basi
                     alert('Error GPS: ' + err.message);
                     document.getElementById('locLabel').innerText = 'GPS';
                     locBtn.classList.remove('active');
