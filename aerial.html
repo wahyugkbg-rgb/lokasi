@@ -284,16 +284,19 @@
         .quake-place{ font-size:0.7rem; color:var(--text-dim); font-weight:600; padding:0 0 8px; line-height:1.35; }
         .quake-item:last-child .quake-place{ padding-bottom:2px; }
         .quake-badge{
-            display:inline-block; padding:2px 9px; border-radius:20px; font-family:var(--font-mono);
-            font-weight:800; font-size:0.74rem; letter-spacing:0.3px;
-            text-shadow:0 1px 2px rgba(0,0,0,0.35);
+            display:inline-block; padding:3px 10px; border-radius:20px; font-family:var(--font-mono);
+            font-weight:800; font-size:0.76rem; letter-spacing:0.4px;
+            color:#ffffff; border:1px solid rgba(0,0,0,0.45);
+            text-shadow:-1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85),
+                        -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85),
+                        0 1px 3px rgba(0,0,0,0.6);
         }
-        /* Warna badge dibuat tetap (tidak ikut berubah pada mode terang/gelap) agar kontras teks selalu terjaga */
-        .quake-badge.mag-kecil{ background:#0fbf80; color:#022a1c; text-shadow:none; }
-        .quake-badge.mag-sedang{ background:#f5a300; color:#2b1600; text-shadow:none; }
-        .quake-badge.mag-kuat{ background:#ff7a00; color:#ffffff; }
-        .quake-badge.mag-besar{ background:#e0143c; color:#ffffff; }
-        .quake-badge.mag-ekstrem{ background:#b3001b; color:#ffffff; animation:livePulse 1s ease-in-out infinite; }
+        /* Warna badge dibuat tetap (tidak ikut berubah pada mode terang/gelap) + teks putih ber-outline agar SELALU kontras di latar apapun */
+        .quake-badge.mag-kecil{ background:#0a8f5c; }
+        .quake-badge.mag-sedang{ background:#c97800; }
+        .quake-badge.mag-kuat{ background:#e05d00; }
+        .quake-badge.mag-besar{ background:#d1103a; }
+        .quake-badge.mag-ekstrem{ background:#a3001a; animation:livePulse 1s ease-in-out infinite; }
 
         /* ---- HUD Badge Ringkas (Cuaca / Angin / Gempa) ---- */
         .hud-badge-row{
