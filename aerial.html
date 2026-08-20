@@ -728,7 +728,7 @@
             <div class="popover-title" style="margin-top:14px;">☁️ Overlay Cuaca</div>
             <div class="layer-grid">
                 <button type="button" id="btnRadarAnim">🌧️ Radar Hujan (Animasi)</button>
-                <button type="button" id="btnCloudSat" title="Citra satelit tutupan awan real-time (RainViewer), mengikuti area peta yang sedang ditampilkan">☁️ Awan (Satelit)</button>
+                <button type="button" id="btnCloudSat" title="Citra satelit tutupan awan (NASA GIBS, harian), mengikuti area peta yang sedang ditampilkan">☁️ Awan (Satelit)</button>
             </div>
 
             <!-- FITUR BARU: MODE VISUAL SCI-FI (filter tampilan, tidak mengganti layer peta) -->
@@ -1075,53 +1075,48 @@
         }
     });
 
-    // FITUR BARU: LAYER VISUALISASI AWAN (Citra Satelit Inframerah - RainViewer)
-    // Berbeda dari Radar Hujan (curah hujan): ini menampilkan tutupan awan aktual
-    // sebagai layer peta, mengikuti area/zoom peta ke mana pun pengguna menggeser —
-    // bukan cuma angka "Tutupan Awan %" di panel cuaca.
+    // FITUR BARU: LAYER VISUALISASI AWAN (Citra Satelit NASA GIBS/VIIRS - True Color)
+    // Catatan: sejak awal 2026 RainViewer membatasi tier gratisnya dan tidak lagi
+    // menyediakan data satelit (hanya radar hujan) — makanya versi lama gagal memuat.
+    // NASA GIBS dipakai sebagai gantinya: layanan resmi & gratis tanpa API key,
+    // cakupan global (mengikuti ke mana pun peta digeser/zoom), diperbarui harian.
+    // Dibuat langsung sebagai tile layer (tanpa fetch JSON dulu) supaya tidak ada
+    // titik gagal jaringan tambahan seperti sebelumnya.
     const btnCloudSat = document.getElementById('btnCloudSat');
     let cloudLayer = null;
-    let cloudRefreshInterval = null;
     let cloudActive = false;
 
-    async function loadCloudFrame() {
-        try {
-            const res = await fetchWithTimeout('https://api.rainviewer.com/public/weather-maps.json', null, 8000);
-            const data = await res.json();
-            const frames = (data.satellite && data.satellite.infrared) || [];
-            const latest = frames[frames.length - 1];
-            if (!latest) throw new Error('Data awan tidak tersedia');
-            const url = `https://tile.cache.rainviewer.com${latest.path}/256/{z}/{x}/{y}/0/0_0.png`;
-            const newLayer = L.tileLayer(url, { opacity: 0.55, zIndex: 90, maxNativeZoom: 18 }).addTo(map);
-            if (cloudLayer) map.removeLayer(cloudLayer);
-            cloudLayer = newLayer;
-            return true;
-        } catch (e) { return false; /* diamkan, dicoba lagi di siklus refresh berikutnya */ }
+    function gibsYesterdayUTC() {
+        // Pakai tanggal kemarin (UTC): citra hari berjalan sering belum lengkap
+        // di seluruh dunia, kemarin sudah pasti tersedia penuh secara global.
+        const d = new Date();
+        d.setUTCDate(d.getUTCDate() - 1);
+        return d.toISOString().slice(0, 10); // format YYYY-MM-DD
+    }
+
+    function buildCloudLayer() {
+        const date = gibsYesterdayUTC();
+        const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+        return L.tileLayer(url, {
+            opacity: 0.85, zIndex: 90, maxZoom: 19, maxNativeZoom: 9, minZoom: 2,
+            bounds: [[-85.0511287776, -179.999999975], [85.0511287776, 179.999999975]],
+            attribution: 'Citra awan: NASA EOSDIS GIBS/VIIRS'
+        });
     }
 
     if (btnCloudSat) {
-        btnCloudSat.addEventListener('click', async () => {
+        btnCloudSat.addEventListener('click', () => {
             if (cloudActive) {
                 if (cloudLayer) { map.removeLayer(cloudLayer); cloudLayer = null; }
-                if (cloudRefreshInterval) { clearInterval(cloudRefreshInterval); cloudRefreshInterval = null; }
                 cloudActive = false;
                 btnCloudSat.classList.remove('active');
                 btnCloudSat.innerText = '☁️ Awan (Satelit)';
             } else {
+                if (cloudLayer) { map.removeLayer(cloudLayer); cloudLayer = null; }
+                cloudLayer = buildCloudLayer().addTo(map);
                 cloudActive = true;
                 btnCloudSat.classList.add('active');
-                btnCloudSat.innerText = '☁️ Memuat Awan...';
-                const ok = await loadCloudFrame();
-                if (!ok) {
-                    cloudActive = false;
-                    btnCloudSat.classList.remove('active');
-                    btnCloudSat.innerText = '☁️ Awan (Satelit)';
-                    alert('Gagal memuat citra awan.');
-                } else {
-                    btnCloudSat.innerText = '☁️ Awan (Aktif)';
-                    // Perbarui citra awan tiap 10 menit agar tetap mutakhir di lokasi mana pun peta digeser/zoom.
-                    cloudRefreshInterval = setInterval(loadCloudFrame, 10 * 60 * 1000);
-                }
+                btnCloudSat.innerText = '☁️ Awan (Aktif)';
             }
         });
     }
