@@ -994,6 +994,7 @@
         currentLayer.addTo(map);
         if (myMarker) myMarker.bringToFront();
         if (searchMarker) searchMarker.bringToFront();
+        if (pinMarker) pinMarker.bringToFront();
         tbLayersLabel.innerText = layerShortLabel[currentLayerKey].replace(/^\S+\s/, '');
     }
 
@@ -1268,6 +1269,7 @@
         if (isLocTracking) return; // GPS sudah diaktifkan (mis. lewat klik lain) sebelum hasil ini diproses — abaikan agar tetap eksklusif
         const lat = parseFloat(result.lat); const lng = parseFloat(result.lon);
         if (isNaN(lat) || isNaN(lng)) return;
+        removePinMarker(); // hasil pencarian menggantikan marker manual agar mode tetap eksklusif
         map.setView([lat, lng], 18);
         if (searchMarker) map.removeLayer(searchMarker);
         const detail = buildDetailedAddress(result.address) || result.display_name;
@@ -1441,6 +1443,104 @@
             if (activeGpsGeocodeAbortController === myAbort) activeGpsGeocodeAbortController = null;
         }
     }
+
+    // ======================================================================
+    // FITUR TAMBAHAN: MARKER LOKASI MANUAL (Double-tap/Double-click & Drag)
+    // Cara ketiga untuk menentukan lokasi acuan aplikasi selain GPS dan
+    // Pencarian: mengetuk dua kali di peta, atau menggeser (drag) marker
+    // yang sudah muncul ke posisi baru. Mode ini eksklusif terhadap GPS &
+    // Pencarian — begitu marker manual dipasang/dipindah, GPS otomatis
+    // dimatikan dan mode pencarian dinonaktifkan, lalu semua fitur (cuaca,
+    // geofisika, alamat, koordinat) mengacu ke lokasi marker manual ini.
+    // Race-condition antar permintaan alamat ditangani lewat token sesi,
+    // mengikuti pola yang sama dengan GPS/Pencarian di atas.
+    // ======================================================================
+    let pinMarker = null;
+    let pinRequestId = 0;
+    let activePinAbortController = null;
+    let pinWeatherTimer = null;
+    let pinTransportTimer = null;
+
+    function makePinIcon() {
+        return L.divIcon({ className: '', html: `<div class="search-loc-wrap"><div class="search-pin">📍</div></div>`, iconSize: [30, 40], iconAnchor: [15, 38], popupAnchor: [0, -34] });
+    }
+    function stopPinLocationMonitoring() {
+        if (pinWeatherTimer) { clearInterval(pinWeatherTimer); pinWeatherTimer = null; }
+        if (pinTransportTimer) { clearInterval(pinTransportTimer); pinTransportTimer = null; }
+    }
+    function startPinLocationMonitoring() {
+        stopPinLocationMonitoring();
+        pinWeatherTimer = setInterval(() => {
+            if (activeLocation && activeLocation.source === 'manual') {
+                maybeFetchWeather(activeLocation.lat, activeLocation.lng, true);
+                maybeFetchGeophysics(activeLocation.lat, activeLocation.lng, true);
+            }
+        }, 5 * 60 * 1000);
+        pinTransportTimer = setInterval(() => {
+            if (activeLocation && activeLocation.source === 'manual') checkNearbyTransport(activeLocation.lat, activeLocation.lng, true);
+        }, 45000);
+    }
+    function removePinMarker() {
+        pinRequestId++; // batalkan permintaan alamat marker manual yang mungkin masih tertunda
+        if (activePinAbortController) { activePinAbortController.abort(); activePinAbortController = null; }
+        stopPinLocationMonitoring();
+        if (pinMarker) { map.removeLayer(pinMarker); pinMarker = null; }
+        if (activeLocation && activeLocation.source === 'manual') { activeLocation = null; updateModePill(); }
+    }
+    async function reverseGeocodePinAndUpdate(lat, lng, session) {
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=id`;
+            const myAbort = new AbortController();
+            activePinAbortController = myAbort;
+            const data = await fetchWithProxy(url, myAbort.signal);
+            if (session !== pinRequestId) return; // lokasi marker sudah berpindah/mode berganti sebelum hasil datang, abaikan
+            const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
+            if (pinMarker) pinMarker.setPopupContent(`<div class="addr-popup"><b>📍 Marker Lokasi</b><div class="row">${detail}</div></div>`);
+            showAddress(detail);
+        } catch (e) {
+            if (session !== pinRequestId) return;
+            if (pinMarker) pinMarker.setPopupContent(`<div class="addr-popup"><b>📍 Marker Lokasi</b><div class="row">Gagal mengambil alamat</div></div>`);
+        } finally {
+            if (activePinAbortController && session === pinRequestId) activePinAbortController = null;
+        }
+    }
+    function placePinMarker(lat, lng, { fromDrag = false } = {}) {
+        // Jamin eksklusivitas mode: matikan GPS & nonaktifkan Pencarian terlebih dulu,
+        // agar semua fitur selanjutnya mengacu hanya pada marker manual ini.
+        if (isLocTracking) stopLocationTracking();
+        setSearchEnabled(false);
+
+        pinRequestId++;
+        const mySession = pinRequestId;
+        if (activePinAbortController) { activePinAbortController.abort(); activePinAbortController = null; }
+
+        if (!pinMarker) {
+            pinMarker = L.marker([lat, lng], { icon: makePinIcon(), draggable: true, autoPan: true, zIndexOffset: 950 }).addTo(map);
+            pinMarker.on('dragstart', () => { if (isLocTracking) stopLocationTracking(); });
+            pinMarker.on('dragend', (e) => {
+                const pos = e.target.getLatLng();
+                placePinMarker(pos.lat, pos.lng, { fromDrag: true });
+            });
+        } else {
+            pinMarker.setLatLng([lat, lng]);
+        }
+        pinMarker.bindPopup(`<div class="addr-popup"><b>📍 Marker Lokasi</b><div class="row loading">Mengambil alamat…</div></div>`);
+        if (!fromDrag) pinMarker.openPopup();
+
+        gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        gpsStatusEl.innerText = 'Marker Manual';
+
+        setActiveLocation(lat, lng, 'manual');
+        startPinLocationMonitoring();
+        checkNearbyTransport(lat, lng, true);
+        maybeFetchWeather(lat, lng, true);
+        maybeFetchGeophysics(lat, lng, true);
+        reverseGeocodePinAndUpdate(lat, lng, mySession);
+        closeAllPopovers();
+    }
+    // Nonaktifkan zoom bawaan Leaflet saat dobel klik/tap, digantikan aksi pindah marker.
+    map.doubleClickZoom.disable();
+    map.on('dblclick', (e) => { placePinMarker(e.latlng.lat, e.latlng.lng); });
 
     // FITUR 4: WEB SHARE API PWA
     document.getElementById('shareAddrBtn').addEventListener('click', () => {
@@ -1880,10 +1980,11 @@
         if (!navigator.geolocation) { alert('Geolokasi tidak didukung.'); return; }
         if (isLocTracking) stopLocationTracking();
         else {
-            // Klik eksplisit pada tombol GPS: batalkan pencarian yang mungkin masih berjalan
-            // dan pastikan mode Pencarian benar-benar nonaktif sebelum GPS mengambil alih.
+            // Klik eksplisit pada tombol GPS: batalkan pencarian yang mungkin masih berjalan,
+            // lepas marker manual (jika ada), dan pastikan mode Pencarian benar-benar nonaktif
+            // sebelum GPS mengambil alih.
             searchRequestId++;
-            setSearchEnabled(false); document.getElementById('locLabel').innerText = '...';
+            setSearchEnabled(false); removePinMarker(); document.getElementById('locLabel').innerText = '...';
             const mySession = ++gpsSessionId;
             let firstFix = true;
             watchId = navigator.geolocation.watchPosition(
