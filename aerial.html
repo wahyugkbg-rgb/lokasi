@@ -281,6 +281,47 @@
         .w-row b{ color:var(--accent); font-weight:800; text-align: right; }
         .w-error{ color:var(--danger); font-weight:700; }
         .w-updated{ margin-top:6px; font-size:0.68rem; color:var(--text-dim); text-align:right; font-weight:600; }
+        .quake-place{ font-size:0.7rem; color:var(--text-dim); font-weight:600; padding:0 0 8px; line-height:1.35; }
+        .quake-item:last-child .quake-place{ padding-bottom:2px; }
+        .quake-badge{
+            display:inline-block; padding:2px 8px; border-radius:20px; font-family:var(--font-mono);
+            font-weight:800; font-size:0.74rem; letter-spacing:0.3px; color:#04060d;
+        }
+        .quake-badge.mag-kecil{ background:var(--accent3); }
+        .quake-badge.mag-sedang{ background:var(--warn); }
+        .quake-badge.mag-kuat{ background:#ff8c1f; }
+        .quake-badge.mag-besar{ background:var(--danger); color:#fff; }
+        .quake-badge.mag-ekstrem{ background:var(--danger); color:#fff; animation:livePulse 1s ease-in-out infinite; }
+
+        /* ---- HUD Badge Ringkas (Cuaca / Angin / Gempa) ---- */
+        .hud-badge-row{
+            position:absolute; top:calc(var(--toolbar-h) + 16px); right:8px; z-index:630;
+            display:flex; flex-direction:column; align-items:flex-end; gap:5px; pointer-events:none;
+            max-width:52%;
+        }
+        .hud-badge{
+            pointer-events:auto; display:none; align-items:center; gap:5px;
+            background:var(--panel-bg-solid); border:1px solid var(--panel-border-strong);
+            border-radius:20px; padding:4px 10px 4px 8px; font-family:var(--font-mono);
+            font-size:0.7rem; font-weight:800; white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,0.4);
+            border-left:4px solid var(--accent); color:var(--text);
+            opacity:0; transform:translateX(10px); transition:opacity 0.3s ease, transform 0.3s ease;
+        }
+        .hud-badge.show{ display:flex; opacity:1; transform:translateX(0); }
+        .hud-badge .hb-icon{ font-size:0.9rem; }
+        .hud-badge.cond-cerah{ border-left-color:#ffb020; }
+        .hud-badge.cond-berawan{ border-left-color:#8fa3c2; }
+        .hud-badge.cond-gerimis{ border-left-color:#4fb0ff; }
+        .hud-badge.cond-hujan{ border-left-color:#2f7dff; }
+        .hud-badge.cond-badai{ border-left-color:var(--danger); }
+        .hud-badge.cond-kabut{ border-left-color:#9aa7b8; }
+        .hud-badge.wind-badge{ border-left-color:var(--accent2); }
+        .hud-badge.quake-hud.mag-kecil{ border-left-color:var(--accent3); }
+        .hud-badge.quake-hud.mag-sedang{ border-left-color:var(--warn); }
+        .hud-badge.quake-hud.mag-kuat{ border-left-color:#ff8c1f; }
+        .hud-badge.quake-hud.mag-besar{ border-left-color:var(--danger); }
+        .hud-badge.quake-hud.mag-ekstrem{ border-left-color:var(--danger); animation:livePulse 1s ease-in-out infinite; }
+        @media (min-width:768px){ .hud-badge-row{ max-width:300px; } }
 
         /* ---- Popover: Info GPS & alamat ---- */
         .info-row{ font-size:0.85rem; color:var(--text-dim); line-height:1.7; font-weight:600; }
@@ -545,6 +586,13 @@
     <div class="hud-corner bl"></div>
     <div class="hud-corner br"></div>
     <div class="mode-pill" id="modePill">MODE: STANDBY</div>
+
+    <!-- Badge ringkas: kondisi cuaca, angin & gempa (mudah dibaca sekilas) -->
+    <div class="hud-badge-row" id="hudBadgeRow">
+        <div class="hud-badge" id="weatherCondBadge"><span class="hb-icon"></span><span class="hb-text"></span></div>
+        <div class="hud-badge wind-badge" id="windBadge"><span class="hb-icon">💨</span><span class="hb-text"></span></div>
+        <div class="hud-badge quake-hud" id="quakeHudBadge"><span class="hb-icon">🌍</span><span class="hb-text"></span></div>
+    </div>
 
     <!-- Toolbar ikon ramping -->
     <div class="toolbar glass" id="toolbar">
@@ -1323,11 +1371,55 @@
     const weatherBody = document.getElementById('weatherBody');
     let lastWeatherLatLng = null;
 
+    // Peta kode cuaca WMO (dipakai Open-Meteo) -> label & ikon Bahasa Indonesia + kelas badge
+    const WMO_MAP = {
+        0:  { label:'Cerah',                icon:'☀️', cls:'cond-cerah' },
+        1:  { label:'Cerah Berawan',        icon:'🌤️', cls:'cond-cerah' },
+        2:  { label:'Berawan Sebagian',     icon:'⛅',  cls:'cond-berawan' },
+        3:  { label:'Mendung',              icon:'☁️', cls:'cond-berawan' },
+        45: { label:'Berkabut',             icon:'🌫️', cls:'cond-kabut' },
+        48: { label:'Kabut Es',             icon:'🌫️', cls:'cond-kabut' },
+        51: { label:'Gerimis Ringan',       icon:'🌦️', cls:'cond-gerimis' },
+        53: { label:'Gerimis Sedang',       icon:'🌦️', cls:'cond-gerimis' },
+        55: { label:'Gerimis Lebat',        icon:'🌦️', cls:'cond-gerimis' },
+        56: { label:'Gerimis Beku',         icon:'🌦️', cls:'cond-gerimis' },
+        57: { label:'Gerimis Beku Lebat',   icon:'🌦️', cls:'cond-gerimis' },
+        61: { label:'Hujan Ringan',         icon:'🌧️', cls:'cond-hujan' },
+        63: { label:'Hujan Sedang',         icon:'🌧️', cls:'cond-hujan' },
+        65: { label:'Hujan Lebat',          icon:'🌧️', cls:'cond-hujan' },
+        66: { label:'Hujan Beku Ringan',    icon:'🌧️', cls:'cond-hujan' },
+        67: { label:'Hujan Beku Lebat',     icon:'🌧️', cls:'cond-hujan' },
+        71: { label:'Salju Ringan',         icon:'🌨️', cls:'cond-hujan' },
+        73: { label:'Salju Sedang',         icon:'🌨️', cls:'cond-hujan' },
+        75: { label:'Salju Lebat',          icon:'🌨️', cls:'cond-hujan' },
+        77: { label:'Butiran Salju',        icon:'🌨️', cls:'cond-hujan' },
+        80: { label:'Hujan Lokal Ringan',   icon:'🌦️', cls:'cond-hujan' },
+        81: { label:'Hujan Lokal Sedang',   icon:'🌧️', cls:'cond-hujan' },
+        82: { label:'Hujan Lokal Deras',    icon:'⛈️', cls:'cond-hujan' },
+        85: { label:'Hujan Salju Ringan',   icon:'🌨️', cls:'cond-hujan' },
+        86: { label:'Hujan Salju Lebat',    icon:'🌨️', cls:'cond-hujan' },
+        95: { label:'Badai Petir',          icon:'⛈️', cls:'cond-badai' },
+        96: { label:'Badai Petir + Es Ringan', icon:'⛈️', cls:'cond-badai' },
+        99: { label:'Badai Petir + Es Lebat',  icon:'⛈️', cls:'cond-badai' }
+    };
+    function weatherCondition(code) {
+        return WMO_MAP[code] || { label:'Tidak diketahui', icon:'❔', cls:'cond-berawan' };
+    }
+    // Arah mata angin (derajat -> label singkat Indonesia)
+    function windDirLabel(deg) {
+        if (deg === null || deg === undefined || isNaN(deg)) return '-';
+        const arah = ['U','TL','T','TG','S','BD','B','BL'];
+        return arah[Math.round(deg / 45) % 8];
+    }
+
+    const weatherCondBadgeEl = document.getElementById('weatherCondBadge');
+    const windBadgeEl = document.getElementById('windBadge');
+
     async function fetchWeather(lat, lng) {
         weatherBody.innerHTML = `<div class="w-row"><span>Memuat data cuaca & AQI…</span></div>`;
         try {
-            // Memanggil endpoint Cuaca Open-Meteo
-            const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,cloud_cover,wind_speed_10m&timezone=auto`;
+            // Memanggil endpoint Cuaca Open-Meteo (ditambah: kode cuaca, curah hujan, arah angin)
+            const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,cloud_cover,wind_speed_10m,wind_direction_10m,weather_code,precipitation&timezone=auto`;
             // Memanggil endpoint AQI Open-Meteo (Tambahan Baru)
             const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=european_aqi,pm10,pm2_5`;
             
@@ -1340,14 +1432,19 @@
             if (!wRes.ok) throw new Error('HTTP ' + wRes.status);
             const wData = await wRes.json();
             const c = wData.current || {};
+            const cond = weatherCondition(c.weather_code);
+            const dirLabel = windDirLabel(c.wind_direction_10m);
+            const precip = c.precipitation ?? 0;
             
-            // Proses data Cuaca Asli
+            // Proses data Cuaca Asli + info tambahan (kondisi, curah hujan, arah angin)
             let html = `
+                <div class="w-row"><span>${cond.icon} Kondisi</span><b>${cond.label}</b></div>
                 <div class="w-row"><span>🌡️ Suhu</span><b>${c.temperature_2m ?? '-'}°C</b></div>
                 <div class="w-row"><span>🌡️ Terasa Seperti</span><b>${c.apparent_temperature ?? '-'}°C</b></div>
                 <div class="w-row"><span>💧 Kelembaban</span><b>${c.relative_humidity_2m ?? '-'}%</b></div>
+                <div class="w-row"><span>🌧️ Curah Hujan</span><b>${precip} mm</b></div>
                 <div class="w-row"><span>☁️ Tutupan Awan</span><b>${c.cloud_cover ?? '-'}%</b></div>
-                <div class="w-row"><span>💨 Angin</span><b>${c.wind_speed_10m ?? '-'} km/j</b></div>
+                <div class="w-row"><span>💨 Angin</span><b>${c.wind_speed_10m ?? '-'} km/j (${dirLabel})</b></div>
             `;
 
             // Proses data AQI jika berhasil diambil
@@ -1368,6 +1465,19 @@
             }
             html += `<div class="w-updated">Diperbarui ${new Date().toLocaleTimeString('id-ID')}</div>`;
             weatherBody.innerHTML = html;
+
+            // Perbarui badge ringkas kondisi cuaca (di layar, tak menutupi peta)
+            if (weatherCondBadgeEl) {
+                weatherCondBadgeEl.className = 'hud-badge show ' + cond.cls;
+                weatherCondBadgeEl.querySelector('.hb-icon').textContent = cond.icon;
+                const precipTxt = precip > 0 ? ` • ${precip}mm` : '';
+                weatherCondBadgeEl.querySelector('.hb-text').textContent = `${cond.label}${precipTxt}`;
+            }
+            // Perbarui badge ringkas angin (kecepatan & arah)
+            if (windBadgeEl) {
+                windBadgeEl.classList.add('show');
+                windBadgeEl.querySelector('.hb-text').textContent = `${c.wind_speed_10m ?? '-'} km/j ${dirLabel}`;
+            }
         } catch (e) {
             weatherBody.innerHTML = `<div class="w-row w-error">Gagal memuat cuaca: ${e.message}</div>`;
         }
@@ -1383,6 +1493,18 @@
     // INFO GEOFISIKA & TRANSPORTASI (SAMA SEPERTI ASLI)
     // ======================================================================
     const geoBody = document.getElementById('geoBody');
+    const quakeHudBadgeEl = document.getElementById('quakeHudBadge');
+
+    // Klasifikasi kekuatan gempa -> label & kelas warna badge (mirip kategori BMKG)
+    function quakeSeverity(mag) {
+        const m = Number(mag) || 0;
+        if (m >= 7)   return { label:'Sangat Besar', cls:'mag-ekstrem' };
+        if (m >= 6)   return { label:'Besar',        cls:'mag-besar' };
+        if (m >= 5)   return { label:'Kuat',         cls:'mag-kuat' };
+        if (m >= 4)   return { label:'Sedang',       cls:'mag-sedang' };
+        return               { label:'Kecil',        cls:'mag-kecil' };
+    }
+
     async function fetchGeophysics(lat, lng) {
         if (!geoBody) return;
         geoBody.innerHTML = `<div class="w-row"><span>Memuat info geofisika…</span></div>`;
@@ -1391,12 +1513,34 @@
             const res = await fetchWithTimeout(url, null, 9000);
             const data = await res.json();
             const feats = (data && data.features) || [];
-            if (!feats.length) { geoBody.innerHTML = `<div class="w-row"><span>Aman, tidak ada gempa signifikan di sekitar.</span></div>`; return; }
+            if (!feats.length) {
+                geoBody.innerHTML = `<div class="w-row"><span>Aman, tidak ada gempa signifikan di sekitar.</span></div>`;
+                if (quakeHudBadgeEl) quakeHudBadgeEl.classList.remove('show');
+                return;
+            }
             geoBody.innerHTML = feats.map(f => {
                 const p = f.properties; const c = f.geometry.coordinates;
-                return `<div class="w-row"><span>M${p.mag} (${Math.round(c[2])}km)</span><b>${new Date(p.time).toLocaleString('id-ID')}</b></div>`;
+                const sev = quakeSeverity(p.mag);
+                const episentrum = p.place || 'Lokasi episentrum tidak diketahui';
+                return `<div class="quake-item">
+                    <div class="w-row">
+                        <span class="quake-badge ${sev.cls}">M${p.mag} • ${sev.label}</span>
+                        <b>${new Date(p.time).toLocaleString('id-ID')}</b>
+                    </div>
+                    <div class="quake-place">📍 Episentrum: ${episentrum} • Kedalaman ${Math.round(c[2])} km</div>
+                </div>`;
             }).join('');
-        } catch (e) { geoBody.innerHTML = `<div class="w-row w-error">Gagal memuat gempa</div>`; }
+
+            // Perbarui badge ringkas gempa di layar berdasarkan kejadian terbaru
+            if (quakeHudBadgeEl) {
+                const latest = feats[0].properties;
+                const sev = quakeSeverity(latest.mag);
+                quakeHudBadgeEl.className = 'hud-badge quake-hud show ' + sev.cls;
+                quakeHudBadgeEl.querySelector('.hb-text').textContent = `M${latest.mag} ${sev.label}`;
+            }
+        } catch (e) {
+            geoBody.innerHTML = `<div class="w-row w-error">Gagal memuat gempa</div>`;
+        }
     }
     let lastGeoLatLng = null; let lastGeoFetchTime = 0;
     function maybeFetchGeophysics(lat, lng, force = false) {
