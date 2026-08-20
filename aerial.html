@@ -1538,9 +1538,51 @@
         reverseGeocodePinAndUpdate(lat, lng, mySession);
         closeAllPopovers();
     }
-    // Nonaktifkan zoom bawaan Leaflet saat dobel klik/tap, digantikan aksi pindah marker.
-    map.doubleClickZoom.disable();
-    map.on('dblclick', (e) => { placePinMarker(e.latlng.lat, e.latlng.lng); });
+    // ======================================================================
+    // GESTUR TEKAN & TAHAN (LONG-PRESS) UNTUK MEMINDAHKAN MARKER LOKASI
+    // Dobel klik/dobel tap TETAP memakai perilaku bawaan Leaflet (zoom peta),
+    // sehingga pemindahan marker memakai gestur yang berbeda: tekan lalu
+    // tahan di peta (mouse ditekan / jari disentuh tanpa digeser) selama
+    // ±550ms. Jika jari/kursor bergeser melebihi toleransi sebelum waktu
+    // tercapai, gestur dianggap sebagai pan/geser peta biasa dan dibatalkan.
+    // ======================================================================
+    const LONG_PRESS_MS = 550;
+    const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
+    let longPressTimer = null;
+    let longPressStartPt = null;
+    let longPressFired = false;
+    function cancelLongPress() {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        longPressStartPt = null;
+    }
+    function onMapPointerDown(e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return; // hanya tombol kiri untuk mouse
+        if (e.target.closest && e.target.closest('.leaflet-marker-icon, .leaflet-popup, .leaflet-control')) return; // biarkan marker/kontrol menangani sendiri
+        cancelLongPress();
+        longPressFired = false;
+        longPressStartPt = { x: e.clientX, y: e.clientY };
+        const evForLatLng = e;
+        longPressTimer = setTimeout(() => {
+            longPressTimer = null;
+            longPressFired = true;
+            if (navigator.vibrate) { try { navigator.vibrate(30); } catch (_) {} }
+            const latlng = map.mouseEventToLatLng(evForLatLng);
+            placePinMarker(latlng.lat, latlng.lng);
+        }, LONG_PRESS_MS);
+    }
+    function onMapPointerMove(e) {
+        if (!longPressStartPt) return;
+        const dx = e.clientX - longPressStartPt.x; const dy = e.clientY - longPressStartPt.y;
+        if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_MOVE_TOLERANCE_PX) cancelLongPress();
+    }
+    const mapContainerEl = map.getContainer();
+    mapContainerEl.addEventListener('pointerdown', onMapPointerDown);
+    mapContainerEl.addEventListener('pointermove', onMapPointerMove);
+    mapContainerEl.addEventListener('pointerup', cancelLongPress);
+    mapContainerEl.addEventListener('pointercancel', cancelLongPress);
+    mapContainerEl.addEventListener('pointerleave', cancelLongPress);
+    // Cegah menu konteks browser muncul akibat tekan-tahan yang memicu aksi pindah marker.
+    mapContainerEl.addEventListener('contextmenu', (e) => { if (longPressFired) e.preventDefault(); });
 
     // FITUR 4: WEB SHARE API PWA
     document.getElementById('shareAddrBtn').addEventListener('click', () => {
