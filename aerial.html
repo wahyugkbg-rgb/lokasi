@@ -2220,7 +2220,9 @@
 
                     if (firstFix) {
                         lastTransportCheckLatLng = { lat, lng };
-                        checkNearbyTransport(lat, lng);
+                        // force=true: titik awal GPS diaktifkan — tampilkan status "mencari…" seketika
+                        // + race multi-mirror + retry cepat bila gagal, sama seperti jalur Cari & Bookmark.
+                        checkNearbyTransport(lat, lng, true);
                         startGpsLocationMonitoring();
                         firstFix = false;
                     } else if (!lastTransportCheckLatLng || haversineMeters(lastTransportCheckLatLng, { lat, lng }) >= GPS_TRANSPORT_MOVE_THRESHOLD_M) {
