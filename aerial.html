@@ -2134,7 +2134,11 @@
                     setActiveLocation(lat, lng, 'gps');
                     if (!myMarker) myMarker = L.marker([lat, lng], { icon: makeMyLocIcon(), zIndexOffset: 1000 }).addTo(map);
                     else myMarker.setLatLng([lat, lng]);
-                    map.setView([lat, lng], 18);
+                    // Zoom TIDAK dikunci: level 18 hanya dipakai sekali di fix pertama sebagai
+                    // titik awal yang wajar. Setelah itu peta tetap mengikuti posisi terkini,
+                    // tapi memakai zoom yang sedang diatur user sendiri (pinch/scroll), tidak
+                    // dipaksa kembali ke 18 di tiap update GPS.
+                    map.setView([lat, lng], firstFix ? 18 : map.getZoom());
                     isLocTracking = true; locBtn.classList.add('active'); document.getElementById('locLabel').innerText = 'Aktif';
                     gpsStatusEl.innerText = 'Aktif'; gpsCoordsEl.innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
@@ -2168,6 +2172,15 @@
         else { document.exitFullscreen(); btnFs.classList.remove('on'); }
     });
     window.addEventListener('resize', () => map.invalidateSize());
+    // Perbaikan: peta bisa "terpotong" (ukuran internal Leaflet jadi tidak sinkron
+    // dengan ukuran layar) saat rotasi layar (portrait↔landscape) atau saat masuk/
+    // keluar mode Full Screen, karena kedua peristiwa itu tidak selalu memicu event
+    // 'resize' tepat waktu. Dipanggil invalidateSize() secara eksplisit (dengan jeda
+    // singkat agar ukuran viewport baru sudah stabil) untuk memastikan peta selalu
+    // menyesuaikan penuh ke area yang tersedia, baik landscape maupun Full Screen
+    // aktif ataupun tidak.
+    window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 250));
+    document.addEventListener('fullscreenchange', () => setTimeout(() => map.invalidateSize(), 250));
 
 </script>
 </body>
