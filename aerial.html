@@ -1638,12 +1638,36 @@
     //     supaya noise sensor kecil tidak pernah ikut terbaca sebagai gerakan.
     //  2) EMA render yang lebih lambat (alpha kecil) dibanding jarum kompas.
     const mapEl = document.getElementById('map');
-    const MAP_ROTATE_SCALE = 1.8; // perbesaran agar sudut peta tidak "bolong" saat berputar
+    const mapRotateWrapEl = document.getElementById('mapRotateWrap');
+    const MAP_ROTATE_SCALE_MIN = 1.8; // perbesaran minimum agar sudut peta tidak "bolong" saat berputar (layar persegi)
     const MAP_HEADING_DEADBAND_DEG = 1.2; // abaikan perubahan arah sekecil ini (noise sensor)
     const MAP_HEADING_SMOOTH_ALPHA = 0.10; // low-pass pada sinyal heading mentah
     const MAP_RENDER_ALPHA = 0.08; // low-pass render (lebih lambat/halus drpd jarum kompas)
     let mapRotationTarget = 0;
     let mapRotationDisplay = 0;
+    // Ukuran wrapper di-cache (bukan dibaca tiap frame agar ringan) dan hanya
+    // diperbarui saat resize/orientasi/fullscreen berubah.
+    let mapWrapW = 1, mapWrapH = 1;
+    function updateMapWrapSize() {
+        if (!mapRotateWrapEl) return;
+        mapWrapW = mapRotateWrapEl.clientWidth || 1;
+        mapWrapH = mapRotateWrapEl.clientHeight || 1;
+    }
+    updateMapWrapSize();
+    // Skala perbesaran peta agar tetap menutupi seluruh area wrapper saat diputar,
+    // dihitung dinamis dari rasio aspek layar SAAT INI (bukan angka tetap).
+    // Layar landscape yang sangat lebar (mis. Oppo A9 2020: ~19.5:9) butuh skala
+    // lebih besar dari 1.8 pada sudut tertentu, sehingga skala tetap lama membuat
+    // sudut peta "bolong" (area hitam) saat berputar. Rumus di bawah menghitung
+    // skala minimum yang persis dibutuhkan untuk rasio & sudut rotasi saat ini,
+    // ditambah sedikit margin keamanan.
+    function mapCoverScaleFor(rotationDeg) {
+        const rad = Math.abs(rotationDeg % 90) * Math.PI / 180;
+        const c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
+        const scaleForWidth = (mapWrapW * c + mapWrapH * s) / mapWrapW;
+        const scaleForHeight = (mapWrapH * c + mapWrapW * s) / mapWrapH;
+        return Math.max(scaleForWidth, scaleForHeight, MAP_ROTATE_SCALE_MIN) * 1.03;
+    }
     let lastHeadingForMapRotation = null; // menyimpan heading YANG SUDAH DIHALUSKAN (bukan mentah)
     let smoothedMapHeading = null;
 
@@ -1720,7 +1744,7 @@
         mapRotationDisplay += Math.abs(mapDiff) < 0.05 ? mapDiff : mapDiff * MAP_RENDER_ALPHA;
         if (mapEl) {
             const rotatingActive = isLocTracking && compassActive;
-            const scale = (rotatingActive || Math.abs(mapRotationDisplay) > 0.5) ? MAP_ROTATE_SCALE : 1;
+            const scale = (rotatingActive || Math.abs(mapRotationDisplay) > 0.5) ? mapCoverScaleFor(mapRotationDisplay) : 1;
             mapEl.style.transform = `rotate(${mapRotationDisplay}deg) scale(${scale})`;
         }
 
@@ -2167,10 +2191,35 @@
 
     const btnFs = document.getElementById('btnFullscreen');
     btnFs.addEventListener('click', () => {
-        if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); btnFs.classList.add('on'); }
-        else { document.exitFullscreen(); btnFs.classList.remove('on'); }
+        // Hanya memicu request/exit di sini — status tombol (kelas "on") TIDAK
+        // diubah langsung, melainkan disinkronkan lewat event fullscreenchange
+        // di bawah. Ini penting karena layar penuh juga bisa keluar sendiri lewat
+        // tombol back sistem / gesture Android, bukan cuma lewat tombol ini —
+        // tanpa sinkronisasi ini status ikon jadi tidak sesuai kondisi layar sebenarnya.
+        if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); }
+        else { document.exitFullscreen().catch(() => {}); }
     });
-    window.addEventListener('resize', () => map.invalidateSize());
+    function syncFullscreenState() {
+        const isFs = !!document.fullscreenElement;
+        btnFs.classList.toggle('on', isFs);
+        // Ukuran viewport peta berubah saat masuk/keluar layar penuh; beri jeda
+        // singkat karena transisi browser belum tentu instan pada semua perangkat.
+        setTimeout(() => { updateMapWrapSize(); map.invalidateSize(); }, 150);
+    }
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenState); // dukungan browser lama/WebKit
+    function handleViewportResize() {
+        updateMapWrapSize();
+        map.invalidateSize();
+    }
+    window.addEventListener('resize', handleViewportResize);
+    // Rotasi layar (mis. Oppo A9 2020 ke landscape) tidak selalu memicu "resize"
+    // tepat waktu di semua browser Android, jadi ditangani terpisah dengan jeda
+    // agar dimensi wrapper yang dibaca sudah dimensi final pasca-rotasi.
+    window.addEventListener('orientationchange', () => setTimeout(handleViewportResize, 250));
+    if (window.screen && window.screen.orientation) {
+        window.screen.orientation.addEventListener('change', () => setTimeout(handleViewportResize, 250));
+    }
 
 </script>
 </body>
