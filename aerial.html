@@ -1662,7 +1662,14 @@
     // skala minimum yang persis dibutuhkan untuk rasio & sudut rotasi saat ini,
     // ditambah sedikit margin keamanan.
     function mapCoverScaleFor(rotationDeg) {
-        const rad = Math.abs(rotationDeg % 90) * Math.PI / 180;
+        // PENTING: jangan "melipat" sudut dengan % 90 — Math.cos/Math.sin sudah otomatis
+        // periodik & benar untuk sudut berapa pun. Pelipatan % 90 sebelumnya SALAH untuk
+        // layar non-persegi (rasio lebar:tinggi HP bukan 1:1): pada sudut seperti ~100°,
+        // ~190°, dst, itu menukar peran sisi lebar/tinggi tanpa menukar mapWrapW/mapWrapH
+        // yang bersangkutan — hasilnya skala kurang besar dan sudut peta tampak terpotong
+        // hitam saat diputar. Memakai sudut asli langsung menghasilkan skala yang selalu
+        // cukup menutupi wrapper di sudut manapun.
+        const rad = rotationDeg * Math.PI / 180;
         const c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
         const scaleForWidth = (mapWrapW * c + mapWrapH * s) / mapWrapW;
         const scaleForHeight = (mapWrapH * c + mapWrapW * s) / mapWrapH;
@@ -2073,6 +2080,14 @@
             if (name.includes('ojek')) return { cat: 'ojek', label: 'Pangkalan Ojek', icon: '🛵' };
             return { cat: 'taksi', label: 'Pangkalan Taksi', icon: '🚕' };
         }
+        // Halte/titik pemberhentian biasa — jauh lebih umum & lebih dekat ke pengguna
+        // sehari-hari daripada terminal/stasiun besar, sehingga ini sering kali JUSTRU
+        // yang paling relevan sebagai "titik naik-turun penumpang" terdekat.
+        if (tags.highway === 'bus_stop' || tags.amenity === 'bus_stop' || tags.public_transport === 'platform' || tags.public_transport === 'stop_position') {
+            const name = (tags.name || '').toLowerCase();
+            if (name.includes('angkot') || name.includes('mikrolet')) return { cat: 'halte', label: 'Halte Angkot', icon: '🚐' };
+            return { cat: 'halte', label: 'Halte/Titik Naik-Turun', icon: '🚏' };
+        }
         return null;
     }
     function showNearbyBox() {
@@ -2095,7 +2110,7 @@
         showNearbyBox();
     }
     function renderNearbyBox(bestByCat) {
-        const order = ['bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek'];
+        const order = ['bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek', 'halte'];
         // Urutkan dari yang terjauh (mendekati 700m) ke yang terdekat, sesuai instruksi tampilan.
         const items = order.map(k => bestByCat[k]).filter(Boolean).sort((a, b) => b.dist - a.dist);
         if (!items.length) { hideNearbyBox(); return; }
@@ -2112,7 +2127,12 @@
     }
     let nearbyFetchToken = 0; // token sesi agar hasil susulan yang sudah usang (lokasi berpindah/retry lama) tidak menimpa hasil terbaru
     async function fetchNearbyTransportElements(lat, lng) {
-        const q = `[out:json][timeout:15];(nwr["aeroway"="aerodrome"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="ferry_terminal"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="halt"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="bus_station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="taxi"](around:${NEARBY_RADIUS_M},${lat},${lng}););out center 30;`;
+        // Ditambah highway=bus_stop & public_transport=platform/stop_position — halte/titik
+        // pemberhentian umum, karena sebelumnya query hanya mencakup hub besar (bandara,
+        // pelabuhan, stasiun, terminal, taksi) sehingga info sering kosong walau ada halte
+        // biasa yang lebih dekat. Batas "out" dinaikkan agar halte yang jumlahnya bisa
+        // banyak di area padat tidak menggeser hub besar dari hasil sebelum difilter jarak.
+        const q = `[out:json][timeout:15];(nwr["aeroway"="aerodrome"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="ferry_terminal"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="halt"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="bus_station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="taxi"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["highway"="bus_stop"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["public_transport"="platform"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["public_transport"="stop_position"](around:${NEARBY_RADIUS_M},${lat},${lng}););out center 60;`;
         const dataQs = 'data=' + encodeURIComponent(q);
         // Race semua mirror sekaligus (bukan berurutan) — dipakai hasil pertama yang sukses,
         // supaya waktu tunggu = mirror tercepat, bukan jumlah semua mirror.
