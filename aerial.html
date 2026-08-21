@@ -1630,13 +1630,22 @@
 
     // ---- Rotasi peta mode "heading-up" (peta berputar mengikuti arah kepala HP) ----
     // HANYA aktif ketika mylocation GPS sedang menyala (isLocTracking) DAN sensor
-    // kompas aktif. Memakai low-pass filter (EMA) yang sama seperti jarum kompas
-    // di atas, sehingga gerak peta halus dan tidak bergetar (jitter).
+    // kompas aktif.
+    // Peta jauh lebih peka terhadap noise sensor daripada jarum kompas kecil (karena
+    // diperbesar 1.8x, goyangan kecil pada sudut jadi terlihat besar di layar), jadi
+    // dipakai filter LEBIH KUAT & 2 tahap khusus untuk peta:
+    //  1) Deadband + low-pass pada HEADING MENTAH itu sendiri (sebelum jadi target),
+    //     supaya noise sensor kecil tidak pernah ikut terbaca sebagai gerakan.
+    //  2) EMA render yang lebih lambat (alpha kecil) dibanding jarum kompas.
     const mapEl = document.getElementById('map');
     const MAP_ROTATE_SCALE = 1.8; // perbesaran agar sudut peta tidak "bolong" saat berputar
+    const MAP_HEADING_DEADBAND_DEG = 1.2; // abaikan perubahan arah sekecil ini (noise sensor)
+    const MAP_HEADING_SMOOTH_ALPHA = 0.10; // low-pass pada sinyal heading mentah
+    const MAP_RENDER_ALPHA = 0.08; // low-pass render (lebih lambat/halus drpd jarum kompas)
     let mapRotationTarget = 0;
     let mapRotationDisplay = 0;
-    let lastHeadingForMapRotation = null;
+    let lastHeadingForMapRotation = null; // menyimpan heading YANG SUDAH DIHALUSKAN (bukan mentah)
+    let smoothedMapHeading = null;
 
     function degToCompassDir(deg) {
         const dirs = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
@@ -1660,11 +1669,22 @@
         // Target rotasi PETA: hanya diakumulasi selagi GPS (mylocation) sedang aktif.
         // Saat GPS nonaktif, dilepas (null) supaya sesi aktivasi berikutnya mulai
         // bersih tanpa lompatan sudut yang aneh.
+        // Dipakai heading yang SUDAH DIHALUSKAN + deadband (bukan heading mentah)
+        // supaya noise kecil sensor tidak pernah membuat peta bergetar.
         if (isLocTracking) {
-            if (lastHeadingForMapRotation == null) mapRotationTarget = -heading;
-            else mapRotationTarget += -shortestAngleDelta(lastHeadingForMapRotation, heading);
-            lastHeadingForMapRotation = heading;
+            if (smoothedMapHeading == null) {
+                smoothedMapHeading = heading;
+                mapRotationTarget = -smoothedMapHeading;
+                lastHeadingForMapRotation = smoothedMapHeading;
+            } else {
+                let rawDelta = shortestAngleDelta(smoothedMapHeading, heading);
+                if (Math.abs(rawDelta) < MAP_HEADING_DEADBAND_DEG) rawDelta = 0; // abaikan noise kecil
+                smoothedMapHeading = (smoothedMapHeading + rawDelta * MAP_HEADING_SMOOTH_ALPHA + 360) % 360;
+                mapRotationTarget += -shortestAngleDelta(lastHeadingForMapRotation, smoothedMapHeading);
+                lastHeadingForMapRotation = smoothedMapHeading;
+            }
         } else {
+            smoothedMapHeading = null;
             lastHeadingForMapRotation = null;
         }
 
@@ -1690,12 +1710,14 @@
             }
         }
 
-        // ---- Render rotasi peta (heading-up), memakai low-pass filter yang sama ----
+        // ---- Render rotasi peta (heading-up) ----
         // Jika GPS tidak aktif, target dipaksa 0 sehingga peta mengurai kembali ke
         // posisi normal (utara di atas) secara halus, bukan melompat mendadak.
+        // Alpha render dibuat LEBIH KECIL (lebih lambat/halus) daripada jarum kompas,
+        // karena peta yang diperbesar jauh lebih peka menampakkan getaran sudut.
         if (!isLocTracking) mapRotationTarget = 0;
         const mapDiff = mapRotationTarget - mapRotationDisplay;
-        mapRotationDisplay += Math.abs(mapDiff) < 0.05 ? mapDiff : mapDiff * 0.18;
+        mapRotationDisplay += Math.abs(mapDiff) < 0.05 ? mapDiff : mapDiff * MAP_RENDER_ALPHA;
         if (mapEl) {
             const rotatingActive = isLocTracking && compassActive;
             const scale = (rotatingActive || Math.abs(mapRotationDisplay) > 0.5) ? MAP_ROTATE_SCALE : 1;
@@ -1726,13 +1748,19 @@
         const w = container.offsetWidth, h = container.offsetHeight; // ukuran layout asli #map (tidak berubah oleh CSS transform)
         return map.containerPointToLatLng(L.point(w / 2 + lx, h / 2 + ly));
     }
-    document.getElementById('compassEnableBtn').addEventListener('click', async () => {
+    // Diekstrak jadi fungsi tersendiri agar bisa dipanggil otomatis saat GPS diaktifkan
+    // (lihat toggleLocationTracking), tidak hanya lewat tombol manual di popover Kompas.
+    let orientationListenersAttached = false;
+    async function enableCompassSensor() {
+        if (orientationListenersAttached) return;
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             try { await DeviceOrientationEvent.requestPermission(); } catch (e) {}
         }
         window.addEventListener('deviceorientationabsolute', handleOrientation, true);
         window.addEventListener('deviceorientation', handleOrientation, true);
-    });
+        orientationListenersAttached = true;
+    }
+    document.getElementById('compassEnableBtn').addEventListener('click', enableCompassSensor);
 
     // ======================================================================
     // FITUR 3: CUACA & KUALITAS UDARA (AQI) - TERINTEGRASI
@@ -2094,6 +2122,9 @@
             // sebelum GPS mengambil alih.
             searchRequestId++;
             setSearchEnabled(false); removePinMarker(); document.getElementById('locLabel').innerText = '...';
+            // Otomatis nyalakan sensor arah (kompas) bersamaan dengan GPS, supaya peta
+            // langsung bisa berputar mengikuti arah kepala HP tanpa langkah manual terpisah.
+            enableCompassSensor();
             const mySession = ++gpsSessionId;
             let firstFix = true;
             watchId = navigator.geolocation.watchPosition(
