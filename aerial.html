@@ -124,8 +124,18 @@
         main {
             flex:1; position:relative; display:flex; flex-direction:column;
         }
+        /* Wrapper ini TIDAK ikut dirotasi — ukuran & posisinya identik dengan #map lama,
+           sehingga layout toolbar/popover/overlay lain (yang sejajar sbg anak <main>)
+           sama sekali tidak berubah. overflow:hidden hanya menyembunyikan kelebihan
+           tepi #map saat sedang diputar/diperbesar (mode heading-up). */
+        .map-rotate-wrap{
+            flex:1; width:100%; position:relative; overflow:hidden; background:#070b13; z-index:1;
+        }
         #map {
-            flex:1; width:100%; background:#070b13; z-index:1;
+            position:absolute; top:0; left:0; right:0; bottom:0;
+            width:100%; height:100%; background:#070b13;
+            transform-origin:50% 50%;
+            will-change:transform;
         }
 
         /* ============================= TOOLBAR IKON ============================= */
@@ -647,7 +657,7 @@
 </header>
 
 <main>
-    <div id="map"></div>
+    <div class="map-rotate-wrap" id="mapRotateWrap"><div id="map"></div></div>
     <div class="hud-scanline"></div>
     <div class="hud-radar-circle"></div>
     <div class="vfx-overlay cyberpunk"></div>
@@ -1566,7 +1576,7 @@
             longPressTimer = null;
             longPressFired = true;
             if (navigator.vibrate) { try { navigator.vibrate(30); } catch (_) {} }
-            const latlng = map.mouseEventToLatLng(evForLatLng);
+            const latlng = mapPointerToLatLng(evForLatLng);
             placePinMarker(latlng.lat, latlng.lng);
         }, LONG_PRESS_MS);
     }
@@ -1618,6 +1628,16 @@
     let targetRotation = null; let displayRotation = null;
     let compassLoopRunning = false; let lastDisplayedDeg = null;
 
+    // ---- Rotasi peta mode "heading-up" (peta berputar mengikuti arah kepala HP) ----
+    // HANYA aktif ketika mylocation GPS sedang menyala (isLocTracking) DAN sensor
+    // kompas aktif. Memakai low-pass filter (EMA) yang sama seperti jarum kompas
+    // di atas, sehingga gerak peta halus dan tidak bergetar (jitter).
+    const mapEl = document.getElementById('map');
+    const MAP_ROTATE_SCALE = 1.8; // perbesaran agar sudut peta tidak "bolong" saat berputar
+    let mapRotationTarget = 0;
+    let mapRotationDisplay = 0;
+    let lastHeadingForMapRotation = null;
+
     function degToCompassDir(deg) {
         const dirs = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
         return dirs[Math.round(deg / 45) % 8];
@@ -1636,6 +1656,18 @@
 
         if (targetRotation == null) { targetRotation = -heading; displayRotation = targetRotation; }
         else targetRotation += -shortestAngleDelta(lastHeadingForRotation, heading);
+
+        // Target rotasi PETA: hanya diakumulasi selagi GPS (mylocation) sedang aktif.
+        // Saat GPS nonaktif, dilepas (null) supaya sesi aktivasi berikutnya mulai
+        // bersih tanpa lompatan sudut yang aneh.
+        if (isLocTracking) {
+            if (lastHeadingForMapRotation == null) mapRotationTarget = -heading;
+            else mapRotationTarget += -shortestAngleDelta(lastHeadingForMapRotation, heading);
+            lastHeadingForMapRotation = heading;
+        } else {
+            lastHeadingForMapRotation = null;
+        }
+
         lastHeadingForRotation = heading;
 
         if (!compassLoopRunning) { compassLoopRunning = true; requestAnimationFrame(compassRenderLoop); }
@@ -1657,7 +1689,42 @@
                 compassDir.innerText = degToCompassDir(shownHeading);
             }
         }
+
+        // ---- Render rotasi peta (heading-up), memakai low-pass filter yang sama ----
+        // Jika GPS tidak aktif, target dipaksa 0 sehingga peta mengurai kembali ke
+        // posisi normal (utara di atas) secara halus, bukan melompat mendadak.
+        if (!isLocTracking) mapRotationTarget = 0;
+        const mapDiff = mapRotationTarget - mapRotationDisplay;
+        mapRotationDisplay += Math.abs(mapDiff) < 0.05 ? mapDiff : mapDiff * 0.18;
+        if (mapEl) {
+            const rotatingActive = isLocTracking && compassActive;
+            const scale = (rotatingActive || Math.abs(mapRotationDisplay) > 0.5) ? MAP_ROTATE_SCALE : 1;
+            mapEl.style.transform = `rotate(${mapRotationDisplay}deg) scale(${scale})`;
+        }
+
         requestAnimationFrame(compassRenderLoop);
+    }
+
+    // Mengoreksi posisi klik/tekan-tahan pada peta agar tetap akurat walau peta
+    // sedang divisualkan berputar (CSS transform) mengikuti arah kepala HP.
+    // Tanpa koreksi ini, penempatan marker manual (tekan-tahan) bisa meleset dari
+    // titik yang sebenarnya disentuh pengguna ketika mode heading-up sedang aktif.
+    function mapPointerToLatLng(e) {
+        const activeRotation = (isLocTracking && compassActive) ? mapRotationDisplay : 0;
+        if (Math.abs(activeRotation) < 0.5) return map.mouseEventToLatLng(e); // tidak berputar → perilaku asli, tak berubah
+        const container = map.getContainer();
+        const rect = container.getBoundingClientRect(); // pusat rotasi selalu presisi walau bounding box berubah akibat rotate/scale
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const rad = activeRotation * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        // Rotasi balik (invers) titik layar → koordinat lokal peta sebelum diputar CSS
+        const lx = dx * cos + dy * sin;
+        const ly = -dx * sin + dy * cos;
+        const w = container.offsetWidth, h = container.offsetHeight; // ukuran layout asli #map (tidak berubah oleh CSS transform)
+        return map.containerPointToLatLng(L.point(w / 2 + lx, h / 2 + ly));
     }
     document.getElementById('compassEnableBtn').addEventListener('click', async () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
