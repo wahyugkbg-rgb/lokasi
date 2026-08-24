@@ -2083,10 +2083,14 @@
         nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span>Anda berada</span></div><div class="nearby-body" tabindex="0" role="list" aria-label="Daftar titik naik/turun penumpang dan fasilitas terdekat"></div>`;
         toastStackEl.appendChild(nearbyBoxEl);
         nearbyBodyEl = nearbyBoxEl.querySelector('.nearby-body');
-        // Pengaman tambahan (selain fix CSS pointer-events di atas): pastikan gestur
-        // scroll/sentuh di dalam daftar ini TIDAK pernah diteruskan ke peta Leaflet di
-        // baliknya (yang sebelumnya menyebabkan peta ikut bergeser saat men-scroll daftar).
-        ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'pointermove'].forEach(evt => {
+        // Pengaman tambahan (selain fix CSS pointer-events & touch-action:pan-y di atas):
+        // pastikan SEMUA gestur mouse/scroll/sentuh di dalam daftar ini TIDAK PERNAH bocor
+        // (bubble) ke peta Leaflet di baliknya — mouse wheel tidak ikut men-zoom peta, dan
+        // geser jari (touch drag) untuk scroll daftar tidak ikut menggeser/mem-pan peta.
+        // touch-action:pan-y sudah memberi tahu browser bahwa gestur vertikal di elemen ini
+        // milik scroll internal, bukan gestur peta; stopPropagation di sini mencegah event
+        // yang sama diteruskan ke listener level-dokumen milik peta (jaga-jaga tambahan).
+        ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup'].forEach(evt => {
             nearbyBodyEl.addEventListener(evt, e => e.stopPropagation(), { passive: true });
         });
         // Selama disentuh/di-hover/di-scroll/difokus keyboard: batalkan timer auto-hide.
@@ -2321,46 +2325,82 @@
             `);out center 60;`;
         return fetchOverpassElements(q, 8000);
     }
-    // Query TAMBAHAN (lebih berat, dijalankan PARALEL — bukan menunggu query cepat di atas
-    // selesai dulu) — kesehatan, pemerintahan, TNI/Polri, ibadah, umum, rekreasi. Hasilnya
-    // ditambahkan ke kotak yang sama begitu datang, memperkaya info tanpa menahan tampilnya
-    // info transportasi (default) yang harus segera muncul.
-    async function fetchNearbyExtraFacilityElements(lat, lng) {
-        const r = NEARBY_RADIUS_M, la = lat, lo = lng;
-        const q = `[out:json][timeout:20];(` +
-            `nwr["amenity"="hospital"](around:${r},${la},${lo});` +
-            `nwr["amenity"="clinic"](around:${r},${la},${lo});` +
-            `nwr["amenity"="pharmacy"](around:${r},${la},${lo});` +
-            `nwr["amenity"="doctors"](around:${r},${la},${lo});` +
-            `nwr["healthcare"](around:${r},${la},${lo});` +
-            `nwr["office"="government"](around:${r},${la},${lo});` +
-            `nwr["amenity"="townhall"](around:${r},${la},${lo});` +
-            `nwr["amenity"="police"](around:${r},${la},${lo});` +
-            `nwr["landuse"="military"](around:${r},${la},${lo});` +
-            `nwr["military"](around:${r},${la},${lo});` +
-            `nwr["amenity"="place_of_worship"](around:${r},${la},${lo});` +
-            `nwr["amenity"="bank"](around:${r},${la},${lo});` +
-            `nwr["amenity"="atm"](around:${r},${la},${lo});` +
-            `nwr["amenity"="marketplace"](around:${r},${la},${lo});` +
-            `nwr["shop"="mall"](around:${r},${la},${lo});` +
-            `nwr["shop"="department_store"](around:${r},${la},${lo});` +
-            `nwr["amenity"="school"](around:${r},${la},${lo});` +
-            `nwr["amenity"="university"](around:${r},${la},${lo});` +
-            `nwr["amenity"="college"](around:${r},${la},${lo});` +
-            `nwr["amenity"="exhibition_centre"](around:${r},${la},${lo});` +
-            `nwr["amenity"="conference_centre"](around:${r},${la},${lo});` +
-            `nwr["leisure"="park"](around:${r},${la},${lo});` +
-            `nwr["leisure"="sports_centre"](around:${r},${la},${lo});` +
-            `nwr["leisure"="stadium"](around:${r},${la},${lo});` +
-            `nwr["leisure"="water_park"](around:${r},${la},${lo});` +
-            `nwr["tourism"="attraction"](around:${r},${la},${lo});` +
-            `nwr["tourism"="theme_park"](around:${r},${la},${lo});` +
-            `nwr["tourism"="zoo"](around:${r},${la},${lo});` +
-            `nwr["tourism"="museum"](around:${r},${la},${lo});` +
-            `nwr["amenity"="cinema"](around:${r},${la},${lo});` +
-            `nwr["amenity"="theatre"](around:${r},${la},${lo});` +
-            `);out center 350;`;
-        return fetchOverpassElements(q, 18000);
+    // Query TAMBAHAN — SEBELUMNYA satu query raksasa berisi 30 filter tag digabung jadi satu
+    // (out center 350, timeout:20) dengan batas waktu sisi klien 18000ms — LEBIH PENDEK dari
+    // timeout internal Overpass (20s). Akibatnya query berat itu HAMPIR SELALU dibatalkan
+    // (AbortController) tepat sebelum server sempat membalas di semua mirror sekaligus,
+    // sehingga kategori seperti Puskesmas/ATM/Bank dsb. TIDAK PERNAH tampil sama sekali.
+    // PERBAIKAN: pecah jadi beberapa query per-grup yang jauh lebih ringan & cepat, masing-
+    // masing dengan client-timeout yang punya jeda aman di ATAS timeout internalnya, dan
+    // dijalankan PARALEL — satu grup lambat/gagal tidak lagi menahan/menggagalkan grup lain.
+    function buildOverpassQuery(filters, timeoutSec, outCenter) {
+        const body = filters.join('');
+        return `[out:json][timeout:${timeoutSec}];(${body});out center ${outCenter};`;
+    }
+    const EXTRA_FACILITY_QUERY_GROUPS = [
+        { // Kesehatan
+            filters: (r, la, lo) => [
+                `nwr["amenity"="hospital"](around:${r},${la},${lo});`,
+                `nwr["amenity"="clinic"](around:${r},${la},${lo});`,
+                `nwr["amenity"="pharmacy"](around:${r},${la},${lo});`,
+                `nwr["amenity"="doctors"](around:${r},${la},${lo});`,
+                `nwr["healthcare"](around:${r},${la},${lo});`
+            ]
+        },
+        { // Pemerintahan + TNI/Polri (digabung satu grup ringan, tetap terpisah dari yg lain)
+            filters: (r, la, lo) => [
+                `nwr["office"="government"](around:${r},${la},${lo});`,
+                `nwr["amenity"="townhall"](around:${r},${la},${lo});`,
+                `nwr["amenity"="police"](around:${r},${la},${lo});`,
+                `nwr["landuse"="military"](around:${r},${la},${lo});`,
+                `nwr["military"](around:${r},${la},${lo});`
+            ]
+        },
+        { // Ibadah
+            filters: (r, la, lo) => [
+                `nwr["amenity"="place_of_worship"](around:${r},${la},${lo});`
+            ]
+        },
+        { // Umum (bank/atm/pasar/mall/sekolah/kampus/pusat dagang)
+            filters: (r, la, lo) => [
+                `nwr["amenity"="bank"](around:${r},${la},${lo});`,
+                `nwr["amenity"="atm"](around:${r},${la},${lo});`,
+                `nwr["amenity"="marketplace"](around:${r},${la},${lo});`,
+                `nwr["shop"="mall"](around:${r},${la},${lo});`,
+                `nwr["shop"="department_store"](around:${r},${la},${lo});`,
+                `nwr["amenity"="school"](around:${r},${la},${lo});`,
+                `nwr["amenity"="university"](around:${r},${la},${lo});`,
+                `nwr["amenity"="college"](around:${r},${la},${lo});`,
+                `nwr["amenity"="exhibition_centre"](around:${r},${la},${lo});`,
+                `nwr["amenity"="conference_centre"](around:${r},${la},${lo});`
+            ]
+        },
+        { // Rekreasi
+            filters: (r, la, lo) => [
+                `nwr["leisure"="park"](around:${r},${la},${lo});`,
+                `nwr["leisure"="sports_centre"](around:${r},${la},${lo});`,
+                `nwr["leisure"="stadium"](around:${r},${la},${lo});`,
+                `nwr["leisure"="water_park"](around:${r},${la},${lo});`,
+                `nwr["tourism"="attraction"](around:${r},${la},${lo});`,
+                `nwr["tourism"="theme_park"](around:${r},${la},${lo});`,
+                `nwr["tourism"="zoo"](around:${r},${la},${lo});`,
+                `nwr["tourism"="museum"](around:${r},${la},${lo});`,
+                `nwr["amenity"="cinema"](around:${r},${la},${lo});`,
+                `nwr["amenity"="theatre"](around:${r},${la},${lo});`
+            ]
+        }
+    ];
+    // Mengembalikan array Promise (satu per grup), BUKAN satu Promise gabungan — supaya
+    // pemanggil (checkNearbyTransport) bisa merender/menggabungkan hasil tiap grup begitu
+    // grup itu selesai, tanpa menunggu grup lain yang mungkin lebih lambat/gagal.
+    function fetchNearbyExtraFacilityElementsPerGroup(lat, lng) {
+        const r = NEARBY_RADIUS_M;
+        const timeoutSec = 15; // timeout internal Overpass per grup
+        const clientTimeoutMs = 22000; // jeda aman di ATAS timeoutSec agar server sempat membalas sebelum di-abort
+        return EXTRA_FACILITY_QUERY_GROUPS.map(group => {
+            const q = buildOverpassQuery(group.filters(r, lat, lng), timeoutSec, 120);
+            return fetchOverpassElements(q, clientTimeoutMs);
+        });
     }
     async function fetchOverpassElements(q, timeoutMs) {
         const dataQs = 'data=' + encodeURIComponent(q);
@@ -2402,10 +2442,21 @@
         const myToken = ++nearbyFetchToken;
         const bestByCat = {};
         let transportOk = false, extraOk = false;
-        // Kedua query dijalankan PARALEL (bukan berurutan): query transportasi biasanya
-        // jauh lebih cepat kembali (filter sedikit, seperti semula) sehingga "Anda berada"
-        // langsung terisi begitu ia selesai, tanpa menunggu query fasilitas tambahan yang
-        // lebih berat — itu menyusul dan memperkaya kotak yang sama saat datang.
+        // Kedua kelompok query dijalankan PARALEL (bukan berurutan): query transportasi
+        // biasanya jauh lebih cepat kembali (filter sedikit, seperti semula) sehingga "Anda
+        // berada" langsung terisi begitu ia selesai, tanpa menunggu query fasilitas tambahan.
+        // Fasilitas tambahan kini dipecah per-grup (kesehatan/pemerintahan+TNI-Polri/ibadah/
+        // umum/rekreasi) — masing-masing grup dirender begitu SELESAI SENDIRI, sehingga satu
+        // grup yang lambat/gagal (mis. server Overpass sedang sibuk) tidak lagi menahan atau
+        // menggagalkan grup lain: Puskesmas/ATM/dll. tetap bisa tampil walau grup lain gagal.
+        const extraTasks = fetchNearbyExtraFacilityElementsPerGroup(lat, lng).map(p =>
+            p.then(elements => {
+                if (myToken !== nearbyFetchToken) return;
+                extraOk = true;
+                mergeFacilityElements(elements, lat, lng, bestByCat);
+                renderNearbyBox(bestByCat);
+            }).catch(() => {})
+        );
         await Promise.all([
             fetchNearbyTransportElements(lat, lng).then(elements => {
                 if (myToken !== nearbyFetchToken) return;
@@ -2413,12 +2464,7 @@
                 mergeFacilityElements(elements, lat, lng, bestByCat);
                 renderNearbyBox(bestByCat);
             }).catch(() => {}),
-            fetchNearbyExtraFacilityElements(lat, lng).then(elements => {
-                if (myToken !== nearbyFetchToken) return;
-                extraOk = true;
-                mergeFacilityElements(elements, lat, lng, bestByCat);
-                renderNearbyBox(bestByCat);
-            }).catch(() => {})
+            ...extraTasks
         ]);
         if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru, abaikan hasil basi ini
         renderNearbyBox(bestByCat, { final: true });
