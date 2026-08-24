@@ -2090,6 +2090,88 @@
         }
         return null;
     }
+    // Kategorikan elemen Overpass menjadi jenis fasilitas NON-transportasi (kesehatan,
+    // pemerintahan, TNI/Polri, ibadah, umum, rekreasi). Dipisah dari categorizeTransportElement
+    // (tidak diubah sama sekali) agar fitur naik/turun penumpang yang sudah berjalan tidak
+    // tersentuh — fungsi ini murni TAMBAHAN yang dipanggil setelahnya sebagai fallback.
+    function categorizeExtraFacilityElement(tags) {
+        if (!tags) return null;
+        const name = (tags.name || '').toLowerCase();
+
+        // --- Fasilitas Kesehatan ---
+        if (tags.amenity === 'hospital') return { cat: 'rs', label: 'Rumah Sakit', icon: '🏥' };
+        if (tags.amenity === 'clinic') {
+            if (name.includes('puskesmas')) return { cat: 'puskesmas', label: 'Puskesmas', icon: '⛑️' };
+            return { cat: 'klinik', label: 'Klinik', icon: '⛑️' };
+        }
+        if (tags.amenity === 'pharmacy') return { cat: 'apotek', label: 'Apotek', icon: '💊' };
+        if (tags.amenity === 'doctors' || tags.healthcare) return { cat: 'kesehatan_lain', label: 'Fasilitas Kesehatan', icon: '➕' };
+
+        // --- Kantor Pemerintahan ---
+        if (name.includes('istana negara')) return { cat: 'istana', label: 'Istana Negara', icon: '🏛️' };
+        if (name.includes('gubernur')) return { cat: 'gubernuran', label: 'Kantor Gubernur', icon: '🏛️' };
+        if (name.includes('kabupaten') || name.includes('kotamadya') || (name.includes('kota') && name.includes('kantor'))) {
+            return { cat: 'kab_kota', label: 'Kantor Kabupaten/Kotamadya', icon: '🏛️' };
+        }
+        if (name.includes('kecamatan')) return { cat: 'kecamatan', label: 'Kantor Kecamatan', icon: '🏛️' };
+        if (name.includes('kelurahan') || name.includes('desa')) return { cat: 'desa_kelurahan', label: 'Kantor Desa/Kelurahan', icon: '🏛️' };
+        if (tags.office === 'government' || tags.amenity === 'townhall') return { cat: 'pemerintahan_lain', label: 'Kantor Pemerintahan', icon: '🏛️' };
+
+        // --- TNI/Polri/Brimob/Polisi Militer/Garnisun/Hankam ---
+        if (tags.amenity === 'police') {
+            if (name.includes('polda')) return { cat: 'polda', label: 'Polda', icon: '🚓' };
+            if (name.includes('polres')) return { cat: 'polres', label: 'Polres', icon: '🚓' };
+            if (name.includes('polsek')) return { cat: 'polsek', label: 'Polsek', icon: '🚓' };
+            if (name.includes('brimob')) return { cat: 'brimob', label: 'Markas Brimob', icon: '🚓' };
+            if (name.includes('pos polisi') || name.includes('pospol')) return { cat: 'pospol', label: 'Pos Polisi', icon: '🚓' };
+            return { cat: 'polisi_lain', label: 'Kantor Polisi', icon: '🚓' };
+        }
+        if (tags.landuse === 'military' || tags.military) {
+            if (name.includes('polisi militer') || name.includes(' pom ') || name.includes('garnisun')) {
+                return { cat: 'pom_garnisun', label: 'Polisi Militer/Garnisun', icon: '🪖' };
+            }
+            return { cat: 'tni', label: 'Markas TNI/Militer', icon: '🪖' };
+        }
+
+        // --- Fasilitas Ibadah ---
+        if (tags.amenity === 'place_of_worship') {
+            const rel = (tags.religion || '').toLowerCase();
+            if (rel === 'christian') return { cat: 'gereja', label: 'Gereja', icon: '⛪' };
+            if (rel === 'muslim') return { cat: 'mesjid', label: 'Mesjid/Musholla/Surau', icon: '🕌' };
+            if (rel === 'buddhist') return { cat: 'wihara', label: 'Wihara', icon: '🛐' };
+            if (rel === 'hindu') return { cat: 'pura', label: 'Pura', icon: '🛕' };
+            if (rel === 'taoist' || rel === 'chinese_folk' || rel === 'confucian') return { cat: 'kelenteng', label: 'Kelenteng', icon: '🏮' };
+            return { cat: 'ibadah_lain', label: 'Fasilitas Ibadah', icon: '🙏' };
+        }
+
+        // --- Fasilitas Umum ---
+        if (tags.amenity === 'bank') return { cat: 'bank', label: 'Bank', icon: '🏦' };
+        if (tags.amenity === 'atm') return { cat: 'atm', label: 'ATM', icon: '🏧' };
+        if (tags.amenity === 'marketplace') return { cat: 'pasar', label: 'Pasar', icon: '🛒' };
+        if (tags.shop === 'mall' || tags.shop === 'department_store') return { cat: 'plasa', label: 'Plasa/Mall', icon: '🏬' };
+        if (tags.amenity === 'school') return { cat: 'sekolah', label: 'Sekolah', icon: '🏫' };
+        if (tags.amenity === 'university' || tags.amenity === 'college') return { cat: 'kampus', label: 'Perguruan Tinggi/Kampus', icon: '🎓' };
+        if (tags.amenity === 'exhibition_centre' || tags.amenity === 'conference_centre') {
+            return { cat: 'pusat_dagang', label: 'Pusat Perdagangan/Pameran', icon: '🏢' };
+        }
+
+        // --- Fasilitas Rekreasi ---
+        if (tags.leisure === 'park') return { cat: 'taman', label: 'Taman', icon: '🌳' };
+        if (tags.leisure === 'sports_centre' || tags.leisure === 'stadium') return { cat: 'olahraga', label: 'Fasilitas Olahraga', icon: '⚽' };
+        if (tags.leisure === 'water_park') return { cat: 'rekreasi_air', label: 'Taman/Wahana Air', icon: '🎢' };
+        if (tags.tourism === 'attraction' || tags.tourism === 'theme_park' || tags.tourism === 'zoo' || tags.tourism === 'museum') {
+            return { cat: 'wisata', label: 'Tempat Wisata', icon: '🎡' };
+        }
+        if (tags.amenity === 'cinema' || tags.amenity === 'theatre') return { cat: 'hiburan', label: 'Bioskop/Teater', icon: '🎬' };
+
+        return null;
+    }
+    // Gabungan: fasilitas naik-turun penumpang tetap sebagai pencarian default (dicoba
+    // lebih dulu, TIDAK diubah), lalu fallback ke kategori fasilitas lain yang baru
+    // ditambahkan (kesehatan, pemerintahan, TNI/Polri, ibadah, umum, rekreasi).
+    function categorizeFacilityElement(tags) {
+        return categorizeTransportElement(tags) || categorizeExtraFacilityElement(tags);
+    }
     function showNearbyBox() {
         ensureNearbyBox();
         if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
@@ -2110,7 +2192,15 @@
         showNearbyBox();
     }
     function renderNearbyBox(bestByCat) {
-        const order = ['bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek', 'halte'];
+        const order = [
+            'bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek', 'halte',
+            'rs', 'puskesmas', 'klinik', 'apotek', 'kesehatan_lain',
+            'istana', 'gubernuran', 'kab_kota', 'kecamatan', 'desa_kelurahan', 'pemerintahan_lain',
+            'polda', 'polres', 'polsek', 'brimob', 'pospol', 'polisi_lain', 'pom_garnisun', 'tni',
+            'gereja', 'mesjid', 'wihara', 'pura', 'kelenteng', 'ibadah_lain',
+            'bank', 'atm', 'pasar', 'plasa', 'sekolah', 'kampus', 'pusat_dagang',
+            'taman', 'olahraga', 'rekreasi_air', 'wisata', 'hiburan'
+        ];
         // Urutkan dari yang terjauh (mendekati 700m) ke yang terdekat, sesuai instruksi tampilan.
         const items = order.map(k => bestByCat[k]).filter(Boolean).sort((a, b) => b.dist - a.dist);
         if (!items.length) { hideNearbyBox(); return; }
@@ -2132,12 +2222,59 @@
         // pelabuhan, stasiun, terminal, taksi) sehingga info sering kosong walau ada halte
         // biasa yang lebih dekat. Batas "out" dinaikkan agar halte yang jumlahnya bisa
         // banyak di area padat tidak menggeser hub besar dari hasil sebelum difilter jarak.
-        const q = `[out:json][timeout:15];(nwr["aeroway"="aerodrome"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="ferry_terminal"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["railway"="halt"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="bus_station"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["amenity"="taxi"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["highway"="bus_stop"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["public_transport"="platform"](around:${NEARBY_RADIUS_M},${lat},${lng});nwr["public_transport"="stop_position"](around:${NEARBY_RADIUS_M},${lat},${lng}););out center 60;`;
+        // Query diperluas: fasilitas naik-turun penumpang tetap paling depan (default pencarian,
+        // filter-filternya TIDAK diubah), lalu ditambahkan filter kategori fasilitas baru
+        // (kesehatan, pemerintahan, TNI/Polri, ibadah, umum, rekreasi) — semua masih dalam
+        // radius NEARBY_RADIUS_M (700m) yang sama. timeout & batas "out" dinaikkan karena
+        // jumlah filter & kemungkinan hasil jauh lebih banyak dari sebelumnya.
+        const r = NEARBY_RADIUS_M, la = lat, lo = lng;
+        const q = `[out:json][timeout:25];(` +
+            `nwr["aeroway"="aerodrome"](around:${r},${la},${lo});` +
+            `nwr["amenity"="ferry_terminal"](around:${r},${la},${lo});` +
+            `nwr["railway"="station"](around:${r},${la},${lo});` +
+            `nwr["railway"="halt"](around:${r},${la},${lo});` +
+            `nwr["amenity"="bus_station"](around:${r},${la},${lo});` +
+            `nwr["amenity"="taxi"](around:${r},${la},${lo});` +
+            `nwr["highway"="bus_stop"](around:${r},${la},${lo});` +
+            `nwr["public_transport"="platform"](around:${r},${la},${lo});` +
+            `nwr["public_transport"="stop_position"](around:${r},${la},${lo});` +
+            `nwr["amenity"="hospital"](around:${r},${la},${lo});` +
+            `nwr["amenity"="clinic"](around:${r},${la},${lo});` +
+            `nwr["amenity"="pharmacy"](around:${r},${la},${lo});` +
+            `nwr["amenity"="doctors"](around:${r},${la},${lo});` +
+            `nwr["healthcare"](around:${r},${la},${lo});` +
+            `nwr["office"="government"](around:${r},${la},${lo});` +
+            `nwr["amenity"="townhall"](around:${r},${la},${lo});` +
+            `nwr["amenity"="police"](around:${r},${la},${lo});` +
+            `nwr["landuse"="military"](around:${r},${la},${lo});` +
+            `nwr["military"](around:${r},${la},${lo});` +
+            `nwr["amenity"="place_of_worship"](around:${r},${la},${lo});` +
+            `nwr["amenity"="bank"](around:${r},${la},${lo});` +
+            `nwr["amenity"="atm"](around:${r},${la},${lo});` +
+            `nwr["amenity"="marketplace"](around:${r},${la},${lo});` +
+            `nwr["shop"="mall"](around:${r},${la},${lo});` +
+            `nwr["shop"="department_store"](around:${r},${la},${lo});` +
+            `nwr["amenity"="school"](around:${r},${la},${lo});` +
+            `nwr["amenity"="university"](around:${r},${la},${lo});` +
+            `nwr["amenity"="college"](around:${r},${la},${lo});` +
+            `nwr["amenity"="exhibition_centre"](around:${r},${la},${lo});` +
+            `nwr["amenity"="conference_centre"](around:${r},${la},${lo});` +
+            `nwr["leisure"="park"](around:${r},${la},${lo});` +
+            `nwr["leisure"="sports_centre"](around:${r},${la},${lo});` +
+            `nwr["leisure"="stadium"](around:${r},${la},${lo});` +
+            `nwr["leisure"="water_park"](around:${r},${la},${lo});` +
+            `nwr["tourism"="attraction"](around:${r},${la},${lo});` +
+            `nwr["tourism"="theme_park"](around:${r},${la},${lo});` +
+            `nwr["tourism"="zoo"](around:${r},${la},${lo});` +
+            `nwr["tourism"="museum"](around:${r},${la},${lo});` +
+            `nwr["amenity"="cinema"](around:${r},${la},${lo});` +
+            `nwr["amenity"="theatre"](around:${r},${la},${lo});` +
+            `);out center 400;`;
         const dataQs = 'data=' + encodeURIComponent(q);
         // Race semua mirror sekaligus (bukan berurutan) — dipakai hasil pertama yang sukses,
         // supaya waktu tunggu = mirror tercepat, bukan jumlah semua mirror.
         const attempts = OVERPASS_ENDPOINTS.map(base => (async () => {
-            const res = await fetchWithTimeout(`${base}?${dataQs}`, null, 8000);
+            const res = await fetchWithTimeout(`${base}?${dataQs}`, null, 20000);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (!data) throw new Error('Respons kosong');
@@ -2156,7 +2293,7 @@
             if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru, abaikan hasil basi ini
             const bestByCat = {};
             for (const el of elements) {
-                const info = categorizeTransportElement(el.tags);
+                const info = categorizeFacilityElement(el.tags);
                 if (!info) continue;
                 const elat = el.lat != null ? el.lat : (el.center && el.center.lat);
                 const elng = el.lon != null ? el.lon : (el.center && el.center.lon);
