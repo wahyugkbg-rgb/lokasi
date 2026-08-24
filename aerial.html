@@ -419,6 +419,11 @@
         }
         .nearby-box .nearby-body::-webkit-scrollbar{ width:5px; }
         .nearby-box .nearby-body::-webkit-scrollbar-thumb{ background:var(--panel-border-strong); border-radius:4px; }
+        /* Fokus keyboard: body diberi tabindex agar tombol panah/PageUp/PageDown/Home/End
+           bisa langsung menggulir daftar begitu elemen ini difokus (klik/tap atau Tab). */
+        .nearby-box .nearby-body:focus{ outline:2px solid var(--accent); outline-offset:-2px; border-radius:6px; }
+        .nearby-box .nearby-body:focus:not(:focus-visible){ outline:none; }
+        body.sunlight-mode .nearby-box .nearby-body:focus{ outline:2px solid #000; }
         /* Sub-judul kategori (Kesehatan, Pemerintahan, dst.) di dalam body — memakai bahasa
            visual yang sama dengan .nearby-header agar tidak terasa seperti elemen UI baru. */
         .nearby-subhead{
@@ -2064,11 +2069,18 @@
     ];
     let nearbyBoxEl = null; let nearbyBodyEl = null; let nearbyHideTimer = null;
     let nearbyShowDurationMs = 7000; // disesuaikan otomatis oleh renderNearbyBox() sesuai jumlah baris hasil
+    // true selama pengguna sedang berinteraksi (hover/sentuh/scroll/fokus keyboard) dengan
+    // daftar — dipakai untuk MENUNDA auto-hide supaya daftar panjang tidak tiba-tiba
+    // hilang saat sedang dibaca/discroll, baik lewat sentuhan/mouse maupun tombol keyboard.
+    let nearbyInteracting = false;
     function ensureNearbyBox() {
         if (nearbyBoxEl) return nearbyBoxEl;
         nearbyBoxEl = document.createElement('div');
         nearbyBoxEl.className = 'nearby-box';
-        nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span>Anda berada</span></div><div class="nearby-body"></div>`;
+        // tabindex="0" + role/aria: membuat body bisa difokus (klik/tap atau Tab), sehingga
+        // tombol panah/PageUp/PageDown/Home/End keyboard bisa langsung menggulir daftar
+        // (perilaku scroll bawaan browser pada elemen overflow yang sedang difokus).
+        nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span>Anda berada</span></div><div class="nearby-body" tabindex="0" role="list" aria-label="Daftar titik naik/turun penumpang dan fasilitas terdekat"></div>`;
         toastStackEl.appendChild(nearbyBoxEl);
         nearbyBodyEl = nearbyBoxEl.querySelector('.nearby-body');
         // Pengaman tambahan (selain fix CSS pointer-events di atas): pastikan gestur
@@ -2077,7 +2089,23 @@
         ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'pointermove'].forEach(evt => {
             nearbyBodyEl.addEventListener(evt, e => e.stopPropagation(), { passive: true });
         });
+        // Selama disentuh/di-hover/di-scroll/difokus keyboard: batalkan timer auto-hide.
+        // Begitu interaksi berhenti, timer dimulai ULANG dari durasi penuh (bukan
+        // melanjutkan sisa waktu lama) agar pengguna tetap sempat membaca baris terakhir.
+        const pauseHide = () => { nearbyInteracting = true; if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; } };
+        const resumeHide = () => { nearbyInteracting = false; if (nearbyBoxEl.classList.contains('show')) restartNearbyHideTimer(); };
+        nearbyBoxEl.addEventListener('mouseenter', pauseHide);
+        nearbyBoxEl.addEventListener('mouseleave', resumeHide);
+        nearbyBodyEl.addEventListener('touchstart', pauseHide, { passive: true });
+        nearbyBodyEl.addEventListener('touchend', resumeHide, { passive: true });
+        nearbyBodyEl.addEventListener('scroll', pauseHide, { passive: true });
+        nearbyBodyEl.addEventListener('focus', pauseHide);
+        nearbyBodyEl.addEventListener('blur', resumeHide);
         return nearbyBoxEl;
+    }
+    function restartNearbyHideTimer() {
+        if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
+        nearbyHideTimer = setTimeout(() => { nearbyBoxEl.classList.remove('show'); nearbyHideTimer = null; }, nearbyShowDurationMs);
     }
     function nearbyDistanceColor(d) {
         // Warna berdasar jarak: makin dekat makin "hidup" (hijau), makin jauh (mendekati 700m) makin redup.
@@ -2214,11 +2242,13 @@
     ];
     function showNearbyBox() {
         ensureNearbyBox();
-        if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
         nearbyBoxEl.classList.add('show');
-        // Box muncul sebentar lalu sembunyi otomatis agar tidak mengganggu peta.
-        // Durasi mengikuti nearbyShowDurationMs (diperpanjang otomatis bila hasil banyak baris).
-        nearbyHideTimer = setTimeout(() => { nearbyBoxEl.classList.remove('show'); nearbyHideTimer = null; }, nearbyShowDurationMs);
+        // Box muncul sebentar lalu sembunyi otomatis agar tidak mengganggu peta — TAPI
+        // hanya jika pengguna sedang TIDAK berinteraksi (hover/sentuh/scroll/fokus).
+        // Kalau sedang berinteraksi, timer sengaja tidak dimulai di sini; resumeHide()
+        // pada ensureNearbyBox() akan memulainya begitu interaksi selesai.
+        if (!nearbyInteracting) restartNearbyHideTimer();
+        else if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
     }
     function hideNearbyBox() {
         if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
@@ -2260,7 +2290,12 @@
             return;
         }
         ensureNearbyBox();
+        // Simpan posisi scroll sebelum konten diganti — pembaruan berkala (interval 45 detik
+        // atau saat lokasi bergeser) tidak boleh melompatkan tampilan balik ke atas kalau
+        // pengguna sedang membaca/menscroll ke bawah daftar.
+        const prevScrollTop = nearbyBodyEl.scrollTop;
         nearbyBodyEl.innerHTML = groupsHtml;
+        nearbyBodyEl.scrollTop = prevScrollTop;
         // Durasi tampil menyesuaikan jumlah baris agar cukup waktu dibaca saat hasil banyak
         // (dasar 7 detik + tambahan per baris), dibatasi maksimum agar tidak mengganggu peta
         // terlalu lama bila pengguna tidak berinteraksi.
