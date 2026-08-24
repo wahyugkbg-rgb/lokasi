@@ -407,6 +407,23 @@
         }
         .nearby-row .nb-text{ font-size:0.74rem; font-weight:800; letter-spacing:0.15px; line-height:1.3; }
         body.sunlight-mode .nearby-row .nb-badge{ background:rgba(0,0,0,0.06); border:1px solid #000; }
+        /* Body kotak dibatasi tinggi & bisa discroll — supaya tetap mudah dibaca walau
+           hasil dari banyak kategori fasilitas muncul sekaligus (bukan hanya transportasi). */
+        .nearby-box .nearby-body{
+            max-height:46vh; overflow-y:auto; overscroll-behavior:contain;
+            -webkit-overflow-scrolling:touch; padding-right:2px;
+        }
+        .nearby-box .nearby-body::-webkit-scrollbar{ width:5px; }
+        .nearby-box .nearby-body::-webkit-scrollbar-thumb{ background:var(--panel-border-strong); border-radius:4px; }
+        /* Sub-judul kategori (Kesehatan, Pemerintahan, dst.) di dalam body — memakai bahasa
+           visual yang sama dengan .nearby-header agar tidak terasa seperti elemen UI baru. */
+        .nearby-subhead{
+            font-family:var(--font-head); font-weight:700; font-size:0.68rem;
+            letter-spacing:0.4px; text-transform:uppercase; color:var(--text-dim);
+            opacity:0.75; margin:7px 0 2px; padding-top:5px;
+            border-top:1px solid var(--panel-border-strong);
+        }
+        .nearby-subhead:first-child{ margin-top:0; padding-top:0; border-top:none; }
 
         /* Toast izin sensor kompas */
         .sensor-toast{
@@ -2042,6 +2059,7 @@
         'https://overpass.openstreetmap.ru/api/interpreter'
     ];
     let nearbyBoxEl = null; let nearbyBodyEl = null; let nearbyHideTimer = null;
+    let nearbyShowDurationMs = 7000; // disesuaikan otomatis oleh renderNearbyBox() sesuai jumlah baris hasil
     function ensureNearbyBox() {
         if (nearbyBoxEl) return nearbyBoxEl;
         nearbyBoxEl = document.createElement('div');
@@ -2172,12 +2190,25 @@
     function categorizeFacilityElement(tags) {
         return categorizeTransportElement(tags) || categorizeExtraFacilityElement(tags);
     }
+    // Kelompok tampilan agar kotak "Anda berada" mudah dibaca walau kategori sudah banyak —
+    // setiap cat dipetakan ke satu grup dengan urutan tetap; dalam satu grup diurutkan dari
+    // yang terdekat, dan grup yang kosong (tidak ada hasil) otomatis tidak ditampilkan.
+    const FACILITY_GROUPS = [
+        { label: 'Naik/Turun Penumpang', cats: ['bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek', 'halte'] },
+        { label: 'Kesehatan', cats: ['rs', 'puskesmas', 'klinik', 'apotek', 'kesehatan_lain'] },
+        { label: 'Pemerintahan', cats: ['istana', 'gubernuran', 'kab_kota', 'kecamatan', 'desa_kelurahan', 'pemerintahan_lain'] },
+        { label: 'TNI/Polri', cats: ['polda', 'polres', 'polsek', 'brimob', 'pospol', 'polisi_lain', 'pom_garnisun', 'tni'] },
+        { label: 'Ibadah', cats: ['gereja', 'mesjid', 'wihara', 'pura', 'kelenteng', 'ibadah_lain'] },
+        { label: 'Umum', cats: ['bank', 'atm', 'pasar', 'plasa', 'sekolah', 'kampus', 'pusat_dagang'] },
+        { label: 'Rekreasi', cats: ['taman', 'olahraga', 'rekreasi_air', 'wisata', 'hiburan'] }
+    ];
     function showNearbyBox() {
         ensureNearbyBox();
         if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
         nearbyBoxEl.classList.add('show');
         // Box muncul sebentar lalu sembunyi otomatis agar tidak mengganggu peta.
-        nearbyHideTimer = setTimeout(() => { nearbyBoxEl.classList.remove('show'); nearbyHideTimer = null; }, 7000);
+        // Durasi mengikuti nearbyShowDurationMs (diperpanjang otomatis bila hasil banyak baris).
+        nearbyHideTimer = setTimeout(() => { nearbyBoxEl.classList.remove('show'); nearbyHideTimer = null; }, nearbyShowDurationMs);
     }
     function hideNearbyBox() {
         if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
@@ -2192,27 +2223,31 @@
         showNearbyBox();
     }
     function renderNearbyBox(bestByCat) {
-        const order = [
-            'bandara', 'pelabuhan', 'kai', 'lrt', 'mrt', 'angkot', 'taksi', 'ojek', 'halte',
-            'rs', 'puskesmas', 'klinik', 'apotek', 'kesehatan_lain',
-            'istana', 'gubernuran', 'kab_kota', 'kecamatan', 'desa_kelurahan', 'pemerintahan_lain',
-            'polda', 'polres', 'polsek', 'brimob', 'pospol', 'polisi_lain', 'pom_garnisun', 'tni',
-            'gereja', 'mesjid', 'wihara', 'pura', 'kelenteng', 'ibadah_lain',
-            'bank', 'atm', 'pasar', 'plasa', 'sekolah', 'kampus', 'pusat_dagang',
-            'taman', 'olahraga', 'rekreasi_air', 'wisata', 'hiburan'
-        ];
-        // Urutkan dari yang terjauh (mendekati 700m) ke yang terdekat, sesuai instruksi tampilan.
-        const items = order.map(k => bestByCat[k]).filter(Boolean).sort((a, b) => b.dist - a.dist);
-        if (!items.length) { hideNearbyBox(); return; }
-        ensureNearbyBox();
-        nearbyBodyEl.innerHTML = items.map(it => {
-            const distText = Math.round(it.dist);
-            const nameText = it.name ? ` ${it.name}` : '';
-            return `<div class="nearby-row" style="color:${nearbyDistanceColor(it.dist)}">` +
-                   `<span class="nb-badge">${it.icon}</span>` +
-                   `<span class="nb-text">${distText} meter dari ${it.label}${nameText}</span>` +
-                   `</div>`;
+        // Kelompokkan per FACILITY_GROUPS (grup kosong dilewati), dalam satu grup diurutkan
+        // dari yang TERDEKAT dulu — supaya baris paling relevan/paling dekat langsung terbaca
+        // di awal setiap grup, alih-alih tercampur acak dalam satu daftar panjang.
+        let totalItems = 0;
+        const groupsHtml = FACILITY_GROUPS.map(group => {
+            const items = group.cats.map(k => bestByCat[k]).filter(Boolean).sort((a, b) => a.dist - b.dist);
+            if (!items.length) return '';
+            totalItems += items.length;
+            const rows = items.map(it => {
+                const distText = Math.round(it.dist);
+                const nameText = it.name ? ` ${it.name}` : '';
+                return `<div class="nearby-row" style="color:${nearbyDistanceColor(it.dist)}">` +
+                       `<span class="nb-badge">${it.icon}</span>` +
+                       `<span class="nb-text">${distText} meter dari ${it.label}${nameText}</span>` +
+                       `</div>`;
+            }).join('');
+            return `<div class="nearby-subhead">${group.label}</div>${rows}`;
         }).join('');
+        if (!totalItems) { hideNearbyBox(); return; }
+        ensureNearbyBox();
+        nearbyBodyEl.innerHTML = groupsHtml;
+        // Durasi tampil menyesuaikan jumlah baris agar cukup waktu dibaca saat hasil banyak
+        // (dasar 7 detik + tambahan per baris), dibatasi maksimum agar tidak mengganggu peta
+        // terlalu lama bila pengguna tidak berinteraksi.
+        nearbyShowDurationMs = Math.min(7000 + totalItems * 450, 22000);
         showNearbyBox();
     }
     let nearbyFetchToken = 0; // token sesi agar hasil susulan yang sudah usang (lokasi berpindah/retry lama) tidak menimpa hasil terbaru
