@@ -393,7 +393,11 @@
             transition: opacity 0.35s ease, transform 0.35s ease;
             border-left:4px solid var(--accent);
         }
-        .nearby-box.show{ opacity:1; transform:translateY(0) scale(1); }
+        /* .toast-stack (induk) memakai pointer-events:none supaya toast lain tidak menghalangi
+           peta. Kotak ini HARUS menimpanya jadi auto saat tampil, kalau tidak semua sentuhan/
+           scroll di kotak ini tembus ke peta di baliknya (itulah sebab peta yang ikut bergeser
+           saat mencoba men-scroll daftar, bukan daftarnya). */
+        .nearby-box.show{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
         .nearby-header{
             display:flex; align-items:center; gap:6px; margin-bottom:4px;
             font-family:var(--font-head); font-weight:700; font-size:0.78rem;
@@ -411,7 +415,7 @@
            hasil dari banyak kategori fasilitas muncul sekaligus (bukan hanya transportasi). */
         .nearby-box .nearby-body{
             max-height:46vh; overflow-y:auto; overscroll-behavior:contain;
-            -webkit-overflow-scrolling:touch; padding-right:2px;
+            -webkit-overflow-scrolling:touch; padding-right:2px; touch-action:pan-y;
         }
         .nearby-box .nearby-body::-webkit-scrollbar{ width:5px; }
         .nearby-box .nearby-body::-webkit-scrollbar-thumb{ background:var(--panel-border-strong); border-radius:4px; }
@@ -2067,6 +2071,12 @@
         nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span>Anda berada</span></div><div class="nearby-body"></div>`;
         toastStackEl.appendChild(nearbyBoxEl);
         nearbyBodyEl = nearbyBoxEl.querySelector('.nearby-body');
+        // Pengaman tambahan (selain fix CSS pointer-events di atas): pastikan gestur
+        // scroll/sentuh di dalam daftar ini TIDAK pernah diteruskan ke peta Leaflet di
+        // baliknya (yang sebelumnya menyebabkan peta ikut bergeser saat men-scroll daftar).
+        ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'pointermove'].forEach(evt => {
+            nearbyBodyEl.addEventListener(evt, e => e.stopPropagation(), { passive: true });
+        });
         return nearbyBoxEl;
     }
     function nearbyDistanceColor(d) {
@@ -2222,7 +2232,7 @@
         nearbyBodyEl.innerHTML = `<div class="nearby-row" style="color:var(--text-dim)"><span class="nb-badge">📡</span><span class="nb-text">Mencari titik naik/turun penumpang terdekat…</span></div>`;
         showNearbyBox();
     }
-    function renderNearbyBox(bestByCat) {
+    function renderNearbyBox(bestByCat, { final = false } = {}) {
         // Kelompokkan per FACILITY_GROUPS (grup kosong dilewati), dalam satu grup diurutkan
         // dari yang TERDEKAT dulu — supaya baris paling relevan/paling dekat langsung terbaca
         // di awal setiap grup, alih-alih tercampur acak dalam satu daftar panjang.
@@ -2241,7 +2251,14 @@
             }).join('');
             return `<div class="nearby-subhead">${group.label}</div>${rows}`;
         }).join('');
-        if (!totalItems) { hideNearbyBox(); return; }
+        if (!totalItems) {
+            // Belum ada apa pun untuk ditampilkan. Hanya sembunyikan kotak jika ini memang
+            // hasil akhir (final) — kalau masih ada bagian lain (query fasilitas tambahan)
+            // yang belum selesai, biarkan status "Mencari…" tetap terlihat, jangan berkedip
+            // hilang lalu muncul lagi.
+            if (final) hideNearbyBox();
+            return;
+        }
         ensureNearbyBox();
         nearbyBodyEl.innerHTML = groupsHtml;
         // Durasi tampil menyesuaikan jumlah baris agar cukup waktu dibaca saat hasil banyak
@@ -2251,19 +2268,12 @@
         showNearbyBox();
     }
     let nearbyFetchToken = 0; // token sesi agar hasil susulan yang sudah usang (lokasi berpindah/retry lama) tidak menimpa hasil terbaru
+    // Query CEPAT (default pencarian) — HANYA fasilitas naik-turun penumpang, persis seperti
+    // semula (9 filter, out center 60): supaya "Anda berada" selalu tampil segera begitu
+    // dipicu (marker dipindah / cari / GPS aktif), tidak ikut menunggu query berat di bawah.
     async function fetchNearbyTransportElements(lat, lng) {
-        // Ditambah highway=bus_stop & public_transport=platform/stop_position — halte/titik
-        // pemberhentian umum, karena sebelumnya query hanya mencakup hub besar (bandara,
-        // pelabuhan, stasiun, terminal, taksi) sehingga info sering kosong walau ada halte
-        // biasa yang lebih dekat. Batas "out" dinaikkan agar halte yang jumlahnya bisa
-        // banyak di area padat tidak menggeser hub besar dari hasil sebelum difilter jarak.
-        // Query diperluas: fasilitas naik-turun penumpang tetap paling depan (default pencarian,
-        // filter-filternya TIDAK diubah), lalu ditambahkan filter kategori fasilitas baru
-        // (kesehatan, pemerintahan, TNI/Polri, ibadah, umum, rekreasi) — semua masih dalam
-        // radius NEARBY_RADIUS_M (700m) yang sama. timeout & batas "out" dinaikkan karena
-        // jumlah filter & kemungkinan hasil jauh lebih banyak dari sebelumnya.
         const r = NEARBY_RADIUS_M, la = lat, lo = lng;
-        const q = `[out:json][timeout:25];(` +
+        const q = `[out:json][timeout:15];(` +
             `nwr["aeroway"="aerodrome"](around:${r},${la},${lo});` +
             `nwr["amenity"="ferry_terminal"](around:${r},${la},${lo});` +
             `nwr["railway"="station"](around:${r},${la},${lo});` +
@@ -2273,6 +2283,16 @@
             `nwr["highway"="bus_stop"](around:${r},${la},${lo});` +
             `nwr["public_transport"="platform"](around:${r},${la},${lo});` +
             `nwr["public_transport"="stop_position"](around:${r},${la},${lo});` +
+            `);out center 60;`;
+        return fetchOverpassElements(q, 8000);
+    }
+    // Query TAMBAHAN (lebih berat, dijalankan PARALEL — bukan menunggu query cepat di atas
+    // selesai dulu) — kesehatan, pemerintahan, TNI/Polri, ibadah, umum, rekreasi. Hasilnya
+    // ditambahkan ke kotak yang sama begitu datang, memperkaya info tanpa menahan tampilnya
+    // info transportasi (default) yang harus segera muncul.
+    async function fetchNearbyExtraFacilityElements(lat, lng) {
+        const r = NEARBY_RADIUS_M, la = lat, lo = lng;
+        const q = `[out:json][timeout:20];(` +
             `nwr["amenity"="hospital"](around:${r},${la},${lo});` +
             `nwr["amenity"="clinic"](around:${r},${la},${lo});` +
             `nwr["amenity"="pharmacy"](around:${r},${la},${lo});` +
@@ -2304,12 +2324,15 @@
             `nwr["tourism"="museum"](around:${r},${la},${lo});` +
             `nwr["amenity"="cinema"](around:${r},${la},${lo});` +
             `nwr["amenity"="theatre"](around:${r},${la},${lo});` +
-            `);out center 400;`;
+            `);out center 350;`;
+        return fetchOverpassElements(q, 18000);
+    }
+    async function fetchOverpassElements(q, timeoutMs) {
         const dataQs = 'data=' + encodeURIComponent(q);
         // Race semua mirror sekaligus (bukan berurutan) — dipakai hasil pertama yang sukses,
         // supaya waktu tunggu = mirror tercepat, bukan jumlah semua mirror.
         const attempts = OVERPASS_ENDPOINTS.map(base => (async () => {
-            const res = await fetchWithTimeout(`${base}?${dataQs}`, null, 20000);
+            const res = await fetchWithTimeout(`${base}?${dataQs}`, null, timeoutMs);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (!data) throw new Error('Respons kosong');
@@ -2318,43 +2341,63 @@
         const data = await Promise.any(attempts);
         return (data && data.elements) || [];
     }
+    function mergeFacilityElements(elements, lat, lng, bestByCat) {
+        for (const el of elements) {
+            const info = categorizeFacilityElement(el.tags);
+            if (!info) continue;
+            const elat = el.lat != null ? el.lat : (el.center && el.center.lat);
+            const elng = el.lon != null ? el.lon : (el.center && el.center.lon);
+            if (elat == null || elng == null) continue;
+            const dist = haversineMeters({ lat, lng }, { lat: elat, lng: elng });
+            if (dist > NEARBY_RADIUS_M) continue;
+            const name = (el.tags && el.tags.name) || '';
+            if (!bestByCat[info.cat] || dist < bestByCat[info.cat].dist) {
+                bestByCat[info.cat] = { label: info.label, icon: info.icon, name, dist };
+            }
+        }
+    }
     async function checkNearbyTransport(lat, lng, force = false) {
         // Titik awal (force): tampilkan status "mencari…" seketika supaya box langsung
         // terasa responsif, tidak menunggu diam beberapa detik sampai jaringan selesai.
+        // Dipicu segera oleh 3 hal: marker dipindah (placePinMarker), pencarian
+        // (selectSearchResult), dan GPS diaktifkan (firstFix pada watchPosition) — ketiganya
+        // memanggil checkNearbyTransport(lat, lng, true) langsung, lalu berlanjut diperbarui
+        // berkala (interval 45 detik per sumber lokasi) selama program berjalan.
         if (force) showNearbyLoading();
         const myToken = ++nearbyFetchToken;
-        try {
-            const elements = await fetchNearbyTransportElements(lat, lng);
-            if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru, abaikan hasil basi ini
-            const bestByCat = {};
-            for (const el of elements) {
-                const info = categorizeFacilityElement(el.tags);
-                if (!info) continue;
-                const elat = el.lat != null ? el.lat : (el.center && el.center.lat);
-                const elng = el.lon != null ? el.lon : (el.center && el.center.lon);
-                if (elat == null || elng == null) continue;
-                const dist = haversineMeters({ lat, lng }, { lat: elat, lng: elng });
-                if (dist > NEARBY_RADIUS_M) continue;
-                const name = (el.tags && el.tags.name) || '';
-                if (!bestByCat[info.cat] || dist < bestByCat[info.cat].dist) {
-                    bestByCat[info.cat] = { label: info.label, icon: info.icon, name, dist };
+        const bestByCat = {};
+        let transportOk = false, extraOk = false;
+        // Kedua query dijalankan PARALEL (bukan berurutan): query transportasi biasanya
+        // jauh lebih cepat kembali (filter sedikit, seperti semula) sehingga "Anda berada"
+        // langsung terisi begitu ia selesai, tanpa menunggu query fasilitas tambahan yang
+        // lebih berat — itu menyusul dan memperkaya kotak yang sama saat datang.
+        await Promise.all([
+            fetchNearbyTransportElements(lat, lng).then(elements => {
+                if (myToken !== nearbyFetchToken) return;
+                transportOk = true;
+                mergeFacilityElements(elements, lat, lng, bestByCat);
+                renderNearbyBox(bestByCat);
+            }).catch(() => {}),
+            fetchNearbyExtraFacilityElements(lat, lng).then(elements => {
+                if (myToken !== nearbyFetchToken) return;
+                extraOk = true;
+                mergeFacilityElements(elements, lat, lng, bestByCat);
+                renderNearbyBox(bestByCat);
+            }).catch(() => {})
+        ]);
+        if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru, abaikan hasil basi ini
+        renderNearbyBox(bestByCat, { final: true });
+        // Khusus titik awal: kedua query gagal total (mis. semua mirror Overpass sedang
+        // sibuk/rate-limit). Coba lagi sekali secara cepat (4 detik) alih-alih menunggu
+        // siklus berkala 45 detik, supaya info tetap muncul secepat mungkin di awal.
+        if (force && !transportOk && !extraOk) {
+            setTimeout(() => {
+                if (activeLocation && Math.abs(activeLocation.lat - lat) < 0.0005 && Math.abs(activeLocation.lng - lng) < 0.0005) {
+                    checkNearbyTransport(lat, lng, false);
                 }
-            }
-            renderNearbyBox(bestByCat);
-        } catch (e) {
-            if (myToken !== nearbyFetchToken) return;
-            // Khusus titik awal: semua mirror Overpass gagal (mis. sedang sibuk/rate-limit).
-            // Coba lagi sekali secara cepat (4 detik) alih-alih menunggu siklus berkala 45 detik,
-            // supaya info tempat naik/turun penumpang tetap muncul secepat mungkin di awal.
-            if (force) {
-                setTimeout(() => {
-                    if (activeLocation && Math.abs(activeLocation.lat - lat) < 0.0005 && Math.abs(activeLocation.lng - lng) < 0.0005) {
-                        checkNearbyTransport(lat, lng, false);
-                    }
-                }, 4000);
-            }
-            /* selain itu diamkan agar kegagalan API tidak mengganggu peta */
+            }, 4000);
         }
+        /* selain itu diamkan agar kegagalan salah satu API tidak mengganggu peta */
     }
 
     // ======================================================================
