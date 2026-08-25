@@ -403,6 +403,24 @@
             font-family:var(--font-head); font-weight:700; font-size:0.78rem;
             letter-spacing:0.3px; color:var(--text-dim);
         }
+        .nearby-header .nb-title{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        /* Tombol minimize/maximize — kotak fasilitas bisa diciutkan jadi satu baris header saja
+           supaya peta di baliknya kelihatan penuh, lalu dibesarkan lagi kapan saja tanpa
+           kehilangan data yang sudah didapat (isi body tidak direset, hanya disembunyikan). */
+        .nearby-min-btn{
+            flex-shrink:0; display:flex; align-items:center; justify-content:center;
+            width:22px; height:22px; border-radius:6px; border:1px solid var(--panel-border-strong);
+            background:rgba(255,255,255,0.06); color:var(--text-dim); cursor:pointer;
+            font-size:0.82rem; line-height:1; padding:0; font-family:inherit;
+        }
+        .nearby-min-btn:hover{ background:rgba(255,255,255,0.14); color:var(--text); }
+        body.sunlight-mode .nearby-min-btn{ background:rgba(0,0,0,0.05); border:1px solid rgba(0,0,0,0.25); }
+        body.sunlight-mode .nearby-min-btn:hover{ background:rgba(0,0,0,0.1); }
+        /* Diciutkan: hanya header (judul + tombol) yang terlihat, body & jarak bawahnya
+           dihilangkan total sehingga tinggi kotak menyusut jadi satu baris tipis saja. */
+        .nearby-box.minimized{ padding-bottom:9px; gap:0; }
+        .nearby-box.minimized .nearby-header{ margin-bottom:0; }
+        .nearby-box.minimized .nearby-body{ display:none; }
         .nearby-row{ display:flex; align-items:center; gap:8px; padding:2px 0; }
         .nearby-row .nb-badge{
             flex-shrink:0; display:flex; align-items:center; justify-content:center;
@@ -2093,7 +2111,7 @@
         // tabindex="0" + role/aria: membuat body bisa difokus (klik/tap atau Tab), sehingga
         // tombol panah/PageUp/PageDown/Home/End keyboard bisa langsung menggulir daftar
         // (perilaku scroll bawaan browser pada elemen overflow yang sedang difokus).
-        nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span>Anda berada</span></div><div class="nearby-body" tabindex="0" role="list" aria-label="Daftar titik naik/turun penumpang dan fasilitas terdekat"></div>`;
+        nearbyBoxEl.innerHTML = `<div class="nearby-header"><span>📍</span><span class="nb-title">Anda berada</span><button type="button" id="nearbyMinBtn" class="nearby-min-btn" aria-label="Minimalkan daftar fasilitas" title="Minimalkan daftar fasilitas">–</button></div><div class="nearby-body" tabindex="0" role="list" aria-label="Daftar titik naik/turun penumpang dan fasilitas terdekat"></div>`;
         toastStackEl.appendChild(nearbyBoxEl);
         nearbyBodyEl = nearbyBoxEl.querySelector('.nearby-body');
         // Pengaman tambahan (selain fix CSS pointer-events & touch-action:pan-y di atas):
@@ -2110,7 +2128,7 @@
         // Begitu interaksi berhenti, timer dimulai ULANG dari durasi penuh (bukan
         // melanjutkan sisa waktu lama) agar pengguna tetap sempat membaca baris terakhir.
         const pauseHide = () => { nearbyInteracting = true; if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; } };
-        const resumeHide = () => { nearbyInteracting = false; if (nearbyBoxEl.classList.contains('show')) restartNearbyHideTimer(); };
+        const resumeHide = () => { nearbyInteracting = false; if (nearbyBoxEl.classList.contains('show') && !nearbyMinimized) restartNearbyHideTimer(); };
         nearbyBoxEl.addEventListener('mouseenter', pauseHide);
         nearbyBoxEl.addEventListener('mouseleave', resumeHide);
         nearbyBodyEl.addEventListener('touchstart', pauseHide, { passive: true });
@@ -2118,7 +2136,42 @@
         nearbyBodyEl.addEventListener('scroll', pauseHide, { passive: true });
         nearbyBodyEl.addEventListener('focus', pauseHide);
         nearbyBodyEl.addEventListener('blur', resumeHide);
+        // Tombol minimize/maximize (lihat setNearbyMinimized) — stopPropagation berjaga-jaga
+        // supaya klik tombol tidak pernah bocor/dianggap sebagai gestur pada peta di baliknya.
+        const minBtn = nearbyBoxEl.querySelector('#nearbyMinBtn');
+        minBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            setNearbyMinimized(!nearbyMinimized);
+        });
+        ['wheel', 'touchstart', 'touchmove', 'touchend', 'pointerdown'].forEach(evt => {
+            minBtn.addEventListener(evt, e => e.stopPropagation(), { passive: true });
+        });
         return nearbyBoxEl;
+    }
+    // true kalau kotak fasilitas sedang diciutkan (hanya header terlihat) — supaya peta
+    // di baliknya bisa terlihat penuh. Data yang sudah didapat TIDAK hilang saat diciutkan,
+    // hanya disembunyikan (nearby-body diberi display:none lewat class .minimized di CSS);
+    // begitu dimaksimalkan lagi, isi terakhir langsung tampak tanpa perlu query ulang.
+    let nearbyMinimized = false;
+    function setNearbyMinimized(min) {
+        nearbyMinimized = min;
+        if (!nearbyBoxEl) return;
+        nearbyBoxEl.classList.toggle('minimized', min);
+        const btn = nearbyBoxEl.querySelector('#nearbyMinBtn');
+        if (btn) {
+            btn.textContent = min ? '▢' : '–';
+            const lbl = min ? 'Maksimalkan daftar fasilitas' : 'Minimalkan daftar fasilitas';
+            btn.setAttribute('aria-label', lbl);
+            btn.title = lbl;
+        }
+        if (min) {
+            // Diciutkan: hentikan timer auto-hide — kotak header-saja ini kecil & tidak
+            // mengganggu peta, jadi biarkan tetap terlihat sampai pengguna sendiri yang
+            // memaksimalkan lagi (bukan hilang sendiri di tengah dia sedang meminimalkannya).
+            if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
+        } else if (!nearbyInteracting && nearbyBoxEl.classList.contains('show')) {
+            restartNearbyHideTimer();
+        }
     }
     function restartNearbyHideTimer() {
         if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
@@ -2261,10 +2314,10 @@
         ensureNearbyBox();
         nearbyBoxEl.classList.add('show');
         // Box muncul sebentar lalu sembunyi otomatis agar tidak mengganggu peta — TAPI
-        // hanya jika pengguna sedang TIDAK berinteraksi (hover/sentuh/scroll/fokus).
-        // Kalau sedang berinteraksi, timer sengaja tidak dimulai di sini; resumeHide()
-        // pada ensureNearbyBox() akan memulainya begitu interaksi selesai.
-        if (!nearbyInteracting) restartNearbyHideTimer();
+        // hanya jika pengguna sedang TIDAK berinteraksi (hover/sentuh/scroll/fokus) DAN
+        // kotak sedang TIDAK diciutkan (lihat setNearbyMinimized — saat diciutkan, auto-hide
+        // sengaja dihentikan supaya baris header kecil ini tidak hilang sendiri).
+        if (!nearbyInteracting && !nearbyMinimized) restartNearbyHideTimer();
         else if (nearbyHideTimer) { clearTimeout(nearbyHideTimer); nearbyHideTimer = null; }
     }
     function hideNearbyBox() {
