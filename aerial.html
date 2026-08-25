@@ -1264,7 +1264,10 @@
             }
         }, 5 * 60 * 1000);
         searchTransportTimer = setInterval(() => {
-            if (activeLocation && activeLocation.source === 'search') checkNearbyTransport(lat, lng, true);
+            // force=false: refresh berkala TIDAK memicu status "Mencari…" yang menimpa daftar
+            // yang sudah tampil — biar daftar lama tetap terlihat sampai data baru siap, tidak
+            // berkedip kosong tiap 45 detik.
+            if (activeLocation && activeLocation.source === 'search') checkNearbyTransport(lat, lng, false);
         }, 45000);
     }
     function hideSearchResults() { searchResultsEl.classList.remove('show'); searchResultsEl.innerHTML = ''; }
@@ -1442,7 +1445,8 @@
             }
         }, 5 * 60 * 1000);
         gpsTransportTimer = setInterval(() => {
-            if (isLocTracking && activeLocation && activeLocation.source === 'gps') checkNearbyTransport(activeLocation.lat, activeLocation.lng, true);
+            // force=false — lihat catatan di searchTransportTimer.
+            if (isLocTracking && activeLocation && activeLocation.source === 'gps') checkNearbyTransport(activeLocation.lat, activeLocation.lng, false);
         }, 45000);
     }
 
@@ -1513,7 +1517,8 @@
             }
         }, 5 * 60 * 1000);
         pinTransportTimer = setInterval(() => {
-            if (activeLocation && activeLocation.source === 'manual') checkNearbyTransport(activeLocation.lat, activeLocation.lng, true);
+            // force=false — lihat catatan di searchTransportTimer.
+            if (activeLocation && activeLocation.source === 'manual') checkNearbyTransport(activeLocation.lat, activeLocation.lng, false);
         }, 45000);
     }
     function removePinMarker() {
@@ -2065,7 +2070,8 @@
     const OVERPASS_ENDPOINTS = [
         'https://overpass-api.de/api/interpreter',
         'https://overpass.kumi.systems/api/interpreter',
-        'https://overpass.openstreetmap.ru/api/interpreter'
+        'https://overpass.openstreetmap.ru/api/interpreter',
+        'https://overpass.nchc.org.tw/api/interpreter'
     ];
     let nearbyBoxEl = null; let nearbyBodyEl = null; let nearbyHideTimer = null;
     let nearbyShowDurationMs = 7000; // disesuaikan otomatis oleh renderNearbyBox() sesuai jumlah baris hasil
@@ -2341,11 +2347,10 @@
             `nwr["public_transport"="platform"](around:${r},${la},${lo});` +
             `nwr["public_transport"="stop_position"](around:${r},${la},${lo});` +
             `);out center 60;`;
-        // Timeout per-mirror 7000ms — dipersingkat (sebelumnya 12000ms) supaya kalau satu
-        // mirror lambat/diam, giliran pindah ke mirror berikutnya lebih cepat, dan hasil
-        // punya peluang lebih besar selesai SEBELUM siklus refresh 45 detik berikutnya
-        // menggantinya dengan token baru (lihat catatan "isStale" di runOverpassQueued).
-        return fetchOverpassElements(q, 7000, isStale);
+        // Timeout per-mirror 9000ms — cukup singkat untuk tetap responsif, tapi cukup panjang
+        // untuk jaringan mobile/lambat (fetchOverpassElements kini juga otomatis mencoba
+        // proxy CORS lewat fetchWithProxy bila koneksi langsung ke mirror gagal/diblokir).
+        return fetchOverpassElements(q, 9000, isStale);
     }
     // Query TAMBAHAN — SEBELUMNYA satu query raksasa berisi 30 filter tag digabung jadi satu
     // (out center 350, timeout:20) dengan batas waktu sisi klien 18000ms — LEBIH PENDEK dari
@@ -2359,6 +2364,15 @@
         const body = filters.join('');
         return `[out:json][timeout:${timeoutSec}];(${body});out center ${outCenter};`;
     }
+    // Sebelumnya 5 grup terpisah (Kesehatan / Pemerintahan+TNI-Polri / Ibadah / Umum / Rekreasi)
+    // = total 6 query Overpass sekaligus (1 transport + 5 ini) setiap kali lokasi berubah/
+    // refresh berkala. Di jaringan lambat, 6 query yang berebut antrian concurrency (lihat
+    // MAX_CONCURRENT_OVERPASS) + digilir mirror satu-per-satu membuat sebagian grup nyaris
+    // tidak pernah sempat selesai sebelum dianggap basi. Dipadatkan jadi 3 grup (Kesehatan
+    // tetap sendiri karena paling sering dicari; Pemerintahan+TNI/Polri+Ibadah digabung;
+    // Umum+Rekreasi digabung) — kategorisasi tiap elemen tetap presisi lewat
+    // categorizeExtraFacilityElement (dijalankan per-elemen, tidak peduli query mana yang
+    // menemukannya), hanya jumlah ROUND-TRIP jaringannya yang berkurang dari 5 jadi 3.
     const EXTRA_FACILITY_QUERY_GROUPS = [
         { // Kesehatan
             filters: (r, la, lo) => [
@@ -2369,21 +2383,17 @@
                 `nwr["healthcare"](around:${r},${la},${lo});`
             ]
         },
-        { // Pemerintahan + TNI/Polri (digabung satu grup ringan, tetap terpisah dari yg lain)
+        { // Pemerintahan + TNI/Polri + Ibadah
             filters: (r, la, lo) => [
                 `nwr["office"="government"](around:${r},${la},${lo});`,
                 `nwr["amenity"="townhall"](around:${r},${la},${lo});`,
                 `nwr["amenity"="police"](around:${r},${la},${lo});`,
                 `nwr["landuse"="military"](around:${r},${la},${lo});`,
-                `nwr["military"](around:${r},${la},${lo});`
-            ]
-        },
-        { // Ibadah
-            filters: (r, la, lo) => [
+                `nwr["military"](around:${r},${la},${lo});`,
                 `nwr["amenity"="place_of_worship"](around:${r},${la},${lo});`
             ]
         },
-        { // Umum (bank/atm/pasar/mall/sekolah/kampus/pusat dagang)
+        { // Umum (bank/atm/pasar/mall/sekolah/kampus/pusat dagang) + Rekreasi
             filters: (r, la, lo) => [
                 `nwr["amenity"="bank"](around:${r},${la},${lo});`,
                 `nwr["amenity"="atm"](around:${r},${la},${lo});`,
@@ -2394,11 +2404,7 @@
                 `nwr["amenity"="university"](around:${r},${la},${lo});`,
                 `nwr["amenity"="college"](around:${r},${la},${lo});`,
                 `nwr["amenity"="exhibition_centre"](around:${r},${la},${lo});`,
-                `nwr["amenity"="conference_centre"](around:${r},${la},${lo});`
-            ]
-        },
-        { // Rekreasi
-            filters: (r, la, lo) => [
+                `nwr["amenity"="conference_centre"](around:${r},${la},${lo});`,
                 `nwr["leisure"="park"](around:${r},${la},${lo});`,
                 `nwr["leisure"="sports_centre"](around:${r},${la},${lo});`,
                 `nwr["leisure"="stadium"](around:${r},${la},${lo});`,
@@ -2417,8 +2423,8 @@
     // grup itu selesai, tanpa menunggu grup lain yang mungkin lebih lambat/gagal.
     function fetchNearbyExtraFacilityElementsPerGroup(lat, lng, isStale) {
         const r = NEARBY_RADIUS_M;
-        const timeoutSec = 8; // timeout internal Overpass per grup — query ini ringan (radius kecil, out center 120) jadi cukup singkat
-        const clientTimeoutMs = 7000; // per-mirror, dipersingkat (sebelumnya 13000ms) — supaya gagal-cepat & pindah mirror lebih responsif, dan grup yang telat giliran antre tetap punya peluang selesai sebelum siklus refresh 45 detik berikutnya
+        const timeoutSec = 10; // timeout internal Overpass per grup — dinaikkan sedikit (grup Umum+Rekreasi kini lebih besar setelah dipadatkan dari 5→3 grup)
+        const clientTimeoutMs = 9000; // per-mirror — dinaikkan dari 7000ms supaya jaringan lambat/mobile tetap sempat dapat balasan sebelum pindah mirror/proxy berikutnya
         return EXTRA_FACILITY_QUERY_GROUPS.map(group => {
             const q = buildOverpassQuery(group.filters(r, lat, lng), timeoutSec, 120);
             return fetchOverpassElements(q, clientTimeoutMs, isStale);
@@ -2448,7 +2454,7 @@
     // jaringan untuk hasil yang toh akan dibuang), sehingga slot antrian langsung terisi
     // permintaan yang MASIH relevan (biasanya milik siklus/lokasi terbaru) dan antrian tidak
     // pernah tersumbat oleh permintaan usang.
-    const MAX_CONCURRENT_OVERPASS = 3; // dinaikkan dari 2 → 3 (satu per mirror) agar antrian 6 task bergilir lebih cepat, tetap jauh di bawah 18 koneksi lama yang menyebabkan macet
+    const MAX_CONCURRENT_OVERPASS = 3; // 1 transport + 3 grup tambahan = 4 task total; batas 3 tetap menjaga jumlah koneksi bersamaan ke server Overpass tetap wajar
     let overpassActiveCount = 0;
     const overpassQueue = [];
     function advanceOverpassQueue() {
@@ -2481,15 +2487,23 @@
         return runOverpassQueued(async () => {
             const dataQs = 'data=' + encodeURIComponent(q);
             let lastErr = null;
-            // Coba mirror SATU PER SATU (berurutan). Mirror kedua/ketiga hanya dicoba kalau
-            // mirror sebelumnya benar-benar gagal (bukan di-race sekaligus seperti sebelumnya)
-            // — ini yang paling menekan jumlah koneksi bersamaan ke server yang sama.
+            // Coba mirror SATU PER SATU (berurutan) — mirror berikutnya hanya dicoba kalau
+            // mirror sebelumnya benar-benar gagal, menjaga jumlah koneksi bersamaan tetap kecil.
+            // PERBAIKAN: setiap percobaan mirror kini TIDAK LANGSUNG fetch mentah, melainkan lewat
+            // fetchWithProxy — yang sudah dipakai & terbukti andal untuk cuaca/geocoding di file
+            // ini. fetchWithProxy me-race koneksi LANGSUNG bersamaan beberapa proxy CORS publik
+            // (Corsfix/CodeTabs/AllOrigins) sekaligus, jadi kalau jaringan/browser pengguna
+            // memblokir/gagal konek langsung ke server Overpass (penyebab paling umum kotak
+            // fasilitas macet kosong selamanya), permintaan tetap py punya peluang tembus lewat
+            // salah satu proxy tanpa menunggu mirror lain digilir dulu.
             for (const base of OVERPASS_ENDPOINTS) {
                 if (isStale && isStale()) throw new Error('Permintaan sudah basi, dihentikan di tengah jalan');
                 try {
-                    const res = await fetchWithTimeout(`${base}?${dataQs}`, null, timeoutMs);
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    const data = await res.json();
+                    const url = `${base}?${dataQs}`;
+                    const data = await Promise.race([
+                        fetchWithProxy(url),
+                        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout mirror')), timeoutMs))
+                    ]);
                     if (!data) throw new Error('Respons kosong');
                     return (data && data.elements) || [];
                 } catch (e) {
@@ -2519,6 +2533,13 @@
         }
     }
     let nearbyRetryCount = 0; // hitungan retry beruntun pada sesi force saat ini (direset tiap force baru)
+    // Menyimpan hasil akhir yang BERHASIL terakhir kali + lokasi saat itu didapat — dipakai
+    // untuk "carry-over": kalau lokasi belum banyak berubah (<80m, mis. refresh berkala 45
+    // detik di titik yang sama), daftar lama dipakai sebagai dasar SEBELUM hasil baru datang,
+    // supaya satu grup yang kebetulan lambat/gagal pada siklus ini tidak membuat entri yang
+    // sudah terbukti ada (siklus sebelumnya) ikut hilang dari tampilan.
+    let lastGoodByCat = null;
+    let lastGoodLatLng = null;
     async function checkNearbyTransport(lat, lng, force = false) {
         // Titik awal (force): tampilkan status "mencari…" seketika supaya box langsung
         // terasa responsif, tidak menunggu diam beberapa detik sampai jaringan selesai.
@@ -2529,7 +2550,14 @@
         if (force) { showNearbyLoading(); nearbyRetryCount = 0; }
         const myToken = ++nearbyFetchToken;
         const bestByCat = {};
-        let anyOk = false; // true kalau MINIMAL SATU dari 6 query (transport + 5 grup tambahan) berhasil
+        // Carry-over: seed dengan hasil baik terakhir bila lokasi masih dekat (<80m) dari saat
+        // hasil itu didapat. mergeFacilityElements() nanti akan menimpa/menambah entri begini
+        // begitu hasil query baru datang (memilih yang lebih dekat), jadi ini murni jaring
+        // pengaman tampilan, bukan sumber data permanen.
+        if (lastGoodByCat && lastGoodLatLng && haversineMeters(lastGoodLatLng, { lat, lng }) < 80) {
+            Object.assign(bestByCat, lastGoodByCat);
+        }
+        let anyOk = false; // true kalau MINIMAL SATU dari 4 query (transport + 3 grup tambahan) berhasil
         // Dicek oleh runOverpassQueued TEPAT SEBELUM sebuah task memakai kuota jaringan —
         // kalau permintaan ini sudah digantikan oleh permintaan lebih baru (lokasi berubah/
         // siklus refresh berikutnya sudah jalan) SAAT task itu masih menunggu giliran di
@@ -2561,6 +2589,7 @@
         );
         await Promise.all([transportTask, ...extraTasks]);
         if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru, abaikan hasil basi ini
+        if (Object.keys(bestByCat).length) { lastGoodByCat = bestByCat; lastGoodLatLng = { lat, lng }; }
         renderNearbyBox(bestByCat, { final: true, anyOk });
         // Khusus titik awal (force): SEMUA query gagal total (mis. mirror Overpass sedang
         // sibuk/rate-limit sesaat). SEBELUMNYA hanya dicoba ulang SEKALI (4 detik) — kalau
