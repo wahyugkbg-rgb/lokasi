@@ -2075,6 +2075,13 @@
     ];
     let nearbyBoxEl = null; let nearbyBodyEl = null; let nearbyHideTimer = null;
     let nearbyShowDurationMs = 7000; // disesuaikan otomatis oleh renderNearbyBox() sesuai jumlah baris hasil
+    // Pesan kesalahan JARINGAN terakhir yang benar-benar terjadi (mis. timeout mirror tertentu,
+    // semua proxy CORS gagal, dsb.) — ditampilkan singkat di kotak saat semua query gagal total,
+    // supaya pengguna/DEV tahu PERSIS penyebabnya alih-alih hanya pesan generik "gagal memuat".
+    let lastNearbyErrorMsg = '';
+    // Koordinat permintaan terakhir — dipakai tombol "Coba lagi sekarang" manual di kotak saat
+    // status gagal, supaya bisa memicu ulang tanpa menunggu retry otomatis / siklus 45 detik.
+    let nearbyRetryLatLng = null;
     // true selama pengguna sedang berinteraksi (hover/sentuh/scroll/fokus keyboard) dengan
     // daftar — dipakai untuk MENUNDA auto-hide supaya daftar panjang tidak tiba-tiba
     // hilang saat sedang dibaca/discroll, baik lewat sentuhan/mouse maupun tombol keyboard.
@@ -2300,11 +2307,17 @@
                 // SEMUA query gagal total (mis. jaringan/Overpass sedang bermasalah) — SEBELUMNYA
                 // kotak ini dibiarkan diam menampilkan teks "Mencari…" lama selamanya (terlihat
                 // seperti macet/kosong tanpa penjelasan). Sekarang tampilkan status gagal yang
-                // jelas + akan otomatis dicoba ulang (lihat retry beruntun di checkNearbyTransport
-                // dan siklus 45 detik yang tetap berjalan setelahnya).
+                // jelas + alasan singkat + tombol coba-lagi manual, selain retry otomatis
+                // beruntun (lihat checkNearbyTransport) dan siklus 45 detik yang tetap berjalan.
                 ensureNearbyBox();
-                nearbyBodyEl.innerHTML = `<div class="nearby-row" style="color:#ff8a80"><span class="nb-badge">⚠️</span><span class="nb-text">Gagal memuat data sekitar, mencoba lagi…</span></div>`;
-                nearbyShowDurationMs = 6000;
+                const reason = lastNearbyErrorMsg ? String(lastNearbyErrorMsg).slice(0, 90) : '';
+                nearbyBodyEl.innerHTML = `<div class="nearby-row" style="color:#ff8a80"><span class="nb-badge">⚠️</span><span class="nb-text">Gagal memuat data sekitar, mencoba lagi…${reason ? `<br><span style="opacity:0.75;font-weight:600;font-size:0.68rem">${reason}</span>` : ''}</span></div>` +
+                    `<div class="nearby-row" id="nearbyManualRetryRow" style="cursor:pointer;color:var(--accent)"><span class="nb-badge">🔄</span><span class="nb-text" style="text-decoration:underline">Coba lagi sekarang</span></div>`;
+                const retryRow = nearbyBodyEl.querySelector('#nearbyManualRetryRow');
+                if (retryRow && nearbyRetryLatLng) {
+                    retryRow.addEventListener('click', () => checkNearbyTransport(nearbyRetryLatLng.lat, nearbyRetryLatLng.lng, true));
+                }
+                nearbyShowDurationMs = 9000;
                 showNearbyBox();
             } else {
                 // Query berhasil dijalankan tapi memang tidak ada fasilitas dalam radius —
@@ -2540,6 +2553,21 @@
     // sudah terbukti ada (siklus sebelumnya) ikut hilang dari tampilan.
     let lastGoodByCat = null;
     let lastGoodLatLng = null;
+    // BUG PENTING yang diperbaiki: SEBELUMNYA setiap panggilan checkNearbyTransport — termasuk
+    // refresh berkala non-force setiap 45 detik — membuat token baru (nearbyFetchToken) yang
+    // otomatis membatalkan/membuang hasil dari permintaan SEBELUMNYA yang masih berjalan
+    // (lewat pengecekan isStale()). Di jaringan lambat, kalau satu putaran penuh 4 query
+    // (transport + 3 grup tambahan, masing-masing bisa mencoba beberapa mirror/proxy) makan
+    // waktu LEBIH dari 45 detik, maka SETIAP siklus akan selalu dipotong oleh siklus berikutnya
+    // sebelum sempat selesai — akibatnya daftar TIDAK PERNAH terisi sama sekali, walau
+    // sebenarnya data sudah/akan berhasil didapat, karena keburu dibuang berulang-ulang.
+    // PERBAIKAN: refresh berkala (force=false) tidak lagi memulai putaran baru bila putaran
+    // sebelumnya masih berjalan — cukup dilewati (nunggu tick 45 detik berikutnya), sehingga
+    // putaran yang sedang berjalan diberi kesempatan selesai sampai tuntas. Pemicu eksplisit
+    // (cari lokasi / geser marker / GPS baru aktif → force=true) TETAP selalu langsung
+    // memulai putaran baru & membatalkan yang lama, supaya perpindahan lokasi tetap responsif.
+    let nearbyFetchInFlight = false;
+    let nearbyFetchStartedAt = 0;
     async function checkNearbyTransport(lat, lng, force = false) {
         // Titik awal (force): tampilkan status "mencari…" seketika supaya box langsung
         // terasa responsif, tidak menunggu diam beberapa detik sampai jaringan selesai.
@@ -2547,7 +2575,16 @@
         // (selectSearchResult), dan GPS diaktifkan (firstFix pada watchPosition) — ketiganya
         // memanggil checkNearbyTransport(lat, lng, true) langsung, lalu berlanjut diperbarui
         // berkala (interval 45 detik per sumber lokasi) selama program berjalan.
+        if (!force) {
+            // Refresh berkala: kalau putaran sebelumnya (force ATAU berkala) masih berjalan,
+            // JANGAN mulai putaran baru — biarkan yang sedang berjalan selesai dulu. Batas
+            // pengaman 90 detik untuk berjaga-jaga andai suatu putaran macet total tanpa
+            // pernah membersihkan flag ini (mis. exception tak terduga).
+            if (nearbyFetchInFlight && (Date.now() - nearbyFetchStartedAt) < 90000) return;
+        }
         if (force) { showNearbyLoading(); nearbyRetryCount = 0; }
+        nearbyFetchInFlight = true; nearbyFetchStartedAt = Date.now();
+        nearbyRetryLatLng = { lat, lng };
         const myToken = ++nearbyFetchToken;
         const bestByCat = {};
         // Carry-over: seed dengan hasil baik terakhir bila lokasi masih dekat (<80m) dari saat
@@ -2574,7 +2611,7 @@
             anyOk = true;
             mergeFacilityElements(elements, lat, lng, bestByCat);
             renderNearbyBox(bestByCat);
-        }).catch(() => {});
+        }).catch(e => { if (e && e.message) lastNearbyErrorMsg = e.message; });
         // Fasilitas tambahan (kesehatan/pemerintahan+TNI-Polri/ibadah/umum/rekreasi) menyusul
         // satu-satu begitu masing-masing selesai — dibatasi antrian concurrency (lihat
         // runOverpassQueued) supaya tidak lagi menembak puluhan koneksi bersamaan ke server
@@ -2585,10 +2622,11 @@
                 anyOk = true;
                 mergeFacilityElements(elements, lat, lng, bestByCat);
                 renderNearbyBox(bestByCat);
-            }).catch(() => {})
+            }).catch(e => { if (e && e.message) lastNearbyErrorMsg = e.message; })
         );
         await Promise.all([transportTask, ...extraTasks]);
-        if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru, abaikan hasil basi ini
+        nearbyFetchInFlight = false;
+        if (myToken !== nearbyFetchToken) return; // sudah ada permintaan lebih baru (lokasi pindah/force baru), abaikan hasil basi ini
         if (Object.keys(bestByCat).length) { lastGoodByCat = bestByCat; lastGoodLatLng = { lat, lng }; }
         renderNearbyBox(bestByCat, { final: true, anyOk });
         // Khusus titik awal (force): SEMUA query gagal total (mis. mirror Overpass sedang
@@ -2598,9 +2636,9 @@
         // BERUNTUN dengan jeda makin panjang (5s, 10s, 20s — maksimum 3x) sebelum akhirnya
         // pasrah ke siklus berkala normal (45 detik) yang tetap berjalan terus di latar
         // belakang tanpa pernah berhenti selama lokasi ini masih aktif.
-        if (force && !anyOk && nearbyRetryCount < 3) {
+        if (force && !anyOk && nearbyRetryCount < 5) {
             nearbyRetryCount++;
-            const delay = [5000, 10000, 20000][nearbyRetryCount - 1];
+            const delay = [3000, 6000, 12000, 20000, 30000][nearbyRetryCount - 1];
             setTimeout(() => {
                 if (activeLocation && Math.abs(activeLocation.lat - lat) < 0.0005 && Math.abs(activeLocation.lng - lng) < 0.0005) {
                     checkNearbyTransport(lat, lng, false);
