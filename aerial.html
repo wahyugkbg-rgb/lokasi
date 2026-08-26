@@ -774,6 +774,7 @@
                 <button type="button" data-layer="aerial" title="Citra satelit + label jalan/nama tempat (Hybrid)">✈️ Udara</button>
                 <button type="button" data-layer="aerialhq" title="Citra udara resolusi tinggi (Esri World Imagery Clarity)">🌆 Udara HQ</button>
                 <button type="button" data-layer="terrain">⛰️ Medan</button>
+                <button type="button" data-layer="topodetail" title="Kontur/relief topografi dipertajam dengan detail jalan sampai level gang &amp; nama desa/kelurahan">🗻 Topo Detail</button>
                 <button type="button" data-layer="hot">🏘️ Detail</button>
                 <button type="button" data-layer="dark">🌙 Gelap</button>
             </div>
@@ -1026,11 +1027,24 @@
     ]);
     const layerAerialHQ = L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
     const layerTerrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17 });
+    // "Topo Detail" — layer BARU (murni tambahan, tidak mengubah "⛰️ Medan" yang sudah ada).
+    // Masalah "⛰️ Medan" polos: server OpenTopoMap sendiri cuma render sampai z17, jadi begitu
+    // di-zoom lebih dekat dari itu (level gang), peta cuma diam/blur di z17 — nama gang & desa
+    // kecil tidak pernah kelihatan karena OpenTopoMap memang tidak punya ubin sedetail itu.
+    // PERBAIKAN: gabungkan base kontur/relief OpenTopoMap (di-upscale otomatis via
+    // maxNativeZoom, tetap bisa terus di-zoom sampai 20) DENGAN lapisan jalan+gang+label
+    // desa/kelurahan dari OSM Humanitarian (native sampai z19, transparansi 55% supaya
+    // relief/kontur di baliknya tetap terlihat) — hasilnya topografi + detail jalan sampai
+    // gang & nama desa dalam satu layer, tanpa mengubah tombol "Medan" polos yang lama.
+    const layerTopoDetail = L.layerGroup([
+        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 20, maxNativeZoom: 17 }),
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 20, maxNativeZoom: 19, opacity: 0.55 })
+    ]);
     const layerHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 19 });
     const layerDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
 
-    const layers = { osm: layerOSM, sat: layerSat, aerial: layerAerial, aerialhq: layerAerialHQ, terrain: layerTerrain, hot: layerHOT, dark: layerDark };
-    const layerShortLabel = { osm: '🗺️ Peta', sat: '🛰️ Satelit', aerial: '✈️ Udara', aerialhq: '🌆 Udara HQ', terrain: '⛰️ Medan', hot: '🏘️ Detail', dark: '🌙 Gelap' };
+    const layers = { osm: layerOSM, sat: layerSat, aerial: layerAerial, aerialhq: layerAerialHQ, terrain: layerTerrain, topodetail: layerTopoDetail, hot: layerHOT, dark: layerDark };
+    const layerShortLabel = { osm: '🗺️ Peta', sat: '🛰️ Satelit', aerial: '✈️ Udara', aerialhq: '🌆 Udara HQ', terrain: '⛰️ Medan', topodetail: '🗻 Topo Detail', hot: '🏘️ Detail', dark: '🌙 Gelap' };
 
     let currentLayerKey = 'osm';
     let currentLayer = layers[currentLayerKey];
