@@ -2413,10 +2413,15 @@
             `nwr["public_transport"="platform"](around:${r},${la},${lo});` +
             `nwr["public_transport"="stop_position"](around:${r},${la},${lo});` +
             `);out center 60;`;
-        // Timeout per-mirror 9000ms — cukup singkat untuk tetap responsif, tapi cukup panjang
-        // untuk jaringan mobile/lambat (fetchOverpassElements kini juga otomatis mencoba
-        // proxy CORS lewat fetchWithProxy bila koneksi langsung ke mirror gagal/diblokir).
-        return fetchOverpassElements(q, 9000, isStale);
+        // Timeout per-mirror 13000ms. PENTING: query di atas memakai timeout SERVER
+        // ([out:json][timeout:10] = 10 detik). Timeout klien SEBELUMNYA 9000ms — LEBIH
+        // PENDEK dari timeout server, jadi klien sering menyerah & pindah mirror padahal
+        // server masih benar-benar memprosesnya (bukan macet) — inilah salah satu sebab
+        // utama kotak kadang tampil kadang tidak (intermitten) walau jaringan baik-baik
+        // saja. Sekarang klien diberi jeda aman DI ATAS timeout server (10s + 3s marjin
+        // jaringan/transmisi) supaya permintaan yang sebenarnya akan berhasil tidak lagi
+        // dibatalkan sia-sia sebelum sempat dibalas.
+        return fetchOverpassElements(q, 13000, isStale);
     }
     // Query TAMBAHAN — SEBELUMNYA satu query raksasa berisi 30 filter tag digabung jadi satu
     // (out center 350, timeout:20) dengan batas waktu sisi klien 18000ms — LEBIH PENDEK dari
@@ -2490,7 +2495,12 @@
     function fetchNearbyExtraFacilityElementsPerGroup(lat, lng, isStale) {
         const r = NEARBY_RADIUS_M;
         const timeoutSec = 10; // timeout internal Overpass per grup — dinaikkan sedikit (grup Umum+Rekreasi kini lebih besar setelah dipadatkan dari 5→3 grup)
-        const clientTimeoutMs = 9000; // per-mirror — dinaikkan dari 7000ms supaya jaringan lambat/mobile tetap sempat dapat balasan sebelum pindah mirror/proxy berikutnya
+        // per-mirror — SEBELUMNYA 9000ms, LEBIH PENDEK dari timeoutSec (10 detik) di atas,
+        // artinya klien sering membatalkan & pindah mirror padahal server masih memproses
+        // dengan sah (bukan macet) — salah satu sebab utama kategori tambahan (Kesehatan/
+        // Pemerintahan/dst.) intermitten. Dinaikkan jadi 13000ms supaya selalu punya jeda
+        // aman DI ATAS timeout server, sesuai maksud semula.
+        const clientTimeoutMs = 13000;
         return EXTRA_FACILITY_QUERY_GROUPS.map(group => {
             const q = buildOverpassQuery(group.filters(r, lat, lng), timeoutSec, 120);
             return fetchOverpassElements(q, clientTimeoutMs, isStale);
@@ -2520,7 +2530,16 @@
     // jaringan untuk hasil yang toh akan dibuang), sehingga slot antrian langsung terisi
     // permintaan yang MASIH relevan (biasanya milik siklus/lokasi terbaru) dan antrian tidak
     // pernah tersumbat oleh permintaan usang.
-    const MAX_CONCURRENT_OVERPASS = 3; // 1 transport + 3 grup tambahan = 4 task total; batas 3 tetap menjaga jumlah koneksi bersamaan ke server Overpass tetap wajar
+    // SEBELUMNYA batas ini 3, padahal total task PERSIS 4 (1 transport + 3 grup tambahan)
+    // setiap siklus — artinya SATU grup selalu wajib menunggu giliran di antrian sebelum
+    // sempat mulai sama sekali, walau task lain sudah lama selesai. Kalau kebetulan grup
+    // yang menunggu itu giliran terakhir & task di depannya lambat (jaringan buruk/mirror
+    // pertama gagal), sisa waktu yang tersedia sebelum dianggap basi (isStale) jadi terlalu
+    // sempit — kategori grup itu jadi kadang tampil kadang tidak (intermitten) walau
+    // sebenarnya bukan gagal, hanya belum sempat giliran. Dinaikkan ke 4 (pas dengan jumlah
+    // task) supaya SEMUA grup mulai bersamaan sejak awal, tanpa menambah jumlah query yang
+    // dikirim per siklus (jumlah task tetap 4, hanya urutan mulainya yang tidak lagi antre).
+    const MAX_CONCURRENT_OVERPASS = 4;
     let overpassActiveCount = 0;
     const overpassQueue = [];
     function advanceOverpassQueue() {
@@ -2549,38 +2568,65 @@
             else overpassQueue.push(attempt);
         });
     }
+    // Jeda sebelum mirror BERIKUTNYA ikut dicoba secara PARALEL kalau mirror yang sedang
+    // berjalan belum juga membalas (bukan berarti gagal — bisa jadi cuma lambat/macet).
+    // Dibatasi maksimal 2 mirror aktif bersamaan (MAX_PARALLEL_MIRRORS) per grup query —
+    // BUKAN sekaligus 4 seperti niat awal komentar lama di atas (itu justru penyebab
+    // permintaan ditolak massal oleh Overpass, sudah pernah terjadi & diperbaiki jadi
+    // berurutan). Pola "hedged" ini kompromi: tetap kecil jumlah koneksi bersamaannya,
+    // tapi satu mirror yang macet/lambat TIDAK LAGI menahan seluruh giliran sampai habis
+    // timeoutMs penuh sebelum mirror lain sempat dicoba — salah satu sebab lain kotak
+    // fasilitas kadang kehabisan waktu sebelum sempat mendapat balasan (intermitten).
+    const MIRROR_STAGGER_MS = 3500;
+    const MAX_PARALLEL_MIRRORS = 2;
     async function fetchOverpassElements(q, timeoutMs, isStale) {
         return runOverpassQueued(async () => {
             const dataQs = 'data=' + encodeURIComponent(q);
-            let lastErr = null;
-            // Coba mirror SATU PER SATU (berurutan) — mirror berikutnya hanya dicoba kalau
-            // mirror sebelumnya benar-benar gagal, menjaga jumlah koneksi bersamaan tetap kecil.
-            // PERBAIKAN: setiap percobaan mirror kini TIDAK LANGSUNG fetch mentah, melainkan lewat
-            // fetchWithProxy — yang sudah dipakai & terbukti andal untuk cuaca/geocoding di file
-            // ini. fetchWithProxy me-race koneksi LANGSUNG bersamaan beberapa proxy CORS publik
-            // (Corsfix/CodeTabs/AllOrigins) sekaligus, jadi kalau jaringan/browser pengguna
-            // memblokir/gagal konek langsung ke server Overpass (penyebab paling umum kotak
-            // fasilitas macet kosong selamanya), permintaan tetap py punya peluang tembus lewat
-            // salah satu proxy tanpa menunggu mirror lain digilir dulu.
-            for (const base of OVERPASS_ENDPOINTS) {
-                if (isStale && isStale()) throw new Error('Permintaan sudah basi, dihentikan di tengah jalan');
-                try {
+            // Setiap percobaan mirror TIDAK LANGSUNG fetch mentah, melainkan lewat
+            // fetchWithProxy — yang sudah dipakai & terbukti andal untuk cuaca/geocoding di
+            // file ini. fetchWithProxy me-race koneksi LANGSUNG bersamaan beberapa proxy
+            // CORS publik (Corsfix/CodeTabs/AllOrigins) sekaligus, jadi kalau jaringan/
+            // browser pengguna memblokir/gagal konek langsung ke server Overpass (penyebab
+            // paling umum kotak fasilitas macet kosong selamanya), permintaan tetap punya
+            // peluang tembus lewat salah satu proxy.
+            return await new Promise((resolve, reject) => {
+                let idx = 0, active = 0, settled = false, lastErr = null;
+                const finish = (fn, arg) => { if (settled) return; settled = true; fn(arg); };
+                const tryNext = () => {
+                    if (settled) return;
+                    if (idx >= OVERPASS_ENDPOINTS.length) {
+                        if (active === 0) finish(reject, lastErr || new Error('Semua mirror Overpass gagal'));
+                        return;
+                    }
+                    if (isStale && isStale()) {
+                        finish(reject, new Error('Permintaan sudah basi, dihentikan di tengah jalan'));
+                        return;
+                    }
+                    const base = OVERPASS_ENDPOINTS[idx++];
                     const url = `${base}?${dataQs}`;
-                    const data = await Promise.race([
+                    active++;
+                    Promise.race([
                         fetchWithProxy(url),
-                        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout mirror')), timeoutMs))
-                    ]);
-                    if (!data) throw new Error('Respons kosong');
-                    return (data && data.elements) || [];
-                } catch (e) {
-                    lastErr = e;
-                    // Debug: terlihat di console browser (F12) kalau ingin diagnosa mirror mana
-                    // yang gagal & kenapa — tidak memengaruhi UI sama sekali.
-                    console.warn('[NearbyBox] mirror gagal:', base, e && e.message);
-                    // lanjut ke mirror berikutnya
-                }
-            }
-            throw lastErr || new Error('Semua mirror Overpass gagal');
+                        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout mirror: ' + base)), timeoutMs))
+                    ]).then(data => {
+                        active--;
+                        if (!data) { lastErr = new Error('Respons kosong'); tryNext(); return; }
+                        finish(resolve, (data && data.elements) || []);
+                    }).catch(e => {
+                        active--;
+                        lastErr = e;
+                        // Debug: terlihat di console browser (F12) kalau ingin diagnosa mirror
+                        // mana yang gagal & kenapa — tidak memengaruhi UI sama sekali.
+                        console.warn('[NearbyBox] mirror gagal:', base, e && e.message);
+                        tryNext();
+                    });
+                    // Kalau masih di bawah batas paralel, jadwalkan mirror berikutnya mulai
+                    // juga setelah MIRROR_STAGGER_MS — dibatalkan otomatis begitu `settled`
+                    // (tak perlu clearTimeout eksplisit, tryNext() akan no-op lewat guard di atas).
+                    if (active < MAX_PARALLEL_MIRRORS) setTimeout(tryNext, MIRROR_STAGGER_MS);
+                };
+                tryNext();
+            });
         }, isStale);
     }
     function mergeFacilityElements(elements, lat, lng, bestByCat) {
