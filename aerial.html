@@ -349,6 +349,16 @@
         body.sunlight-mode .addr-row{ border-top:1px dashed #999; }
         .addr-row.show { display:flex; align-items:center; gap:6px; }
         .addr-text { color:var(--text); font-size:0.84rem; flex:1; font-weight:700; line-height:1.4; }
+
+        /* Panel tambahan: hari & jam (GPS HP vs jam lokasi) di bawah alamat */
+        .time-row {
+            margin-top:6px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.14);
+            display:none; font-size:0.78rem; color:var(--text-dim); font-weight:600; line-height:1.65;
+        }
+        body.sunlight-mode .time-row{ border-top:1px dashed #999; }
+        .time-row.show { display:block; }
+        .time-row .label{ color:var(--text-dim); }
+        .time-row .value{ color:var(--accent); font-weight:800; font-family:var(--font-mono); }
         
         .action-btns { display:flex; gap:6px; flex-shrink:0; }
         .copy-btn {
@@ -853,6 +863,10 @@
                     <button type="button" class="copy-btn" id="saveBookmarkBtn" title="Simpan ke Markah">⭐</button>
                 </div>
             </div>
+            <div class="time-row" id="timeRow">
+                <div><span class="label">🕐 Jam GPS HP: </span><span class="value" id="hpTimeText">-</span></div>
+                <div><span class="label">🌐 Jam Lokasi: </span><span class="value" id="locTimeText">-</span></div>
+            </div>
         </div>
     </div>
 
@@ -1348,7 +1362,7 @@
             .bindPopup(`<div class="addr-popup"><b>📌 Hasil Pencarian</b><div class="row">${detail}</div><span class="full">${result.display_name}</span></div>`).openPopup();
         document.getElementById('gpsCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         document.getElementById('gpsStatus').innerText = 'Pencarian';
-        showAddress(detail);
+        showAddress(detail, lat, lng);
         searchInput.value = result.display_name.split(',')[0];
         closeAllPopovers();
 
@@ -1483,7 +1497,60 @@
     }
 
     function makeMyLocIcon() { return L.divIcon({ className: '', html: `<div class="my-loc-wrap"><div class="my-loc-pulse"></div><div class="my-loc-ring"></div></div>`, iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20] }); }
-    function showAddress(text) { if (!text) { addrRowEl.classList.remove('show'); return; } addrTextEl.innerText = text; addrRowEl.classList.add('show'); }
+
+    // ======================================================================
+    // PANEL TAMBAHAN: HARI & JAM (di bawah alamat, dalam popover "i")
+    // - "Jam GPS HP" = jam SISTEM HP (Date() bawaan browser), BUKAN dari
+    //   timestamp fix GPS (posisi/akurasi mylocation tetap dari sumber asli,
+    //   tidak diubah/disentuh sama sekali oleh fitur ini).
+    // - "Jam Lokasi" = perkiraan jam setempat di titik lokasi aktif, dihitung
+    //   dari selisih zona waktu berbasis bujur (lng/15, dibulatkan ke jam
+    //   terdekat) — tanpa perlu API tambahan, jadi tetap ringan & mandiri.
+    // Format: DDD,dd-MMM-yyyy HH:mm (24 jam), mengikuti pola nama hari/bulan
+    // Indonesia yang sudah dipakai di bagian lain aplikasi ini.
+    // ======================================================================
+    const timeRowEl = document.getElementById('timeRow');
+    const hpTimeTextEl = document.getElementById('hpTimeText');
+    const locTimeTextEl = document.getElementById('locTimeText');
+    const ID_DAY_ABBR = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const ID_MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    function formatDDDddMMMyyyyHHmm(dayIdx, date, month, year, hours, minutes) {
+        const dd = String(date).padStart(2, '0');
+        const hh = String(hours).padStart(2, '0');
+        const mm = String(minutes).padStart(2, '0');
+        return `${ID_DAY_ABBR[dayIdx]},${dd}-${ID_MONTH_ABBR[month]}-${year} ${hh}:${mm}`;
+    }
+    function formatHpTime(d) {
+        // Jam sistem HP: pakai getter waktu LOKAL perangkat apa adanya.
+        return formatDDDddMMMyyyyHHmm(d.getDay(), d.getDate(), d.getMonth(), d.getFullYear(), d.getHours(), d.getMinutes());
+    }
+    function formatLocationTime(lng) {
+        // Perkiraan zona waktu dari bujur (setiap 15° ≈ 1 jam UTC), lalu
+        // dibaca lewat getter UTC agar tidak tercampur zona waktu perangkat.
+        const offsetHours = Math.round(lng / 15);
+        const zoned = new Date(Date.now() + offsetHours * 3600000);
+        return formatDDDddMMMyyyyHHmm(zoned.getUTCDay(), zoned.getUTCDate(), zoned.getUTCMonth(), zoned.getUTCFullYear(), zoned.getUTCHours(), zoned.getUTCMinutes());
+    }
+    let lastTimePanelLatLng = null;
+    function renderTimePanel() {
+        if (!lastTimePanelLatLng || !timeRowEl) return;
+        hpTimeTextEl.innerText = formatHpTime(new Date());
+        locTimeTextEl.innerText = formatLocationTime(lastTimePanelLatLng.lng);
+        timeRowEl.classList.add('show');
+    }
+    function updateTimePanel(lat, lng) {
+        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return;
+        lastTimePanelLatLng = { lat, lng };
+        renderTimePanel();
+    }
+    function hideTimePanel() { lastTimePanelLatLng = null; if (timeRowEl) timeRowEl.classList.remove('show'); }
+    setInterval(renderTimePanel, 30000); // jam terus berjalan walau alamat belum diperbarui
+
+    function showAddress(text, lat, lng) {
+        if (!text) { addrRowEl.classList.remove('show'); hideTimePanel(); return; }
+        addrTextEl.innerText = text; addrRowEl.classList.add('show');
+        updateTimePanel(lat, lng);
+    }
     function haversineMeters(a, b) {
         const R = 6371000; const toRad = d => d * Math.PI / 180;
         const dLat = toRad(b.lat - a.lat); const dLng = toRad(b.lng - a.lng);
@@ -1506,7 +1573,7 @@
             const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
             lastGeocodedLatLng = point;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">${detail}</div></div>`);
-            showAddress(detail);
+            showAddress(detail, lat, lng);
         } catch (e) {
             if (session !== null && session !== gpsSessionId) return;
             if (myMarker) myMarker.setPopupContent(`<div class="addr-popup"><b>📍 Lokasi Saya</b><div class="row">Gagal mengambil alamat</div></div>`);
@@ -1569,7 +1636,7 @@
             if (session !== pinRequestId) return; // lokasi marker sudah berpindah/mode berganti sebelum hasil datang, abaikan
             const detail = buildDetailedAddress(data && data.address) || (data && data.display_name) || 'Alamat tidak ditemukan';
             if (pinMarker) pinMarker.setPopupContent(`<div class="addr-popup"><b>📍 Marker Lokasi</b><div class="row">${detail}</div></div>`);
-            showAddress(detail);
+            showAddress(detail, lat, lng);
         } catch (e) {
             if (session !== pinRequestId) return;
             if (pinMarker) pinMarker.setPopupContent(`<div class="addr-popup"><b>📍 Marker Lokasi</b><div class="row">Gagal mengambil alamat</div></div>`);
@@ -1656,6 +1723,61 @@
     mapContainerEl.addEventListener('pointerleave', cancelLongPress);
     // Cegah menu konteks browser muncul akibat tekan-tahan yang memicu aksi pindah marker.
     mapContainerEl.addEventListener('contextmenu', (e) => { if (longPressFired) e.preventDefault(); });
+
+    // ======================================================================
+    // KOREKSI ARAH GESER (DRAG) PETA SAAT MODE HEADING-UP AKTIF
+    // Leaflet menghitung pergeseran drag dari piksel layar MENTAH (tak peduli
+    // rotasi CSS elemen #map). Karena peta divisualkan berputar mengikuti arah
+    // kepala HP (lihat compassRenderLoop), pergeseran mentah itu ikut "terputar"
+    // secara visual — pada rotasi ~180° geser ke kanan malah tampak ke kiri,
+    // begitu juga arah lain. Saat peta TIDAK berputar, dragging bawaan Leaflet
+    // dipakai apa adanya, sama sekali tidak diubah. Hanya saat peta berputar,
+    // dragging bawaan dimatikan sementara dan diganti versi ini yang memutar
+    // balik (invers) vektor geseran layar — rumus invers sama seperti yang
+    // dipakai mapPointerToLatLng — sebelum diteruskan ke map.panBy, sehingga
+    // arah visual pergeseran peta selalu mengikuti arah jari yang sebenarnya.
+    // ======================================================================
+    const ROT_DRAG_THRESHOLD_DEG = 2;
+    let rotDragActive = false;       // status: dragging bawaan Leaflet nonaktif & koreksi ini aktif
+    let rotDragPointerId = null;     // pointer yang sedang dipakai menggeser peta
+    let rotDragActivePointers = new Set();
+    let rotDragLastX = 0, rotDragLastY = 0;
+    function setRotDragMode(active) {
+        if (active === rotDragActive) return;
+        rotDragActive = active;
+        if (active) { if (map.dragging.enabled()) map.dragging.disable(); }
+        else { if (!map.dragging.enabled()) map.dragging.enable(); rotDragPointerId = null; }
+    }
+    function onRotDragPointerDown(e) {
+        rotDragActivePointers.add(e.pointerId);
+        if (!rotDragActive) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.target.closest && e.target.closest('.leaflet-marker-icon, .leaflet-popup, .leaflet-control')) return;
+        if (rotDragActivePointers.size > 1) { rotDragPointerId = null; return; } // biarkan Leaflet menangani pinch-zoom 2 jari
+        rotDragPointerId = e.pointerId;
+        rotDragLastX = e.clientX; rotDragLastY = e.clientY;
+    }
+    function onRotDragPointerMove(e) {
+        if (!rotDragActive || rotDragPointerId !== e.pointerId || rotDragActivePointers.size > 1) return;
+        const dx = e.clientX - rotDragLastX, dy = e.clientY - rotDragLastY;
+        if (dx === 0 && dy === 0) return;
+        rotDragLastX = e.clientX; rotDragLastY = e.clientY;
+        const rad = mapRotationDisplay * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        // Rotasi balik (invers) vektor geseran layar -> ruang lokal peta sebelum diputar CSS
+        const localDx = dx * cos + dy * sin;
+        const localDy = -dx * sin + dy * cos;
+        map.panBy(L.point(-localDx, -localDy), { animate: false, duration: 0 });
+    }
+    function onRotDragPointerUp(e) {
+        rotDragActivePointers.delete(e.pointerId);
+        if (rotDragPointerId === e.pointerId) rotDragPointerId = null;
+    }
+    mapContainerEl.addEventListener('pointerdown', onRotDragPointerDown);
+    mapContainerEl.addEventListener('pointermove', onRotDragPointerMove);
+    mapContainerEl.addEventListener('pointerup', onRotDragPointerUp);
+    mapContainerEl.addEventListener('pointercancel', onRotDragPointerUp);
+    mapContainerEl.addEventListener('pointerleave', onRotDragPointerUp);
 
     // FITUR 4: WEB SHARE API PWA
     document.getElementById('shareAddrBtn').addEventListener('click', () => {
@@ -1816,6 +1938,7 @@
             const rotatingActive = isLocTracking && compassActive;
             const scale = (rotatingActive || Math.abs(mapRotationDisplay) > 0.5) ? mapCoverScaleFor(mapRotationDisplay) : 1;
             mapEl.style.transform = `rotate(${mapRotationDisplay}deg) scale(${scale})`;
+            setRotDragMode(Math.abs(mapRotationDisplay) > ROT_DRAG_THRESHOLD_DEG);
         }
 
         requestAnimationFrame(compassRenderLoop);
