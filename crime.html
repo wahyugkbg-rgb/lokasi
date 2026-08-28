@@ -286,13 +286,57 @@
                 judi:'fa-dice', penipuan:'fa-user-secret', 'obat-keras':'fa-capsules', kekerasan:'fa-hand-fist', umum:'fa-circle-info'
             };
 
-            // Beberapa proxy CORS — sekarang DIBALAP paralel (bukan berurutan) agar yang tercepat langsung dipakai
+            // BANYAK proxy CORS berbeda (bukan cuma 3) — beberapa membungkus hasil dalam JSON,
+            // jadi tiap proxy punya parser sendiri. Semakin beragam proxy => makin kecil kemungkinan
+            // SEMUA proxy kena limit/down bersamaan (ini penyebab utama "hanya 1 sumber muncul":
+            // proxy gratis kena rate-limit karena terlalu banyak request bersamaan).
             const PROXIES = [
-                url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-                url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
-                url => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
+                { name: 'allorigins-raw', build: url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url), parse: r => r.text() },
+                { name: 'codetabs', build: url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), parse: r => r.text() },
+                { name: 'corsproxy.io', build: url => 'https://corsproxy.io/?url=' + encodeURIComponent(url), parse: r => r.text() },
+                { name: 'allorigins-get', build: url => 'https://api.allorigins.win/get?url=' + encodeURIComponent(url), parse: async r => { const j = await r.json(); return (j && j.contents) || ''; } },
+                { name: 'thingproxy', build: url => 'https://thingproxy.freeboard.io/fetch/' + url, parse: r => r.text() },
+                { name: 'corsfix', build: url => 'https://proxy.corsfix.com/?' + url, parse: r => r.text() },
+                { name: 'cors.eu.org', build: url => 'https://cors.eu.org/' + url, parse: r => r.text() },
+                { name: 'whateverorigin', build: url => 'https://api.whateverorigin.org/get?url=' + encodeURIComponent(url), parse: async r => { const j = await r.json(); return (j && j.contents) || ''; } }
             ];
-            const PROXY_TIMEOUT_MS = 8000; // batas waktu per proxy agar tidak ada yang menggantung lama
+            const PROXY_TIMEOUT_MS = 9000;         // batas waktu per proxy agar tidak ada yang menggantung lama
+            const MAX_CONCURRENT_REQUESTS = 8;     // batasi request HTTP simultan agar proxy gratis tidak langsung nge-limit
+            const MAX_ROUNDS_PER_SOURCE = 2;       // kalau satu ronde proxy gagal total, coba sekali lagi dgn urutan baru
+
+            // ---- Gerbang concurrency sederhana: menahan request baru saat slot penuh ----
+            let activeRequests = 0;
+            const requestQueue = [];
+            function acquireSlot() {
+                return new Promise(resolve => {
+                    const tryAcquire = () => {
+                        if (activeRequests < MAX_CONCURRENT_REQUESTS) { activeRequests++; resolve(); }
+                        else requestQueue.push(tryAcquire);
+                    };
+                    tryAcquire();
+                });
+            }
+            function releaseSlot() {
+                activeRequests--;
+                const next = requestQueue.shift();
+                if (next) next();
+            }
+            async function gatedFetch(url, options) {
+                await acquireSlot();
+                try { return await fetch(url, options); }
+                finally { releaseSlot(); }
+            }
+
+            // Coba fetch LANGSUNG (tanpa proxy) dulu — sejumlah feed RSS sudah CORS-enabled,
+            // ini jalur tercepat & paling stabil kalau berhasil.
+            function fetchDirect(url) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4000);
+                return gatedFetch(url, { cache: 'no-store', signal: controller.signal, mode: 'cors' })
+                    .then(r => (r.ok ? r.text() : null))
+                    .catch(() => null)
+                    .finally(() => clearTimeout(timer));
+            }
 
             // >12 sumber RSS: beberapa query Google News per-kategori/wilayah + RSS langsung dari media nasional.
             // Urutan array ini DIACAK setiap kali fetch dijalankan (lihat shuffleArray), jadi kalau berita duplikat
@@ -450,37 +494,47 @@
             // ================================================================
 
             // Balap semua proxy CORS secara paralel dengan timeout; ambil yang PERTAMA berhasil.
-            function fetchWithFallback(url) {
-                const proxies = shuffleArray(PROXIES);
-                return new Promise((resolve) => {
-                    let settled = 0;
-                    let done = false;
-                    proxies.forEach(buildProxyUrl => {
-                        const controller = new AbortController();
-                        const timer = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
-                        fetch(buildProxyUrl(url), { cache: 'no-store', signal: controller.signal })
-                            .then(r => (r.ok ? r.text() : null))
-                            .then(text => {
-                                clearTimeout(timer);
-                                settled++;
-                                if (!done && text && text.length > 50) {
-                                    done = true;
-                                    resolve(text);
-                                } else if (settled === proxies.length && !done) {
-                                    done = true;
-                                    resolve(null);
-                                }
-                            })
-                            .catch(() => {
-                                clearTimeout(timer);
-                                settled++;
-                                if (settled === proxies.length && !done) {
-                                    done = true;
-                                    resolve(null);
-                                }
-                            });
+            // Kalau ronde pertama gagal total, ulangi sekali lagi dengan urutan proxy diacak ulang.
+            async function fetchWithFallback(url) {
+                // 1) coba langsung tanpa proxy dulu (kalau server sumbernya CORS-enabled, ini paling cepat & stabil)
+                const direct = await fetchDirect(url);
+                if (direct && direct.length > 50) return direct;
+
+                // 2) balap semua proxy, dengan retry ronde bila perlu
+                for (let round = 0; round < MAX_ROUNDS_PER_SOURCE; round++) {
+                    const proxies = shuffleArray(PROXIES);
+                    const result = await new Promise((resolve) => {
+                        let settled = 0;
+                        let done = false;
+                        proxies.forEach(proxy => {
+                            const controller = new AbortController();
+                            const timer = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+                            gatedFetch(proxy.build(url), { cache: 'no-store', signal: controller.signal })
+                                .then(r => (r.ok ? proxy.parse(r) : null))
+                                .then(text => {
+                                    clearTimeout(timer);
+                                    settled++;
+                                    if (!done && text && text.length > 50) {
+                                        done = true;
+                                        resolve(text);
+                                    } else if (settled === proxies.length && !done) {
+                                        done = true;
+                                        resolve(null);
+                                    }
+                                })
+                                .catch(() => {
+                                    clearTimeout(timer);
+                                    settled++;
+                                    if (settled === proxies.length && !done) {
+                                        done = true;
+                                        resolve(null);
+                                    }
+                                });
+                        });
                     });
-                });
+                    if (result) return result;
+                }
+                return null;
             }
 
             async function fetchSingleSource(source) {
@@ -542,26 +596,33 @@
                 return result;
             }
 
-            // Ambil SEMUA sumber paralel (urutan diacak tiap panggilan), progress dilaporkan live
-            async function fetchAllSources(onProgress) {
+            // Ambil SEMUA sumber paralel (urutan diacak tiap panggilan). onSourceDone dipanggil
+            // SETIAP kali satu sumber selesai (bukan cuma di akhir) agar layar bisa terisi bertahap
+            // (responsif) walau ada sumber yang lambat/gagal.
+            async function fetchAllSources(onSourceDone) {
                 const shuffled = shuffleArray(RSS_SOURCES);
                 const total = shuffled.length;
                 let completed = 0;
                 let sourcesOk = 0;
+                let accumulated = [];
 
                 const promises = shuffled.map(src =>
                     fetchSingleSource(src).then(events => {
                         completed++;
-                        if (events.length > 0) sourcesOk++;
-                        if (onProgress) onProgress(completed, total);
+                        if (events.length > 0) {
+                            sourcesOk++;
+                            accumulated = accumulated.concat(events);
+                        }
+                        if (onSourceDone) {
+                            const mergedSoFar = dedupeEvents(accumulated.slice()).sort((a, b) => b.ts - a.ts);
+                            onSourceDone(mergedSoFar, completed, total, sourcesOk);
+                        }
                         return events;
                     })
                 );
 
-                const results = await Promise.all(promises);
-                let merged = [].concat(...results);
-                merged = dedupeEvents(merged);
-                merged.sort((a, b) => b.ts - a.ts);
+                await Promise.all(promises);
+                const merged = dedupeEvents(accumulated).sort((a, b) => b.ts - a.ts);
                 return { events: merged, sourcesOk, sourcesTotal: total, order: shuffled.map(s => s.name) };
             }
 
@@ -701,8 +762,18 @@
                 const prevCount = currentData.length;
                 const prevKeysBefore = previousKeys;
 
-                const result = await fetchAllSources((done, total) => {
-                    progressBar.style.width = Math.round((done / total) * 100) + '%';
+                let lastPartialRender = 0;
+                const result = await fetchAllSources((partialData, completed, total, sourcesOk) => {
+                    progressBar.style.width = Math.round((completed / total) * 100) + '%';
+                    sourceLabel.innerHTML = `<i class="fas fa-shuffle"></i> ${sourcesOk}/${total} sumber merespons (${completed}/${total} selesai)...`;
+                    // Render bertahap begitu ada data baru masuk, dibatasi (throttle) ~250ms
+                    // supaya DOM tidak di-update berlebihan, tapi tetap terasa "hidup" & responsif.
+                    const now = Date.now();
+                    if (partialData.length > 0 && (now - lastPartialRender > 250 || completed === total)) {
+                        lastPartialRender = now;
+                        currentData = partialData;
+                        render();
+                    }
                 });
                 const newData = result.events;
 
@@ -807,7 +878,7 @@
             setInterval(() => {
                 updateClock();
                 updateData(false);
-            }, 300000);
+            }, 60000); // 60 detik — sebelumnya kode ini berjalan tiap 5 menit meski komentarnya bilang 60 detik
 
             // ================================================================
             // 10. INIT
