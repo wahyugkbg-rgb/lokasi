@@ -24,11 +24,20 @@
         ::-webkit-scrollbar-thumb { background:#00f5d4; border-radius:10px; }
         .glow-text { text-shadow:0 0 20px rgba(0,245,212,0.3), 0 0 60px rgba(0,245,212,0.1); }
         .glow-border { box-shadow:0 0 30px rgba(0,245,212,0.05), inset 0 0 30px rgba(0,245,212,0.02); }
+
+        /* ============ HEADER ============ */
         .header {
+            position:relative; overflow:hidden;
             display:flex; justify-content:space-between; align-items:center; padding:12px 16px;
             background:rgba(12,20,35,0.85); backdrop-filter:blur(12px); border-radius:16px;
             border:1px solid rgba(0,245,212,0.15); margin-bottom:16px; flex-wrap:wrap; gap:8px;
         }
+        .header::after {
+            content:''; position:absolute; top:0; left:-40%; width:40%; height:100%; pointer-events:none;
+            background:linear-gradient(120deg, transparent, rgba(0,245,212,0.07), transparent);
+            animation: sweep 6s linear infinite;
+        }
+        @keyframes sweep { 0%{ left:-40%; } 100%{ left:140%; } }
         .header-left { display:flex; align-items:center; gap:12px; }
         .logo-icon { font-size:28px; color:#00f5d4; animation:pulse 2s infinite; }
         @keyframes pulse { 0%{opacity:1;text-shadow:0 0 10px #00f5d4;} 50%{opacity:0.6;text-shadow:0 0 30px #00f5d4;} 100%{opacity:1;text-shadow:0 0 10px #00f5d4;} }
@@ -44,15 +53,24 @@
             background:rgba(0,245,212,0.06); padding:4px 14px; border-radius:8px; border:1px solid rgba(0,245,212,0.1); }
         .date-range { font-size:clamp(10px,1.6vw,13px); color:#7a8ba8; background:rgba(255,255,255,0.03); padding:4px 12px;
             border-radius:8px; border:1px solid rgba(255,255,255,0.05); }
+
+        /* ============ STATS ============ */
         .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:10px; margin-bottom:16px; }
-        .stat-card { background:rgba(12,20,35,0.8); backdrop-filter:blur(8px); border-radius:12px; padding:12px 14px;
-            border:1px solid rgba(0,245,212,0.08); text-align:center; transition:all 0.3s; }
-        .stat-card:hover { border-color:rgba(0,245,212,0.25); transform:translateY(-2px); }
+        .stat-card { position:relative; overflow:hidden; background:rgba(12,20,35,0.8); backdrop-filter:blur(8px); border-radius:12px; padding:14px 14px 12px;
+            border:1px solid rgba(0,245,212,0.08); text-align:center; transition:all 0.3s cubic-bezier(.2,.8,.3,1.2); }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; opacity:.7;
+            background:linear-gradient(90deg,#00f5d4,#00b8ff); }
+        .stat-card:hover { border-color:rgba(0,245,212,0.3); transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,245,212,0.08); }
         .stat-number { font-family:'Orbitron',monospace; font-size:clamp(20px,4vw,34px); font-weight:900; color:#00f5d4; line-height:1.2; }
         .stat-label { font-size:clamp(9px,1.4vw,12px); color:#7a8ba8; letter-spacing:1px; text-transform:uppercase; }
         .stat-card.danger .stat-number { color:#ff4477; }
+        .stat-card.danger::before { background:linear-gradient(90deg,#ff4477,#ff0044); }
         .stat-card.warning .stat-number { color:#ffb347; }
+        .stat-card.warning::before { background:linear-gradient(90deg,#ffb347,#ff8844); }
         .stat-card.info .stat-number { color:#4fc3ff; }
+        .stat-card.info::before { background:linear-gradient(90deg,#4fc3ff,#00b8ff); }
+
+        /* ============ FILTER ============ */
         .filter-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding:12px 16px;
             background:rgba(12,20,35,0.7); backdrop-filter:blur(8px); border-radius:12px; border:1px solid rgba(0,245,212,0.06);
             align-items:center; }
@@ -61,7 +79,7 @@
         .filter-bar select, .filter-bar input { background:rgba(0,0,0,0.4); border:1px solid rgba(0,245,212,0.15);
             color:#e0e8f0; padding:7px 12px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px;
             font-weight:500; outline:none; transition:all 0.3s; min-width:100px; flex:1; }
-        .filter-bar select:focus, .filter-bar input:focus { border-color:#00f5d4; box-shadow:0 0 20px rgba(0,245,212,0.1); }
+        .filter-bar select:focus, .filter-bar input:focus { border-color:#00f5d4; box-shadow:0 0 20px rgba(0,245,212,0.15); }
         .filter-bar select option { background:#0a0e1a; color:#e0e8f0; }
         .filter-bar .search-wrapper { flex:2; min-width:150px; position:relative; }
         .filter-bar .search-wrapper i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#4a5a7a; }
@@ -69,9 +87,14 @@
         .filter-reset { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#7a8ba8;
             padding:6px 16px; border-radius:8px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-weight:600;
             font-size:12px; transition:all 0.3s; white-space:nowrap; }
-        .filter-reset:hover { background:rgba(255,255,255,0.1); color:#e0e8f0; }
+        .filter-reset:hover { background:rgba(255,255,255,0.1); color:#e0e8f0; transform:translateY(-1px); }
+
+        /* ============ TABLE PANEL ============ */
         .table-container { background:rgba(12,20,35,0.7); backdrop-filter:blur(8px); border-radius:12px;
             border:1px solid rgba(0,245,212,0.06); overflow:hidden; margin-bottom:16px; }
+        .progress-wrap { height:3px; width:100%; background:rgba(255,255,255,0.04); overflow:hidden; }
+        .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#00f5d4,#00b8ff);
+            box-shadow:0 0 10px rgba(0,245,212,0.6); transition:width .35s ease; }
         .table-scroll { overflow-x:auto; padding:0 4px 4px 4px; -webkit-overflow-scrolling:touch; }
         table { width:100%; border-collapse:collapse; font-size:clamp(13px,1.7vw,15px); min-width:700px; font-family:'Inter',sans-serif; }
         thead { background:rgba(0,245,212,0.04); border-bottom:2px solid rgba(0,245,212,0.1); }
@@ -80,8 +103,10 @@
             user-select:none; transition:color 0.3s; white-space:nowrap; }
         thead th:hover { color:#00f5d4; }
         thead th i { margin-left:4px; font-size:11px; opacity:0.5; }
-        tbody tr { border-bottom:1px solid rgba(255,255,255,0.03); transition:all 0.3s; }
-        tbody tr:hover { background:rgba(0,245,212,0.04); }
+        tbody tr { border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.25s, transform 0.25s;
+            animation: rowIn .45s cubic-bezier(.2,.8,.3,1) both; }
+        @keyframes rowIn { from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
+        tbody tr:hover { background:rgba(0,245,212,0.05); transform:translateX(2px); }
         tbody td { padding:13px 12px; vertical-align:middle; line-height:1.45; }
         .td-provinsi { font-weight:700; color:#4fc3ff; font-size:clamp(12px,1.5vw,14px); }
         .td-kota { color:#c3d4ea; font-size:clamp(12px,1.5vw,14px); }
@@ -90,29 +115,60 @@
             color:#5a7a9a; font-family:'Inter',sans-serif; letter-spacing:0.2px; }
         .td-sumber i { margin-right:4px; opacity:0.8; }
         .td-tanggal { font-family:'Inter',sans-serif; font-weight:600; font-size:clamp(12px,1.3vw,14px); color:#8fa4c4; white-space:nowrap; }
-        .badge-kategori { display:inline-block; padding:4px 14px; border-radius:50px; font-size:clamp(11px,1.2vw,13px);
+
+        .tag-new { display:inline-flex; align-items:center; gap:3px; background:rgba(0,245,212,0.16); border:1px solid rgba(0,245,212,0.4);
+            color:#00f5d4; font-size:9px; font-weight:800; letter-spacing:0.5px; padding:1px 7px; border-radius:20px; margin-left:6px;
+            vertical-align:middle; animation:newPulse 1.6s infinite; }
+        @keyframes newPulse { 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+
+        /* ============ BADGES ============ */
+        .badge-kategori { display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:50px; font-size:clamp(11px,1.2vw,13px);
             font-weight:700; letter-spacing:0.3px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
-            color:#c3d4ea; }
-        .badge-kategori.narkoba { background:rgba(255,0,80,0.12); border-color:rgba(255,0,80,0.2); color:#ff4477; }
-        .badge-kategori.pencurian { background:rgba(255,180,0,0.12); border-color:rgba(255,180,0,0.2); color:#ffb347; }
-        .badge-kategori.kekerasan { background:rgba(255,50,50,0.12); border-color:rgba(255,50,50,0.2); color:#ff5555; }
-        .badge-kategori.narkotika { background:rgba(255,0,80,0.12); border-color:rgba(255,0,80,0.2); color:#ff4477; }
-        .badge-kategori.curanmor { background:rgba(255,180,0,0.12); border-color:rgba(255,180,0,0.2); color:#ffb347; }
-        .badge-kategori.tawuran { background:rgba(255,50,50,0.12); border-color:rgba(255,50,50,0.2); color:#ff5555; }
-        .badge-kategori.pembunuhan { background:rgba(200,0,0,0.15); border-color:rgba(200,0,0,0.25); color:#ff3333; }
-        .badge-kategori.perampokan { background:rgba(255,100,0,0.12); border-color:rgba(255,100,0,0.2); color:#ff8844; }
-        .badge-kategori.judi { background:rgba(100,50,255,0.12); border-color:rgba(100,50,255,0.2); color:#aa88ff; }
-        .badge-kategori.obat-keras { background:rgba(0,200,255,0.12); border-color:rgba(0,200,255,0.2); color:#4fc3ff; }
+            color:#c3d4ea; transition:transform .25s ease, box-shadow .25s ease; }
+        .badge-kategori:hover { transform:translateY(-2px) scale(1.05); }
+        .badge-kategori i { font-size:11px; opacity:.9; }
+        .badge-kategori.narkoba, .badge-kategori.narkotika { background:linear-gradient(135deg,rgba(255,0,80,.18),rgba(255,0,80,.04)); border-color:rgba(255,0,80,.28); color:#ff4477; }
+        .badge-kategori.pencurian { background:linear-gradient(135deg,rgba(255,180,0,.18),rgba(255,180,0,.04)); border-color:rgba(255,180,0,.28); color:#ffb347; }
+        .badge-kategori.kekerasan { background:linear-gradient(135deg,rgba(255,50,50,.18),rgba(255,50,50,.04)); border-color:rgba(255,50,50,.28); color:#ff5555; }
+        .badge-kategori.curanmor { background:linear-gradient(135deg,rgba(255,180,0,.18),rgba(255,180,0,.04)); border-color:rgba(255,180,0,.28); color:#ffb347; }
+        .badge-kategori.tawuran { background:linear-gradient(135deg,rgba(255,50,50,.18),rgba(255,50,50,.04)); border-color:rgba(255,50,50,.28); color:#ff5555; }
+        .badge-kategori.pembunuhan { background:linear-gradient(135deg,rgba(200,0,0,.22),rgba(200,0,0,.05)); border-color:rgba(200,0,0,.32); color:#ff3333;
+            animation:badgePulse 2.2s infinite; }
+        .badge-kategori.perampokan { background:linear-gradient(135deg,rgba(255,100,0,.18),rgba(255,100,0,.04)); border-color:rgba(255,100,0,.28); color:#ff8844;
+            animation:badgePulse 2.4s infinite; }
+        .badge-kategori.judi { background:linear-gradient(135deg,rgba(100,50,255,.18),rgba(100,50,255,.04)); border-color:rgba(100,50,255,.28); color:#aa88ff; }
+        .badge-kategori.obat-keras { background:linear-gradient(135deg,rgba(0,200,255,.18),rgba(0,200,255,.04)); border-color:rgba(0,200,255,.28); color:#4fc3ff; }
         .badge-kategori.umum { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.08); color:#b0c4de; }
+        @keyframes badgePulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,51,51,.35); } 50%{ box-shadow:0 0 0 6px rgba(255,51,51,0); } }
+
         .footer { text-align:center; font-size:12px; color:#5a6f95; padding:12px; letter-spacing:0.3px;
             border-top:1px solid rgba(255,255,255,0.02); }
         .footer a { color:#00f5d4; text-decoration:none; }
         .footer a:hover { text-decoration:underline; }
         .no-data { text-align:center; padding:40px 20px; color:#5a6f95; font-size:15px; }
         .no-data i { font-size:40px; display:block; margin-bottom:12px; color:#2a3a5a; }
+
+        /* ============ SKELETON LOADING ============ */
+        .sk-bar { height:12px; border-radius:6px; background:linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.1) 37%, rgba(255,255,255,.04) 63%);
+            background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
+        @keyframes shimmer { 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
+
         .status-bar { font-size:13px; color:#8fa4c4; margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
         .status-bar .source { color:#00f5d4; font-weight:600; }
         .status-bar .error { color:#ff4477; }
+        #refreshBtn { display:inline-flex; align-items:center; gap:5px; transition:color .2s; }
+        #refreshBtn:hover { color:#7fffe4 !important; }
+        .spin-icon { display:inline-block; animation:spin .8s linear infinite; }
+        @keyframes spin { from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+
+        /* ============ TOAST ============ */
+        .toast { position:fixed; top:16px; right:16px; left:auto; max-width:90vw; background:rgba(12,20,35,0.96);
+            border:1px solid rgba(0,245,212,0.35); color:#e0e8f0; padding:10px 18px; border-radius:10px; font-size:13px;
+            font-weight:600; box-shadow:0 8px 30px rgba(0,0,0,0.5); z-index:999; display:flex; align-items:center; gap:8px;
+            transform:translateX(130%); transition:transform .45s cubic-bezier(.2,.9,.25,1.2); pointer-events:none; }
+        .toast.show { transform:translateX(0); }
+        .toast i { color:#00f5d4; }
+
         @media (max-width:600px) {
             body { padding:6px; font-size:14px; }
             .header { padding:10px 12px; flex-direction:column; align-items:stretch; }
@@ -125,10 +181,14 @@
             tbody td { padding:10px 8px; font-size:13px; }
             .td-peristiwa { font-size:13.5px; }
             .badge-kategori { font-size:11px; padding:3px 10px; }
+            .toast { right:8px; left:8px; max-width:unset; }
         }
     </style>
 </head>
 <body>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"><i class="fas fa-bolt"></i><span id="toastText"></span></div>
 
     <!-- HEADER -->
     <header class="header glow-border">
@@ -170,11 +230,12 @@
     <div class="status-bar">
         <span><i class="fas fa-database"></i> Data: <span id="dataStatus">Memuat...</span></span>
         <span><i class="fas fa-sync-alt fa-fw"></i> <span id="lastUpdate">-</span></span>
-        <span><a href="#" id="refreshBtn" style="color:#00f5d4;"><i class="fas fa-rotate-right"></i> Refresh</a></span>
+        <span><a href="#" id="refreshBtn" style="color:#00f5d4;text-decoration:none;"><i class="fas fa-rotate-right" id="refreshIcon"></i> Refresh</a></span>
     </div>
 
     <!-- TABLE -->
     <div class="table-container">
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
         <div class="table-scroll">
             <table>
                 <thead>
@@ -187,14 +248,14 @@
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari 12 sumber berita...</td></tr>
+                    <tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Menyiapkan dashboard...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
     <div class="footer">
-        <i class="fas fa-shield-alt"></i> Data <strong>real</strong> dari 12 sumber RSS (Google News, Detik, Antara, CNN Indonesia, Tribunnews) · Update otomatis setiap 60 detik · Jendela 7 hari terakhir
+        <i class="fas fa-shield-alt"></i> Data <strong>real</strong> dari <span id="totalSourcesFooter">16</span> sumber RSS (Google News, Detik, Antara, CNN Indonesia, Tribunnews, Kompas, Liputan6, Sindonews, Suara.com) · Sumber diacak & dibalap setiap refresh · Update otomatis setiap 60 detik · Jendela 7 hari terakhir
     </div>
 
     <script>
@@ -215,19 +276,25 @@
                 'perampokan': ['rampok', 'perampokan', 'begal', 'merampok', 'jambret'],
                 'judi': ['judi', 'slot', 'online', 'togel', 'casino'],
                 'obat-keras': ['obat', 'tramadol', 'hexymer', 'psikotropika', 'ilegal'],
-                'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan', 'pemukulan']
+                'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan', 'pemukulan', 'sajam', 'senjata', 'miras']
+            };
+            const CATEGORY_ICON = {
+                narkoba:'fa-pills', narkotika:'fa-pills', pencurian:'fa-user-ninja', curanmor:'fa-motorcycle',
+                tawuran:'fa-people-robbery', pembunuhan:'fa-skull-crossbones', perampokan:'fa-mask',
+                judi:'fa-dice', 'obat-keras':'fa-capsules', kekerasan:'fa-hand-fist', umum:'fa-circle-info'
             };
 
-            // Beberapa proxy CORS dicoba berurutan agar fetch tidak mudah gagal total
+            // Beberapa proxy CORS — sekarang DIBALAP paralel (bukan berurutan) agar yang tercepat langsung dipakai
             const PROXIES = [
                 url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
                 url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
                 url => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
             ];
+            const PROXY_TIMEOUT_MS = 8000; // batas waktu per proxy agar tidak ada yang menggantung lama
 
-            // Banyak sumber RSS digabung: beberapa query Google News per-kategori (agar hasil
-            // lebih banyak, karena satu query gabungan dibatasi jumlah hasilnya oleh Google)
-            // ditambah RSS langsung dari media nasional yang punya kanal hukum/kriminal.
+            // >12 sumber RSS: beberapa query Google News per-kategori/wilayah + RSS langsung dari media nasional.
+            // Urutan array ini DIACAK setiap kali fetch dijalankan (lihat shuffleArray), jadi kalau berita duplikat
+            // muncul di beberapa sumber, sumber yang "menang" tampil (byline) akan berbeda-beda tiap refresh.
             const RSS_SOURCES = [
                 { name: 'Google News – Kriminal Umum', url: 'https://news.google.com/rss/search?q=kriminal+OR+kejahatan+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
                 { name: 'Google News – Narkoba', url: 'https://news.google.com/rss/search?q=narkoba+OR+narkotika+OR+sabu+ditangkap+Indonesia+when:7d&hl=id&gl=ID&ceid=ID:id' },
@@ -240,17 +307,24 @@
                 { name: 'Detik – Hukum & Kriminal', url: 'https://rss.detik.com/index.php/hukum' },
                 { name: 'Antara – Hukum', url: 'https://www.antaranews.com/rss/hukum.xml' },
                 { name: 'CNN Indonesia – Nasional', url: 'https://www.cnnindonesia.com/nasional/rss' },
-                { name: 'Tribunnews', url: 'https://www.tribunnews.com/rss' }
+                { name: 'Tribunnews', url: 'https://www.tribunnews.com/rss' },
+                { name: 'Kompas – Nasional', url: 'https://nasional.kompas.com/rss' },
+                { name: 'Liputan6 – News', url: 'https://feed.liputan6.com/rss/news' },
+                { name: 'Sindonews – Metro', url: 'https://metro.sindonews.com/rss' },
+                { name: 'Suara.com – News', url: 'https://www.suara.com/rss' }
             ];
 
             // ================================================================
             // 2. STATE
             // ================================================================
             let currentData = [];
+            let previousKeys = new Set(); // untuk deteksi berita "BARU" antar refresh
+            let firstLoadDone = false;
             let sortKey = 'tanggal';
             let sortAsc = false;
             let isFetching = false;
             let fetchError = false;
+            let statPrev = { total: 0, prov: 0, kota: 0, kat: 0 };
 
             // DOM refs
             const tbody = document.getElementById('tableBody');
@@ -260,11 +334,17 @@
             const searchInput = document.getElementById('searchInput');
             const resetBtn = document.getElementById('resetFilter');
             const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
             const clockEl = document.getElementById('clock');
             const dateRangeEl = document.getElementById('dateRange');
             const lastUpdateEl = document.getElementById('lastUpdate');
             const dataStatusEl = document.getElementById('dataStatus');
             const sourceLabel = document.getElementById('sourceLabel');
+            const progressBar = document.getElementById('progressBar');
+            const toastEl = document.getElementById('toast');
+            const toastTextEl = document.getElementById('toastText');
+
+            document.getElementById('totalSourcesFooter').textContent = RSS_SOURCES.length;
 
             // ================================================================
             // 3. HELPERS
@@ -290,38 +370,54 @@
                 return map[kat] || kat;
             }
 
+            // Fisher-Yates shuffle — dipakai agar urutan sumber & prioritas dedup acak tiap refresh
+            function shuffleArray(arr) {
+                const a = arr.slice();
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function showToast(msg) {
+                toastTextEl.textContent = msg;
+                toastEl.classList.add('show');
+                clearTimeout(showToast._t);
+                showToast._t = setTimeout(() => toastEl.classList.remove('show'), 3200);
+            }
+
+            // Animasi hitung naik/turun untuk angka statistik
+            function animateValue(el, start, end, duration) {
+                duration = duration || 650;
+                if (start === end) { el.textContent = end; return; }
+                const startTime = performance.now();
+                function step(now) {
+                    const progress = Math.min((now - startTime) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(start + (end - start) * eased);
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
+
             // Ekstrak provinsi dan kota dari judul
             function extractLocation(text) {
                 let provinsi = 'Umum';
                 let kota = 'Umum';
-                // Cari kota
                 for (let k of TARGET_KOTA) {
-                    if (text.includes(k)) {
-                        kota = k;
-                        break;
-                    }
+                    if (text.includes(k)) { kota = k; break; }
                 }
-                // Cari provinsi
                 for (let p of TARGET_PROVINSI) {
-                    if (text.includes(p)) {
-                        provinsi = p;
-                        break;
-                    }
+                    if (text.includes(p)) { provinsi = p; break; }
                 }
-                // Jika kota ketemu, coba petakan ke provinsi (jika belum ketemu)
                 if (kota !== 'Umum' && provinsi === 'Umum') {
-                    if (kota === 'Jakarta' || kota === 'Jakarta Selatan' || kota === 'Jakarta Timur' || kota === 'Jakarta Barat' || kota === 'Jakarta Pusat' || kota === 'Jakarta Utara')
-                        provinsi = 'DKI Jakarta';
-                    else if (kota === 'Bogor' || kota === 'Depok' || kota === 'Bekasi' || kota === 'Bandung')
-                        provinsi = 'Jawa Barat';
-                    else if (kota === 'Tangerang' || kota === 'Tangerang Selatan')
-                        provinsi = 'Banten';
-                    else if (kota === 'Surabaya')
-                        provinsi = 'Jawa Timur';
-                    else if (kota === 'Semarang')
-                        provinsi = 'Jawa Tengah';
-                    else if (kota === 'Yogyakarta')
-                        provinsi = 'DI Yogyakarta';
+                    if (kota === 'Jakarta') provinsi = 'DKI Jakarta';
+                    else if (kota === 'Bogor' || kota === 'Depok' || kota === 'Bekasi' || kota === 'Bandung') provinsi = 'Jawa Barat';
+                    else if (kota === 'Tangerang' || kota === 'Tangerang Selatan') provinsi = 'Banten';
+                    else if (kota === 'Surabaya') provinsi = 'Jawa Timur';
+                    else if (kota === 'Semarang') provinsi = 'Jawa Tengah';
+                    else if (kota === 'Yogyakarta') provinsi = 'DI Yogyakarta';
                 }
                 return { provinsi, kota };
             }
@@ -336,24 +432,48 @@
                 return 'umum';
             }
 
-            // ================================================================
-            // 4. FETCH DATA DARI BANYAK SUMBER RSS (REAL, PARALEL)
-            // ================================================================
-
-            // Ambil satu URL lewat beberapa proxy CORS berurutan, berhenti begitu salah satu berhasil
-            async function fetchWithFallback(url) {
-                for (const buildProxyUrl of PROXIES) {
-                    try {
-                        const response = await fetch(buildProxyUrl(url), { cache: 'no-store' });
-                        if (!response.ok) continue;
-                        const text = await response.text();
-                        if (text && text.length > 50) return text;
-                    } catch (e) { /* coba proxy berikutnya */ }
-                }
-                return null;
+            function dedupeKey(peristiwa) {
+                return peristiwa.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70);
             }
 
-            // Ambil & parse satu sumber RSS, kembalikan array event dalam 7 hari terakhir (atau [] jika gagal)
+            // ================================================================
+            // 4. FETCH DATA — AGRESIF: proxy dibalap paralel + timeout, sumber diacak
+            // ================================================================
+
+            // Balap semua proxy CORS secara paralel dengan timeout; ambil yang PERTAMA berhasil.
+            function fetchWithFallback(url) {
+                const proxies = shuffleArray(PROXIES);
+                return new Promise((resolve) => {
+                    let settled = 0;
+                    let done = false;
+                    proxies.forEach(buildProxyUrl => {
+                        const controller = new AbortController();
+                        const timer = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+                        fetch(buildProxyUrl(url), { cache: 'no-store', signal: controller.signal })
+                            .then(r => (r.ok ? r.text() : null))
+                            .then(text => {
+                                clearTimeout(timer);
+                                settled++;
+                                if (!done && text && text.length > 50) {
+                                    done = true;
+                                    resolve(text);
+                                } else if (settled === proxies.length && !done) {
+                                    done = true;
+                                    resolve(null);
+                                }
+                            })
+                            .catch(() => {
+                                clearTimeout(timer);
+                                settled++;
+                                if (settled === proxies.length && !done) {
+                                    done = true;
+                                    resolve(null);
+                                }
+                            });
+                    });
+                });
+            }
+
             async function fetchSingleSource(source) {
                 try {
                     const xmlText = await fetchWithFallback(source.url);
@@ -365,7 +485,6 @@
                     const items = xmlDoc.querySelectorAll('item');
                     const events = [];
 
-                    // Rentang tanggal: hari ini mundur 7 hari (real time, dihitung ulang tiap fetch)
                     const today = new Date();
                     today.setHours(23, 59, 59, 999);
                     const sevenDaysAgo = new Date();
@@ -379,7 +498,6 @@
 
                         const dateObj = new Date(pubDate);
                         if (isNaN(dateObj.getTime())) continue;
-                        // Filter tanggal: harus dalam jendela hari-ini s/d 7 hari ke belakang
                         if (dateObj < sevenDaysAgo || dateObj > today) continue;
 
                         const tanggal = dateObj.toISOString().split('T')[0];
@@ -396,7 +514,6 @@
                             sumber: source.name
                         });
                     }
-
                     return events;
                 } catch (err) {
                     console.warn('Gagal fetch sumber:', source.name, err);
@@ -404,12 +521,11 @@
                 }
             }
 
-            // Buang berita duplikat yang muncul di beberapa sumber sekaligus (judul mirip)
             function dedupeEvents(events) {
                 const seen = new Set();
                 const result = [];
                 for (const ev of events) {
-                    const key = ev.peristiwa.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70);
+                    const key = dedupeKey(ev.peristiwa);
                     if (seen.has(key)) continue;
                     seen.add(key);
                     result.push(ev);
@@ -417,27 +533,33 @@
                 return result;
             }
 
-            // Ambil semua sumber secara paralel, gabungkan, dedup, urutkan terbaru dulu
-            async function fetchAllSources() {
-                const settled = await Promise.allSettled(RSS_SOURCES.map(src => fetchSingleSource(src)));
-                let merged = [];
+            // Ambil SEMUA sumber paralel (urutan diacak tiap panggilan), progress dilaporkan live
+            async function fetchAllSources(onProgress) {
+                const shuffled = shuffleArray(RSS_SOURCES);
+                const total = shuffled.length;
+                let completed = 0;
                 let sourcesOk = 0;
-                settled.forEach(r => {
-                    if (r.status === 'fulfilled' && r.value.length > 0) {
-                        sourcesOk++;
-                        merged = merged.concat(r.value);
-                    }
-                });
+
+                const promises = shuffled.map(src =>
+                    fetchSingleSource(src).then(events => {
+                        completed++;
+                        if (events.length > 0) sourcesOk++;
+                        if (onProgress) onProgress(completed, total);
+                        return events;
+                    })
+                );
+
+                const results = await Promise.all(promises);
+                let merged = [].concat(...results);
                 merged = dedupeEvents(merged);
                 merged.sort((a, b) => b.ts - a.ts);
-                return { events: merged, sourcesOk, sourcesTotal: RSS_SOURCES.length };
+                return { events: merged, sourcesOk, sourcesTotal: total, order: shuffled.map(s => s.name) };
             }
 
             // ================================================================
             // 5. MAIN RENDER
             // ================================================================
             function render() {
-                // Filter
                 const provFilter = filterProvinsi.value;
                 const kotaFilter = filterKota.value;
                 const katFilter = filterKategori.value;
@@ -456,7 +578,6 @@
                     return true;
                 });
 
-                // Sort
                 filtered.sort((a, b) => {
                     let va = a[sortKey] || '';
                     let vb = b[sortKey] || '';
@@ -471,32 +592,39 @@
                     return 0;
                 });
 
-                // Render rows
                 if (filtered.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-inbox"></i> Tidak ada data</td></tr>`;
                 } else {
                     let html = '';
-                    filtered.forEach(item => {
+                    filtered.forEach((item, idx) => {
                         const badgeClass = 'badge-kategori ' + (item.kategori || 'umum');
-                        html += `<tr>
+                        const icon = CATEGORY_ICON[item.kategori] || 'fa-circle-info';
+                        const key = dedupeKey(item.peristiwa);
+                        const isNew = firstLoadDone && !previousKeys.has(key);
+                        const delay = Math.min(idx, 14) * 30;
+                        html += `<tr style="animation-delay:${delay}ms">
                             <td class="td-tanggal">${formatTanggal(item.tanggal)}</td>
                             <td class="td-provinsi">${item.provinsi}</td>
                             <td class="td-kota">${item.kota}</td>
-                            <td class="td-peristiwa">${item.peristiwa}<span class="td-sumber"><i class="fas fa-newspaper"></i>${item.sumber || 'Google News'}</span></td>
-                            <td><span class="${badgeClass}">${getKategoriLabel(item.kategori)}</span></td>
+                            <td class="td-peristiwa">${item.peristiwa}${isNew ? '<span class="tag-new"><i class="fas fa-star"></i>BARU</span>' : ''}<span class="td-sumber"><i class="fas fa-newspaper"></i>${item.sumber || 'Google News'}</span></td>
+                            <td><span class="${badgeClass}"><i class="fas ${icon}"></i>${getKategoriLabel(item.kategori)}</span></td>
                         </tr>`;
                     });
                     tbody.innerHTML = html;
                 }
 
-                // Update stats
+                // Simpan key untuk deteksi "BARU" di render berikutnya
+                previousKeys = new Set(currentData.map(d => dedupeKey(d.peristiwa)));
+
+                // Update stats dengan animasi hitung
                 const provSet = new Set(currentData.map(d => d.provinsi));
                 const kotaSet = new Set(currentData.map(d => d.kota));
                 const katSet = new Set(currentData.map(d => d.kategori));
-                document.getElementById('totalKejadian').textContent = currentData.length;
-                document.getElementById('totalProvinsi').textContent = provSet.size;
-                document.getElementById('totalKota').textContent = kotaSet.size;
-                document.getElementById('totalKategori').textContent = katSet.size;
+                animateValue(document.getElementById('totalKejadian'), statPrev.total, currentData.length);
+                animateValue(document.getElementById('totalProvinsi'), statPrev.prov, provSet.size);
+                animateValue(document.getElementById('totalKota'), statPrev.kota, kotaSet.size);
+                animateValue(document.getElementById('totalKategori'), statPrev.kat, katSet.size);
+                statPrev = { total: currentData.length, prov: provSet.size, kota: kotaSet.size, kat: katSet.size };
 
                 // Update filter dropdowns (preserve selection)
                 const currentProv = filterProvinsi.value;
@@ -522,7 +650,6 @@
                     kats.map(k => `<option value="${k}">${getKategoriLabel(k)}</option>`).join('');
                 filterKategori.value = currentKat;
 
-                // Update last update time
                 const now = new Date();
                 lastUpdateEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 if (fetchError) {
@@ -532,30 +659,50 @@
                 }
             }
 
+            function renderSkeleton() {
+                let html = '';
+                for (let i = 0; i < 6; i++) {
+                    html += `<tr class="skeleton" style="animation-delay:${i * 40}ms">
+                        <td><div class="sk-bar" style="width:70px"></div></td>
+                        <td><div class="sk-bar" style="width:90px"></div></td>
+                        <td><div class="sk-bar" style="width:80px"></div></td>
+                        <td><div class="sk-bar" style="width:${60 + Math.random()*30}%"></div></td>
+                        <td><div class="sk-bar" style="width:80px"></div></td>
+                    </tr>`;
+                }
+                tbody.innerHTML = html;
+            }
+
             // ================================================================
             // 6. UPDATE DATA (fetch & render)
             // ================================================================
-            async function updateData(showLoading = true) {
+            async function updateData(showLoading) {
                 if (isFetching) return;
                 isFetching = true;
                 fetchError = false;
+                refreshIcon.classList.add('spin-icon');
+                progressBar.style.width = '4%';
 
                 if (showLoading) {
                     dataStatusEl.textContent = ' Mengambil data...';
-                    tbody.innerHTML = `<tr><td colspan="5" class="no-data"><i class="fas fa-spinner fa-pulse"></i> Mengambil data dari 12 sumber berita...</td></tr>`;
+                    if (currentData.length === 0) renderSkeleton();
+                    sourceLabel.innerHTML = `<i class="fas fa-shuffle"></i> Mengacak & membalap ${RSS_SOURCES.length} sumber...`;
                 }
 
-                const result = await fetchAllSources();
+                const prevCount = currentData.length;
+                const prevKeysBefore = previousKeys;
+
+                const result = await fetchAllSources((done, total) => {
+                    progressBar.style.width = Math.round((done / total) * 100) + '%';
+                });
                 const newData = result.events;
 
                 if (newData && newData.length > 0) {
                     currentData = newData;
-                    // Simpan di localStorage untuk cadangan jika nanti gagal
                     try { localStorage.setItem('crimeData', JSON.stringify(currentData)); } catch (e) {}
-                    sourceLabel.textContent = `${result.sourcesOk}/${result.sourcesTotal} sumber aktif (real-time)`;
+                    sourceLabel.innerHTML = `<i class="fas fa-check-circle" style="color:#00f5d4"></i> ${result.sourcesOk}/${result.sourcesTotal} sumber aktif (real-time, acak)`;
                     fetchError = false;
                 } else {
-                    // Gagal atau tidak ada data: gunakan data dari localStorage jika ada
                     fetchError = true;
                     const stored = localStorage.getItem('crimeData');
                     if (stored) {
@@ -580,6 +727,21 @@
                 }
 
                 render();
+
+                // Notifikasi jika ada berita baru masuk saat auto-refresh diam-diam
+                if (!showLoading && !fetchError) {
+                    const newKeys = new Set(currentData.map(d => dedupeKey(d.peristiwa)));
+                    let freshCount = 0;
+                    newKeys.forEach(k => { if (!prevKeysBefore.has(k)) freshCount++; });
+                    if (firstLoadDone && freshCount > 0) {
+                        showToast(`${freshCount} berita baru ditemukan`);
+                    }
+                }
+
+                firstLoadDone = true;
+                progressBar.style.width = '100%';
+                setTimeout(() => { progressBar.style.width = '0%'; }, 500);
+                refreshIcon.classList.remove('spin-icon');
                 isFetching = false;
             }
 
@@ -610,8 +772,7 @@
             document.querySelectorAll('thead th[data-sort]').forEach(th => {
                 th.addEventListener('click', () => {
                     const key = th.dataset.sort;
-                    if (sortKey === key) { sortAsc = !sortAsc; } else { sortKey = key;
-                        sortAsc = false; }
+                    if (sortKey === key) { sortAsc = !sortAsc; } else { sortKey = key; sortAsc = false; }
                     render();
                 });
             });
@@ -628,11 +789,11 @@
 
             refreshBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                updateData(true);
+                if (!isFetching) updateData(true);
             });
 
             // ================================================================
-            // 9. AUTO UPDATE (setiap 60 detik)
+            // 9. AUTO UPDATE (setiap 60 detik, sumber selalu diacak ulang)
             // ================================================================
             setInterval(() => {
                 updateClock();
@@ -645,24 +806,24 @@
             (async function init() {
                 updateClock();
                 updateDateRange();
-                // Coba muat dari localStorage dulu agar cepat
                 const stored = localStorage.getItem('crimeData');
                 if (stored) {
                     try {
                         const parsed = JSON.parse(stored);
                         if (parsed && parsed.length > 0) {
                             currentData = parsed;
+                            previousKeys = new Set(currentData.map(d => dedupeKey(d.peristiwa)));
                             render();
                             dataStatusEl.textContent = ` ${currentData.length} berita (cache)`;
                             sourceLabel.textContent = 'Cache';
                         }
                     } catch (e) {}
+                } else {
+                    renderSkeleton();
                 }
-                // Lalu fetch data terbaru
                 await updateData(true);
             })();
 
-            // Re-render on visibility change
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) {
                     updateClock();
