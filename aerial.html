@@ -352,13 +352,39 @@
 
         /* Panel tambahan: hari & jam (GPS HP vs jam lokasi) di bawah alamat */
         .time-row {
-            margin-top:6px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.14);
-            display:none; font-size:0.78rem; color:var(--text-dim); font-weight:600; line-height:1.65;
+            margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.14);
+            display:none; flex-direction:column; gap:6px;
         }
         body.sunlight-mode .time-row{ border-top:1px dashed #999; }
-        .time-row.show { display:block; }
-        .time-row .label{ color:var(--text-dim); }
-        .time-row .value{ color:var(--accent); font-weight:800; font-family:var(--font-mono); }
+        .time-row.show { display:flex; }
+        .time-card {
+            display:flex; align-items:center; gap:9px;
+            background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.25);
+            border-radius:10px; padding:6px 10px;
+        }
+        .time-card-loc { background:rgba(0,255,176,0.08); border-color:rgba(0,255,176,0.28); }
+        body.sunlight-mode .time-card { background:rgba(0,87,199,0.07); border-color:rgba(0,87,199,0.35); }
+        body.sunlight-mode .time-card-loc { background:rgba(10,125,58,0.08); border-color:rgba(10,125,58,0.35); }
+        .time-icon { font-size:1.25rem; line-height:1; flex-shrink:0; filter:drop-shadow(0 0 4px rgba(0,0,0,0.25)); }
+        .time-card-text { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+        .time-card-label {
+            font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em;
+            color:var(--text-dim); font-weight:800; font-family:var(--font-head);
+            display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+        }
+        .time-card-value {
+            font-size:0.98rem; font-weight:800; font-family:var(--font-mono);
+            color:var(--accent); letter-spacing:0.015em; text-shadow:0 0 10px rgba(0,229,255,0.35);
+        }
+        .time-card-loc .time-card-value { color:var(--accent3); text-shadow:0 0 10px rgba(0,255,176,0.35); }
+        .time-offset {
+            font-size:0.64rem; font-weight:800; letter-spacing:0; text-transform:none;
+            padding:1px 7px; border-radius:9px; background:rgba(255,176,32,0.2); color:var(--warn);
+            border:1px solid rgba(255,176,32,0.35); white-space:nowrap;
+        }
+        .time-offset.zero { background:rgba(0,255,176,0.18); color:var(--accent3); border-color:rgba(0,255,176,0.35); }
+        body.sunlight-mode .time-offset { background:rgba(163,91,0,0.12); border-color:rgba(163,91,0,0.4); }
+        body.sunlight-mode .time-offset.zero { background:rgba(10,125,58,0.12); border-color:rgba(10,125,58,0.4); }
         
         .action-btns { display:flex; gap:6px; flex-shrink:0; }
         .copy-btn {
@@ -864,8 +890,20 @@
                 </div>
             </div>
             <div class="time-row" id="timeRow">
-                <div><span class="label">🕐 Jam GPS HP: </span><span class="value" id="hpTimeText">-</span></div>
-                <div><span class="label">🌐 Jam Lokasi: </span><span class="value" id="locTimeText">-</span></div>
+                <div class="time-card">
+                    <span class="time-icon">🕐</span>
+                    <div class="time-card-text">
+                        <span class="time-card-label">Jam GPS HP</span>
+                        <span class="time-card-value" id="hpTimeText">-</span>
+                    </div>
+                </div>
+                <div class="time-card time-card-loc">
+                    <span class="time-icon">🌐</span>
+                    <div class="time-card-text">
+                        <span class="time-card-label">Jam Lokasi <span class="time-offset" id="locTimeOffset"></span></span>
+                        <span class="time-card-value" id="locTimeText">-</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1512,6 +1550,7 @@
     const timeRowEl = document.getElementById('timeRow');
     const hpTimeTextEl = document.getElementById('hpTimeText');
     const locTimeTextEl = document.getElementById('locTimeText');
+    const locTimeOffsetEl = document.getElementById('locTimeOffset');
     const ID_DAY_ABBR = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     const ID_MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     function formatDDDddMMMyyyyHHmm(dayIdx, date, month, year, hours, minutes) {
@@ -1524,18 +1563,34 @@
         // Jam sistem HP: pakai getter waktu LOKAL perangkat apa adanya.
         return formatDDDddMMMyyyyHHmm(d.getDay(), d.getDate(), d.getMonth(), d.getFullYear(), d.getHours(), d.getMinutes());
     }
+    function locationUtcOffsetHours(lng) {
+        // Perkiraan zona waktu dari bujur (setiap 15° ≈ 1 jam UTC).
+        return Math.round(lng / 15);
+    }
     function formatLocationTime(lng) {
-        // Perkiraan zona waktu dari bujur (setiap 15° ≈ 1 jam UTC), lalu
-        // dibaca lewat getter UTC agar tidak tercampur zona waktu perangkat.
-        const offsetHours = Math.round(lng / 15);
-        const zoned = new Date(Date.now() + offsetHours * 3600000);
+        // Dibaca lewat getter UTC agar tidak tercampur zona waktu perangkat.
+        const zoned = new Date(Date.now() + locationUtcOffsetHours(lng) * 3600000);
         return formatDDDddMMMyyyyHHmm(zoned.getUTCDay(), zoned.getUTCDate(), zoned.getUTCMonth(), zoned.getUTCFullYear(), zoned.getUTCHours(), zoned.getUTCMinutes());
+    }
+    function formatOffsetBadge(lng) {
+        // Selisih zona jam Lokasi terhadap zona jam GPS HP (perangkat), supaya
+        // langsung terlihat berapa jam lebih cepat/lambat tanpa perlu menghitung sendiri.
+        const deviceOffsetHours = Math.round(-new Date().getTimezoneOffset() / 60);
+        const diff = locationUtcOffsetHours(lng) - deviceOffsetHours;
+        if (diff === 0) return { text: 'sama dgn HP', zero: true };
+        const sign = diff > 0 ? '+' : '−';
+        return { text: `${sign}${Math.abs(diff)} jam dari HP`, zero: false };
     }
     let lastTimePanelLatLng = null;
     function renderTimePanel() {
         if (!lastTimePanelLatLng || !timeRowEl) return;
         hpTimeTextEl.innerText = formatHpTime(new Date());
         locTimeTextEl.innerText = formatLocationTime(lastTimePanelLatLng.lng);
+        if (locTimeOffsetEl) {
+            const badge = formatOffsetBadge(lastTimePanelLatLng.lng);
+            locTimeOffsetEl.innerText = badge.text;
+            locTimeOffsetEl.classList.toggle('zero', badge.zero);
+        }
         timeRowEl.classList.add('show');
     }
     function updateTimePanel(lat, lng) {
