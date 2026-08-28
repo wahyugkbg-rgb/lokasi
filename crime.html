@@ -137,6 +137,7 @@
         .badge-kategori.perampokan { background:linear-gradient(135deg,rgba(255,100,0,.18),rgba(255,100,0,.04)); border-color:rgba(255,100,0,.28); color:#ff8844;
             animation:badgePulse 2.4s infinite; }
         .badge-kategori.judi { background:linear-gradient(135deg,rgba(100,50,255,.18),rgba(100,50,255,.04)); border-color:rgba(100,50,255,.28); color:#aa88ff; }
+        .badge-kategori.penipuan { background:linear-gradient(135deg,rgba(0,220,150,.18),rgba(0,220,150,.04)); border-color:rgba(0,220,150,.28); color:#3ddba0; }
         .badge-kategori.obat-keras { background:linear-gradient(135deg,rgba(0,200,255,.18),rgba(0,200,255,.04)); border-color:rgba(0,200,255,.28); color:#4fc3ff; }
         .badge-kategori.umum { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.08); color:#b0c4de; }
         @keyframes badgePulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,51,51,.35); } 50%{ box-shadow:0 0 0 6px rgba(255,51,51,0); } }
@@ -270,18 +271,19 @@
             const CATEGORY_KEYWORDS = {
                 'narkoba': ['narkoba', 'narkotika', 'ganja', 'sabu', 'ekstasi', 'metamfetamin', 'psikotropika'],
                 'pencurian': ['curi', 'mencuri', 'pencurian', 'maling', 'curat'],
-                'curanmor': ['curanmor', 'motor', 'kendaraan', 'mobil', 'sepeda motor'],
+                'curanmor': ['curanmor', 'motor hilang', 'mobil hilang', 'pencurian kendaraan', 'copet motor', 'pencuri motor'],
                 'tawuran': ['tawuran', 'gangster', 'klithih', 'bentrok', 'perkelahian'],
                 'pembunuhan': ['bunuh', 'pembunuhan', 'mutilasi', 'mayat', 'tewas'],
                 'perampokan': ['rampok', 'perampokan', 'begal', 'merampok', 'jambret'],
                 'judi': ['judi', 'slot', 'online', 'togel', 'casino'],
+                'penipuan': ['penipuan', 'pinjol', 'investasi bodong', 'pishing', 'jualan online', 'tipu'],
                 'obat-keras': ['obat', 'tramadol', 'hexymer', 'psikotropika', 'ilegal'],
                 'kekerasan': ['kekerasan', 'aniaya', 'pengeroyokan', 'pemukulan', 'sajam', 'senjata', 'miras']
             };
             const CATEGORY_ICON = {
                 narkoba:'fa-pills', narkotika:'fa-pills', pencurian:'fa-user-ninja', curanmor:'fa-motorcycle',
                 tawuran:'fa-people-robbery', pembunuhan:'fa-skull-crossbones', perampokan:'fa-mask',
-                judi:'fa-dice', 'obat-keras':'fa-capsules', kekerasan:'fa-hand-fist', umum:'fa-circle-info'
+                judi:'fa-dice', penipuan:'fa-user-secret', 'obat-keras':'fa-capsules', kekerasan:'fa-hand-fist', umum:'fa-circle-info'
             };
 
             // Beberapa proxy CORS — sekarang DIBALAP paralel (bukan berurutan) agar yang tercepat langsung dipakai
@@ -310,8 +312,15 @@
                 { name: 'Tribunnews', url: 'https://www.tribunnews.com/rss' },
                 { name: 'Kompas – Nasional', url: 'https://nasional.kompas.com/rss' },
                 { name: 'Liputan6 – News', url: 'https://feed.liputan6.com/rss/news' },
-                { name: 'Sindonews – Metro', url: 'https://metro.sindonews.com/rss' },
-                { name: 'Suara.com – News', url: 'https://www.suara.com/rss' }
+                { name: 'Sindo – Metro', url: 'https://metro.sindonews.com/rss' },
+                { name: 'Suara.com – News', url: 'https://www.suara.com/rss' },
+                { name: 'Suara.com – Hukum Kriminal', url: 'https://www.suara.com/rss/category/hukum-kriminal' },
+                { name: 'Okezone – Kriminal', url: 'https://sindikasi.okezone.com/index.php/rss/15/Kriminal' },
+                { name: 'Tribun Jabar', url: 'https://jabar.tribunnews.com/rss' },
+                { name: 'Tribun Jateng', url: 'https://jateng.tribunnews.com/rss' },
+                { name: 'Tribun Jatim', url: 'https://jatim.tribunnews.com/rss' },
+                { name: 'Tribun Jakarta', url: 'https://jakarta.tribunnews.com/rss' },
+                { name: 'Poskota', url: 'https://poskota.co.id/feed' }
             ];
 
             // ================================================================
