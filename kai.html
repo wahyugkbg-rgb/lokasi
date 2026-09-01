@@ -1727,10 +1727,12 @@
                 if (warn) warn.remove();
             }
 
-            // Dipakai khusus oleh kartu Gunung Api. Semua proxy dicoba PARALEL
+            // Dipakai khusus oleh kartu Gunung Api. Semua sumber dicoba PARALEL
             // (bukan berurutan) via Promise.any, sehingga total waktu tunggu =
-            // proxy tercepat yang berhasil, bukan jumlah timeout tiap proxy yang
-            // gagal satu per satu (yang sebelumnya bisa membuat penampilan lama).
+            // sumber tercepat yang berhasil, bukan jumlah timeout tiap sumber yang
+            // gagal satu per satu. Beberapa penyedia proxy independen disertakan
+            // sekaligus supaya kalau satu penyedia sedang down / diblokir jaringan,
+            // yang lain tetap punya peluang berhasil.
             async function fetchTextResilient(targetUrl, timeout = 12000) {
                 const validate = (text) => {
                     if (!text || text.length < 100) throw new Error('Respons kosong');
@@ -1740,23 +1742,30 @@
                     return text;
                 };
 
+                const rawFetch = (url) => (async () => {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(timeout) });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    return validate(await resp.text());
+                })();
+
+                const jsonFetch = (url) => (async () => {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(timeout) });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const data = await resp.json();
+                    return validate(data && data.contents);
+                })();
+
                 const attempts = [
-                    ...CORS_PROXIES.map((buildUrl) => (async () => {
-                        const resp = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(timeout) });
-                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                        return validate(await resp.text());
-                    })()),
-                    // Fallback tambahan khusus gunung: varian JSON allorigins, kadang
-                    // masih longgar saat /raw kena rate limit.
-                    (async () => {
-                        const resp = await fetch(
-                            'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl),
-                            { signal: AbortSignal.timeout(timeout) }
-                        );
-                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                        const data = await resp.json();
-                        return validate(data && data.contents);
-                    })(),
+                    // Percobaan langsung tanpa proxy — paling cepat kalau kebetulan
+                    // berhasil, dan tidak bergantung pada pihak ketiga.
+                    rawFetch(targetUrl),
+                    // Proxy CORS utama (lihat CORS_PROXIES di atas).
+                    ...CORS_PROXIES.map((buildUrl) => rawFetch(buildUrl(targetUrl))),
+                    // Proxy cadangan tambahan dari penyedia lain, supaya tidak semua
+                    // percobaan bergantung pada infrastruktur yang sama.
+                    rawFetch('https://thingproxy.freeboard.io/fetch/' + targetUrl),
+                    jsonFetch('https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl)),
+                    jsonFetch('https://whateverorigin.org/get?url=' + encodeURIComponent(targetUrl)),
                 ];
 
                 try {
@@ -1765,7 +1774,12 @@
                     const msgs = (aggErr && aggErr.errors ? aggErr.errors : [])
                         .map((e) => e && e.message)
                         .filter(Boolean);
-                    throw new Error(msgs[msgs.length - 1] || 'Semua proxy CORS gagal diakses');
+                    const uniqueMsgs = [...new Set(msgs)];
+                    throw new Error(
+                        uniqueMsgs.length
+                            ? `Semua ${attempts.length} sumber gagal (${uniqueMsgs.slice(0, 3).join('; ')}${uniqueMsgs.length > 3 ? '; …' : ''})`
+                            : 'Semua proxy gagal diakses — cek koneksi internet perangkat'
+                    );
                 }
             }
 
