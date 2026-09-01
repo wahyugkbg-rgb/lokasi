@@ -1640,10 +1640,14 @@
             // ============================================================
             //  WATER & VOLCANO (preserved from KAI.HTML with minimal changes)
             // ============================================================
+            // Catatan (perbaikan koneksi gunung): corsproxy.io sejak 2026 mewajibkan
+            // API key berbayar dan mengembalikan HTTP 401 untuk permintaan tanpa key,
+            // sehingga dihapus dari daftar di bawah karena selalu gagal & hanya
+            // membuang waktu tunggu. codetabs ditaruh lebih dulu karena saat ini
+            // lebih konsisten berhasil dibanding allorigins.
             const CORS_PROXIES = [
-                (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
                 (u) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-                (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+                (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
             ];
 
             // Proxy khusus untuk sumber air: dicoba lebih dulu karena me-render
@@ -1723,23 +1727,46 @@
                 if (warn) warn.remove();
             }
 
+            // Dipakai khusus oleh kartu Gunung Api. Semua proxy dicoba PARALEL
+            // (bukan berurutan) via Promise.any, sehingga total waktu tunggu =
+            // proxy tercepat yang berhasil, bukan jumlah timeout tiap proxy yang
+            // gagal satu per satu (yang sebelumnya bisa membuat penampilan lama).
             async function fetchTextResilient(targetUrl, timeout = 12000) {
-                let lastErr = new Error('Semua proxy CORS gagal diakses');
-                for (const buildUrl of CORS_PROXIES) {
-                    try {
+                const validate = (text) => {
+                    if (!text || text.length < 100) throw new Error('Respons kosong');
+                    if (text.length < 4000 && /aktivitas mencurigakan|support id|akses ditolak/i.test(text)) {
+                        throw new Error('Diblokir sistem keamanan situs sumber');
+                    }
+                    return text;
+                };
+
+                const attempts = [
+                    ...CORS_PROXIES.map((buildUrl) => (async () => {
                         const resp = await fetch(buildUrl(targetUrl), { signal: AbortSignal.timeout(timeout) });
                         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                        const text = await resp.text();
-                        if (!text || text.length < 100) throw new Error('Respons kosong');
-                        if (text.length < 4000 && /aktivitas mencurigakan|support id|akses ditolak/i.test(text)) {
-                            throw new Error('Diblokir sistem keamanan situs sumber');
-                        }
-                        return text;
-                    } catch (err) {
-                        lastErr = err;
-                    }
+                        return validate(await resp.text());
+                    })()),
+                    // Fallback tambahan khusus gunung: varian JSON allorigins, kadang
+                    // masih longgar saat /raw kena rate limit.
+                    (async () => {
+                        const resp = await fetch(
+                            'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl),
+                            { signal: AbortSignal.timeout(timeout) }
+                        );
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const data = await resp.json();
+                        return validate(data && data.contents);
+                    })(),
+                ];
+
+                try {
+                    return await Promise.any(attempts);
+                } catch (aggErr) {
+                    const msgs = (aggErr && aggErr.errors ? aggErr.errors : [])
+                        .map((e) => e && e.message)
+                        .filter(Boolean);
+                    throw new Error(msgs[msgs.length - 1] || 'Semua proxy CORS gagal diakses');
                 }
-                throw lastErr;
             }
 
             async function fetchJsonResilient(url, { timeout = 12000, directRetries = 2 } = {}) {
