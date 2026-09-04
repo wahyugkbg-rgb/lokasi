@@ -307,6 +307,58 @@
         .quake-badge.mag-kuat{ background:#e05d00; }
         .quake-badge.mag-besar{ background:#d1103a; }
         .quake-badge.mag-ekstrem{ background:#a3001a; animation:livePulse 1s ease-in-out infinite; }
+        .quake-src{
+            display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px;
+            font-family:var(--font-mono); font-size:0.62rem; font-weight:700; letter-spacing:0.3px;
+            background:rgba(255,255,255,0.08); color:var(--text-dim); border:1px solid var(--panel-border);
+            vertical-align:middle;
+        }
+        body.sunlight-mode .quake-src{ background:rgba(0,0,0,0.06); border:1px solid #000; color:#000; }
+
+        /* ---- Panel Info Geofisika (Gempa BMKG/USGS): header + minimize/maximize + list
+           yang bisa discroll sendiri TANPA mengganggu peta di baliknya — dibuat memakai pola
+           yang persis sama seperti kotak "Anda berada" (.nearby-box) supaya konsisten. ---- */
+        .geo-panel{ display:flex; flex-direction:column; gap:0; }
+        .geo-header{
+            display:flex; align-items:center; gap:6px; margin-bottom:8px;
+        }
+        .geo-header .popover-title{ margin-bottom:0; flex:1; min-width:0; }
+        .geo-header-btns{ display:flex; gap:5px; flex-shrink:0; }
+        .geo-ctrl-btn{
+            flex-shrink:0; display:flex; align-items:center; justify-content:center;
+            width:24px; height:24px; border-radius:6px; border:1px solid var(--panel-border-strong);
+            background:rgba(255,255,255,0.06); color:var(--text-dim); cursor:pointer;
+            font-size:0.82rem; line-height:1; padding:0; font-family:inherit; touch-action:manipulation;
+        }
+        .geo-ctrl-btn:hover{ background:rgba(255,255,255,0.14); color:var(--text); }
+        .geo-ctrl-btn:active{ transform:scale(0.92); }
+        .geo-ctrl-btn.on{
+            background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#04060d; border-color:transparent;
+        }
+        body.sunlight-mode .geo-ctrl-btn{ background:rgba(0,0,0,0.05); border:1px solid rgba(0,0,0,0.25); }
+        body.sunlight-mode .geo-ctrl-btn:hover{ background:rgba(0,0,0,0.1); }
+        body.sunlight-mode .geo-ctrl-btn.on{ background:#ffdd00; color:#000; }
+        /* Diciutkan: daftar disembunyikan total, hanya header (judul + tombol) tersisa —
+           data yang sudah didapat TIDAK hilang, hanya disembunyikan (sama seperti nearby-box). */
+        .geo-panel.minimized .geo-header{ margin-bottom:0; }
+        .geo-panel.minimized #geoBody{ display:none; }
+        /* Daftar dibatasi tinggi & bisa discroll sendiri — persis pola .nearby-box .nearby-body:
+           overscroll-behavior:contain + touch-action:pan-y supaya gestur geser di dalam daftar
+           murni jadi scroll internal, tidak pernah bocor jadi drag/zoom peta di baliknya. */
+        #geoBody{
+            max-height:180px; overflow-y:auto; overscroll-behavior:contain;
+            -webkit-overflow-scrolling:touch; padding-right:2px; touch-action:pan-y;
+            transition:max-height 0.25s ease;
+        }
+        /* Diperbesar (maximize): daftar diberi ruang jauh lebih tinggi supaya lebih banyak
+           kejadian gempa terlihat sekaligus tanpa harus scroll terus-menerus. */
+        .geo-panel.maximized #geoBody{ max-height:52vh; }
+        #geoBody::-webkit-scrollbar{ width:5px; }
+        #geoBody::-webkit-scrollbar-thumb{ background:var(--panel-border-strong); border-radius:4px; }
+        #geoBody:focus{ outline:2px solid var(--accent); outline-offset:-2px; border-radius:6px; }
+        #geoBody:focus:not(:focus-visible){ outline:none; }
+        body.sunlight-mode #geoBody:focus{ outline:2px solid #000; }
+        .geo-updated{ margin-top:6px; font-size:0.68rem; color:var(--text-dim); text-align:right; font-weight:600; }
 
         /* ---- HUD Badge Ringkas (Cuaca / Angin / Gempa) ---- */
         .hud-badge-row{
@@ -863,9 +915,18 @@
             <div id="weatherBody">
                 <div class="w-row"><span>Aktifkan GPS atau cari lokasi, lalu buka panel ini…</span></div>
             </div>
-            <div class="popover-title" style="margin-top:14px;">🌍 Info Geofisika</div>
-            <div id="geoBody">
-                <div class="w-row"><span>Aktifkan GPS atau cari lokasi, lalu buka panel ini…</span></div>
+            <div class="geo-panel" id="geoPanel" style="margin-top:14px;">
+                <div class="geo-header">
+                    <div class="popover-title">🌍 Info Geofisika (BMKG &amp; USGS)</div>
+                    <div class="geo-header-btns">
+                        <button type="button" id="geoRefreshBtn" class="geo-ctrl-btn" aria-label="Segarkan data gempa sekarang" title="Segarkan data gempa sekarang">🔄</button>
+                        <button type="button" id="geoMaxBtn" class="geo-ctrl-btn" aria-label="Perbesar daftar gempa" title="Perbesar daftar gempa">⤢</button>
+                        <button type="button" id="geoMinBtn" class="geo-ctrl-btn" aria-label="Ciutkan daftar gempa" title="Ciutkan daftar gempa">–</button>
+                    </div>
+                </div>
+                <div id="geoBody" tabindex="0" role="list" aria-label="Daftar info gempa terkini dari BMKG dan USGS">
+                    <div class="w-row"><span>Aktifkan GPS atau cari lokasi, lalu buka panel ini…</span></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1322,6 +1383,7 @@
     let lastSearchResults = [];
     let searchWeatherTimer = null;
     let searchTransportTimer = null;
+    let searchQuakeTimer = null;
 
     function setSearchEnabled(enabled) {
         searchInput.disabled = !enabled; searchBtn.disabled = !enabled;
@@ -1339,14 +1401,18 @@
     function stopSearchLocationMonitoring() {
         if (searchWeatherTimer) { clearInterval(searchWeatherTimer); searchWeatherTimer = null; }
         if (searchTransportTimer) { clearInterval(searchTransportTimer); searchTransportTimer = null; }
+        if (searchQuakeTimer) { clearInterval(searchQuakeTimer); searchQuakeTimer = null; }
     }
     function startSearchLocationMonitoring(lat, lng) {
         stopSearchLocationMonitoring();
         searchWeatherTimer = setInterval(() => {
-            if (activeLocation && activeLocation.source === 'search') {
-                maybeFetchWeather(lat, lng, true); maybeFetchGeophysics(lat, lng, true);
-            }
+            if (activeLocation && activeLocation.source === 'search') maybeFetchWeather(lat, lng, true);
         }, 5 * 60 * 1000);
+        // Info gempa disegarkan lebih SERING (1 menit) & terpisah dari cuaca (5 menit) supaya
+        // lebih responsif/real-time — data gempa lebih kritikal untuk selalu terkini.
+        searchQuakeTimer = setInterval(() => {
+            if (activeLocation && activeLocation.source === 'search') maybeFetchGeophysics(lat, lng, true);
+        }, 60000);
         searchTransportTimer = setInterval(() => {
             // force=false: refresh berkala TIDAK memicu status "Mencari…" yang menimpa daftar
             // yang sudah tampil — biar daftar lama tetap terlihat sampai data baru siap, tidak
@@ -1513,9 +1579,11 @@
     let lastTransportCheckLatLng = null;
     let gpsWeatherTimer = null;
     let gpsTransportTimer = null;
+    let gpsQuakeTimer = null;
     function stopGpsLocationMonitoring() {
         if (gpsWeatherTimer) { clearInterval(gpsWeatherTimer); gpsWeatherTimer = null; }
         if (gpsTransportTimer) { clearInterval(gpsTransportTimer); gpsTransportTimer = null; }
+        if (gpsQuakeTimer) { clearInterval(gpsQuakeTimer); gpsQuakeTimer = null; }
         lastTransportCheckLatLng = null;
     }
     function startGpsLocationMonitoring() {
@@ -1525,9 +1593,15 @@
         gpsWeatherTimer = setInterval(() => {
             if (isLocTracking && activeLocation && activeLocation.source === 'gps') {
                 maybeFetchWeather(activeLocation.lat, activeLocation.lng, true);
-                maybeFetchGeophysics(activeLocation.lat, activeLocation.lng, true);
             }
         }, 5 * 60 * 1000);
+        // Info gempa disegarkan lebih SERING (1 menit) & terpisah dari cuaca (5 menit) supaya
+        // lebih responsif/real-time — data gempa lebih kritikal untuk selalu terkini.
+        gpsQuakeTimer = setInterval(() => {
+            if (isLocTracking && activeLocation && activeLocation.source === 'gps') {
+                maybeFetchGeophysics(activeLocation.lat, activeLocation.lng, true);
+            }
+        }, 60000);
         gpsTransportTimer = setInterval(() => {
             // force=false — lihat catatan di searchTransportTimer.
             if (isLocTracking && activeLocation && activeLocation.source === 'gps') checkNearbyTransport(activeLocation.lat, activeLocation.lng, false);
@@ -1654,6 +1728,7 @@
     let activePinAbortController = null;
     let pinWeatherTimer = null;
     let pinTransportTimer = null;
+    let pinQuakeTimer = null;
 
     function makePinIcon() {
         return L.divIcon({ className: '', html: `<div class="search-loc-wrap"><div class="search-pin">📍</div></div>`, iconSize: [30, 40], iconAnchor: [15, 38], popupAnchor: [0, -34] });
@@ -1661,15 +1736,22 @@
     function stopPinLocationMonitoring() {
         if (pinWeatherTimer) { clearInterval(pinWeatherTimer); pinWeatherTimer = null; }
         if (pinTransportTimer) { clearInterval(pinTransportTimer); pinTransportTimer = null; }
+        if (pinQuakeTimer) { clearInterval(pinQuakeTimer); pinQuakeTimer = null; }
     }
     function startPinLocationMonitoring() {
         stopPinLocationMonitoring();
         pinWeatherTimer = setInterval(() => {
             if (activeLocation && activeLocation.source === 'manual') {
                 maybeFetchWeather(activeLocation.lat, activeLocation.lng, true);
-                maybeFetchGeophysics(activeLocation.lat, activeLocation.lng, true);
             }
         }, 5 * 60 * 1000);
+        // Info gempa disegarkan lebih SERING (1 menit) & terpisah dari cuaca (5 menit) supaya
+        // lebih responsif/real-time — data gempa lebih kritikal untuk selalu terkini.
+        pinQuakeTimer = setInterval(() => {
+            if (activeLocation && activeLocation.source === 'manual') {
+                maybeFetchGeophysics(activeLocation.lat, activeLocation.lng, true);
+            }
+        }, 60000);
         pinTransportTimer = setInterval(() => {
             // force=false — lihat catatan di searchTransportTimer.
             if (activeLocation && activeLocation.source === 'manual') checkNearbyTransport(activeLocation.lat, activeLocation.lng, false);
@@ -2039,6 +2121,17 @@
     // ======================================================================
     const weatherBody = document.getElementById('weatherBody');
     let lastWeatherLatLng = null;
+    // Pengaman tambahan: seluruh panel Cuaca & Geofisika (popWeather) — bukan cuma daftar
+    // gempa — TIDAK PERNAH meneruskan gestur sentuh/scroll/roda-mouse ke peta di baliknya,
+    // supaya geser-geser di dalam panel manapun (cuaca maupun geofisika) murni jadi scroll
+    // panel, tidak pernah dianggap sebagai drag/zoom peta. Pola sama seperti .nearby-box.
+    (function () {
+        const popWeatherEl = document.getElementById('popWeather');
+        if (!popWeatherEl) return;
+        ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup'].forEach(evt => {
+            popWeatherEl.addEventListener(evt, e => e.stopPropagation(), { passive: true });
+        });
+    })();
 
     // Peta kode cuaca WMO (dipakai Open-Meteo) -> label & ikon Bahasa Indonesia + kelas badge
     const WMO_MAP = {
@@ -2199,9 +2292,10 @@
     }
 
     // ======================================================================
-    // INFO GEOFISIKA & TRANSPORTASI (SAMA SEPERTI ASLI)
+    // INFO GEOFISIKA (GEMPA BMKG + USGS) & TRANSPORTASI
     // ======================================================================
     const geoBody = document.getElementById('geoBody');
+    const geoPanelEl = document.getElementById('geoPanel');
     const quakeHudBadgeEl = document.getElementById('quakeHudBadge');
 
     // Klasifikasi kekuatan gempa -> label & kelas warna badge (mirip kategori BMKG)
@@ -2214,49 +2308,141 @@
         return               { label:'Kecil',        cls:'mag-kecil' };
     }
 
+    // ---- Sumber 1: USGS (earthquake.usgs.gov) — sudah mendukung CORS langsung,
+    // jadi cukup fetchWithTimeout biasa tanpa perlu proxy. ----
+    async function fetchUsgsQuakes(lat, lng) {
+        const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${lat}&longitude=${lng}&maxradiuskm=1000&minmagnitude=3&limit=6&orderby=time`;
+        const res = await fetchWithTimeout(url, null, 9000);
+        if (!res.ok) throw new Error(`USGS HTTP ${res.status}`);
+        const data = await res.json();
+        const feats = (data && data.features) || [];
+        return feats.map(f => {
+            const p = f.properties; const c = f.geometry.coordinates || [];
+            return {
+                id: f.id || `usgs-${p.time}-${p.mag}`,
+                source: 'USGS', mag: Number(p.mag) || 0, time: p.time,
+                place: p.place || 'Lokasi episentrum tidak diketahui',
+                depth: Number.isFinite(c[2]) ? Math.round(c[2]) : null,
+                lat: c[1], lon: c[0]
+            };
+        });
+    }
+
+    // ---- Sumber 2: BMKG (data.bmkg.go.id) — kadang menolak fetch langsung dari
+    // browser (CORS), jadi dipanggil lewat fetchWithProxy yang sudah me-race koneksi
+    // LANGSUNG + beberapa proxy CORS publik sekaligus (lihat fetchWithProxy di atas),
+    // supaya tetap dapat data secepat mungkin tanpa terkunci oleh isu API key/CORS. ----
+    const BMKG_QUAKE_URL = 'https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json';
+    function parseBmkgCoord(coordStr) {
+        // Format field "Coordinates" BMKG: "lat,lon" mis. "-6.20,106.80"
+        if (!coordStr || typeof coordStr !== 'string') return null;
+        const parts = coordStr.split(',').map(s => parseFloat(s.trim()));
+        if (parts.length !== 2 || parts.some(n => !Number.isFinite(n))) return null;
+        return { lat: parts[0], lon: parts[1] };
+    }
+    async function fetchBmkgQuakes(lat, lng) {
+        const data = await fetchWithProxy(BMKG_QUAKE_URL);
+        const list = (data && data.Infogempa && data.Infogempa.gempa) || [];
+        const arr = Array.isArray(list) ? list : [list];
+        return arr.map(g => {
+            const coord = parseBmkgCoord(g.Coordinates);
+            // "DateTime" BMKG format ISO-like "2024-01-01T12:34:56+07:00"; fallback ke Tanggal+Jam
+            const timeMs = g.DateTime ? Date.parse(g.DateTime) : Date.parse(`${g.Tanggal} ${g.Jam}`);
+            return {
+                id: `bmkg-${g.DateTime || g.Jam}-${g.Magnitude}`,
+                source: 'BMKG', mag: parseFloat(g.Magnitude) || 0,
+                time: Number.isFinite(timeMs) ? timeMs : Date.now(),
+                place: g.Wilayah || 'Lokasi episentrum tidak diketahui',
+                depth: g.Kedalaman ? parseInt(g.Kedalaman, 10) : null,
+                lat: coord ? coord.lat : null, lon: coord ? coord.lon : null
+            };
+        }).filter(q => {
+            if (q.lat == null || q.lon == null) return true; // tetap tampilkan jika koordinat tak terbaca, lebih baik ada info daripada hilang
+            return haversineMeters({ lat, lng }, { lat: q.lat, lng: q.lon }) <= 1000 * 1000; // radius 1000km, konsisten dgn query USGS
+        });
+    }
+
+    let geoLastLatLng = null; // dipakai tombol refresh manual saat panel dibuka tanpa lokasi baru
     async function fetchGeophysics(lat, lng) {
         if (!geoBody) return;
-        geoBody.innerHTML = `<div class="w-row"><span>Memuat info geofisika…</span></div>`;
-        try {
-            const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=${lat}&longitude=${lng}&maxradiuskm=1000&minmagnitude=3&limit=3&orderby=time`;
-            const res = await fetchWithTimeout(url, null, 9000);
-            const data = await res.json();
-            const feats = (data && data.features) || [];
-            if (!feats.length) {
-                geoBody.innerHTML = `<div class="w-row"><span>Aman, tidak ada gempa signifikan di sekitar.</span></div>`;
-                if (quakeHudBadgeEl) quakeHudBadgeEl.classList.remove('show');
-                return;
-            }
-            geoBody.innerHTML = feats.map(f => {
-                const p = f.properties; const c = f.geometry.coordinates;
-                const sev = quakeSeverity(p.mag);
-                const episentrum = p.place || 'Lokasi episentrum tidak diketahui';
-                return `<div class="quake-item">
-                    <div class="w-row">
-                        <span class="quake-badge ${sev.cls}">M${p.mag} • ${sev.label}</span>
-                        <b>${new Date(p.time).toLocaleString('id-ID')}</b>
-                    </div>
-                    <div class="quake-place">📍 Episentrum: ${episentrum} • Kedalaman ${Math.round(c[2])} km</div>
-                </div>`;
-            }).join('');
+        geoLastLatLng = { lat, lng };
+        // Simpan posisi scroll biar tidak melompat ke atas saat refresh berkala (sama seperti nearby-box)
+        const prevScrollTop = geoBody.scrollTop;
+        if (!geoBody.dataset.hasData) {
+            geoBody.innerHTML = `<div class="w-row"><span>Memuat info gempa (BMKG &amp; USGS)…</span></div>`;
+        }
+        // Ambil dari KEDUA sumber sekaligus (bukan berurutan) — salah satu gagal/lambat tidak
+        // menghalangi yang lain, sehingga data tetap tampil selama minimal SATU sumber berhasil.
+        const [usgsRes, bmkgRes] = await Promise.allSettled([
+            fetchUsgsQuakes(lat, lng),
+            fetchBmkgQuakes(lat, lng)
+        ]);
+        const usgsList = usgsRes.status === 'fulfilled' ? usgsRes.value : [];
+        const bmkgList = bmkgRes.status === 'fulfilled' ? bmkgRes.value : [];
+        const anyOk = usgsRes.status === 'fulfilled' || bmkgRes.status === 'fulfilled';
 
-            // Perbarui badge ringkas gempa di layar berdasarkan kejadian terbaru
-            const latest = feats[0].properties;
-            const sev = quakeSeverity(latest.mag);
-            if (quakeHudBadgeEl) {
-                quakeHudBadgeEl.className = 'hud-badge quake-hud show ' + sev.cls;
-                quakeHudBadgeEl.querySelector('.hb-text').textContent = `M${latest.mag} ${sev.label}`;
-            }
+        if (!anyOk) {
+            const reason = (usgsRes.reason && usgsRes.reason.message) || (bmkgRes.reason && bmkgRes.reason.message) || '';
+            geoBody.innerHTML = `<div class="w-row w-error">Gagal memuat gempa${reason ? `<br><span style="opacity:0.75;font-weight:600;font-size:0.68rem">${String(reason).slice(0, 90)}</span>` : ''}</div>` +
+                `<div class="w-row" id="geoManualRetryRow" style="cursor:pointer;color:var(--accent);justify-content:flex-start;gap:8px"><span>🔄</span><span style="text-decoration:underline">Coba lagi sekarang</span></div>`;
+            geoBody.dataset.hasData = '';
+            const retryRow = document.getElementById('geoManualRetryRow');
+            if (retryRow) retryRow.addEventListener('click', () => geoLastLatLng && fetchGeophysics(geoLastLatLng.lat, geoLastLatLng.lng));
+            return;
+        }
 
-            // Peringatan dini gempa signifikan (M >= 5) di sekitar lokasi aktif
-            const latestQuakeId = feats[0].id || `${latest.time}-${latest.mag}`;
-            if (Number(latest.mag) >= 5 && latestQuakeId !== lastAlertedQuakeId) {
-                lastAlertedQuakeId = latestQuakeId;
-                showDisasterAlert('🌍', `Peringatan Gempa • ${sev.label}`,
-                    `M${latest.mag} — ${latest.place || 'lokasi episentrum tidak diketahui'} (${new Date(latest.time).toLocaleTimeString('id-ID')})`);
-            }
-        } catch (e) {
-            geoBody.innerHTML = `<div class="w-row w-error">Gagal memuat gempa</div>`;
+        // Gabungkan kedua sumber, buang duplikat kejadian yang sama (waktu berdekatan <2menit
+        // & magnitudo mirip ±0.3, umum terjadi karena event yang sama dilaporkan BMKG & USGS
+        // sekaligus) — sisakan salah satu saja per duplikat supaya daftar tidak dobel.
+        const merged = [...usgsList, ...bmkgList].filter(q => q.time && q.mag > 0);
+        const deduped = [];
+        merged.sort((a, b) => b.time - a.time);
+        for (const q of merged) {
+            const dup = deduped.find(x => Math.abs(x.time - q.time) < 120000 && Math.abs(x.mag - q.mag) < 0.3);
+            if (!dup) deduped.push(q);
+        }
+        const top = deduped.slice(0, 6);
+
+        if (!top.length) {
+            geoBody.innerHTML = `<div class="w-row"><span>Aman, tidak ada gempa signifikan di sekitar.</span></div>`;
+            geoBody.dataset.hasData = '1';
+            geoBody.scrollTop = prevScrollTop;
+            if (quakeHudBadgeEl) quakeHudBadgeEl.classList.remove('show');
+            return;
+        }
+
+        geoBody.innerHTML = top.map(q => {
+            const sev = quakeSeverity(q.mag);
+            const depthText = Number.isFinite(q.depth) ? ` • Kedalaman ${q.depth} km` : '';
+            return `<div class="quake-item">
+                <div class="w-row">
+                    <span class="quake-badge ${sev.cls}">M${q.mag.toFixed(1)} • ${sev.label}</span><span class="quake-src">${q.source}</span>
+                    <b>${new Date(q.time).toLocaleString('id-ID')}</b>
+                </div>
+                <div class="quake-place">📍 Episentrum: ${q.place}${depthText}</div>
+            </div>`;
+        }).join('');
+        geoBody.dataset.hasData = '1';
+        geoBody.scrollTop = prevScrollTop;
+
+        const updatedEl = document.createElement('div');
+        updatedEl.className = 'geo-updated';
+        updatedEl.textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID')} • BMKG${bmkgRes.status === 'fulfilled' ? '' : ' (gagal)'} & USGS${usgsRes.status === 'fulfilled' ? '' : ' (gagal)'}`;
+        geoBody.appendChild(updatedEl);
+
+        // Perbarui badge ringkas gempa di layar berdasarkan kejadian terbaru
+        const latest = top[0];
+        const sev = quakeSeverity(latest.mag);
+        if (quakeHudBadgeEl) {
+            quakeHudBadgeEl.className = 'hud-badge quake-hud show ' + sev.cls;
+            quakeHudBadgeEl.querySelector('.hb-text').textContent = `M${latest.mag.toFixed(1)} ${sev.label}`;
+        }
+
+        // Peringatan dini gempa signifikan (M >= 5) di sekitar lokasi aktif
+        if (latest.mag >= 5 && latest.id !== lastAlertedQuakeId) {
+            lastAlertedQuakeId = latest.id;
+            showDisasterAlert('🌍', `Peringatan Gempa • ${sev.label}`,
+                `M${latest.mag.toFixed(1)} — ${latest.place} (${new Date(latest.time).toLocaleTimeString('id-ID')})`);
         }
     }
     let lastGeoLatLng = null; let lastGeoFetchTime = 0;
@@ -2265,10 +2451,52 @@
         // walau panel Cuaca sedang tertutup — bukan hanya saat panel dibuka pengguna.
         const point = { lat, lng };
         const now = Date.now();
-        // Throttle jarak (300m) + waktu (60dtk) agar aman dipanggil berulang mengikuti pergerakan GPS tanpa membanjiri API
-        if (!force && lastGeoLatLng && haversineMeters(lastGeoLatLng, point) < 300 && (now - lastGeoFetchTime) < 60000) return;
+        // Throttle jarak (300m) + waktu diperpendek jadi 30dtk (dari 60dtk) supaya data gempa
+        // lebih responsif/real-time mengikuti pergerakan GPS, tanpa membanjiri API.
+        if (!force && lastGeoLatLng && haversineMeters(lastGeoLatLng, point) < 300 && (now - lastGeoFetchTime) < 30000) return;
         lastGeoLatLng = point; lastGeoFetchTime = now;
         fetchGeophysics(lat, lng);
+    }
+
+    // ---- Kontrol panel: minimize/maximize + tombol segarkan + memastikan gestur
+    // sentuh/scroll/roda-mouse di dalam daftar TIDAK bocor jadi drag/zoom peta di
+    // baliknya — pola identik dengan kotak "Anda berada" (.nearby-box) di atas. ----
+    let geoMinimized = false; let geoMaximized = false;
+    function setGeoMinimized(min) {
+        geoMinimized = min;
+        if (min && geoMaximized) { geoMaximized = false; geoPanelEl.classList.remove('maximized'); document.getElementById('geoMaxBtn').classList.remove('on'); }
+        geoPanelEl.classList.toggle('minimized', min);
+        const btn = document.getElementById('geoMinBtn');
+        btn.textContent = min ? '+' : '–';
+        btn.title = min ? 'Perlihatkan daftar gempa' : 'Ciutkan daftar gempa';
+        btn.setAttribute('aria-label', btn.title);
+    }
+    function setGeoMaximized(max) {
+        geoMaximized = max;
+        if (max && geoMinimized) { setGeoMinimized(false); }
+        geoPanelEl.classList.toggle('maximized', max);
+        document.getElementById('geoMaxBtn').classList.toggle('on', max);
+    }
+    if (geoPanelEl && geoBody) {
+        ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup'].forEach(evt => {
+            geoBody.addEventListener(evt, e => e.stopPropagation(), { passive: true });
+        });
+        const geoMinBtn = document.getElementById('geoMinBtn');
+        const geoMaxBtn = document.getElementById('geoMaxBtn');
+        const geoRefreshBtn = document.getElementById('geoRefreshBtn');
+        [geoMinBtn, geoMaxBtn, geoRefreshBtn].forEach(btn => {
+            if (!btn) return;
+            ['wheel', 'touchstart', 'touchmove', 'touchend', 'pointerdown'].forEach(evt => {
+                btn.addEventListener(evt, e => e.stopPropagation(), { passive: true });
+            });
+        });
+        if (geoMinBtn) geoMinBtn.addEventListener('click', e => { e.stopPropagation(); setGeoMinimized(!geoMinimized); });
+        if (geoMaxBtn) geoMaxBtn.addEventListener('click', e => { e.stopPropagation(); setGeoMaximized(!geoMaximized); });
+        if (geoRefreshBtn) geoRefreshBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const p = geoLastLatLng || activeLocation || { lat: MY_LAT, lng: MY_LNG };
+            maybeFetchGeophysics(p.lat, p.lng, true);
+        });
     }
 
     const toastStackEl = document.getElementById('toastStack');
