@@ -2335,19 +2335,67 @@
             }
 
             // ---------- NASA FIRMS ----------
-            const FIRMS_API_KEY = 'e916bdfd16f5230b3e6cabc6c03f5870';
+            const FIRMS_API_KEY = 'e916bdfd16f5230b3e6cabc6c03f5870'.trim();
             const INDONESIA_BBOX = [95.0, -11.0, 141.0, 6.0];
+
+            // Validasi isi respons: hanya CSV hotspot yang valid yang diterima. Respons teks
+            // error dari server/proxy (mis. "Invalid MAP_KEY", halaman HTML proxy, rate limit)
+            // ditolak secara diam-diam sehingga proxy/sumber lain dicoba, bukan ditampilkan sebagai error.
+            function looksLikeHotspotCSV(text) {
+                if (typeof text !== 'string') return false;
+                const first = (text.split('\n')[0] || '').toLowerCase();
+                return first.includes('latitude') && first.includes('longitude');
+            }
+
+            async function fetchValidCSV(url) {
+                const attempt = async (u, timeout) => {
+                    const r = await fetchWithTimeout(u, {}, timeout, 0);
+                    const t = await r.text();
+                    if (!looksLikeHotspotCSV(t)) throw new Error('respons bukan CSV hotspot');
+                    return t;
+                };
+                try {
+                    return await attempt(url, 6000);
+                } catch (_) {
+                    return await promiseAny(PROXIES.map(px => attempt(px + encodeURIComponent(url), 9000)));
+                }
+            }
+
+            // Sumber cadangan tanpa API key (file CSV publik FIRMS, 24 jam terakhir Asia Tenggara).
+            const FIRMS_PUBLIC_FILES = {
+                'MODIS_NRT': 'modis-c6.1/csv/MODIS_C6_1_SouthEast_Asia_24h.csv',
+                'VIIRS_NOAA20_NRT': 'noaa-20-viirs-c2/csv/J1_VIIRS_C2_SouthEast_Asia_24h.csv',
+                'VIIRS_SNPP_NRT': 'suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_SouthEast_Asia_24h.csv'
+            };
+            const firmsCache = {};
+
+            async function getFirmsCSV(sensor, url) {
+                try {
+                    return await fetchValidCSV(url);
+                } catch (_) { /* lanjut ke sumber cadangan */ }
+                const file = FIRMS_PUBLIC_FILES[sensor];
+                if (file) {
+                    try {
+                        return await fetchValidCSV('https://firms.modaps.eosdis.nasa.gov/data/active_fire/' + file);
+                    } catch (_) {}
+                }
+                return null;
+            }
 
             async function fetchFirmsAreaCSV(sensor, label) {
                 const out = [];
                 try {
+                    const cached = firmsCache[sensor];
+                    if (cached && Date.now() - cached.time < 180000) {
+                        logMessage(`✅ NASA FIRMS (${label}): ${cached.data.length} hotspot (cache).`, 'ok');
+                        return cached.data.slice();
+                    }
                     logMessage(`📡 NASA FIRMS (${label})...`, 'info');
                     const coordStr = INDONESIA_BBOX.join(',');
                     const url =
                         `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_API_KEY}/${sensor}/${coordStr}/1`;
-                    const resp = await fetchWithProxy(url, { headers: { 'Accept': 'text/csv' } });
-                    if (resp.ok) {
-                        const text = await resp.text();
+                    const text = await getFirmsCSV(sensor, url);
+                    if (text) {
                         const lines = text.split('\n').filter(l => l.trim() !== '');
                         if (lines.length > 1) {
                             const header = parseCSVLine(lines[0]);
@@ -2357,8 +2405,7 @@
                             const timeIdx = header.findIndex(h => h.toLowerCase().includes('acq_time'));
                             const confIdx = header.findIndex(h => h.toLowerCase().includes('confidence'));
                             if (latIdx === -1 || lngIdx === -1) {
-                                logMessage(`⚠️ NASA FIRMS (${label}): format header tidak sesuai (${header.join(',')})`,
-                                    'err');
+                                logMessage(`⚠️ NASA FIRMS (${label}): format data tidak sesuai, dilewati.`, 'info');
                                 return out;
                             }
                             let count = 0;
@@ -2369,6 +2416,7 @@
                                 const lat = parseFloat(cols[latIdx]);
                                 const lng = parseFloat(cols[lngIdx]);
                                 if (isNaN(lat) || isNaN(lng)) continue;
+                                if (lng < INDONESIA_BBOX[0] || lat < INDONESIA_BBOX[1] || lng > INDONESIA_BBOX[2] || lat > INDONESIA_BBOX[3]) continue;
                                 const date = cols[dateIdx] || '';
                                 const time = cols[timeIdx] || '';
                                 const conf = cols[confIdx] || '';
@@ -2395,15 +2443,22 @@
                                 });
                                 count++;
                             }
+                            firmsCache[sensor] = { time: Date.now(), data: out.slice() };
                             logMessage(`✅ NASA FIRMS (${label}): ${count} hotspot.`, 'ok');
                         } else {
-                            logMessage(`⚠️ NASA FIRMS (${label}): data kosong.`, 'err');
+                            firmsCache[sensor] = { time: Date.now(), data: [] };
+                            logMessage(`ℹ️ NASA FIRMS (${label}): tidak ada hotspot pada periode ini.`, 'info');
                         }
                     } else {
-                        logMessage(`⚠️ NASA FIRMS (${label}): HTTP ${resp.status}`, 'err');
+                        // Gagal sementara (jaringan/proxy): pakai data terakhir yang berhasil bila ada.
+                        if (firmsCache[sensor]) {
+                            logMessage(`ℹ️ NASA FIRMS (${label}): server tidak merespons, memakai data terakhir.`, 'info');
+                            return firmsCache[sensor].data.slice();
+                        }
+                        logMessage(`ℹ️ NASA FIRMS (${label}): belum dapat diakses, akan dicoba lagi pada refresh berikutnya.`, 'info');
                     }
                 } catch (e) {
-                    logMessage(`❌ NASA FIRMS (${label}) error: ${e.message}`, 'err');
+                    logMessage(`ℹ️ NASA FIRMS (${label}) dilewati sementara: ${e.message}`, 'info');
                 }
                 return out;
             }
