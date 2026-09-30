@@ -316,11 +316,65 @@
     // ===================== INISIALISASI PETA =====================
     function initMap() {
         map = L.map('map', { maxZoom: 19 }).setView([-6.2, 106.8], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19,
-            maxNativeZoom: 19
-        }).addTo(map);
+        // Peta dasar berantai: MapTiler (prioritas) -> OpenStreetMap -> Esri -> OpenTopoMap.
+        // Jika sumber aktif gagal memuat banyak tile (key ditolak/kuota habis/jaringan/diblokir),
+        // otomatis pindah ke sumber berikutnya.
+        const MAPTILER_KEY = 'ZysslvFevCRPQ18FOaOY';
+        const TILE_SOURCES = [
+            {
+                name: 'MapTiler',
+                url: 'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=' + MAPTILER_KEY,
+                options: {
+                    attribution: '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }
+            },
+            {
+                name: 'OpenStreetMap',
+                url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                options: {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }
+            },
+            {
+                name: 'Esri World Street Map',
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+                options: {
+                    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, OpenStreetMap contributors',
+                    maxZoom: 19
+                }
+            },
+            {
+                name: 'OpenTopoMap',
+                url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                options: {
+                    attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+                    subdomains: 'abc',
+                    maxZoom: 17
+                }
+            }
+        ];
+        let tileIdx = 0, tileErrCount = 0, tileOkCount = 0, baseLayer = null;
+        function mountBaseLayer(idx) {
+            const src = TILE_SOURCES[idx];
+            if (baseLayer) { try { map.removeLayer(baseLayer); } catch (_) {} }
+            tileErrCount = 0;
+            tileOkCount = 0;
+            baseLayer = L.tileLayer(src.url, src.options);
+            baseLayer.on('tileload', () => { tileOkCount++; });
+            baseLayer.on('tileerror', () => {
+                tileErrCount++;
+                if (tileErrCount >= 6 && tileErrCount > tileOkCount * 2 && tileIdx < TILE_SOURCES.length - 1) {
+                    tileIdx++;
+                    console.warn('Sumber peta gagal, beralih ke ' + TILE_SOURCES[tileIdx].name);
+                    mountBaseLayer(tileIdx);
+                }
+            });
+            baseLayer.addTo(map);
+            if (baseLayer.bringToBack) baseLayer.bringToBack();
+        }
+        mountBaseLayer(tileIdx);
         markersLayer = L.layerGroup().addTo(map);
 
         const locateBtn = L.control({ position: 'topleft' });
