@@ -1376,11 +1376,20 @@
                     // sehingga lebih mudah diketuk terutama di layar sentuh/mobile.
                     renderer: L.canvas({ tolerance: 10 })
                 });
-                // Peta dasar TANPA API key. Carto (basemaps.cartocdn.com) kini mewajibkan API key
+                // Peta dasar: MapTiler (prioritas), lalu cadangan tanpa key. Carto (basemaps.cartocdn.com) kini mewajibkan API key
                 // sehingga muncul pesan "api key required"; diganti dengan rantai sumber tile
                 // gratis. Jika sumber aktif gagal memuat banyak tile (jaringan/diblokir/dibatasi),
                 // otomatis pindah ke sumber berikutnya.
+                const MAPTILER_KEY = 'ZysslvFevCRPQ18FOaOY';
                 const TILE_SOURCES = [
+                    {
+                        name: 'MapTiler',
+                        url: 'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=' + MAPTILER_KEY,
+                        options: {
+                            attribution: '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                            maxZoom: 19, minZoom: 3
+                        }
+                    },
                     {
                         name: 'OpenStreetMap',
                         url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
