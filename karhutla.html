@@ -16,6 +16,21 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js">
     </script>
+    <script>
+        // Cadangan CDN: jika unpkg diblokir/lambat, muat Leaflet & MarkerCluster dari cdnjs.
+        (function () {
+            var CD = 'https://cdnjs.cloudflare.com/ajax/libs/';
+            if (typeof L === 'undefined') {
+                document.write('<link rel="stylesheet" href="' + CD + 'leaflet/1.9.4/leaflet.css">' +
+                    '<script src="' + CD + 'leaflet/1.9.4/leaflet.js"><\/script>');
+            }
+            if (typeof L === 'undefined' || typeof L.markerClusterGroup !== 'function') {
+                document.write('<link rel="stylesheet" href="' + CD + 'leaflet.markercluster/1.5.3/MarkerCluster.css">' +
+                    '<link rel="stylesheet" href="' + CD + 'leaflet.markercluster/1.5.3/MarkerCluster.Default.css">' +
+                    '<script src="' + CD + 'leaflet.markercluster/1.5.3/leaflet.markercluster.js"><\/script>');
+            }
+        })();
+    </script>
     <style>
         /* ====== CSS ====== */
         :root {
@@ -1376,12 +1391,30 @@
                     // sehingga lebih mudah diketuk terutama di layar sentuh/mobile.
                     renderer: L.canvas({ tolerance: 10 })
                 });
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                const baseCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
                     subdomains: 'abcd',
                     maxZoom: 20,
                     minZoom: 3
                 }).addTo(map);
+                // Cadangan peta dasar: bila tile CartoDB gagal berulang kali (diblokir/error),
+                // otomatis pindah ke tile OpenStreetMap standar (tanpa API key).
+                let tileErrCount = 0, tileFallbackDone = false;
+                baseCarto.on('tileerror', function () {
+                    tileErrCount++;
+                    if (tileErrCount >= 4 && !tileFallbackDone) {
+                        tileFallbackDone = true;
+                        try {
+                            map.removeLayer(baseCarto);
+                            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                                maxZoom: 19,
+                                minZoom: 3
+                            }).addTo(map);
+                            logMessage('⚠️ Tile CartoDB gagal dimuat, beralih ke OpenStreetMap.', 'info');
+                        } catch (_) {}
+                    }
+                });
 
                 // Ribuan titik yang ditampilkan mentah (tanpa pengelompokan) adalah penyebab
                 // utama browser "not responding" di HP low-end saat berpindah ke Peta Penuh:
@@ -2335,7 +2368,42 @@
             }
 
             // ---------- NASA FIRMS ----------
-            const FIRMS_API_KEY = 'e916bdfd16f5230b3e6cabc6c03f5870'.trim();
+            // MAP_KEY NASA FIRMS. Bisa diganti tanpa edit kode: di konsol jalankan
+            //   localStorage.setItem('firms_map_key','KEY_32_KARAKTER_BARU')
+            // Key dibuat gratis di https://firms.modaps.eosdis.nasa.gov/api/map_key/
+            const FIRMS_DEFAULT_KEY = 'e916bdfd16f5230b3e6cabc6c03f5870';
+            const FIRMS_API_KEY = (function () {
+                try {
+                    const k = (localStorage.getItem('firms_map_key') || '').trim();
+                    if (/^[0-9a-f]{32}$/i.test(k)) return k;
+                } catch (_) {}
+                return FIRMS_DEFAULT_KEY.trim();
+            })();
+            // 'unknown' | 'bad' (ditolak NASA) | 'nocors' (tak bisa dicek dari browser)
+            let firmsKeyState = 'unknown';
+            const FIRMS_KEY_ERR_RE = /invalid\s*(map_?key|api)|map_?key.*(invalid|not valid|expired)|exceed|too many|transaction limit|unauthori[sz]ed|forbidden/i;
+
+            // Permintaan BERKUNCI (API area) hanya dikirim LANGSUNG ke NASA, tidak lewat proxy CORS
+            // pihak ketiga: key di URL tidak bocor ke proxy, dan tidak ikut kena rate-limit/blokir proxy.
+            async function fetchKeyedFirmsCSV(url) {
+                let r, t;
+                try {
+                    r = await fetch(url, { cache: 'no-store' });
+                    t = await r.text();
+                } catch (e) {
+                    firmsKeyState = 'nocors';
+                    throw new Error('tidak bisa diakses langsung dari browser (CORS/jaringan)');
+                }
+                if (looksLikeHotspotCSV(t)) return t;
+                if (r.status === 401 || r.status === 403 || FIRMS_KEY_ERR_RE.test(t.slice(0, 400))) {
+                    firmsKeyState = 'bad';
+                    const why = (t || ('HTTP ' + r.status)).replace(/\s+/g, ' ').slice(0, 120);
+                    const err = new Error('MAP_KEY ditolak NASA: ' + why);
+                    err.keyError = true;
+                    throw err;
+                }
+                throw new Error('respons bukan CSV hotspot (HTTP ' + r.status + ')');
+            }
             const INDONESIA_BBOX = [95.0, -11.0, 141.0, 6.0];
 
             // Validasi isi respons: hanya CSV hotspot yang valid yang diterima. Respons teks
@@ -2370,9 +2438,17 @@
             const firmsCache = {};
 
             async function getFirmsCSV(sensor, url) {
-                try {
-                    return await fetchValidCSV(url);
-                } catch (_) { /* lanjut ke sumber cadangan */ }
+                if (firmsKeyState !== 'bad' && firmsKeyState !== 'nocors') {
+                    try {
+                        return await fetchKeyedFirmsCSV(url);
+                    } catch (e) {
+                        if (e.keyError) {
+                            logMessage(`🔑 NASA FIRMS: ${e.message}. Key kemungkinan tidak valid/kedaluwarsa/melebihi kuota. ` +
+                                `Otomatis beralih ke file CSV publik FIRMS (tanpa API key).`, 'err');
+                        }
+                    }
+                }
+                // Sumber cadangan tanpa API key: file CSV publik (24 jam, Asia Tenggara), difilter ke Indonesia.
                 const file = FIRMS_PUBLIC_FILES[sensor];
                 if (file) {
                     try {
